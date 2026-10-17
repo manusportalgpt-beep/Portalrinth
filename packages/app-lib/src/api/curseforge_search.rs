@@ -229,7 +229,7 @@ pub async fn search_with_state(
     query: &CurseforgeSearchQuery,
     state: &State,
 ) -> crate::Result<CurseforgeSearchPage> {
-    let Some(key) = curseforge_metadata::api_key() else {
+    let Some(key) = crate::api::curseforge_metadata::api_key() else {
         return Ok(empty_page(query));
     };
 
@@ -332,7 +332,7 @@ pub async fn files_with_state(
     loader: Option<&str>,
     state: &State,
 ) -> crate::Result<Vec<CurseforgeFile>> {
-    let Some(key) = curseforge_metadata::api_key() else {
+    let Some(key) = crate::api::curseforge_metadata::api_key() else {
         return Ok(Vec::new());
     };
 
@@ -400,7 +400,7 @@ pub async fn files_with_state(
 
 /// Whether this build can search CurseForge at all.
 pub fn is_available() -> bool {
-    curseforge_metadata::api_key().is_some()
+    crate::api::curseforge_metadata::api_key().is_some()
 }
 
 fn empty_page(query: &CurseforgeSearchQuery) -> CurseforgeSearchPage {
