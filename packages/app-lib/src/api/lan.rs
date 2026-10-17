@@ -17,7 +17,7 @@
 //! would publish whichever happened to be started last.
 
 use chrono::{DateTime, Utc};
-use dashmap::{DashMap, DashSet};
+use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock};
@@ -87,13 +87,14 @@ struct ActiveRelay {
 static RELAYS: LazyLock<DashMap<Uuid, ActiveRelay>> =
     LazyLock::new(DashMap::new);
 
-/// Running copies whose log has already been read back once.
+/// How far each running copy's log has been read, so that a launcher which
+/// missed the beginning of a session still notices what the game says next.
 ///
-/// A game the launcher started is watched as it writes, so its log only has to
-/// be read for a launcher that missed the beginning of the session — restarted
-/// while the game was left open, say. One read per copy is enough, because from
-/// then on the game is heard saying what it opens next.
-static LOGS_CONSULTED: LazyLock<DashSet<Uuid>> = LazyLock::new(DashSet::new);
+/// The length, not a flag: a world is opened to the network at some unknowable
+/// moment, and a file read only once would have happened long before it. The
+/// log is re-read only when the game has added to it, which for the line that
+/// matters is once.
+static LOGS_READ: LazyLock<DashMap<Uuid, u64>> = LazyLock::new(DashMap::new);
 
 /// Every copy of an instance that is running right now, and where its world can
 /// be reached.
@@ -177,11 +178,17 @@ async fn local_port(
     if let Some(port) = crate::state::lan::port_for_process(&process_uuid) {
         return Some(port);
     }
-    if !LOGS_CONSULTED.insert(process.uuid) {
+
+    let length = log_length(state, &process.instance_path).await?;
+    if LOGS_READ
+        .get(&process.uuid)
+        .is_some_and(|read| *read >= length)
+    {
         return None;
     }
+    LOGS_READ.insert(process.uuid, length);
 
-    let port = port_from_log_file(state, &process.instance_path).await?;
+    let port = port_from_log_tail(state, &process.instance_path, length).await?;
     if !is_serving(port).await {
         return None;
     }
@@ -199,23 +206,36 @@ async fn is_serving(port: u16) -> bool {
     .is_ok_and(|connected| connected.is_ok())
 }
 
+fn game_log(state: &crate::State, instance_path: &str) -> std::path::PathBuf {
+    state
+        .directories
+        .instance_logs_dir(instance_path)
+        .join("latest.log")
+}
+
+/// How much of the game's own log there is, which is nothing at all until the
+/// game has written to it.
+async fn log_length(state: &crate::State, instance_path: &str) -> Option<u64> {
+    tokio::fs::metadata(game_log(state, instance_path))
+        .await
+        .ok()
+        .map(|metadata| metadata.len())
+}
+
 /// The last world a running game opened to the network, read back out of its own
 /// log.
 ///
 /// The launcher has not always seen every line a running game wrote — it was
 /// restarted while the game was left open, say — and the log is where the rest
 /// of those lines went.
-async fn port_from_log_file(
+async fn port_from_log_tail(
     state: &crate::State,
     instance_path: &str,
+    length: u64,
 ) -> Option<u16> {
-    let path = state
-        .directories
-        .instance_logs_dir(instance_path)
-        .join("latest.log");
-
-    let mut file = tokio::fs::File::open(&path).await.ok()?;
-    let length = file.metadata().await.ok()?.len();
+    let mut file = tokio::fs::File::open(game_log(state, instance_path))
+        .await
+        .ok()?;
     file.seek(std::io::SeekFrom::Start(
         length.saturating_sub(MAX_LOG_TAIL),
     ))
@@ -351,7 +371,7 @@ pub async fn stop(process_uuid: Uuid) -> crate::Result<()> {
 /// Called from the process manager, which cannot wait and which has already torn
 /// the world down — there is nothing left to publish either way.
 pub fn detach_process(process_uuid: Uuid) {
-    LOGS_CONSULTED.remove(&process_uuid);
+    LOGS_READ.remove(&process_uuid);
 
     let Some((_, tunnel)) = RELAYS.remove(&process_uuid) else {
         return;
