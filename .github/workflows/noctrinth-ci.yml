@@ -115,6 +115,21 @@ jobs:
       - name: Check app-lib and app crates
         run: cargo check -p theseus -p theseus_gui --all-targets
 
+      # The logs of a failed step need an account to read, so a red run here says
+      # only that something did not compile. This puts the compiler's own words
+      # where anyone can see them.
+      - name: Report what cargo said
+        if: failure()
+        run: |
+          set +e
+          cargo check -p theseus -p theseus_gui --all-targets > "$RUNNER_TEMP/cargo.log" 2>&1
+          code=$?
+          tail -n 60 "$RUNNER_TEMP/cargo.log" \
+            | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g' \
+            > "$RUNNER_TEMP/cargo-tail.txt"
+          echo "::error title=cargo check failed::$(cat "$RUNNER_TEMP/cargo-tail.txt")"
+          exit $code
+
       - name: Run app-lib unit tests
         run: cargo test -p theseus
 

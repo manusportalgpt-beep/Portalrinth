@@ -1947,7 +1947,7 @@ impl CachedEntry {
                         let url = format!(
                             "{}project/{}/version?include_changelog=false",
                             env!("MODRINTH_API_URL"),
-                            key
+                            key.to_string()
                         );
 
                         async move {
