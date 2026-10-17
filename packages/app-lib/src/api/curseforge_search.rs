@@ -60,6 +60,20 @@ pub fn loader_to_curseforge(loader: &str) -> Option<u64> {
     }
 }
 
+/// And back again, for a loader that arrived from CurseForge rather than from
+/// one of our own dropdowns.
+pub fn curseforge_loader_name(loader: u64) -> Option<&'static str> {
+    match loader {
+        LOADER_FORGE => Some("forge"),
+        LOADER_CAULDRON => Some("cauldron"),
+        LOADER_LITELOADER => Some("liteloader"),
+        LOADER_FABRIC => Some("fabric"),
+        LOADER_QUILT => Some("quilt"),
+        LOADER_NEOFORGE => Some("neoforge"),
+        _ => None,
+    }
+}
+
 /// A project as a search result draws it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct CurseforgeSearchHit {
@@ -583,15 +597,7 @@ fn to_file(file: &serde_json::Value) -> CurseforgeFile {
             .as_array()
             .and_then(|loaders| loaders.first())
             .and_then(|loader| loader.as_u64())
-            .and_then(|loader| match loader {
-                LOADER_FORGE => Some("forge"),
-                LOADER_CAULDRON => Some("cauldron"),
-                LOADER_LITELOADER => Some("liteloader"),
-                LOADER_FABRIC => Some("fabric"),
-                LOADER_QUILT => Some("quilt"),
-                LOADER_NEOFORGE => Some("neoforge"),
-                _ => None,
-            })
+            .and_then(curseforge_loader_name)
             .map(str::to_owned),
         file_date: file["fileDate"].as_str().map(str::to_owned),
         sha1: file["hashes"]

@@ -137,6 +137,12 @@ struct CfFileData {
     download_url: Option<String>,
     #[serde(default)]
     hashes: Vec<CfFileHash>,
+    /// CurseForge's own game version names, which are the same strings ours are
+    /// for Minecraft but not for anything else on their site.
+    #[serde(default)]
+    game_versions: Vec<String>,
+    #[serde(default)]
+    loaders: Vec<i64>,
 }
 
 #[derive(Deserialize)]
@@ -647,7 +653,8 @@ pub async fn install_curseforge_mod(
         loader: file
             .loaders
             .first()
-            .map(|loader| loader.name.clone())
+            .and_then(|loader| u64::try_from(*loader).ok())
+            .and_then(crate::api::curseforge_search::curseforge_loader_name)
             .unwrap_or_default(),
         dependent_on: None,
     };
