@@ -1,0 +1,117 @@
+name: Noctrinth Windows build
+
+# Builds one Windows x64 installer and leaves it in the run's artifacts.
+#
+# The release workflows already build Windows, but they do it as a side effect
+# of a tagged release: they need the updater signing key, they create a release
+# (draft or not), and they run for all three platforms. None of that is wanted
+# when the question is simply "what does the current `main` look like on
+# Windows", which is what this is for.
+#
+# Because nothing is signed, the installer cannot update itself and is not
+# published anywhere — it is a build to try, not a release. Use
+# `noctrinth-release.yml` for anything that ships.
+#
+# WHAT IS DIFFERENT FROM THE RELEASE BUILD
+#   * `tauri.build.conf.json` turns off `createUpdaterArtifacts`, which would
+#     otherwise fail the build asking for `TAURI_SIGNING_PRIVATE_KEY`.
+#   * No tag, no release, no `latest.json`, no updater branch.
+#   * Windows only — the other two platforms cost three times as much runner
+#     time and nothing here is platform-specific.
+#
+# HOW TO RUN IT
+#   Push the branch this workflow watches:
+#     git checkout -b windows-build main
+#     git push origin windows-build
+#   or press "Run workflow" on the Actions page.
+
+on:
+  push:
+    branches: [windows-build]
+  workflow_dispatch:
+
+concurrency:
+  group: noctrinth-build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # windows-latest is x64, and the only Windows target Tauri produces here.
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Tauri reads the tag and the commit for the version it stamps into
+          # the installer, and a shallow clone leaves it guessing.
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+
+      - name: Prepare app-lib environment
+        shell: bash
+        run: cp packages/app-lib/.env.prod packages/app-lib/.env
+
+      - name: Prepare CurseForge API key
+        if: ${{ secrets.CURSEFORGE_API_KEY != '' }}
+        shell: bash
+        env:
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        run: |
+          # The key is read raw from this file by vite.config.ts (bypasses
+          # dotenv-expand so bcrypt-style `$` chars survive). Without it,
+          # importing a CurseForge modpack zip does not work.
+          printf 'VITE_CURSEFORGE_API_KEY=%s\n' "$CURSEFORGE_API_KEY" \
+            > apps/app-frontend/.env.local
+
+      - name: Sync versions from the VERSION file
+        shell: bash
+        run: node scripts/sync-version.mjs
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build the installer
+        working-directory: apps/app
+        # `--bundles nsis` is the one target that exists on Windows; the config
+        # lists the macOS and Linux ones too, which Tauri skips on its own but
+        # not before it has looked for their toolchains.
+        #
+        # `--features updater` matches the release build. What is different is
+        # `tauri.build.conf.json`, which turns off the updater artifacts: with
+        # them on, the build stops and asks for a signing key that a build to
+        # try has no business having.
+        run: pnpm tauri build --features updater --bundles nsis --config src/tauri.build.conf.json
+
+      - name: Upload the installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Noctrinth-Windows-x64
+          path: target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 30
