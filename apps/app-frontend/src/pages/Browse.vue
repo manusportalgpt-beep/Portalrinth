@@ -34,15 +34,17 @@ import {
 } from '@modrinth/ui'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import type { Ref } from 'vue'
-import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import type { LocationQuery } from 'vue-router'
 import { useRoute, useRouter } from 'vue-router'
 
 import CurseforgeBrowseSection from '@/components/ui/browse/CurseforgeBrowseSection.vue'
+import ProviderSwitch from '@/components/ui/browse/ProviderSwitch.vue'
 import { useAppServerBrowse } from '@/composables/browse/use-app-server-browse'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { get_project, get_search_results_v3, get_version_many } from '@/helpers/cache.js'
+import { isCurseforgeAvailable } from '@/helpers/curseforge-api'
 import {
 	get_installed_project_ids as getInstalledProjectIds,
 	getInstanceIconUrl,
@@ -546,6 +548,11 @@ onBeforeUnmount(() => {
 })
 
 const messages = defineMessages({
+	curseforgeNoKey: {
+		id: 'app.browse.curseforge-no-key',
+		defaultMessage:
+			'CurseForge is unavailable: no API key is configured. One can be added in Settings → Resources.',
+	},
 	addServersToInstance: {
 		id: 'app.browse.add-servers-to-instance',
 		defaultMessage: 'Adding server to instance',
@@ -1166,12 +1173,54 @@ const curseforgeNarrowing = computed(() => {
 
 const hideModrinthResults = ref(false)
 
+/**
+ * Which of the two places mods come from the search asks.
+ *
+ * Owned here because the switch sits above the search box and the results below
+ * it, and two components each holding their own copy of the answer would drift
+ * apart the first time either changed.
+ */
+const curseforgeProvider = ref<'modrinth' | 'both' | 'curseforge'>('modrinth')
+const curseforgeAvailable = ref(false)
+
+/**
+ * Whether a key is in force, asked again whenever settings change.
+ *
+ * A key can be pasted, changed or cleared while the tab is open, and this is
+ * the thing that decides whether the CurseForge mark does anything. Asking once
+ * on mount is how a switch ends up sitting there doing nothing after a key has
+ * just been added.
+ */
+async function refreshCurseforgeAvailability() {
+	curseforgeAvailable.value = await isCurseforgeAvailable()
+	if (!curseforgeAvailable.value && curseforgeProvider.value !== 'modrinth') {
+		curseforgeProvider.value = 'modrinth'
+		hideModrinthResults.value = false
+	}
+}
+
+onMounted(() => {
+	void refreshCurseforgeAvailability()
+})
+
+watch(
+	() => appSettings.value.curseforge_api_key,
+	() => {
+		void refreshCurseforgeAvailability()
+	},
+)
+
+watch(curseforgeProvider, (provider) => {
+	hideModrinthResults.value = provider === 'curseforge'
+})
+
 const searchState = useBrowseSearch({
 	projectType,
 	tags,
 	active: browseRouteActive,
 	providedFilters: combinedProvidedFilters,
 	search,
+	infiniteScroll: computed(() => appSettings.value.browse_infinite_scroll !== false),
 	persistentQueryParams: ['i', 'ai', 'shi', 'sid', 'wid', 'from'],
 	getExtraQueryParams: () => ({
 		sid: serverIdQuery.value || undefined,
@@ -1357,6 +1406,27 @@ provideBrowseManager({
 						<GlobeIcon /> {{ option.label }} <ExternalIcon />
 					</template>
 				</ContextMenu>
+				<CurseforgeBrowseSection
+					v-if="projectType === 'mod'"
+					:provider="curseforgeProvider"
+					:available="curseforgeAvailable"
+					:filter="searchState.query.value"
+					:game-version="curseforgeNarrowing.gameVersion"
+					:loader="curseforgeNarrowing.loader"
+					:instance-id="instance?.id ?? null"
+				/>
+			</template>
+			<template #above-search>
+				<div v-if="projectType === 'mod'" class="flex flex-wrap items-center gap-2 pt-4">
+					<ProviderSwitch
+						:provider="curseforgeProvider"
+						:disabled="!curseforgeAvailable"
+						@select="curseforgeProvider = $event"
+					/>
+					<p v-if="!curseforgeAvailable" class="m-0 text-sm text-secondary">
+						{{ formatMessage(messages.curseforgeNoKey) }}
+					</p>
+				</div>
 			</template>
 		</BrowsePageLayout>
 		<CreationFlowModal
@@ -1376,13 +1446,5 @@ provideBrowseManager({
 		<Teleport v-if="browseRouteActive" to="#sidebar-teleport-target">
 			<BrowseSidebar />
 		</Teleport>
-		<CurseforgeBrowseSection
-			v-if="projectType === 'mod'"
-			:filter="searchState.query.value"
-			:game-version="curseforgeNarrowing.gameVersion"
-			:loader="curseforgeNarrowing.loader"
-			:instance-id="instance?.id ?? null"
-			@hide-modrinth="hideModrinthResults = $event"
-		/>
 	</div>
 </template>

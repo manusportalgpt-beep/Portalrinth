@@ -159,6 +159,15 @@ const messages = defineMessages({
 		id: 'app.settings.resource-management.curseforge.present',
 		defaultMessage: 'A key of your own is in use for CurseForge.',
 	},
+	infiniteScrollTitle: {
+		id: 'app.settings.resource-management.infinite-scroll.title',
+		defaultMessage: 'Keep loading search results',
+	},
+	infiniteScrollDescription: {
+		id: 'app.settings.resource-management.infinite-scroll.description',
+		defaultMessage:
+			'Load the next results as you scroll instead of showing page numbers. Turn this off to page through results instead.',
+	},
 })
 
 watch(
@@ -365,6 +374,20 @@ async function findLauncherDir() {
 						? formatMessage(messages.curseforgePresent)
 						: formatMessage(messages.curseforgeMissing)
 				}}
+			</p>
+		</div>
+
+		<div class="flex flex-col gap-2.5">
+			<h2 class="m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.infiniteScrollTitle) }}
+			</h2>
+			<Toggle
+				id="browse-infinite-scroll"
+				v-model="settings.browse_infinite_scroll"
+				:label="formatMessage(messages.infiniteScrollTitle)"
+			/>
+			<p class="m-0 leading-tight text-secondary">
+				{{ formatMessage(messages.infiniteScrollDescription) }}
 			</p>
 		</div>
 

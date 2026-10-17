@@ -44,6 +44,11 @@ export interface BrowseManagerContext {
 	excludeLoaders: ComputedRef<boolean>
 	refreshSearch: () => Promise<void>
 	setPage: (page: number) => Promise<void>
+	/** Appends the next page below the ones shown, for scrolling instead of paging. */
+	loadMore: () => Promise<void>
+	loadingMore: Ref<boolean>
+	canLoadMore: ComputedRef<boolean>
+	infiniteScroll: ComputedRef<boolean>
 	clearSearch: () => void
 	onFilterChange: () => void
 	linkOverridesAdvancedPrefs: Ref<boolean>

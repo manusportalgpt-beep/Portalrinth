@@ -40,6 +40,8 @@ export interface UseBrowseSearchOptions {
 	getExtraQueryParams?: () => Record<string, string | undefined>
 	maxResultsOptions?: ComputedRef<number[]>
 	displayMode?: Ref<'list' | 'grid' | 'gallery'> | ComputedRef<'list' | 'grid' | 'gallery'>
+	/** When true, results arrive by scrolling instead of by turning pages. */
+	infiniteScroll?: Ref<boolean>
 }
 
 export interface BrowseSearchState {
@@ -74,6 +76,11 @@ export interface BrowseSearchState {
 
 	refreshSearch: () => Promise<void>
 	setPage: (page: number) => Promise<void>
+	/** Appends the next page below the ones shown, for scrolling instead of paging. */
+	loadMore: () => Promise<void>
+	loadingMore: Ref<boolean>
+	canLoadMore: ComputedRef<boolean>
+	infiniteScroll: ComputedRef<boolean>
 	clearSearch: () => void
 	onFilterChange: () => void
 
@@ -191,6 +198,24 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 	const projectHits = shallowRef<BrowseSearchResponse['projectHits']>([])
 	const serverHits = shallowRef<BrowseSearchResponse['serverHits']>([])
 	const totalHits = ref(0)
+
+	/**
+	 * Whether results arrive by scrolling rather than by turning pages.
+	 *
+	 * Set by whoever mounts the browse tab, because it is a setting and settings
+	 * live with the application rather than with the search. It is read through
+	 * a ref rather than copied, so turning it in settings takes effect on the
+	 * tab that is already open instead of after a restart.
+	 */
+	const infiniteScroll = options.infiniteScroll ?? ref(false)
+	const effectiveInfiniteScroll = computed(() => infiniteScroll.value && !isServerType.value)
+
+	/** How many pages have already been appended below the first one. */
+	const loadedExtraPages = ref(0)
+	const loadingMore = ref(false)
+	const canLoadMore = computed(
+		() => effectiveInfiniteScroll.value && projectHits.value.length < totalHits.value,
+	)
 
 	const pageCount = computed(() => {
 		if (totalHits.value === 0) return 1
@@ -356,6 +381,7 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 				serverHits.value = response.serverHits
 			} else {
 				projectHits.value = response.projectHits
+				loadedExtraPages.value = 0
 			}
 			totalHits.value = response.total_hits
 			debug('refreshSearch complete', {
@@ -411,6 +437,48 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 		window.scrollTo({ top: 0, behavior: 'smooth' })
 	}
 
+	/**
+	 * Appends the next page below the ones already shown.
+	 *
+	 * The page is set, read and put back within one synchronous block, so the
+	 * watcher that normally turns a page change into a fresh search never sees
+	 * the change at all — which is the point: this is an addition to what is on
+	 * screen, not a replacement of it.
+	 */
+	async function loadMore() {
+		if (!canLoadMore.value || loadingMore.value || !active.value) {
+			return
+		}
+
+		const version = searchVersion
+		const page = currentPage.value
+		currentPage.value = page + 1
+		const params = effectiveRequestParams.value
+		currentPage.value = page
+
+		loadingMore.value = true
+		refreshing.value = true
+		try {
+			const response = await options.search(params)
+			if (!active.value || version !== searchVersion) {
+				return
+			}
+
+			// The first page is refreshed underneath the list while it is being
+			// scrolled, so the same project can arrive twice; it is drawn once.
+			const seen = new Set(projectHits.value.map((hit) => hit.project_id))
+			const fresh = response.projectHits.filter((hit) => !seen.has(hit.project_id))
+			projectHits.value = [...projectHits.value, ...fresh]
+			totalHits.value = response.total_hits
+			loadedExtraPages.value += 1
+		} catch (err) {
+			debug('loadMore error', err)
+		} finally {
+			loadingMore.value = false
+			refreshing.value = false
+		}
+	}
+
 	function clearSearch() {
 		query.value = ''
 		currentPage.value = 1
@@ -460,6 +528,10 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 		excludeLoaders,
 		refreshSearch,
 		setPage,
+		loadMore,
+		loadingMore,
+		canLoadMore,
+		infiniteScroll: effectiveInfiniteScroll,
 		clearSearch,
 		onFilterChange,
 		linkOverridesAdvancedPrefs,

@@ -1,12 +1,16 @@
 <script setup lang="ts">
 /**
- * Searching CurseForge alongside Modrinth.
+ * What CurseForge has for the current search.
  *
  * Drawn as its own section rather than mixed into the project cards, because the
  * two do not describe the same thing: a CurseForge result has no Modrinth
  * project id, no Modrinth versions and no Modrinth compatibility answers, and
  * dressing it up as one would make the cards claim things nobody asked. Keeping
  * it separate also means every result says where it came from.
+ *
+ * The switch that chooses whether to ask CurseForge at all lives above the
+ * search box, where the search itself is; its state is owned by whoever mounts
+ * both and passed in, so the two are never out of step.
  *
  * Nothing here reaches the network directly — the backend owns the key, and
  * CurseForge's index window and loader numbering, and a second copy of either in
@@ -22,11 +26,13 @@ import {
 	type CurseforgeHit,
 	curseforgeProjectUrl,
 	installCurseforgeMod,
-	isCurseforgeAvailable,
 	searchCurseforge,
 } from '@/helpers/curseforge-api'
 
 const props = defineProps<{
+	provider: 'modrinth' | 'both' | 'curseforge'
+	/** Whether a key is in force. Asked of the backend, never assumed. */
+	available: boolean
 	/** The words in the search box, so both providers are asked the same question. */
 	filter: string
 	gameVersion?: string | null
@@ -35,26 +41,10 @@ const props = defineProps<{
 	instanceId?: string | null
 }>()
 
-const emit = defineEmits<{ (event: 'hide-modrinth', hide: boolean): void }>()
-
 const { formatMessage } = useVIntl()
 
-type Provider = 'modrinth' | 'both' | 'curseforge'
-
 const messages = defineMessages({
-	providerLabel: { id: 'browse.curseforge.provider-label', defaultMessage: 'Search' },
-	providerModrinth: { id: 'browse.curseforge.provider-modrinth', defaultMessage: 'Modrinth' },
-	providerBoth: { id: 'browse.curseforge.provider-both', defaultMessage: 'Both' },
-	providerCurseforge: {
-		id: 'browse.curseforge.provider-curseforge',
-		defaultMessage: 'CurseForge',
-	},
 	sectionTitle: { id: 'browse.curseforge.section-title', defaultMessage: 'From CurseForge' },
-	noKey: {
-		id: 'browse.curseforge.no-key',
-		defaultMessage:
-			'CurseForge is not available: no API key is configured. One can be added in Settings → Resources.',
-	},
 	noResults: {
 		id: 'browse.curseforge.no-results',
 		defaultMessage: 'Nothing on CurseForge matches these words.',
@@ -83,8 +73,6 @@ const messages = defineMessages({
 	},
 })
 
-const provider = ref<Provider>('modrinth')
-const available = ref(false)
 const searching = ref(false)
 const hits = ref<CurseforgeHit[]>([])
 const errorMessage = ref<string | null>(null)
@@ -92,25 +80,10 @@ const installingIds = ref<Set<string>>(new Set())
 const openVersionsFor = ref<string | null>(null)
 const filesByProject = ref<Record<string, CurseforgeFile[] | 'loading'>>({})
 
-const includeCurseforge = computed(() => provider.value !== 'modrinth')
-
-void isCurseforgeAvailable().then((answer) => {
-	available.value = answer
-	if (!answer) {
-		// Offering a provider that cannot answer anything would be a control that
-		// quietly does nothing, so it is not offered at all.
-		provider.value = 'modrinth'
-		emit('hide-modrinth', false)
-	}
-})
-
-watch(
-	() => provider.value,
-	(hideModrinth) => emit('hide-modrinth', hideModrinth === 'curseforge'),
-)
+const wanted = computed(() => props.provider !== 'modrinth')
 
 async function runSearch() {
-	if (!includeCurseforge.value || !available.value) {
+	if (!wanted.value || !props.available) {
 		hits.value = []
 		return
 	}
@@ -142,7 +115,13 @@ async function runSearch() {
 }
 
 watch(
-	[() => provider.value, () => props.filter, () => props.gameVersion, () => props.loader],
+	[
+		() => props.provider,
+		() => props.filter,
+		() => props.gameVersion,
+		() => props.loader,
+		() => props.available,
+	],
 	() => {
 		void runSearch()
 	},
@@ -195,129 +174,101 @@ async function toggleVersions(hit: CurseforgeHit) {
 </script>
 
 <template>
-	<div class="flex flex-col gap-3">
-		<div class="flex flex-wrap items-center gap-3">
-			<span class="text-sm text-secondary">{{ formatMessage(messages.providerLabel) }}</span>
-			<div class="flex gap-1 rounded-lg bg-surface-3 p-1">
-				<Button
-					v-for="option in ['modrinth', 'both', 'curseforge'] as Provider[]"
-					:key="option"
-					:color="provider === option ? 'brand' : 'secondary'"
-					size="sm"
-					@click="provider = option"
-				>
-					{{
-						formatMessage(
-							option === 'modrinth'
-								? messages.providerModrinth
-								: option === 'both'
-									? messages.providerBoth
-									: messages.providerCurseforge,
-						)
-					}}
-				</Button>
-			</div>
-			<p v-if="!available" class="m-0 text-sm text-secondary">
-				{{ formatMessage(messages.noKey) }}
-			</p>
-		</div>
+	<template v-if="wanted && available">
+		<ProgressBar v-if="searching" />
+		<p v-if="errorMessage" class="m-0 text-sm text-red-500">{{ errorMessage }}</p>
 
-		<template v-if="includeCurseforge && available">
-			<ProgressBar v-if="searching" />
-			<p v-if="errorMessage" class="m-0 text-sm text-red-500">{{ errorMessage }}</p>
+		<p v-else-if="!filter.trim()" class="m-0 text-sm text-secondary">
+			{{ formatMessage(messages.emptyFilter) }}
+		</p>
+		<p v-else-if="!hits.length" class="m-0 text-sm text-secondary">
+			{{ formatMessage(messages.noResults) }}
+		</p>
 
-			<p v-else-if="!filter.trim()" class="m-0 text-sm text-secondary">
-				{{ formatMessage(messages.emptyFilter) }}
-			</p>
-			<p v-else-if="!hits.length" class="m-0 text-sm text-secondary">
-				{{ formatMessage(messages.noResults) }}
-			</p>
+		<div v-else class="flex flex-col gap-2">
+			<h2 class="m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.sectionTitle) }}
+			</h2>
 
-			<div v-else class="flex flex-col gap-2">
-				<h2 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.sectionTitle) }}
-				</h2>
-
-				<Card v-for="hit in hits" :key="hit.id">
-					<template #header>
-						<div class="flex w-full items-center gap-3">
-							<img
-								v-if="hit.icon_url"
-								:src="hit.icon_url"
-								:alt="hit.name"
-								class="h-12 w-12 rounded"
-							/>
-							<BoxIcon v-else class="h-12 w-12 shrink-0 text-contrast" />
-							<div class="flex min-w-0 flex-col">
-								<strong class="truncate text-contrast">{{ hit.name }}</strong>
-								<span v-if="hit.author_name" class="truncate text-sm text-secondary">
-									{{ hit.author_name }}
-								</span>
-							</div>
-
-							<div class="ml-auto flex shrink-0 items-center gap-2">
-								<IconButton
-									v-tooltip="formatMessage(messages.openOnCurseforge)"
-									:label="formatMessage(messages.openOnCurseforge)"
-									@click="openOnCurseforge(hit)"
-								>
-									<ExternalIcon />
-								</IconButton>
-								<Button
-									v-if="instanceId"
-									size="sm"
-									:disabled="!hit.latest_file || isInstalling(hit.id)"
-									@click="toggleVersions(hit)"
-								>
-									{{ formatMessage(messages.otherVersions) }}
-								</Button>
-								<Button
-									v-if="instanceId"
-									:disabled="!hit.latest_file || isInstalling(hit.id)"
-									@click="install(hit, hit.latest_file)"
-								>
-									<DownloadIcon />
-									{{
-										isInstalling(hit.id)
-											? formatMessage(messages.installing)
-											: formatMessage(messages.install)
-									}}
-								</Button>
-							</div>
-						</div>
-					</template>
-
-					<p v-if="hit.summary" class="m-0 text-secondary">{{ hit.summary }}</p>
-					<p class="m-0 text-sm text-secondary">
-						{{ formatMessage(messages.downloads, { count: hit.download_count }) }}
-						<span v-if="!hit.latest_file"> · {{ formatMessage(messages.noFileForVersion) }} </span>
-					</p>
-
-					<ul
-						v-if="openVersionsFor === hit.id && filesByProject[hit.id] !== 'loading'"
-						class="mt-2 flex list-none flex-col gap-1 p-0"
-					>
-						<li
-							v-for="file in filesByProject[hit.id] as CurseforgeFile[]"
-							:key="file.id"
-							class="flex items-center gap-2 text-sm"
-						>
-							<span class="truncate text-primary">{{ file.display_name }}</span>
-							<span v-if="file.game_version" class="shrink-0 text-secondary">
-								{{ file.game_version }}
+			<Card v-for="hit in hits" :key="hit.id">
+				<template #header>
+					<div class="flex w-full items-center gap-3">
+						<img
+							v-if="hit.icon_url"
+							:src="hit.icon_url"
+							:alt="hit.name"
+							class="h-12 w-12 rounded"
+						/>
+						<BoxIcon v-else class="h-12 w-12 shrink-0 text-contrast" />
+						<div class="flex min-w-0 flex-col">
+							<strong class="truncate text-contrast">{{ hit.name }}</strong>
+							<span v-if="hit.author_name" class="truncate text-sm text-secondary">
+								{{ hit.author_name }}
 							</span>
-							<Button
-								class="ml-auto shrink-0"
-								size="sm"
-								:disabled="isInstalling(hit.id)"
-								@click="install(hit, file)"
+						</div>
+
+						<div class="ml-auto flex shrink-0 items-center gap-2">
+							<IconButton
+								v-tooltip="formatMessage(messages.openOnCurseforge)"
+								:label="formatMessage(messages.openOnCurseforge)"
+								@click="openOnCurseforge(hit)"
 							>
-								{{ formatMessage(messages.install) }}
+								<ExternalIcon />
+							</IconButton>
+							<Button
+								v-if="instanceId"
+								size="sm"
+								:disabled="!hit.latest_file || isInstalling(hit.id)"
+								@click="toggleVersions(hit)"
+							>
+								{{ formatMessage(messages.otherVersions) }}
 							</Button>
-						</li>
-					</ul>
-				</Card>
-			</div>
-		</template>
-	</div>
+							<Button
+								v-if="instanceId"
+								:disabled="!hit.latest_file || isInstalling(hit.id)"
+								@click="install(hit, hit.latest_file)"
+							>
+								<DownloadIcon />
+								{{
+									isInstalling(hit.id)
+										? formatMessage(messages.installing)
+										: formatMessage(messages.install)
+								}}
+							</Button>
+						</div>
+					</div>
+				</template>
+
+				<p v-if="hit.summary" class="m-0 text-secondary">{{ hit.summary }}</p>
+				<p class="m-0 text-sm text-secondary">
+					{{ formatMessage(messages.downloads, { count: hit.download_count }) }}
+					<span v-if="!hit.latest_file"> · {{ formatMessage(messages.noFileForVersion) }} </span>
+				</p>
+
+				<ul
+					v-if="openVersionsFor === hit.id && filesByProject[hit.id] !== 'loading'"
+					class="mt-2 flex list-none flex-col gap-1 p-0"
+				>
+					<li
+						v-for="file in filesByProject[hit.id] as CurseforgeFile[]"
+						:key="file.id"
+						class="flex items-center gap-2 text-sm"
+					>
+						<span class="truncate text-primary">{{ file.display_name }}</span>
+						<span v-if="file.game_version" class="shrink-0 text-secondary">
+							{{ file.game_version }}
+						</span>
+						<Button
+							class="ml-auto shrink-0"
+							size="sm"
+							:disabled="isInstalling(hit.id)"
+							@click="install(hit, file)"
+						>
+							{{ formatMessage(messages.install) }}
+						</Button>
+					</li>
+				</ul>
+			</Card>
+		</div>
+	</template>
 </template>

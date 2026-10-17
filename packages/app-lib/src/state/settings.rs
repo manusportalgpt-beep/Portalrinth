@@ -126,6 +126,12 @@ pub struct Settings {
     /// and it takes precedence over the compiled-in one.
     pub curseforge_api_key: Option<String>,
 
+    /// Whether results arrive by scrolling instead of by turning pages.
+    ///
+    /// Default on, and a column with a default rather than a nullable one so
+    /// that an older settings row reads as on without a migration step.
+    pub browse_infinite_scroll: bool,
+
     pub version: usize,
 }
 
@@ -195,6 +201,11 @@ impl Settings {
         // sqlx offline cache, for the same reason as proxy_url above.
         let curseforge_api_key: Option<String> =
             sqlx::query_scalar("SELECT curseforge_api_key FROM settings")
+                .fetch_one(exec)
+                .await?;
+
+        let browse_infinite_scroll: i64 =
+            sqlx::query_scalar("SELECT browse_infinite_scroll FROM settings")
                 .fetch_one(exec)
                 .await?;
 
@@ -305,6 +316,7 @@ impl Settings {
             background_blur: background_blur == 1,
             background_dim: background_dim.clamp(0, 100) as u32,
             curseforge_api_key,
+            browse_infinite_scroll: browse_infinite_scroll == 1,
             sync_theme_across_devices: res.sync_theme_across_devices == 1,
             sync_behavior_across_devices: res.sync_behavior_across_devices == 1,
             sync_features_across_devices: res.sync_features_across_devices == 1,
@@ -494,6 +506,11 @@ impl Settings {
 
         sqlx::query("UPDATE settings SET curseforge_api_key = $1")
             .bind(&self.curseforge_api_key)
+            .execute(exec)
+            .await?;
+
+        sqlx::query("UPDATE settings SET browse_infinite_scroll = $1")
+            .bind(i64::from(self.browse_infinite_scroll))
             .execute(exec)
             .await?;
 
