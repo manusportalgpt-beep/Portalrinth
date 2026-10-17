@@ -137,6 +137,12 @@ struct CfFileData {
     download_url: Option<String>,
     #[serde(default)]
     hashes: Vec<CfFileHash>,
+    /// CurseForge's own game version names, which are the same strings ours are
+    /// for Minecraft but not for anything else on their site.
+    #[serde(default)]
+    game_versions: Vec<String>,
+    #[serde(default)]
+    loaders: Vec<i64>,
 }
 
 #[derive(Deserialize)]
@@ -584,6 +590,103 @@ async fn download_cf_file(
     )
     .await?;
     Ok(())
+}
+
+/// Portalrinth's own: one CurseForge mod, picked out of a search and put in an
+/// instance, rather than a whole modpack's worth of them.
+///
+/// The pack installer stamps what it fetches as the pack's own content, so that
+/// a pack's list and everything a person adds to it afterwards can be told
+/// apart. A mod added on its own is the other kind, and is stamped as such.
+#[tracing::instrument(skip_all)]
+pub async fn install_curseforge_mod(
+    instance_id: &str,
+    mod_id: u64,
+    file_id: u64,
+    state: &State,
+) -> crate::Result<String> {
+    let Some(key) = crate::api::curseforge_metadata::api_key() else {
+        return Err(crate::ErrorKind::InputError(
+            "this build has no CurseForge key, so CurseForge mods cannot be fetched"
+                .to_string(),
+        )
+        .as_error());
+    };
+
+    let url =
+        format!("https://api.curseforge.com/v1/mods/{mod_id}/files/{file_id}");
+    let body = fetch_advanced(
+        Method::GET,
+        &url,
+        None,
+        None,
+        Some(("x-api-key", &key)),
+        None,
+        None,
+        None,
+        &state.fetch_semaphore,
+        &state.pool,
+    )
+    .await?;
+    let file = serde_json::from_slice::<CfFileData>(&body)?;
+
+    // Where to fetch it from is asked of CurseForge rather than worked out
+    // here: it knows about projects whose distribution the author limited, and
+    // it has moved its files between hosts more than once.
+    let mirrors = crate::api::curseforge_search::download_urls(mod_id, file_id)
+        .await?;
+    let mirrors: Vec<&str> = mirrors.iter().map(String::as_str).collect();
+    if mirrors.is_empty() {
+        return Err(crate::ErrorKind::InputError(format!(
+            "no download URL could be determined (file id {})",
+            file.id
+        ))
+        .as_error());
+    }
+    let download_meta = DownloadMeta {
+        reason: DownloadReason::Standalone,
+        game_version: file
+            .game_versions
+            .first()
+            .cloned()
+            .unwrap_or_default(),
+        loader: file
+            .loaders
+            .first()
+            .and_then(|loader| u64::try_from(*loader).ok())
+            .and_then(crate::api::curseforge_search::curseforge_loader_name)
+            .unwrap_or_default()
+            .to_string(),
+        dependent_on: None,
+    };
+    let bytes = fetch_mirrors(
+        &mirrors,
+        file.sha1(),
+        Some(&download_meta),
+        None,
+        &state.fetch_semaphore,
+        &state.pool,
+    )
+    .await?;
+
+    let safe_file_name = sanitize_filename(&file.file_name);
+    let project_id = file.mod_id.to_string();
+    let curseforge_file_id = file.id.to_string();
+    let _permit = state.install_db_semaphore.acquire().await?;
+    crate::state::instances::commands::add_project_bytes(
+        instance_id,
+        &safe_file_name,
+        bytes,
+        file.sha1(),
+        None,
+        ContentSourceKind::CurseForge,
+        Some(&project_id),
+        Some(&curseforge_file_id),
+        state,
+    )
+    .await?;
+
+    Ok(safe_file_name)
 }
 
 /// Noctrinth's own: names a CurseForge pack ships its own picture under, in

@@ -34,13 +34,13 @@ export const minecraftAuthErrors: MinecraftAuthError[] = [
 		whatHappened: defineMessage({
 			id: 'app.minecraft-auth-error.refresh-token.what',
 			defaultMessage:
-				'Your saved Microsoft sign-in token has expired or was revoked, so Noctrinth cannot refresh your Minecraft session.',
+				'Your saved Microsoft sign-in token has expired or was revoked, so Portalrinth cannot refresh your Minecraft session.',
 		}),
 		stepsToFix: [
 			{
 				message: defineMessage({
 					id: 'app.minecraft-auth-error.refresh-token.step-1',
-					defaultMessage: 'Sign out of the affected Minecraft account in Noctrinth',
+					defaultMessage: 'Sign out of the affected Minecraft account in Portalrinth',
 				}),
 			},
 			{
@@ -86,7 +86,7 @@ export const minecraftAuthErrors: MinecraftAuthError[] = [
 			{
 				message: defineMessage({
 					id: 'app.minecraft-auth-error.sisu-authenticate.step-4',
-					defaultMessage: 'Restart Noctrinth',
+					defaultMessage: 'Restart Portalrinth',
 				}),
 			},
 			{
@@ -116,7 +116,7 @@ export const minecraftAuthErrors: MinecraftAuthError[] = [
 			{
 				message: defineMessage({
 					id: 'app.minecraft-auth-error.too-many-requests.step-2',
-					defaultMessage: 'Restart Noctrinth after waiting',
+					defaultMessage: 'Restart Portalrinth after waiting',
 				}),
 			},
 			{
@@ -141,7 +141,7 @@ export const minecraftAuthErrors: MinecraftAuthError[] = [
 		whatHappened: defineMessage({
 			id: 'app.minecraft-auth-error.minecraft-server-error.what',
 			defaultMessage:
-				"Minecraft's authentication service is returning a server error, so Noctrinth cannot finish signing you in right now.",
+				"Minecraft's authentication service is returning a server error, so Portalrinth cannot finish signing you in right now.",
 		}),
 		stepsToFix: [
 			{
@@ -212,7 +212,7 @@ export const minecraftAuthErrors: MinecraftAuthError[] = [
 			{
 				message: defineMessage({
 					id: 'app.minecraft-auth-error.player-profile.step-5',
-					defaultMessage: 'Try signing in to Noctrinth again',
+					defaultMessage: 'Try signing in to Portalrinth again',
 				}),
 			},
 		],
@@ -231,13 +231,13 @@ export const minecraftAuthErrors: MinecraftAuthError[] = [
 		whatHappened: defineMessage({
 			id: 'app.minecraft-auth-error.network.what',
 			defaultMessage:
-				'Noctrinth could not connect to a Microsoft, Xbox, or Minecraft service needed for sign-in. This is usually caused by a local network, DNS, proxy, firewall, hosts file, VPN, or antivirus issue.',
+				'Portalrinth could not connect to a Microsoft, Xbox, or Minecraft service needed for sign-in. This is usually caused by a local network, DNS, proxy, firewall, hosts file, VPN, or antivirus issue.',
 		}),
 		stepsToFix: [
 			{
 				message: defineMessage({
 					id: 'app.minecraft-auth-error.network.step-1',
-					defaultMessage: 'Restart Noctrinth and try signing in again',
+					defaultMessage: 'Restart Portalrinth and try signing in again',
 				}),
 			},
 			{
@@ -250,7 +250,7 @@ export const minecraftAuthErrors: MinecraftAuthError[] = [
 				message: defineMessage({
 					id: 'app.minecraft-auth-error.network.step-3',
 					defaultMessage:
-						'Allow Noctrinth through your firewall, antivirus, proxy, VPN, and hosts file rules',
+						'Allow Portalrinth through your firewall, antivirus, proxy, VPN, and hosts file rules',
 				}),
 			},
 			{
@@ -528,7 +528,7 @@ export const minecraftAuthErrors: MinecraftAuthError[] = [
 		whatHappened: defineMessage({
 			id: 'app.minecraft-auth-error.xsts-authorize.what',
 			defaultMessage:
-				'Xbox services rejected the request to authorize this account for Minecraft services, but did not return a specific account restriction that Noctrinth recognizes.',
+				'Xbox services rejected the request to authorize this account for Minecraft services, but did not return a specific account restriction that Portalrinth recognizes.',
 		}),
 		stepsToFix: [
 			{
@@ -547,7 +547,7 @@ export const minecraftAuthErrors: MinecraftAuthError[] = [
 			{
 				message: defineMessage({
 					id: 'app.minecraft-auth-error.xsts-authorize.step-3',
-					defaultMessage: 'Try signing in to Noctrinth again',
+					defaultMessage: 'Try signing in to Portalrinth again',
 				}),
 			},
 			{

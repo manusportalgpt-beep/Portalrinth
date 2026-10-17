@@ -50,19 +50,19 @@ const messages = defineMessages({
 	},
 	titleStateInit: {
 		id: 'app.error-modal.title.state-init',
-		defaultMessage: 'Error initializing Noctrinth',
+		defaultMessage: 'Error initializing Portalrinth',
 	},
 	titleUnknown: { id: 'app.error-modal.title.unknown', defaultMessage: 'An error occurred' },
 	networkHeading: { id: 'app.error-modal.network.heading', defaultMessage: 'Network issues' },
 	networkBody: {
 		id: 'app.error-modal.network.body',
 		defaultMessage:
-			"It looks like there were issues with Noctrinth connecting to Microsoft's servers. This is often the result of a poor connection, so we recommend trying again to see if it works. If issues continue to persist, follow the steps in <support-article>our support article</support-article> to troubleshoot.",
+			"It looks like there were issues with Portalrinth connecting to Microsoft's servers. This is often the result of a poor connection, so we recommend trying again to see if it works. If issues continue to persist, follow the steps in <support-article>our support article</support-article> to troubleshoot.",
 	},
 	hostsFileBody: {
 		id: 'app.error-modal.hosts-file.body',
 		defaultMessage:
-			'Noctrinth tried to connect to Microsoft / Xbox / Minecraft services, but the remote server rejected the connection. This may indicate that these services are blocked by the hosts file. Please visit <support-article>our support article</support-article> for steps on how to fix the issue.',
+			'Portalrinth tried to connect to Microsoft / Xbox / Minecraft services, but the remote server rejected the connection. This may indicate that these services are blocked by the hosts file. Please visit <support-article>our support article</support-article> for steps on how to fix the issue.',
 	},
 	serviceOutageHeading: {
 		id: 'app.error-modal.service-outage.heading',
@@ -71,7 +71,7 @@ const messages = defineMessages({
 	serviceOutageBody: {
 		id: 'app.error-modal.service-outage.body',
 		defaultMessage:
-			'Microsoft’s sign-in servers answered with an error, and Noctrinth kept retrying without getting through. This is on their side, and it usually clears up within a few minutes — wait a moment, then try again.',
+			'Microsoft’s sign-in servers answered with an error, and Portalrinth kept retrying without getting through. This is on their side, and it usually clears up within a few minutes — wait a moment, then try again.',
 	},
 	otherAccountHeading: {
 		id: 'app.error-modal.other-account.heading',
@@ -106,7 +106,7 @@ const messages = defineMessages({
 	readOnlyBody: {
 		id: 'app.error-modal.directory.read-only.body',
 		defaultMessage:
-			'It looks like Noctrinth is unable to write to the directory you selected. Please adjust the permissions of the directory and try again or cancel the directory change.',
+			'It looks like Portalrinth is unable to write to the directory you selected. Please adjust the permissions of the directory and try again or cancel the directory change.',
 	},
 	noSpaceHeading: {
 		id: 'app.error-modal.directory.no-space.heading',
@@ -120,7 +120,7 @@ const messages = defineMessages({
 	directoryGenericBody: {
 		id: 'app.error-modal.directory.generic.body',
 		defaultMessage:
-			'Noctrinth is unable to migrate to the new directory you selected. Please contact support for help or cancel the directory change.',
+			'Portalrinth is unable to migrate to the new directory you selected. Please contact support for help or cancel the directory change.',
 	},
 	retryDirectoryChange: {
 		id: 'app.error-modal.directory.retry',
@@ -133,7 +133,7 @@ const messages = defineMessages({
 	stateInitBody: {
 		id: 'app.error-modal.state-init.body',
 		defaultMessage:
-			'Noctrinth failed to load correctly. This may be because of a corrupted file, or because the app is missing crucial files.',
+			'Portalrinth failed to load correctly. This may be because of a corrupted file, or because the app is missing crucial files.',
 	},
 	stateInitFixes: {
 		id: 'app.error-modal.state-init.fixes',
@@ -149,7 +149,7 @@ const messages = defineMessages({
 	},
 	noLoaderBody: {
 		id: 'app.error-modal.no-loader.body',
-		defaultMessage: 'Noctrinth failed to find the loader version for this instance.',
+		defaultMessage: 'Portalrinth failed to find the loader version for this instance.',
 	},
 	noLoaderFix: {
 		id: 'app.error-modal.no-loader.fix',

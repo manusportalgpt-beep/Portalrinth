@@ -323,7 +323,7 @@ const messages = defineMessages({
 	},
 	appVersion: {
 		id: 'app.settings.app-version',
-		defaultMessage: 'Noctrinth {version}',
+		defaultMessage: 'Portalrinth {version}',
 	},
 	macos: {
 		id: 'app.settings.operating-system.macos',

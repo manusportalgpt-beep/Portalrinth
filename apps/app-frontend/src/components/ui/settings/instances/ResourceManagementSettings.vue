@@ -5,6 +5,7 @@ import {
 	FolderOpenIcon,
 	FolderSearchIcon,
 	GlobeIcon,
+	KeyIcon,
 	LoaderCircleIcon,
 	TrashIcon,
 } from '@modrinth/assets'
@@ -18,8 +19,9 @@ import {
 	Toggle,
 	useVIntl,
 } from '@modrinth/ui'
+import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 
 import {
 	exportDebugInfo,
@@ -59,7 +61,7 @@ const messages = defineMessages({
 	appDirectoryDescription: {
 		id: 'app.settings.resource-management.app-directory.description',
 		defaultMessage:
-			'Where Noctrinth stores instances and other files. Changes take effect after restarting the app.',
+			'Where Portalrinth stores instances and other files. Changes take effect after restarting the app.',
 	},
 	selectAppDirectory: {
 		id: 'app.settings.resource-management.app-directory.select',
@@ -139,6 +141,24 @@ const messages = defineMessages({
 		defaultMessage:
 			'Backups of important app data are stored here in case you need to recover them later.',
 	},
+	curseforgeTitle: {
+		id: 'app.settings.resource-management.curseforge.title',
+		defaultMessage: 'CurseForge API key',
+	},
+	curseforgeDescription: {
+		id: 'app.settings.resource-management.curseforge.description',
+		defaultMessage:
+			'CurseForge requires a key for searching, listing files and downloading. Leave this empty to use the key this build was made with, if it has one.',
+	},
+	curseforgeMissing: {
+		id: 'app.settings.resource-management.curseforge.missing',
+		defaultMessage:
+			'No key is configured, so CurseForge is not available anywhere in this launcher.',
+	},
+	curseforgePresent: {
+		id: 'app.settings.resource-management.curseforge.present',
+		defaultMessage: 'A key of your own is in use for CurseForge.',
+	},
 })
 
 watch(
@@ -154,10 +174,33 @@ watch(
 			setSettings.proxy_url = null
 		}
 
+		if (!setSettings.curseforge_api_key) {
+			setSettings.curseforge_api_key = null
+		}
+
 		await set(setSettings)
+
+		// Whether the key took effect is the backend's answer, not this file's:
+		// it is what decides if CurseForge is reachable at all.
+		await refreshCurseforgeAvailability()
 	},
 	{ deep: true },
 )
+
+const curseforgeAvailable = ref(false)
+
+async function refreshCurseforgeAvailability() {
+	try {
+		curseforgeAvailable.value = await invoke<boolean>(
+			'plugin:noctrinth-curseforge|curseforge_is_available',
+		)
+	} catch {
+		// An empty key is the ordinary case, not a failure to report.
+		curseforgeAvailable.value = false
+	}
+}
+
+onMounted(refreshCurseforgeAvailability)
 
 async function purgeCache() {
 	await purge_cache_types([
@@ -300,6 +343,30 @@ async function findLauncherDir() {
 			/>
 			<p class="m-0 leading-tight text-secondary">
 				{{ formatMessage(messages.proxyDescription) }}
+			</p>
+		</div>
+
+		<div class="flex flex-col gap-2.5">
+			<h2 class="m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.curseforgeTitle) }}
+			</h2>
+			<Input
+				id="curseforge-api-key"
+				v-model="settings.curseforge_api_key"
+				:icon="KeyIcon"
+				type="password"
+				placeholder="••••••••••••••••"
+				wrapper-class="w-full"
+			/>
+			<p class="m-0 leading-tight text-secondary">
+				{{ formatMessage(messages.curseforgeDescription) }}
+			</p>
+			<p class="m-0 leading-tight text-secondary">
+				{{
+					curseforgeAvailable
+						? formatMessage(messages.curseforgePresent)
+						: formatMessage(messages.curseforgeMissing)
+				}}
 			</p>
 		</div>
 

@@ -1931,43 +1931,64 @@ impl CachedEntry {
                 vec![]
             }
             CacheValueType::ProjectVersions => {
-                let mut values = vec![];
+                // One request per project, and a pack with sixty dependencies
+                // would otherwise make them one after another, each waiting on
+                // the last to come back. That is slow, and — because the API rate
+                // limiter is a bucket that keeps filling while the last request
+                // is still in flight — it is why installing anything with
+                // dependencies used to stop partway through with "too many
+                // requests". The semaphore and the limiter both still apply;
+                // they just no longer have nothing to do between requests.
+                const PROJECT_VERSION_CONCURRENCY: usize = 8;
 
-                for key in keys {
-                    let project_id = key.to_string();
-                    let url = format!(
-                        "{}project/{}/version?include_changelog=false",
-                        env!("MODRINTH_API_URL"),
-                        project_id
-                    );
+                use futures::stream::StreamExt;
+                // The ids are copied out first. Handing the stream a reference
+                // into the set means each future borrows from the closure's own
+                // argument, which the compiler cannot put a lifetime on.
+                let project_ids: Vec<String> =
+                    keys.iter().map(|key| key.to_string()).collect();
 
-                    match fetch_json::<Vec<Version>>(
-                        Method::GET,
-                        &url,
-                        None,
-                        None,
-                        Some("/v2/project/:id/version"),
-                        fetch_semaphore,
-                        pool,
-                    )
-                    .await
-                    {
-                        Ok(versions) => {
-                            values.push((
-                                CacheValue::ProjectVersions(
-                                    CachedProjectVersions {
-                                        project_id,
-                                        versions,
-                                    },
+                let fetched = futures::stream::iter(project_ids)
+                    .map(|project_id| {
+                        let url = format!(
+                            "{}project/{}/version?include_changelog=false",
+                            env!("MODRINTH_API_URL"),
+                            project_id
+                        );
+
+                        async move {
+                            fetch_json::<Vec<Version>>(
+                                Method::GET,
+                                &url,
+                                None,
+                                None,
+                                Some("/v2/project/:id/version"),
+                                fetch_semaphore,
+                                pool,
+                            )
+                            .await
+                            .map(|versions| {
+                                (
+                                    CacheValue::ProjectVersions(
+                                        CachedProjectVersions {
+                                            project_id,
+                                            versions,
+                                        },
+                                    )
+                                    .get_entry(),
+                                    true,
                                 )
-                                .get_entry(),
-                                true,
-                            ));
+                            })
                         }
-                        Err(error) => return Err(error),
-                    }
-                }
+                    })
+                    .buffer_unordered(PROJECT_VERSION_CONCURRENCY)
+                    .collect::<Vec<_>>()
+                    .await;
 
+                let mut values = Vec::with_capacity(fetched.len());
+                for result in fetched {
+                    values.push(result?);
+                }
                 values
             }
             CacheValueType::SearchResultsV3 => {

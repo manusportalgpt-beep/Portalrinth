@@ -115,8 +115,42 @@ jobs:
       - name: Check app-lib and app crates
         run: cargo check -p theseus -p theseus_gui --all-targets
 
+      # The logs of a failed step need an account to read, so a red run here says
+      # only that something did not compile. This puts the compiler's own words
+      # where anyone can see them.
+      - name: Report what cargo said
+        if: failure()
+        run: |
+          set +e
+          cargo check --message-format=short -p theseus -p theseus_gui --all-targets \
+            > "$RUNNER_TEMP/cargo.log" 2>&1
+          code=$?
+          # Colour codes count towards the annotation's length and stop it being
+          # readable, and one error per line is all an annotation can hold.
+          sed -e 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/cargo.log" | grep -E "error|warning: unused|cannot find|^ *-->" \
+            | tail -n 30 \
+            | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g' \
+            > "$RUNNER_TEMP/cargo-tail.txt"
+          echo "::error title=cargo check failed::$(cat "$RUNNER_TEMP/cargo-tail.txt")"
+          exit $code
+
       - name: Run app-lib unit tests
-        run: cargo test -p theseus
+        run: |
+          cargo test -p theseus 2>&1 | tee "$RUNNER_TEMP/theseus-tests.log"
+          exit ${PIPESTATUS[0]}
+
+      # A failing test says nothing at all in the log by default, which is the
+      # same blind spot the step above exists to close for the compiler.
+      - name: Report which tests failed
+        if: failure()
+        run: |
+          set +e
+          grep -E "^(test |failures:|    [a-z_]+::)" "$RUNNER_TEMP/theseus-tests.log" \
+            | tail -n 40 \
+            | sed -e 's/%/%25/g' -e 's/\r/%0D/g' \
+            > "$RUNNER_TEMP/test-tail.txt"
+          echo "::error title=unit tests failed::$(cat "$RUNNER_TEMP/test-tail.txt")"
+          exit 0
 
       # The app crate carries a few of its own — how an error is classified on
       # its way to the interface, for one — and the check above already builds

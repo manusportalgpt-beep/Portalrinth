@@ -75,6 +75,12 @@ export interface BrowseManagerContext {
 	serverOnly?: Ref<boolean>
 	showServerOnly?: ComputedRef<boolean>
 	serverOnlyLabel?: ComputedRef<string>
+	/**
+	 * Draws no Modrinth results at all, for when another provider is answering
+	 * the search instead. The filters and the search box stay: they are what the
+	 * other provider is asked with.
+	 */
+	hideProjectHits?: Ref<boolean>
 	hiddenFilterTypes?: ComputedRef<string[]>
 	advancedFiltersCollapsed?: Ref<boolean>
 	dismissedPhotosensitivityFilterWarning?: Ref<boolean>

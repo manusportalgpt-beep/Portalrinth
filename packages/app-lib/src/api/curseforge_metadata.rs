@@ -52,24 +52,63 @@ const MAX_IDS_PER_REQUEST: usize = 500;
 /// the backend is simply told what it is. `None` means CurseForge cannot be
 /// asked anything, which is a perfectly ordinary way for a build to be
 /// configured and must stay silent rather than erroring.
-static API_KEY: RwLock<Option<String>> = RwLock::new(None);
+static BUILD_KEY: RwLock<Option<String>> = RwLock::new(None);
+
+/// The key the person using this launcher put in their settings.
+///
+/// Kept as a copy rather than read out of settings on every call because
+/// `api_key` is asked from the middle of list-drawing code, and a key is
+/// needed before anything can be asked. It is refreshed whenever settings are
+/// loaded or saved, which is the only time it can change.
+static USER_KEY: RwLock<Option<String>> = RwLock::new(None);
 
 /// Called once from the frontend at startup.
 pub fn set_api_key(key: Option<String>) {
-    let key = key
-        .map(|key| key.trim().to_string())
-        .filter(|k| !k.is_empty());
-    let had_key = api_key().is_some();
-    if let Ok(mut slot) = API_KEY.write() {
+    let key = clean(key);
+    if let Ok(mut slot) = BUILD_KEY.write() {
         *slot = key;
     }
-    if !had_key && api_key().is_some() {
-        tracing::debug!("CurseForge metadata lookups are available");
+    match api_key() {
+        Some(_) => tracing::debug!("CurseForge lookups are available"),
+        None => tracing::debug!(
+            "This build has no CurseForge key. One can be added in settings."
+        ),
     }
 }
 
-fn api_key() -> Option<String> {
-    API_KEY.read().ok().and_then(|slot| slot.clone())
+/// Takes the key out of the settings the launcher just loaded or saved.
+///
+/// Called on both paths on purpose: settings are loaded once at startup and
+/// written whenever anything in them changes, so between the two the key can
+/// be added, changed or removed without the launcher being restarted.
+pub fn adopt_user_key(key: Option<&str>) {
+    if let Ok(mut slot) = USER_KEY.write() {
+        *slot = clean(key.map(str::to_owned));
+    }
+}
+
+/// The key to ask CurseForge with: the person's own if they set one, and the
+/// build's if they did not.
+///
+/// Also read by `curseforge_search`, which cannot ask CurseForge anything
+/// without it either.
+pub fn api_key() -> Option<String> {
+    if let Ok(slot) = USER_KEY.read()
+        && let Some(key) = slot.clone()
+    {
+        return Some(key);
+    }
+    BUILD_KEY.read().ok().and_then(|slot| slot.clone())
+}
+
+/// Whether this launcher can ask CurseForge anything at all.
+pub fn is_available() -> bool {
+    api_key().is_some()
+}
+
+fn clean(key: Option<String>) -> Option<String> {
+    key.map(|key| key.trim().to_string())
+        .filter(|key| !key.is_empty())
 }
 
 /// A CurseForge project, reduced to what a content row draws.
@@ -669,14 +708,36 @@ mod tests {
     }
 
     #[test]
-    fn a_key_that_is_only_whitespace_counts_as_no_key() {
+    fn the_key_in_force_is_the_persons_own_when_they_set_one() {
+        // One test rather than three on purpose: the two slots are process-wide,
+        // and tests run in parallel threads, so separate tests asserting on them
+        // would be asserting on each other's writes.
         set_api_key(Some("   ".to_string()));
-        assert!(api_key().is_none());
+        assert!(api_key().is_none(), "whitespace is not a key");
 
-        set_api_key(Some("real-key".to_string()));
-        assert_eq!(api_key().as_deref(), Some("real-key"));
+        set_api_key(Some("build-key".to_string()));
+        assert_eq!(api_key().as_deref(), Some("build-key"));
+        assert!(is_available());
+
+        adopt_user_key(Some("person-key"));
+        assert_eq!(api_key().as_deref(), Some("person-key"));
+
+        adopt_user_key(Some("  \t "));
+        assert_eq!(
+            api_key().as_deref(),
+            Some("build-key"),
+            "a blank key must not shadow the build's with nothing"
+        );
+
+        adopt_user_key(None);
+        assert_eq!(
+            api_key().as_deref(),
+            Some("build-key"),
+            "removing your own key falls back to the build's, not to nothing"
+        );
 
         set_api_key(None);
-        assert!(api_key().is_none());
+        adopt_user_key(None);
+        assert!(!is_available());
     }
 }

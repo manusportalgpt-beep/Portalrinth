@@ -67,6 +67,32 @@ Each project may have its own file with detailed instructions:
 - [`apps/labrinth/AGENTS.md`](apps/labrinth/AGENTS.md) — Backend API
 - [`apps/frontend/AGENTS.md`](apps/frontend/AGENTS.md) - Frontend Website
 
+## Working Agreement
+
+Two rules that hold for every change in this repository, whatever else this file says.
+
+### 1. Commit and push when the task is done
+
+Every finished piece of work ends committed and pushed to `origin`, on the branch the work belongs on. Not "the next time", not "once CI is green" — as soon as the task is done. Fetch first and check `git rev-list --left-right --count origin/<branch>...HEAD`; if the remote has moved, integrate before pushing, and never force-push.
+
+### 2. The function has to match the interface
+
+A capability that no control reaches is not a capability, and a control that leads nowhere is worse than neither. Both halves ship together:
+
+- Do not add a Tauri command, a backend function, or an API module that nothing in the interface calls. If it cannot be wired up in the same change, it does not go in.
+- Do not add a button, a toggle, a switch, or a menu entry whose action is not implemented and reachable end to end.
+- When something is deliberately left out — no key configured, platform unsupported, feature behind a flag — the interface has to say so in the place the person is looking, rather than showing a control that quietly does nothing.
+
+A half-landed feature that a person can reach is a bug, even when every line of it is correct.
+
+### 3. Always do the Noctrinth Windows build
+
+Every finished change is built for Windows before it is called done, and the resulting installer is handed over. A change that only passes CI has not proved it runs: the CI job type-checks and lints, while the build is what catches the missing toolchain file, the mis-named icon, the bundle that will not package, and the panic that only happens once the window exists.
+
+The build to run is `.github/workflows/noctrinth-build-windows.yml`, and only that one. Push to `main` to start it, then report the run link and the artifact name. Nothing else counts as the build: not CI going green, not a passing `cargo check`, not a local build of one crate.
+
+If the build fails, that is the task finishing late rather than a separate problem to report.
+
 ## Code Guidelines
 
 ### Comments

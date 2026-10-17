@@ -81,19 +81,19 @@
 		"message": "Показаны недавние выпуски. Полный список изменений приложения Modrinth доступен на их сайте."
 	},
 	"app.changelog.noctrinth-note": {
-		"message": "Полный список изменений Noctrinth также доступен онлайн."
+		"message": "Полный список изменений Portalrinth также доступен онлайн."
 	},
 	"app.changelog.open-modrinth": {
 		"message": "Открыть список изменений Modrinth"
 	},
 	"app.changelog.open-noctrinth": {
-		"message": "Открыть список изменений Noctrinth"
+		"message": "Открыть список изменений Portalrinth"
 	},
 	"app.changelog.source.modrinth": {
 		"message": "Modrinth"
 	},
 	"app.changelog.source.noctrinth": {
-		"message": "Noctrinth"
+		"message": "Portalrinth"
 	},
 	"app.changelog.support": {
 		"message": "Поддержать на Boosty"
@@ -696,7 +696,7 @@
 		"message": "Отменить смену папки"
 	},
 	"app.error-modal.directory.generic.body": {
-		"message": "Noctrinth не может перенести данные в выбранную папку. Обратитесь в поддержку или отмените смену папки."
+		"message": "Portalrinth не может перенести данные в выбранную папку. Обратитесь в поддержку или отмените смену папки."
 	},
 	"app.error-modal.directory.no-space.body": {
 		"message": "Похоже, на диске с выбранной папкой не хватает места. Освободите место и попробуйте снова или отмените смену папки."
@@ -705,7 +705,7 @@
 		"message": "Недостаточно места"
 	},
 	"app.error-modal.directory.read-only.body": {
-		"message": "Похоже, Noctrinth не может писать в выбранную папку. Измените права доступа и попробуйте снова или отмените смену папки."
+		"message": "Похоже, Portalrinth не может писать в выбранную папку. Измените права доступа и попробуйте снова или отмените смену папки."
 	},
 	"app.error-modal.directory.read-only.heading": {
 		"message": "Измените права на папку"
@@ -723,10 +723,10 @@
 		"message": "Написать в поддержку"
 	},
 	"app.error-modal.hosts-file.body": {
-		"message": "Noctrinth пытался подключиться к сервисам Microsoft / Xbox / Minecraft, но удалённый сервер отклонил соединение. Возможно, эти сервисы заблокированы в файле hosts. Откройте <support-article>нашу статью поддержки</support-article>, чтобы узнать, как это исправить."
+		"message": "Portalrinth пытался подключиться к сервисам Microsoft / Xbox / Minecraft, но удалённый сервер отклонил соединение. Возможно, эти сервисы заблокированы в файле hosts. Откройте <support-article>нашу статью поддержки</support-article>, чтобы узнать, как это исправить."
 	},
 	"app.error-modal.network.body": {
-		"message": "Похоже, у Noctrinth не получилось связаться с серверами Microsoft. Обычно виновато нестабильное соединение, так что попробуйте ещё раз. Если не помогает, выполните шаги из <support-article>нашей статьи поддержки</support-article>."
+		"message": "Похоже, у Portalrinth не получилось связаться с серверами Microsoft. Обычно виновато нестабильное соединение, так что попробуйте ещё раз. Если не помогает, выполните шаги из <support-article>нашей статьи поддержки</support-article>."
 	},
 	"app.error-modal.network.heading": {
 		"message": "Проблемы с сетью"
@@ -735,7 +735,7 @@
 		"message": "Сообщения об ошибке нет."
 	},
 	"app.error-modal.no-loader.body": {
-		"message": "Noctrinth не нашёл версию загрузчика для этой сборки."
+		"message": "Portalrinth не нашёл версию загрузчика для этой сборки."
 	},
 	"app.error-modal.no-loader.fix": {
 		"message": "Чтобы это исправить, нужно восстановить сборку. Нажмите кнопку ниже."
@@ -753,13 +753,13 @@
 		"message": "Попробуйте другой аккаунт Microsoft"
 	},
 	"app.error-modal.service-outage.body": {
-		"message": "Серверы входа Microsoft ответили ошибкой, и Noctrinth не смог до них достучаться даже после нескольких попыток. Это неполадка на их стороне, обычно она проходит за несколько минут — подождите немного и попробуйте снова."
+		"message": "Серверы входа Microsoft ответили ошибкой, и Portalrinth не смог до них достучаться даже после нескольких попыток. Это неполадка на их стороне, обычно она проходит за несколько минут — подождите немного и попробуйте снова."
 	},
 	"app.error-modal.service-outage.heading": {
 		"message": "Сервисы Microsoft недоступны"
 	},
 	"app.error-modal.state-init.body": {
-		"message": "Noctrinth не смог загрузиться правильно. Возможно, повреждён файл или не хватает важных файлов приложения."
+		"message": "Portalrinth не смог загрузиться правильно. Возможно, повреждён файл или не хватает важных файлов приложения."
 	},
 	"app.error-modal.state-init.fix-internet": {
 		"message": "Убедитесь, что есть интернет, и перезапустите приложение."
@@ -783,7 +783,7 @@
 		"message": "Загрузчик не выбран"
 	},
 	"app.error-modal.title.state-init": {
-		"message": "Не удалось запустить Noctrinth"
+		"message": "Не удалось запустить Portalrinth"
 	},
 	"app.error-modal.title.unknown": {
 		"message": "Произошла ошибка"
@@ -801,10 +801,10 @@
 		"message": "Хостинг"
 	},
 	"app.hosting.update-required.description": {
-		"message": "Чтобы пользоваться хостингом Modrinth через Noctrinth, нужно обновиться"
+		"message": "Чтобы пользоваться хостингом Modrinth через Portalrinth, нужно обновиться"
 	},
 	"app.hosting.update-required.title": {
-		"message": "Нужно обновить Noctrinth"
+		"message": "Нужно обновить Portalrinth"
 	},
 	"app.instance.add-content.from-file": {
 		"message": "Добавить из файла"
@@ -993,16 +993,16 @@
 		"message": "Если сервисы работают, а ошибка повторяется, обратитесь в поддержку и приложите отладочную информацию ниже"
 	},
 	"app.minecraft-auth-error.minecraft-server-error.what": {
-		"message": "Сервис авторизации Minecraft отвечает ошибкой сервера, поэтому Noctrinth сейчас не может завершить вход."
+		"message": "Сервис авторизации Minecraft отвечает ошибкой сервера, поэтому Portalrinth сейчас не может завершить вход."
 	},
 	"app.minecraft-auth-error.network.step-1": {
-		"message": "Перезапустите Noctrinth и попробуйте войти снова"
+		"message": "Перезапустите Portalrinth и попробуйте войти снова"
 	},
 	"app.minecraft-auth-error.network.step-2": {
 		"message": "Проверьте, работает ли интернет"
 	},
 	"app.minecraft-auth-error.network.step-3": {
-		"message": "Разрешите Noctrinth доступ в брандмауэре, антивирусе, прокси, VPN и правилах файла hosts"
+		"message": "Разрешите Portalrinth доступ в брандмауэре, антивирусе, прокси, VPN и правилах файла hosts"
 	},
 	"app.minecraft-auth-error.network.step-4": {
 		"message": "Попробуйте другую сеть или временно отключите VPN и прокси, если пользуетесь ими"
@@ -1011,7 +1011,7 @@
 		"message": "Если дело в маршрутизации или DNS, иногда помогает сервис вроде Cloudflare WARP"
 	},
 	"app.minecraft-auth-error.network.what": {
-		"message": "Noctrinth не смог подключиться к сервису Microsoft, Xbox или Minecraft, который нужен для входа. Обычно мешают локальная сеть, DNS, прокси, брандмауэр, файл hosts, VPN или антивирус."
+		"message": "Portalrinth не смог подключиться к сервису Microsoft, Xbox или Minecraft, который нужен для входа. Обычно мешают локальная сеть, DNS, прокси, брандмауэр, файл hosts, VPN или антивирус."
 	},
 	"app.minecraft-auth-error.no-xbox-profile.step-1": {
 		"message": "Убедитесь, что Minecraft куплен на этом аккаунте"
@@ -1041,13 +1041,13 @@
 		"message": "Убедитесь, что используете аккаунт Microsoft, на котором куплен Minecraft. Подсказка: <link>как найти нужный аккаунт Xbox</link>"
 	},
 	"app.minecraft-auth-error.player-profile.step-5": {
-		"message": "Попробуйте войти в Noctrinth снова"
+		"message": "Попробуйте войти в Portalrinth снова"
 	},
 	"app.minecraft-auth-error.player-profile.what": {
 		"message": "Сервисы Minecraft не вернули профиль Java Edition для этого аккаунта. Обычно так бывает, если игра куплена недавно, профиль Java ещё не создан или используется не тот аккаунт Microsoft."
 	},
 	"app.minecraft-auth-error.refresh-token.step-1": {
-		"message": "Выйдите из этого аккаунта Minecraft в Noctrinth"
+		"message": "Выйдите из этого аккаунта Minecraft в Portalrinth"
 	},
 	"app.minecraft-auth-error.refresh-token.step-2": {
 		"message": "Войдите в него заново"
@@ -1056,7 +1056,7 @@
 		"message": "Когда вход завершится, попробуйте запустить Minecraft снова"
 	},
 	"app.minecraft-auth-error.refresh-token.what": {
-		"message": "Сохранённый токен входа Microsoft истёк или был отозван, поэтому Noctrinth не может обновить сессию Minecraft."
+		"message": "Сохранённый токен входа Microsoft истёк или был отозван, поэтому Portalrinth не может обновить сессию Minecraft."
 	},
 	"app.minecraft-auth-error.region-unavailable.step-1": {
 		"message": "Войти можно только там, где поддерживаются сервисы Xbox"
@@ -1092,7 +1092,7 @@
 		"message": "Синхронизируйте часы кнопкой синхронизации в настройках системы"
 	},
 	"app.minecraft-auth-error.sisu-authenticate.step-4": {
-		"message": "Перезапустите Noctrinth"
+		"message": "Перезапустите Portalrinth"
 	},
 	"app.minecraft-auth-error.sisu-authenticate.step-5": {
 		"message": "Попробуйте войти снова"
@@ -1128,7 +1128,7 @@
 		"message": "Подождите примерно час, прежде чем пробовать снова"
 	},
 	"app.minecraft-auth-error.too-many-requests.step-2": {
-		"message": "После ожидания перезапустите Noctrinth"
+		"message": "После ожидания перезапустите Portalrinth"
 	},
 	"app.minecraft-auth-error.too-many-requests.step-3": {
 		"message": "Попробуйте войти ещё раз"
@@ -1185,13 +1185,13 @@
 		"message": "Выполните всё, о чём попросят Microsoft, Xbox или Minecraft"
 	},
 	"app.minecraft-auth-error.xsts-authorize.step-3": {
-		"message": "Попробуйте войти в Noctrinth снова"
+		"message": "Попробуйте войти в Portalrinth снова"
 	},
 	"app.minecraft-auth-error.xsts-authorize.step-4": {
 		"message": "Если официальный лаунчер тоже не пускает, действуйте по его подсказке или обратитесь в поддержку Xbox"
 	},
 	"app.minecraft-auth-error.xsts-authorize.what": {
-		"message": "Сервисы Xbox отклонили запрос на авторизацию этого аккаунта в Minecraft, но не сообщили конкретное ограничение, которое Noctrinth умеет распознавать."
+		"message": "Сервисы Xbox отклонили запрос на авторизацию этого аккаунта в Minecraft, но не сообщили конкретное ограничение, которое Portalrinth умеет распознавать."
 	},
 	"app.nav.lan": {
 		"message": "LAN"
@@ -1290,7 +1290,7 @@
 		"message": "Прокси"
 	},
 	"app.settings.app-version": {
-		"message": "Noctrinth {version}"
+		"message": "Portalrinth {version}"
 	},
 	"app.settings.default-instance-options.universal-skins.description": {
 		"message": "Серверы в offline-режиме не присылают скины вообще — поэтому там все Стивы. Запрашивать их по нику у Ely.by, который отдаёт скины своих пользователей, а для остальных — скины Mojang. Моды не нужны, а скин, присланный сервером, никогда не подменяется."
@@ -1353,10 +1353,10 @@
 		"message": "Скачанные среды Java"
 	},
 	"app.settings.privacy.discord-rich-presence.description": {
-		"message": "Показывать Noctrinth в текущей активности Discord. Не влияет на Rich Presence, который добавляют моды. Требуется перезапуск."
+		"message": "Показывать Portalrinth в текущей активности Discord. Не влияет на Rich Presence, который добавляют моды. Требуется перезапуск."
 	},
 	"app.settings.resource-management.app-directory.description": {
-		"message": "Здесь Noctrinth хранит сборки и другие файлы. Изменения вступят в силу после перезапуска."
+		"message": "Здесь Portalrinth хранит сборки и другие файлы. Изменения вступят в силу после перезапуска."
 	},
 	"app.settings.tabs.changelog": {
 		"message": "Список изменений"
@@ -1383,31 +1383,31 @@
 		"message": "Ely.by не принял изменение"
 	},
 	"app.survey.body": {
-		"message": "Не хотите ответить на несколько вопросов о вашем опыте с Noctrinth?"
+		"message": "Не хотите ответить на несколько вопросов о вашем опыте с Portalrinth?"
 	},
 	"app.update-popup.body": {
-		"message": "Noctrinth v{version} готов к установке! Перезагрузите, чтобы обновить сейчас, или обновление произойдёт автоматически при закрытии Noctrinth."
+		"message": "Portalrinth v{version} готов к установке! Перезагрузите, чтобы обновить сейчас, или обновление произойдёт автоматически при закрытии Portalrinth."
 	},
 	"app.update-popup.body.download-complete": {
-		"message": "Скачивание Noctrinth v{version} завершено. Перезапустите приложение, чтобы обновить его, или оно обновится автоматически после закрытия."
+		"message": "Скачивание Portalrinth v{version} завершено. Перезапустите приложение, чтобы обновить его, или оно обновится автоматически после закрытия."
 	},
 	"app.update-popup.body.downloading": {
-		"message": "Noctrinth v{version} — {downloaded} из {size}"
+		"message": "Portalrinth v{version} — {downloaded} из {size}"
 	},
 	"app.update-popup.body.downloading-unknown-size": {
-		"message": "Noctrinth v{version} загружается…"
+		"message": "Portalrinth v{version} загружается…"
 	},
 	"app.update-popup.body.linux": {
-		"message": "Доступна версия Noctrinth {version}. Обновите приложение через менеджер пакетов, чтобы получить последние улучшения и исправления!"
+		"message": "Доступна версия Portalrinth {version}. Обновите приложение через менеджер пакетов, чтобы получить последние улучшения и исправления!"
 	},
 	"app.update-popup.body.metered": {
-		"message": "Версия Noctrinth {version} доступна для скачивания! Используется сеть с лимитным тарифным планом, поэтому скачивание не началось автоматически."
+		"message": "Версия Portalrinth {version} доступна для скачивания! Используется сеть с лимитным тарифным планом, поэтому скачивание не началось автоматически."
 	},
 	"app.update-popup.downloading": {
 		"message": "Загрузка обновления"
 	},
 	"app.welcome-screen.title": {
-		"message": "Добро пожаловать в Noctrinth"
+		"message": "Добро пожаловать в Portalrinth"
 	},
 	"app.window-controls.close": {
 		"message": "Закрыть окно"
@@ -1971,16 +1971,16 @@
 		"message": "Подтверждённые запуски"
 	},
 	"servers.list-empty.no-servers-description": {
-		"message": "Устанавливайте моды, зовите друзей и играйте вместе прямо в Noctrinth."
+		"message": "Устанавливайте моды, зовите друзей и играйте вместе прямо в Portalrinth."
 	},
 	"servers.list-empty.play-with-friends-description": {
-		"message": "Пригласите друзей на свой сервер — из Noctrinth они зайдут в один клик."
+		"message": "Пригласите друзей на свой сервер — из Portalrinth они зайдут в один клик."
 	},
 	"settings.display.theme.description": {
-		"message": "Выберите тему для Noctrinth на этом устройстве."
+		"message": "Выберите тему для Portalrinth на этом устройстве."
 	},
 	"settings.language.coverage.app-tooltip": {
-		"message": "Примерно {percentage}% Noctrinth доступно на этом языке."
+		"message": "Примерно {percentage}% Portalrinth доступно на этом языке."
 	},
 	"skin.preview.drag-to-rotate": {
 		"message": "Тяните, чтобы вращать"
@@ -2103,22 +2103,22 @@
 		"message": "Смягчает её, чтобы она не спорила с тем, что поверх."
 	},
 	"app.behavior-settings.refocus-on-game-close.description": {
-		"message": "Выводить Noctrinth на передний план при закрытии игры."
+		"message": "Выводить Portalrinth на передний план при закрытии игры."
 	},
 	"app.screenshots.selection.global-export-filename": {
-		"message": "Скриншоты Noctrinth.zip"
+		"message": "Скриншоты Portalrinth.zip"
 	},
 	"app.settings.game-options.compatibility.reason.launcher-controlled": {
-		"message": "Этим параметром управляют настройки запуска Noctrinth."
+		"message": "Этим параметром управляют настройки запуска Portalrinth."
 	},
 	"app.settings.resource-management.debug-info.description": {
 		"message": "Экспортировать журналы приложения и диагностические данные в ZIP-файл, чтобы приложить его к сообщению о проблеме."
 	},
 	"app.settings.synced-options.game-settings.custom-empty": {
-		"message": "Настройки, добавленные модами, появятся здесь после того, как Noctrinth найдёт их в одной из сборок."
+		"message": "Настройки, добавленные модами, появятся здесь после того, как Portalrinth найдёт их в одной из сборок."
 	},
 	"app.settings.privacy.telemetry.description": {
-		"message": "Noctrinth не отправляет ни аналитику, ни данные об использовании, как бы ни стоял этот переключатель. Он оставлен, чтобы настройка переносилась из Modrinth App и обратно."
+		"message": "Portalrinth не отправляет ни аналитику, ни данные об использовании, как бы ни стоял этот переключатель. Он оставлен, чтобы настройка переносилась из Modrinth App и обратно."
 	},
 	"noctrinth.settings.background.drop-hint": {
 		"message": "Или перетащите картинку на окно."

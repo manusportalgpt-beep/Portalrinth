@@ -116,6 +116,15 @@ export type AppSettings = {
 	/** How far the background picture is darkened, from 0 to 100. */
 	background_dim: number
 
+	/**
+	 * The CurseForge key this launcher asks with.
+	 *
+	 * Without one, everything CurseForge does is unavailable — searching,
+	 * listing files, downloading. A build can ship with one compiled in, and
+	 * when it does, this stays empty; anything set here is used instead.
+	 */
+	curseforge_api_key?: string | null
+
 	version: number
 }
 
