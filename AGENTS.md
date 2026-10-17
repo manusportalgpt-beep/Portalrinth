@@ -67,6 +67,24 @@ Each project may have its own file with detailed instructions:
 - [`apps/labrinth/AGENTS.md`](apps/labrinth/AGENTS.md) — Backend API
 - [`apps/frontend/AGENTS.md`](apps/frontend/AGENTS.md) - Frontend Website
 
+## Working Agreement
+
+Two rules that hold for every change in this repository, whatever else this file says.
+
+### 1. Commit and push when the task is done
+
+Every finished piece of work ends committed and pushed to `origin`, on the branch the work belongs on. Not "the next time", not "once CI is green" — as soon as the task is done. Fetch first and check `git rev-list --left-right --count origin/<branch>...HEAD`; if the remote has moved, integrate before pushing, and never force-push.
+
+### 2. The function has to match the interface
+
+A capability that no control reaches is not a capability, and a control that leads nowhere is worse than neither. Both halves ship together:
+
+- Do not add a Tauri command, a backend function, or an API module that nothing in the interface calls. If it cannot be wired up in the same change, it does not go in.
+- Do not add a button, a toggle, a switch, or a menu entry whose action is not implemented and reachable end to end.
+- When something is deliberately left out — no key configured, platform unsupported, feature behind a flag — the interface has to say so in the place the person is looking, rather than showing a control that quietly does nothing.
+
+A half-landed feature that a person can reach is a bug, even when every line of it is correct.
+
 ## Code Guidelines
 
 ### Comments

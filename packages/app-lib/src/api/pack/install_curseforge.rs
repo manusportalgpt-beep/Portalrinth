@@ -595,8 +595,8 @@ async fn download_cf_file(
 #[tracing::instrument(skip_all)]
 pub async fn install_curseforge_mod(
     instance_id: &str,
-    mod_id: i64,
-    file_id: i64,
+    mod_id: u64,
+    file_id: u64,
     state: &State,
 ) -> crate::Result<String> {
     let Some(key) = crate::api::curseforge_metadata::api_key() else {
@@ -624,15 +624,19 @@ pub async fn install_curseforge_mod(
     .await?;
     let file = serde_json::from_slice::<CfFileData>(&body)?;
 
-    let candidates = file.download_candidates();
-    if candidates.is_empty() {
+    // Where to fetch it from is asked of CurseForge rather than worked out
+    // here: it knows about projects whose distribution the author limited, and
+    // it has moved its files between hosts more than once.
+    let mirrors = crate::api::curseforge_search::download_urls(mod_id, file_id)
+        .await?;
+    let mirrors: Vec<&str> = mirrors.iter().map(String::as_str).collect();
+    if mirrors.is_empty() {
         return Err(crate::ErrorKind::InputError(format!(
             "no download URL could be determined (file id {})",
             file.id
         ))
         .as_error());
     }
-    let mirrors: Vec<&str> = candidates.iter().map(String::as_str).collect();
     let download_meta = DownloadMeta {
         reason: DownloadReason::Standalone,
         game_version: file

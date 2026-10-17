@@ -41,6 +41,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAppServerBrowse } from '@/composables/browse/use-app-server-browse'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
+import CurseforgeBrowseSection from '@/components/ui/browse/CurseforgeBrowseSection.vue'
 import { get_project, get_search_results_v3, get_version_many } from '@/helpers/cache.js'
 import {
 	get_installed_project_ids as getInstalledProjectIds,
@@ -1148,6 +1149,23 @@ const lockedFilterMessages = computed(() => ({
 	providedBy: formatMessage(messages.providedByInstance),
 }))
 
+/**
+ * The game version and loader CurseForge should be asked about, taken from the
+ * same filters Modrinth is searched with so the two are never asked different
+ * questions about the same instance.
+ */
+const curseforgeNarrowing = computed(() => {
+	const filters = searchState.currentFilters.value
+	const optionOf = (type: string) => filters.find((f) => f.type === type)?.option ?? null
+
+	return {
+		gameVersion: (instance.value?.game_version ?? optionOf('game_version')) || null,
+		loader: (instance.value?.loader ?? optionOf('categories:loader')) || null,
+	}
+})
+
+const hideModrinthResults = ref(false)
+
 const searchState = useBrowseSearch({
 	projectType,
 	tags,
@@ -1273,6 +1291,7 @@ provideBrowseManager({
 	selectableProjectTypes,
 	showProjectTypeTabs: computed(() => !isServerContext.value),
 	variant: 'app',
+	hideProjectHits: hideModrinthResults,
 	getCardActions,
 	installContext,
 	providedFilters: combinedProvidedFilters,
@@ -1357,5 +1376,13 @@ provideBrowseManager({
 		<Teleport v-if="browseRouteActive" to="#sidebar-teleport-target">
 			<BrowseSidebar />
 		</Teleport>
+		<CurseforgeBrowseSection
+			v-if="projectType === 'mod'"
+			:filter="searchState.query.value"
+			:game-version="curseforgeNarrowing.gameVersion"
+			:loader="curseforgeNarrowing.loader"
+			:instance-id="instance?.id ?? null"
+			@hide-modrinth="hideModrinthResults = $event"
+		/>
 	</div>
 </template>

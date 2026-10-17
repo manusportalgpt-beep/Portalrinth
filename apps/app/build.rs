@@ -618,6 +618,7 @@ fn main() {
                         "curseforge_is_available",
                         "curseforge_search",
                         "curseforge_files",
+                        "curseforge_download_urls",
                         "curseforge_install_mod",
                     ])
                     .default_permission(

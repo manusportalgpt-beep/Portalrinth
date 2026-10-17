@@ -116,6 +116,16 @@ pub struct Settings {
     /// How far the background picture is darkened, from 0 to 100.
     pub background_dim: u32,
 
+    /// The CurseForge key this launcher asks with.
+    ///
+    /// CurseForge requires one for everything it does — searching, listing
+    /// files, even downloading a file whose address is already known. A build
+    /// can arrive with one compiled in, but a key baked into a distributed
+    /// binary belongs to whoever distributed it rather than to whoever is
+    /// using it, so the person using it can set their own. This is that key,
+    /// and it takes precedence over the compiled-in one.
+    pub curseforge_api_key: Option<String>,
+
     pub version: usize,
 }
 
@@ -178,6 +188,13 @@ impl Settings {
 
         let background_dim: i64 =
             sqlx::query_scalar("SELECT background_dim FROM settings")
+                .fetch_one(exec)
+                .await?;
+
+        // Fork-only column, so it is read at runtime rather than through the
+        // sqlx offline cache, for the same reason as proxy_url above.
+        let curseforge_api_key: Option<String> =
+            sqlx::query_scalar("SELECT curseforge_api_key FROM settings")
                 .fetch_one(exec)
                 .await?;
 
@@ -287,6 +304,7 @@ impl Settings {
             splash_cube,
             background_blur: background_blur == 1,
             background_dim: background_dim.clamp(0, 100) as u32,
+            curseforge_api_key,
             sync_theme_across_devices: res.sync_theme_across_devices == 1,
             sync_behavior_across_devices: res.sync_behavior_across_devices == 1,
             sync_features_across_devices: res.sync_features_across_devices == 1,
@@ -471,6 +489,11 @@ impl Settings {
 
         sqlx::query("UPDATE settings SET background_dim = $1")
             .bind(i64::from(self.background_dim.min(100)))
+            .execute(exec)
+            .await?;
+
+        sqlx::query("UPDATE settings SET curseforge_api_key = $1")
+            .bind(&self.curseforge_api_key)
             .execute(exec)
             .await?;
 

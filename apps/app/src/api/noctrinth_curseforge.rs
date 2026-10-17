@@ -25,6 +25,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             curseforge_is_available,
             curseforge_search,
             curseforge_files,
+            curseforge_download_urls,
             curseforge_install_mod,
         ])
         .build()
@@ -51,19 +52,28 @@ pub async fn curseforge_search(query: CurseforgeSearchQuery) -> Result<Curseforg
 /// One project's files, newest first, for one game version and loader.
 #[tauri::command]
 pub async fn curseforge_files(
-    mod_id: i64,
+    mod_id: u64,
     game_version: Option<String>,
     loader: Option<String>,
 ) -> Result<Vec<CurseforgeFile>> {
     Ok(curseforge_search::files(mod_id, game_version.as_deref(), loader.as_deref()).await?)
 }
 
+/// Where one file can be fetched from, most likely first.
+#[tauri::command]
+pub async fn curseforge_download_urls(
+    mod_id: u64,
+    file_id: u64,
+) -> Result<Vec<String>> {
+    Ok(curseforge_search::download_urls(mod_id, file_id).await?)
+}
+
 /// Puts one CurseForge mod into an instance, by project and file id.
 #[tauri::command]
 pub async fn curseforge_install_mod(
     instance_id: String,
-    mod_id: i64,
-    file_id: i64,
+    mod_id: u64,
+    file_id: u64,
 ) -> Result<String> {
     let state = theseus::State::get().await?;
     Ok(

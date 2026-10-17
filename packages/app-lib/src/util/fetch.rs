@@ -400,6 +400,17 @@ fn reqwest_client_builder_with_timeout() -> reqwest::ClientBuilder {
     reqwest_client_builder().read_timeout(Duration::from_secs(30))
 }
 
+/// A client builder for an API that needs headers of its own.
+///
+/// Built from the same settings as the launcher's own clients — the proxy
+/// included — so a launcher configured to go through a proxy goes through it
+/// everywhere and not only where it happens to be remembered. A separate
+/// builder is needed only for the extra headers; anything else built from
+/// scratch would quietly ignore a setting the person deliberately made.
+pub fn api_client_builder() -> reqwest::ClientBuilder {
+    reqwest_client_builder().read_timeout(Duration::from_secs(30))
+}
+
 fn reqwest_client_builder() -> reqwest::ClientBuilder {
     let mut builder = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(15))
