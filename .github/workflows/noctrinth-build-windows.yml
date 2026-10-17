@@ -145,12 +145,13 @@ jobs:
         # `--features updater` matches the release build. What is different is
         # `tauri.build.conf.json`, which turns off the updater artifacts: with
         # them on, the build stops and asks for a signing key that a build to
-        # try has no business having.
+        # try has no business having. It sits beside tauri.conf.json rather than
+        # next to it in `src/`, because that is where it is passed from.
         shell: bash
         working-directory: apps/app
         run: |
           set +e
-          pnpm tauri build --features updater --bundles nsis --config src/tauri.build.conf.json \
+          pnpm tauri build --features updater --bundles nsis --config tauri.build.conf.json \
             > "$GITHUB_WORKSPACE/logs/30-tauri.log" 2>&1
           code=$?
           tail -n 40 "$GITHUB_WORKSPACE/logs/30-tauri.log"
