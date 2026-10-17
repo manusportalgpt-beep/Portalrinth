@@ -191,9 +191,7 @@ const curseforgeAvailable = ref(false)
 
 async function refreshCurseforgeAvailability() {
 	try {
-		curseforgeAvailable.value = await invoke<boolean>(
-			'plugin:noctrinth-curseforge|curseforge_is_available',
-		)
+		curseforgeAvailable.value = await invoke('plugin:noctrinth-curseforge|curseforge_is_available')
 	} catch {
 		// An empty key is the ordinary case, not a failure to report.
 		curseforgeAvailable.value = false
