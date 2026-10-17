@@ -16,16 +16,6 @@ import { invoke } from '@tauri-apps/api/core'
 
 import { CURSEFORGE_API_KEY } from './curseforge-key'
 
-/** CurseForge's own loader ids, which are not the launcher's. */
-const LOADER_IDS: Record<string, number> = {
-	forge: 1,
-	cauldron: 2,
-	liteloader: 3,
-	fabric: 4,
-	quilt: 5,
-	neoforge: 6,
-}
-
 /** The dropdown's own way of saying "any version", which CurseForge reads as a version. */
 const ANY_VERSION = 'All'
 
@@ -87,10 +77,11 @@ export async function searchCurseforge(
 	options: CurseforgeSearchOptions,
 ): Promise<CurseforgeSearchPage> {
 	// The class id is deliberately left to the caller. Sending it to a query
-	// that is not about mods is what makes CurseForge answer with nothing.
+	// that is not about mods is what makes CurseForge answer with nothing. The
+	// loader is sent by our own name rather than CurseForge's number, because
+	// translating it in two places is how the two disagree.
 	const gameVersion =
 		options.gameVersion && options.gameVersion !== ANY_VERSION ? options.gameVersion : null
-	const loader = options.loader ? LOADER_IDS[options.loader] : null
 
 	return await invoke<CurseforgeSearchPage>('plugin:noctrinth-curseforge|curseforge_search', {
 		query: {

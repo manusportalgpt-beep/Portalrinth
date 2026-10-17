@@ -85,6 +85,12 @@ A capability that no control reaches is not a capability, and a control that lea
 
 A half-landed feature that a person can reach is a bug, even when every line of it is correct.
 
+### 3. Always do the Noctrinth Windows build
+
+Every finished change is built for Windows before it is called done, and the resulting installer is handed over. A change that only passes CI has not proved it runs: the CI job type-checks and lints, while the build is what catches the missing toolchain file, the mis-named icon, the bundle that will not package, and the panic that only happens once the window exists.
+
+Trigger it by pushing to `main`, which starts `.github/workflows/noctrinth-build-windows.yml`, and report the run link and the artifact name. If the build fails, that is the task finishing late rather than a separate problem to report.
+
 ## Code Guidelines
 
 ### Comments

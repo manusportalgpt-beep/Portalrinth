@@ -37,18 +37,18 @@ const GAME_ID_JAVA: u64 = 432;
 pub const CLASS_ID_MODS: u64 = 6;
 
 /// CurseForge's own loader numbering. It is not ours and does not follow it.
-const LOADER_FORGE: u32 = 1;
-const LOADER_CAULDRON: u32 = 2;
-const LOADER_LITELOADER: u32 = 3;
-const LOADER_FABRIC: u32 = 4;
-const LOADER_QUILT: u32 = 5;
-const LOADER_NEOFORGE: u32 = 6;
+const LOADER_FORGE: u64 = 1;
+const LOADER_CAULDRON: u64 = 2;
+const LOADER_LITELOADER: u64 = 3;
+const LOADER_FABRIC: u64 = 4;
+const LOADER_QUILT: u64 = 5;
+const LOADER_NEOFORGE: u64 = 6;
 
 /// CurseForge refuses to serve an offset this far in.
 const INDEX_WINDOW: u64 = 10_000;
 
 /// What the launcher knows a loader as, to what CurseForge calls it.
-pub fn loader_to_curseforge(loader: &str) -> Option<u32> {
+pub fn loader_to_curseforge(loader: &str) -> Option<u64> {
     match loader {
         "forge" => Some(LOADER_FORGE),
         "cauldron" => Some(LOADER_CAULDRON),
