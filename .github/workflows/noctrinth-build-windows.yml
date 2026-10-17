@@ -100,6 +100,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Report the toolchain
+        shell: bash
+        run: |
+          node --version
+          pnpm --version
+          pnpm --filter @modrinth/app exec tauri --version
+          rustc --version
+
+      - name: Build the app frontend
+        # The same build `beforeBuildCommand` in tauri.conf.json runs. Done as
+        # its own step so that a failure here is distinguishable from a failure
+        # in the Tauri build — the two look identical in the run's step list
+        # otherwise, and a failed step's log needs an account to read.
+        run: pnpm turbo run build --filter=@modrinth/app-frontend
+
       - name: Build the installer
         id: build
         shell: bash
@@ -114,18 +129,25 @@ jobs:
         # them on, the build stops and asks for a signing key that a build to
         # try has no business having.
         #
-        # The output is teed to a file so that a failure can be read from the run
-        # page without an account — the logs of a failed step are not public.
+        # Everything is written to a file and then echoed, rather than piped
+        # through tee: a pipeline hides the command's own exit code behind
+        # tee's, and a build that fails with nothing printed looks exactly like
+        # one that was killed.
         run: |
-          pnpm tauri build --features updater --bundles nsis --config src/tauri.build.conf.json 2>&1 \
-            | tee "$GITHUB_WORKSPACE/build.log"
-          exit "${PIPESTATUS[0]}"
+          set +e
+          pnpm tauri build --features updater --bundles nsis --config src/tauri.build.conf.json \
+            > "$GITHUB_WORKSPACE/build.log" 2>&1
+          code=$?
+          cat "$GITHUB_WORKSPACE/build.log"
+          echo "### tauri build exited with $code" >> "$GITHUB_WORKSPACE/build.log"
+          exit $code
 
       - name: Report what the build said
         if: always()
         shell: bash
         run: |
-          if [ ! -f "$GITHUB_WORKSPACE/build.log" ]; then
+          log="$GITHUB_WORKSPACE/build.log"
+          if [ ! -f "$log" ]; then
             echo '::error::The build produced no output at all — it never got as far as running.'
             exit 0
           fi
@@ -133,7 +155,7 @@ jobs:
           {
             echo '### Build output, last 60 lines'
             echo '```'
-            tail -n 60 "$GITHUB_WORKSPACE/build.log"
+            tail -n 60 "$log"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -141,7 +163,7 @@ jobs:
           # step need an account to read; annotations do not, so this is the
           # only copy of the reason a build to try is visible to anyone but the
           # person who pushed it.
-          tail -n 60 "$GITHUB_WORKSPACE/build.log" \
+          tail -n 60 "$log" \
             | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g' \
             > "$RUNNER_TEMP/build-tail.txt"
           echo "::error title=Installer build failed::$(cat "$RUNNER_TEMP/build-tail.txt")"
