@@ -101,7 +101,10 @@ jobs:
         run: pnpm install
 
       - name: Build the installer
+        id: build
+        shell: bash
         working-directory: apps/app
+        continue-on-error: true
         # `--bundles nsis` is the one target that exists on Windows; the config
         # lists the macOS and Linux ones too, which Tauri skips on its own but
         # not before it has looked for their toolchains.
@@ -110,12 +113,43 @@ jobs:
         # `tauri.build.conf.json`, which turns off the updater artifacts: with
         # them on, the build stops and asks for a signing key that a build to
         # try has no business having.
-        run: pnpm tauri build --features updater --bundles nsis --config src/tauri.build.conf.json
+        #
+        # The output is teed to a file so that a failure can be read from the run
+        # page without an account — the logs of a failed step are not public.
+        run: |
+          pnpm tauri build --features updater --bundles nsis --config src/tauri.build.conf.json 2>&1 \
+            | tee "$GITHUB_WORKSPACE/build.log"
+          exit "${PIPESTATUS[0]}"
+
+      - name: Report what the build said
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "$GITHUB_WORKSPACE/build.log" ]; then
+            tail -n 60 "$GITHUB_WORKSPACE/build.log" > "$RUNNER_TEMP/build-tail.log"
+            {
+              echo '### Build output, last 60 lines'
+              echo '```'
+              cat "$RUNNER_TEMP/build-tail.log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo '::error::The installer build failed. See the step summary for the last 60 lines.'
+          else
+            {
+              echo 'The build produced no output at all — it did not get as far as running.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo '::error::The installer build produced no output.'
+          fi
 
       - name: Upload the installer
+        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: Noctrinth-Windows-x64
           path: target/release/bundle/nsis/*.exe
           if-no-files-found: error
           retention-days: 30
+
+      - name: Fail the run if the installer was not built
+        if: steps.build.outcome != 'success'
+        run: exit 1
