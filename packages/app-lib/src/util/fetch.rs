@@ -458,6 +458,25 @@ pub static NO_TIMEOUT_REQWEST_CLIENT: LazyLock<reqwest::Client> =
             .expect("client configuration should be valid")
     });
 
+/// How long a file download may produce nothing before it is treated as dead.
+///
+/// The launcher's other clients give up after thirty seconds, which is right for
+/// an API call and wrong for a forty-megabyte Java runtime on a slow line:
+/// there, half a minute of silence happens routinely, and three attempts in a row
+/// all running into it fails an install that was never really broken. Long
+/// enough that a slow line survives it, finite enough that a host which has
+/// actually gone away is not waited on forever.
+const DOWNLOAD_READ_TIMEOUT: Duration = Duration::from_secs(180);
+
+/// The client every file download goes through.
+pub static DOWNLOAD_REQWEST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest_client_builder()
+        .https_only(true)
+        .read_timeout(DOWNLOAD_READ_TIMEOUT)
+        .build()
+        .expect("client configuration should be valid")
+});
+
 const FETCH_ATTEMPTS: usize = 2;
 
 pub type FetchProgressFn<'a> = dyn FnMut(
@@ -661,7 +680,7 @@ pub(crate) async fn fetch_file_mirrors_in(
             uri_path,
             semaphore,
             exec,
-            &REQWEST_CLIENT,
+            &DOWNLOAD_REQWEST_CLIENT,
             progress.as_deref_mut(),
             true,
             staging,
@@ -1225,7 +1244,7 @@ pub async fn fetch_mirrors(
             uri_path,
             semaphore,
             exec,
-            &REQWEST_CLIENT,
+            &DOWNLOAD_REQWEST_CLIENT,
         )
         .await;
 
