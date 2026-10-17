@@ -101,6 +101,10 @@ pub struct Settings {
     /// list, and falls back to the theme's own for an id it does not know.
     pub accent_preset: String,
 
+    /// The colour a person's own wheel picked, used when the accent is set to
+    /// custom rather than to one of the presets.
+    pub accent_custom_color: Option<String>,
+
     /// Whether that preset also tints the backgrounds it is drawn on, or only
     /// the accent itself.
     pub accent_tint_background: bool,
@@ -172,8 +176,13 @@ impl Settings {
                 .fetch_one(exec)
                 .await?;
 
-        let accent_preset: Option<String> =
+let accent_preset: Option<String> =
             sqlx::query_scalar("SELECT accent_preset FROM settings")
+                .fetch_one(exec)
+                .await?;
+
+        let accent_custom_color: Option<String> =
+            sqlx::query_scalar("SELECT accent_custom_color FROM settings")
                 .fetch_one(exec)
                 .await?;
 
@@ -311,6 +320,7 @@ impl Settings {
             universal_skins: universal_skins == 1,
             accent_preset: accent_preset
                 .unwrap_or_else(|| DEFAULT_ACCENT_PRESET.to_string()),
+            accent_custom_color,
             accent_tint_background: accent_tint_background == 1,
             splash_cube,
             background_blur: background_blur == 1,
@@ -481,6 +491,11 @@ impl Settings {
 
         sqlx::query("UPDATE settings SET accent_preset = $1")
             .bind(&self.accent_preset)
+            .execute(exec)
+            .await?;
+
+        sqlx::query("UPDATE settings SET accent_custom_color = $1")
+            .bind(&self.accent_custom_color)
             .execute(exec)
             .await?;
 

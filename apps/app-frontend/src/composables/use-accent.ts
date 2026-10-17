@@ -46,6 +46,10 @@ export interface AccentPreset {
 
 export const DEFAULT_ACCENT_PRESET = 'theme'
 
+/** The id the wheel writes under, and the one a colour of its own takes. */
+export const CUSTOM_ACCENT_ID = 'custom'
+const DEFAULT_CUSTOM_ACCENT = '#4d9227'
+
 /**
  * The list, in the order it is drawn.
  *
@@ -314,6 +318,7 @@ function writeCache(preset: string, tint: boolean): void {
 const cached = readCache()
 const presetId = ref(cached.preset)
 const tintBackground = ref(cached.tint)
+const customColor = ref(DEFAULT_CUSTOM_ACCENT)
 const theme = useTheme()
 
 /** The colour a preset is drawn in under the theme currently on screen. */
@@ -324,6 +329,7 @@ const theme = useTheme()
 const THEME_ACCENTS: Record<string, string> = { retro: '#4d9227' }
 
 export function accentColorFor(preset: AccentPreset, active: string = theme.active): string {
+	if (preset.id === CUSTOM_ACCENT_ID) return customColor.value
 	if (preset.id === DEFAULT_ACCENT_PRESET && THEME_ACCENTS[active]) return THEME_ACCENTS[active]
 	return active === 'light' ? preset.light : preset.dark
 }
@@ -337,10 +343,15 @@ function apply(id: string, tint: boolean): void {
 		html.style.removeProperty(variable)
 	}
 
-	const preset = findAccentPreset(id)
-	if (!preset || preset.id === DEFAULT_ACCENT_PRESET) return
+	// A colour of someone's own is not a preset; it is drawn from where the wheel
+	// left it, and everything below works on it exactly as on one.
+	const hex = id === CUSTOM_ACCENT_ID ? customColor.value : null
+	if (id === DEFAULT_ACCENT_PRESET) return
 
-	const rgb = parseHex(accentColorFor(preset))
+	const preset = findAccentPreset(id)
+	if (!preset && !hex) return
+
+	const rgb = parseHex(hex ?? accentColorFor(preset as AccentPreset))
 	if (!rgb) return
 
 	const [red, green, blue] = rgb
@@ -409,12 +420,33 @@ export function useAccentPreset() {
 	return {
 		id: presetId,
 		tintBackground,
+		customColor,
 		preset: computed(() => findAccentPreset(presetId.value) ?? ACCENT_PRESETS[0]),
 	}
 }
 
+/**
+ * Sets the accent to a colour of someone's own choosing.
+ *
+ * The colour is remembered alongside the presets rather than as one of them,
+ * because a list that could hold a hundred and fifty thousand entries is not a
+ * list. The id becomes `custom`, which is what `apply` resolves through here.
+ */
+export function setCustomAccentColor(hex: string | null | undefined): void {
+	const next = typeof hex === 'string' ? hex.trim() : ''
+	customColor.value = /^#[\da-f]{6}$/i.test(next) ? next.toLowerCase() : DEFAULT_CUSTOM_ACCENT
+	presetId.value = CUSTOM_ACCENT_ID
+	writeCache(presetId.value, tintBackground.value)
+	apply(presetId.value, tintBackground.value)
+}
+
 /** Sets the accent without going through the settings tab — used at startup. */
 export function setAccentPreset(id: string | null | undefined, tint = true): void {
-	presetId.value = id && findAccentPreset(id) ? id : DEFAULT_ACCENT_PRESET
+	presetId.value =
+		id === CUSTOM_ACCENT_ID
+			? CUSTOM_ACCENT_ID
+			: id && findAccentPreset(id)
+				? id
+				: DEFAULT_ACCENT_PRESET
 	tintBackground.value = tint
 }
