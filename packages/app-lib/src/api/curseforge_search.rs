@@ -437,10 +437,9 @@ pub fn download_url_candidates(url: &str) -> Vec<String> {
         .replace(FALLBACK, PRIMARY);
     let fallback = primary.replace(PRIMARY, FALLBACK);
     if fallback == primary {
-        vec![primary]
-    } else {
-        vec![primary, fallback, primary.replace(PRIMARY, LEGACY)]
+        return vec![primary];
     }
+    vec![primary, fallback, primary.replace(PRIMARY, LEGACY)]
 }
 
 /// The CDN path CurseForge keeps a file at, rebuilt from its numeric id.
