@@ -122,9 +122,13 @@ jobs:
         if: failure()
         run: |
           set +e
-          cargo check -p theseus -p theseus_gui --all-targets > "$RUNNER_TEMP/cargo.log" 2>&1
+          cargo check --message-format=short -p theseus -p theseus_gui --all-targets \
+            > "$RUNNER_TEMP/cargo.log" 2>&1
           code=$?
-          tail -n 60 "$RUNNER_TEMP/cargo.log" \
+          # Colour codes count towards the annotation's length and stop it being
+          # readable, and one error per line is all an annotation can hold.
+          sed -e 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/cargo.log" | grep -E "error|warning: unused|cannot find|^ *-->" \
+            | tail -n 30 \
             | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g' \
             > "$RUNNER_TEMP/cargo-tail.txt"
           echo "::error title=cargo check failed::$(cat "$RUNNER_TEMP/cargo-tail.txt")"
