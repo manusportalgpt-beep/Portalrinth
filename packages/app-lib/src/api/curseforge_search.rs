@@ -147,20 +147,8 @@ fn default_sort_field() -> u32 {
     2
 }
 
-fn client(key: &str) -> crate::Result<reqwest::Client> {
-    // CurseForge's edge sometimes answers with an HTML failure of its own when
-    // it is asked to compress, and a launcher that only ever sees the parse
-    // error has nothing to report.
-    let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert(
-        "x-api-key",
-        reqwest::header::HeaderValue::from_str(key)
-            .unwrap_or_else(|_| reqwest::header::HeaderValue::from_static("")),
-    );
-
+fn client() -> crate::Result<reqwest::Client> {
     crate::util::fetch::api_client_builder()
-        .header(reqwest::header::ACCEPT_ENCODING, "identity")
-        .default_headers(headers)
         .build()
         .map_err(|error| {
             crate::ErrorKind::OtherError(format!(
@@ -168,6 +156,17 @@ fn client(key: &str) -> crate::Result<reqwest::Client> {
             ))
             .as_error()
         })
+}
+
+/// Puts on the two headers every CurseForge request needs.
+///
+/// `Accept-Encoding: identity` because their edge sometimes answers a compressed
+/// request with an HTML failure of its own, and a launcher that only ever sees
+/// the parse error has nothing to report.
+fn with_headers(request: reqwest::RequestBuilder, key: &str) -> reqwest::RequestBuilder {
+    request
+        .header("x-api-key", key)
+        .header(reqwest::header::ACCEPT_ENCODING, "identity")
 }
 
 /// One request, one JSON value, and an error that says what came back.
@@ -227,7 +226,7 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
     let Some(key) = crate::api::curseforge_metadata::api_key() else {
         return Ok(empty_page(query));
     };
-    let http = client(&key)?;
+    let http = client()?;
 
     let limit = query.page_size.clamp(1, 50);
     let offset = query.index;
@@ -246,8 +245,7 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
         .filter(|loader| *loader > 0);
 
     let build = |index: u64, order: &str| {
-        let mut request = http
-            .get("https://api.curseforge.com/v1/mods/search")
+        let mut request = with_headers(http.get("https://api.curseforge.com/v1/mods/search"), &key)
             .query(&[
                 ("gameId", game_id.to_string()),
                 ("pageSize", limit.to_string()),
@@ -358,11 +356,15 @@ pub async fn files(
     let Some(key) = crate::api::curseforge_metadata::api_key() else {
         return Ok(Vec::new());
     };
-    let http = client(&key)?;
+    let http = client()?;
 
-    let mut request = http
-        .get(format!("https://api.curseforge.com/v1/mods/{mod_id}/files"))
-        .query(&[("pageSize", "50"), ("sortOrder", "desc")]);
+    let mut request = with_headers(
+        http.get(format!(
+            "https://api.curseforge.com/v1/mods/{mod_id}/files"
+        )),
+        &key,
+    )
+    .query(&[("pageSize", "50"), ("sortOrder", "desc")]);
     if let Some(version) = game_version.map(str::trim).filter(|version| {
         !version.is_empty() && *version != "All"
     }) {
@@ -483,12 +485,15 @@ pub async fn download_urls(mod_id: u64, file_id: u64) -> crate::Result<Vec<Strin
         )
         .as_error());
     };
-    let http = client(&key)?;
+    let http = client()?;
 
     let asked = json_response(
-        http.get(format!(
-            "https://api.curseforge.com/v1/mods/{mod_id}/files/{file_id}/download-url"
-        )),
+        with_headers(
+            http.get(format!(
+                "https://api.curseforge.com/v1/mods/{mod_id}/files/{file_id}/download-url"
+            )),
+            &key,
+        ),
         "download URL lookup",
     )
     .await;
@@ -503,9 +508,12 @@ pub async fn download_urls(mod_id: u64, file_id: u64) -> crate::Result<Vec<Strin
     // metadata knows its name, which is the part that has to be right.
     let fallback = || async {
         let body = json_response(
-            http.get(format!(
-                "https://api.curseforge.com/v1/mods/{mod_id}/files/{file_id}"
-            )),
+            with_headers(
+                http.get(format!(
+                    "https://api.curseforge.com/v1/mods/{mod_id}/files/{file_id}"
+                )),
+                &key,
+            ),
             "file metadata lookup",
         )
         .await?;
