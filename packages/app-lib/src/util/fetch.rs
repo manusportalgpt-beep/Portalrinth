@@ -227,10 +227,33 @@ const API_RETRY_AFTER_FALLBACK: Duration = Duration::from_secs(60);
 // replenish one unit time in seconds = (60 / (units recovered per minute))
 // smooth recovery time = replenish one unit time in seconds * API_RATE_LIMIT_RECOVERY_SIZE.
 //
-// At 20 it means (60 / 120) * 20 = 10 seconds.
-const API_RATE_LIMIT_RECOVERY_SIZE: u32 = 20;
+// At 20 it means (60 / 120) * 20 = 10 seconds, which is how emptying a bucket
+// that refills in half a second used to turn into "retry in 10 seconds" in the
+// middle of installing a pack. At 3 the same recovery is under a second, which
+// is long enough not to flap and short enough not to be noticed.
+const API_RATE_LIMIT_RECOVERY_SIZE: u32 = 3;
 
-/// Implements request-rate-limit handling as well as a local rate limiter of 120 RPM + 50 burst.
+/// How long a request will queue for the limiter before it gives up and reports
+/// the block instead.
+///
+/// Waiting is what makes installing a pack work: the requests behind it are
+/// wanted, and the only wrong answer is to fail. But a block long enough to be
+/// worth telling somebody about — the server's own `Retry-After`, usually — must
+/// not be silently sat through, so past this the caller is told.
+const API_RATE_LIMIT_MAX_WAIT: Duration = Duration::from_secs(8);
+
+/// How many API requests a minute the launcher makes for itself, and how many of
+/// them may be made at once.
+///
+/// This is the launcher's own ceiling on its own traffic, not the API's: it
+/// exists to stop a pack with sixty dependencies from opening sixty sockets at
+/// once. Modrinth's documented limit is far higher, and nothing here has ever
+/// been the reason the API refused a request — that arrives as a 429 and is
+/// handled separately.
+const API_REQUESTS_PER_MINUTE: u32 = 300;
+const API_REQUESTS_BURST: u32 = 120;
+
+/// Implements request-rate-limit handling as well as a local rate limiter.
 struct ApiRateLimit {
     block_until: Mutex<Option<Instant>>,
     check_lock: Mutex<()>,
@@ -240,8 +263,9 @@ struct ApiRateLimit {
 
 impl ApiRateLimit {
     fn new() -> Self {
-        let quota = Quota::per_minute(NonZeroU32::new(120).unwrap())
-            .allow_burst(NonZeroU32::new(50).unwrap());
+        let quota =
+            Quota::per_minute(NonZeroU32::new(API_REQUESTS_PER_MINUTE).unwrap())
+                .allow_burst(NonZeroU32::new(API_REQUESTS_BURST).unwrap());
         let recovery_size =
             API_RATE_LIMIT_RECOVERY_SIZE.min(quota.burst_size().get());
 
@@ -255,32 +279,44 @@ impl ApiRateLimit {
         }
     }
 
-    fn check(&self) -> crate::Result<()> {
-        let _check_guard = self.check_lock.lock();
-        self.ensure_not_blocked()?;
+    /// Waits for the limiter's permission to make this request.
+    ///
+    /// Every request that arrives a moment early is a request the launcher was
+    /// always going to make, so it queues rather than fails. What used to
+    /// happen instead is that emptying the bucket produced an error at an
+    /// arbitrary point in an install, which cancelled the whole thing over a
+    /// delay too short to notice.
+    async fn wait_turn(&self) -> crate::Result<()> {
+        loop {
+            // A block is a decision somebody else made, and is not waited out.
+            self.ensure_not_blocked()?;
 
-        if let Err(not_until) = self.local.check() {
-            // Adds hysteresis to the rate limiting system, ensuring recovery happens
-            // for longer but for more units, avoiding the "flapping" effect when running
-            // out of units.
+            let wait = {
+                let _check_guard = self.check_lock.lock();
+                match self.local.check() {
+                    Ok(()) => return Ok(()),
+                    Err(not_until) => {
+                        not_until
+                            .wait_time_from(DefaultClock::default().now())
+                            .saturating_add(self.recovery_padding)
+                    }
+                }
+            };
 
-            let retry_after = not_until
-                .wait_time_from(DefaultClock::default().now())
-                .saturating_add(self.recovery_padding);
-            info!(
-                ?retry_after,
-                "Hit builtin rate limiter; waiting for recovery"
-            );
-            self.block_for(retry_after);
+            if wait > API_RATE_LIMIT_MAX_WAIT {
+                info!(?wait, "API rate limiter wait is too long; reporting it");
+                self.block_for(wait);
+                return Err(ErrorKind::Ratelimited {
+                    retry_in_seconds: self
+                        .retry_in_seconds()
+                        .unwrap_or_else(|| duration_seconds_ceil(wait)),
+                }
+                .into());
+            }
 
-            let retry_in_seconds = self
-                .retry_in_seconds()
-                .unwrap_or_else(|| duration_seconds_ceil(retry_after));
-
-            return Err(ErrorKind::Ratelimited { retry_in_seconds }.into());
+            debug!(?wait, "Waiting for the API rate limiter");
+            tokio::time::sleep(wait).await;
         }
-
-        self.ensure_not_blocked()
     }
 
     fn handle_response(
@@ -1021,7 +1057,7 @@ async fn fetch_advanced_with_target(
 
     for attempt in 1..=(FETCH_ATTEMPTS + 1) {
         if is_api_url {
-            GLOBAL_API_RATE_LIMIT.check()?;
+            GLOBAL_API_RATE_LIMIT.wait_turn().await?;
         }
 
         if let Some(fence_key) = fence_key

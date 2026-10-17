@@ -18,7 +18,7 @@
 		"message": "Системная рамка окна"
 	},
 	"app.behavior-settings.refocus-on-game-close.description": {
-		"message": "Выводить Noctrinth на передний план, когда Minecraft закрывается."
+		"message": "Выводить Portalrinth на передний план, когда Minecraft закрывается."
 	},
 	"app.behavior-settings.refocus-on-game-close.title": {
 		"message": "Возвращать фокус после закрытия Minecraft"

@@ -1,4 +1,4 @@
-<img src=".github/assets/noctrinth-banner.svg" alt="Noctrinth" width="100%"/>
+<img src=".github/assets/noctrinth-banner.svg" alt="Portalrinth" width="100%"/>
 
 <div align="center">
 
@@ -34,11 +34,11 @@
 </table>
 </div>
 
-## Why Noctrinth
+## Why Portalrinth
 
-The Modrinth App is a genuinely good launcher, but it only knows Microsoft accounts, only installs Modrinth's own `.mrpack` files, and shows you ads while you browse. If you play on Ely.by or offline servers, keep a shelf of CurseForge zips, or sit behind a blocked connection, you end up running a second launcher to cover the gaps. Noctrinth covers them in the same app, and follows upstream release for release.
+The Modrinth App is a genuinely good launcher, but it only knows Microsoft accounts, only installs Modrinth's own `.mrpack` files, and shows you ads while you browse. If you play on Ely.by or offline servers, keep a shelf of CurseForge zips, or sit behind a blocked connection, you end up running a second launcher to cover the gaps. Portalrinth covers them in the same app, and follows upstream release for release.
 
-## What Noctrinth adds
+## What Portalrinth adds
 
 ### Accounts and skins
 
@@ -98,7 +98,7 @@ Updates are signed and delivered automatically through GitHub Releases — no re
 
 ### Bring your instances over
 
-Already on the Modrinth App? Open Noctrinth and a banner offers to import everything it finds. Prefer to choose? **Create instance → Import** lists Modrinth App next to Prism, MultiMC, ATLauncher, GDLauncher and CurseForge.
+Already on the Modrinth App? Open Portalrinth and a banner offers to import everything it finds. Prefer to choose? **Create instance → Import** lists Modrinth App next to Prism, MultiMC, ATLauncher, GDLauncher and CurseForge.
 
 ## Build from source
 
@@ -122,12 +122,12 @@ pnpm prepr:frontend:app
 
 ## Repository layout
 
-This is the upstream Modrinth monorepo, so it carries far more than the launcher — the website, the backend API and the shared libraries all live here. Noctrinth ships the desktop app.
+This is the upstream Modrinth monorepo, so it carries far more than the launcher — the website, the backend API and the shared libraries all live here. Portalrinth ships the desktop app.
 
 | Path                                | What it is                                             |
 | ----------------------------------- | ------------------------------------------------------ |
 | `apps/app`                          | Tauri shell — Rust commands, window and updater config |
-| `apps/app-frontend`                 | Desktop UI (Vue 3), Noctrinth's changelog and locales  |
+| `apps/app-frontend`                 | Desktop UI (Vue 3), Portalrinth's changelog and locales  |
 | `packages/app-lib`                  | Launcher core — accounts, instances, installs, imports |
 | `packages/ui`                       | Shared Vue component library                           |
 | `apps/frontend`, `apps/labrinth`, … | Modrinth's website and backend, carried from upstream  |
@@ -136,7 +136,7 @@ For architecture and infrastructure that isn't fork-specific, the [upstream repo
 
 ## Relationship with upstream
 
-Noctrinth syncs with [modrinth/code](https://github.com/modrinth/code) and pins its version to upstream's exactly: when Modrinth is on `0.21.9`, so is Noctrinth. Where both sides implement the same thing, upstream's version wins and the fork's is dropped. That is how the fork's shared `options.txt` profile, screenshots tab and download cache went: upstream's settings sync, Screenshots page and content store do the same jobs better.
+Portalrinth syncs with [modrinth/code](https://github.com/modrinth/code) and pins its version to upstream's exactly: when Modrinth is on `0.21.9`, so is Portalrinth. Where both sides implement the same thing, upstream's version wins and the fork's is dropped. That is how the fork's shared `options.txt` profile, screenshots tab and download cache went: upstream's settings sync, Screenshots page and content store do the same jobs better.
 
 A fix between upstream releases ships as a micropatch (`0.21.6+1`), which installs already on that version take as a normal update. Test builds ship as pre-releases (`0.21.10-beta.1`), which sort above the current stable and below the next one, so testers roll onto the real release the moment it lands.
 
@@ -144,12 +144,12 @@ A fix between upstream releases ships as a micropatch (`0.21.6+1`), which instal
 
 Bug reports and pull requests are welcome — [open an issue](https://github.com/Everelsu/Noctrinth/issues) to start.
 
-Found a bug that isn't Noctrinth-specific? It belongs [upstream](https://github.com/modrinth/code/issues); fixing it there means everyone gets it, and it reaches this fork on the next sync.
+Found a bug that isn't Portalrinth-specific? It belongs [upstream](https://github.com/modrinth/code/issues); fixing it there means everyone gets it, and it reaches this fork on the next sync.
 
-If Noctrinth helped you, [give it a star](https://github.com/Everelsu/Noctrinth/stargazers).
+If Portalrinth helped you, [give it a star](https://github.com/Everelsu/Noctrinth/stargazers).
 
 ## License
 
 The desktop app is licensed under [GPL-3.0](apps/app/LICENSE). Other packages carry their own licenses — see the `LICENSE` file in each, and [COPYING.md](COPYING.md) for details.
 
-Modrinth branding is the property of Rinth, Inc. and is not used here; Noctrinth ships its own. Noctrinth is an independent fork and is not affiliated with or endorsed by Rinth, Inc.
+Modrinth branding is the property of Rinth, Inc. and is not used here; Portalrinth ships its own. Portalrinth is an independent fork and is not affiliated with or endorsed by Rinth, Inc.

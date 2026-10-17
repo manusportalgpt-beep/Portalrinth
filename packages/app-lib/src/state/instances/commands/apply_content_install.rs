@@ -47,6 +47,15 @@ pub(crate) struct InstanceInstallProjectRequest {
     pub selected: ResolutionPreferences,
 }
 
+/// Reads what the resolver needs about projects and versions.
+///
+/// The two calls answer different questions and are allowed to answer them
+/// differently. `get_version` is asked for a version somebody picked, and that
+/// has to be the version they picked. `get_project_versions` is asked which of
+/// a project's versions best fills a dependency, and a list that is a minute
+/// behind is as good as one that is not — which matters because a pack with
+/// sixty dependencies asks it sixty times, and insisting on a fresh answer each
+/// time is what made installing one fail halfway with "too many requests".
 struct CachedEntryContentProvider<'a> {
     state: &'a State,
     cache_behaviour: Option<CacheBehaviour>,
@@ -77,7 +86,7 @@ impl ContentMetadataProvider for CachedEntryContentProvider<'_> {
     ) -> Result<Vec<modrinth_content_management::Version>, ResolveError> {
         let versions = CachedEntry::get_project_versions(
             project_id,
-            self.cache_behaviour,
+            Some(CacheBehaviour::StaleWhileRevalidate),
             &self.state.pool,
             &self.state.api_semaphore,
         )

@@ -327,7 +327,7 @@ const hasPlus = computed(
 		(hasMidasBadge(credentials.value.user) ||
 			hasActivePride26Midas(authenticatedModrinthUser.value?.campaigns?.pride_26)),
 )
-// Noctrinth does not serve Modrinth's ads. Upstream's gating is kept intact
+// Portalrinth does not serve Modrinth's ads. Upstream's gating is kept intact
 // behind this flag so the sync stays a one-line diff — flip it to re-enable
 // the ad window, the consent popup and the Modrinth+ upsell.
 const ADS_ENABLED = false
@@ -913,7 +913,7 @@ provideLoadingState(loading)
 
 traceStartupStep('Initialize backend state', () => initialize_state(appEventChannel))
 	.then(() => {
-		// Noctrinth's own: the CurseForge key lives in the frontend bundle, and
+		// Portalrinth's own: the CurseForge key lives in the frontend bundle, and
 		// the backend needs it to name installed CurseForge content. Nothing
 		// waits on it — a listing drawn before it lands simply has filenames in
 		// it, and redraws with names once the answers are cached.
@@ -1705,15 +1705,15 @@ const updatePopupMessages = defineMessages({
 	body: {
 		id: 'app.update-popup.body',
 		defaultMessage:
-			'Noctrinth v{version} is ready to install! Reload to update now, or automatically when you close Noctrinth.',
+			'Portalrinth v{version} is ready to install! Reload to update now, or automatically when you close Portalrinth.',
 	},
 	meteredBody: {
 		id: 'app.update-popup.body.metered',
-		defaultMessage: `Noctrinth v{version} is available now! Since you're on a metered network, we didn't automatically download it.`,
+		defaultMessage: `Portalrinth v{version} is available now! Since you're on a metered network, we didn't automatically download it.`,
 	},
 	downloadedBody: {
 		id: 'app.update-popup.body.download-complete',
-		defaultMessage: `Noctrinth v{version} has finished downloading. Reload to update now, or automatically when you close Noctrinth.`,
+		defaultMessage: `Portalrinth v{version} has finished downloading. Reload to update now, or automatically when you close Portalrinth.`,
 	},
 	downloading: {
 		id: 'app.update-popup.downloading',
@@ -1721,16 +1721,16 @@ const updatePopupMessages = defineMessages({
 	},
 	downloadingBody: {
 		id: 'app.update-popup.body.downloading',
-		defaultMessage: 'Noctrinth v{version} — {downloaded} of {size}',
+		defaultMessage: 'Portalrinth v{version} — {downloaded} of {size}',
 	},
 	downloadingBodyUnknownSize: {
 		id: 'app.update-popup.body.downloading-unknown-size',
-		defaultMessage: 'Noctrinth v{version} is downloading…',
+		defaultMessage: 'Portalrinth v{version} is downloading…',
 	},
 	linuxBody: {
 		id: 'app.update-popup.body.linux',
 		defaultMessage:
-			'Noctrinth v{version} is available. Use your package manager to update for the latest features and fixes!',
+			'Portalrinth v{version} is available. Use your package manager to update for the latest features and fixes!',
 	},
 	reload: {
 		id: 'app.update-popup.reload',

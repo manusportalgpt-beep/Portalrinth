@@ -63,7 +63,7 @@
 		"message": "Verdant"
 	},
 	"app.appearance-settings.minimize-launcher.description": {
-		"message": "Minimize Noctrinth when Minecraft starts."
+		"message": "Minimize Portalrinth when Minecraft starts."
 	},
 	"app.changelog.author": {
 		"message": "Author"
@@ -72,19 +72,19 @@
 		"message": "Showing recent releases. The full Modrinth App changelog is available on their website."
 	},
 	"app.changelog.noctrinth-note": {
-		"message": "The full Noctrinth changelog is also available online."
+		"message": "The full Portalrinth changelog is also available online."
 	},
 	"app.changelog.open-modrinth": {
 		"message": "Open Modrinth changelog"
 	},
 	"app.changelog.open-noctrinth": {
-		"message": "Open Noctrinth changelog"
+		"message": "Open Portalrinth changelog"
 	},
 	"app.changelog.source.modrinth": {
 		"message": "Modrinth"
 	},
 	"app.changelog.source.noctrinth": {
-		"message": "Noctrinth"
+		"message": "Portalrinth"
 	},
 	"app.collection.create.created": {
 		"message": "Collection created"
@@ -189,7 +189,7 @@
 		"message": "Cancel directory change"
 	},
 	"app.error-modal.directory.generic.body": {
-		"message": "Noctrinth is unable to migrate to the new directory you selected. Please contact support for help or cancel the directory change."
+		"message": "Portalrinth is unable to migrate to the new directory you selected. Please contact support for help or cancel the directory change."
 	},
 	"app.error-modal.directory.no-space.body": {
 		"message": "It looks like there is not enough space on the disk containing the directory you selected. Please free up some space and try again or cancel the directory change."
@@ -198,7 +198,7 @@
 		"message": "Not enough space"
 	},
 	"app.error-modal.directory.read-only.body": {
-		"message": "It looks like Noctrinth is unable to write to the directory you selected. Please adjust the permissions of the directory and try again or cancel the directory change."
+		"message": "It looks like Portalrinth is unable to write to the directory you selected. Please adjust the permissions of the directory and try again or cancel the directory change."
 	},
 	"app.error-modal.directory.read-only.heading": {
 		"message": "Change directory permissions"
@@ -216,10 +216,10 @@
 		"message": "Get support"
 	},
 	"app.error-modal.hosts-file.body": {
-		"message": "Noctrinth tried to connect to Microsoft / Xbox / Minecraft services, but the remote server rejected the connection. This may indicate that these services are blocked by the hosts file. Please visit <support-article>our support article</support-article> for steps on how to fix the issue."
+		"message": "Portalrinth tried to connect to Microsoft / Xbox / Minecraft services, but the remote server rejected the connection. This may indicate that these services are blocked by the hosts file. Please visit <support-article>our support article</support-article> for steps on how to fix the issue."
 	},
 	"app.error-modal.network.body": {
-		"message": "It looks like there were issues with Noctrinth connecting to Microsoft's servers. This is often the result of a poor connection, so we recommend trying again to see if it works. If issues continue to persist, follow the steps in <support-article>our support article</support-article> to troubleshoot."
+		"message": "It looks like there were issues with Portalrinth connecting to Microsoft's servers. This is often the result of a poor connection, so we recommend trying again to see if it works. If issues continue to persist, follow the steps in <support-article>our support article</support-article> to troubleshoot."
 	},
 	"app.error-modal.network.heading": {
 		"message": "Network issues"
@@ -228,7 +228,7 @@
 		"message": "No error message."
 	},
 	"app.error-modal.no-loader.body": {
-		"message": "Noctrinth failed to find the loader version for this instance."
+		"message": "Portalrinth failed to find the loader version for this instance."
 	},
 	"app.error-modal.no-loader.fix": {
 		"message": "To resolve this, you need to repair the instance. Click the button below to do so."
@@ -246,7 +246,7 @@
 		"message": "Try another Microsoft account"
 	},
 	"app.error-modal.state-init.body": {
-		"message": "Noctrinth failed to load correctly. This may be because of a corrupted file, or because the app is missing crucial files."
+		"message": "Portalrinth failed to load correctly. This may be because of a corrupted file, or because the app is missing crucial files."
 	},
 	"app.error-modal.state-init.fix-internet": {
 		"message": "Ensuring you are connected to the internet, then try restarting the app."
@@ -270,7 +270,7 @@
 		"message": "No loader selected"
 	},
 	"app.error-modal.title.state-init": {
-		"message": "Error initializing Noctrinth"
+		"message": "Error initializing Portalrinth"
 	},
 	"app.error-modal.title.unknown": {
 		"message": "An error occurred"
@@ -282,10 +282,10 @@
 		"message": "Hosting"
 	},
 	"app.hosting.update-required.description": {
-		"message": "You need to update to use Modrinth Hosting through Noctrinth"
+		"message": "You need to update to use Modrinth Hosting through Portalrinth"
 	},
 	"app.hosting.update-required.title": {
-		"message": "Noctrinth update required"
+		"message": "Portalrinth update required"
 	},
 	"app.instance.add-content.from-file": {
 		"message": "Add from file"
@@ -474,16 +474,16 @@
 		"message": "If the service is healthy and this keeps happening, contact support with the debug information below"
 	},
 	"app.minecraft-auth-error.minecraft-server-error.what": {
-		"message": "Minecraft's authentication service is returning a server error, so Noctrinth cannot finish signing you in right now."
+		"message": "Minecraft's authentication service is returning a server error, so Portalrinth cannot finish signing you in right now."
 	},
 	"app.minecraft-auth-error.network.step-1": {
-		"message": "Restart Noctrinth and try signing in again"
+		"message": "Restart Portalrinth and try signing in again"
 	},
 	"app.minecraft-auth-error.network.step-2": {
 		"message": "Check that your internet connection is working"
 	},
 	"app.minecraft-auth-error.network.step-3": {
-		"message": "Allow Noctrinth through your firewall, antivirus, proxy, VPN, and hosts file rules"
+		"message": "Allow Portalrinth through your firewall, antivirus, proxy, VPN, and hosts file rules"
 	},
 	"app.minecraft-auth-error.network.step-4": {
 		"message": "Try a different network or temporarily disable VPN/proxy software if you use one"
@@ -492,7 +492,7 @@
 		"message": "If routing or DNS is the issue, a service like Cloudflare WARP can sometimes help"
 	},
 	"app.minecraft-auth-error.network.what": {
-		"message": "Noctrinth could not connect to a Microsoft, Xbox, or Minecraft service needed for sign-in. This is usually caused by a local network, DNS, proxy, firewall, hosts file, VPN, or antivirus issue."
+		"message": "Portalrinth could not connect to a Microsoft, Xbox, or Minecraft service needed for sign-in. This is usually caused by a local network, DNS, proxy, firewall, hosts file, VPN, or antivirus issue."
 	},
 	"app.minecraft-auth-error.no-xbox-profile.step-1": {
 		"message": "Make sure Minecraft is purchased on this account"
@@ -522,13 +522,13 @@
 		"message": "Make sure you are using the Microsoft account that owns Minecraft. See <link>Finding the right Xbox account</link> for help"
 	},
 	"app.minecraft-auth-error.player-profile.step-5": {
-		"message": "Try signing in to Noctrinth again"
+		"message": "Try signing in to Portalrinth again"
 	},
 	"app.minecraft-auth-error.player-profile.what": {
 		"message": "Minecraft services could not return a Java Edition profile for this account. This most often happens when the game was purchased recently, the Java profile has not finished being created, or the wrong Microsoft account is being used."
 	},
 	"app.minecraft-auth-error.refresh-token.step-1": {
-		"message": "Sign out of the affected Minecraft account in Noctrinth"
+		"message": "Sign out of the affected Minecraft account in Portalrinth"
 	},
 	"app.minecraft-auth-error.refresh-token.step-2": {
 		"message": "Sign in to the account again"
@@ -537,7 +537,7 @@
 		"message": "Once the new sign-in finishes, try launching Minecraft again"
 	},
 	"app.minecraft-auth-error.refresh-token.what": {
-		"message": "Your saved Microsoft sign-in token has expired or was revoked, so Noctrinth cannot refresh your Minecraft session."
+		"message": "Your saved Microsoft sign-in token has expired or was revoked, so Portalrinth cannot refresh your Minecraft session."
 	},
 	"app.minecraft-auth-error.region-unavailable.step-1": {
 		"message": "Xbox services must be supported in your country before you can sign in"
@@ -573,7 +573,7 @@
 		"message": "Use the sync option in your system settings to synchronize the clock"
 	},
 	"app.minecraft-auth-error.sisu-authenticate.step-4": {
-		"message": "Restart Noctrinth"
+		"message": "Restart Portalrinth"
 	},
 	"app.minecraft-auth-error.sisu-authenticate.step-5": {
 		"message": "Try signing in again"
@@ -609,7 +609,7 @@
 		"message": "Wait about an hour before trying again"
 	},
 	"app.minecraft-auth-error.too-many-requests.step-2": {
-		"message": "Restart Noctrinth after waiting"
+		"message": "Restart Portalrinth after waiting"
 	},
 	"app.minecraft-auth-error.too-many-requests.step-3": {
 		"message": "Try signing in once more"
@@ -666,13 +666,13 @@
 		"message": "Complete any prompts shown by Microsoft, Xbox, or Minecraft"
 	},
 	"app.minecraft-auth-error.xsts-authorize.step-3": {
-		"message": "Try signing in to Noctrinth again"
+		"message": "Try signing in to Portalrinth again"
 	},
 	"app.minecraft-auth-error.xsts-authorize.step-4": {
 		"message": "If the official launcher also fails, follow the error shown there or contact Xbox Support"
 	},
 	"app.minecraft-auth-error.xsts-authorize.what": {
-		"message": "Xbox services rejected the request to authorize this account for Minecraft services, but did not return a specific account restriction that Noctrinth recognizes."
+		"message": "Xbox services rejected the request to authorize this account for Minecraft services, but did not return a specific account restriction that Portalrinth recognizes."
 	},
 	"app.nav.lan": {
 		"message": "LAN"
@@ -732,7 +732,7 @@
 		"message": "Proxy"
 	},
 	"app.settings.app-version": {
-		"message": "Noctrinth {version}"
+		"message": "Portalrinth {version}"
 	},
 	"app.settings.default-instance-options.universal-skins.description": {
 		"message": "Servers in offline mode send no skins at all, which is why everyone is Steve there. Look them up by name instead, from Ely.by — which answers for the players registered there and falls back to Mojang for everyone else. Needs no mods, and never replaces a skin the server did send."
@@ -795,10 +795,10 @@
 		"message": "Downloaded runtimes"
 	},
 	"app.settings.privacy.discord-rich-presence.description": {
-		"message": "Show Noctrinth as your current activity on Discord. This does not affect Rich Presence added to instances by mods. Requires an app restart."
+		"message": "Show Portalrinth as your current activity on Discord. This does not affect Rich Presence added to instances by mods. Requires an app restart."
 	},
 	"app.settings.resource-management.app-directory.description": {
-		"message": "Where Noctrinth stores instances and other files. Changes take effect after restarting the app."
+		"message": "Where Portalrinth stores instances and other files. Changes take effect after restarting the app."
 	},
 	"app.settings.tabs.changelog": {
 		"message": "Changelog"
@@ -822,31 +822,31 @@
 		"message": "Ely.by did not accept the change"
 	},
 	"app.survey.body": {
-		"message": "Would you mind answering a few questions about your experience with Noctrinth?"
+		"message": "Would you mind answering a few questions about your experience with Portalrinth?"
 	},
 	"app.update-popup.body": {
-		"message": "Noctrinth v{version} is ready to install! Reload to update now, or automatically when you close Noctrinth."
+		"message": "Portalrinth v{version} is ready to install! Reload to update now, or automatically when you close Portalrinth."
 	},
 	"app.update-popup.body.download-complete": {
-		"message": "Noctrinth v{version} has finished downloading. Reload to update now, or automatically when you close Noctrinth."
+		"message": "Portalrinth v{version} has finished downloading. Reload to update now, or automatically when you close Portalrinth."
 	},
 	"app.update-popup.body.downloading": {
-		"message": "Noctrinth v{version} — {downloaded} of {size}"
+		"message": "Portalrinth v{version} — {downloaded} of {size}"
 	},
 	"app.update-popup.body.downloading-unknown-size": {
-		"message": "Noctrinth v{version} is downloading…"
+		"message": "Portalrinth v{version} is downloading…"
 	},
 	"app.update-popup.body.linux": {
-		"message": "Noctrinth v{version} is available. Use your package manager to update for the latest features and fixes!"
+		"message": "Portalrinth v{version} is available. Use your package manager to update for the latest features and fixes!"
 	},
 	"app.update-popup.body.metered": {
-		"message": "Noctrinth v{version} is available now! Since you're on a metered network, we didn't automatically download it."
+		"message": "Portalrinth v{version} is available now! Since you're on a metered network, we didn't automatically download it."
 	},
 	"app.update-popup.downloading": {
 		"message": "Downloading update"
 	},
 	"app.welcome-screen.title": {
-		"message": "Welcome to Noctrinth"
+		"message": "Welcome to Portalrinth"
 	},
 	"app.window-controls.close": {
 		"message": "Close window"
@@ -1317,16 +1317,16 @@
 		"message": "Verified Plays"
 	},
 	"servers.list-empty.no-servers-description": {
-		"message": "Install mods, invite friends, and play together all from Noctrinth."
+		"message": "Install mods, invite friends, and play together all from Portalrinth."
 	},
 	"servers.list-empty.play-with-friends-description": {
-		"message": "Invite friends to play your server with one-click play from Noctrinth."
+		"message": "Invite friends to play your server with one-click play from Portalrinth."
 	},
 	"settings.display.theme.description": {
-		"message": "Select your preferred color theme across Noctrinth."
+		"message": "Select your preferred color theme across Portalrinth."
 	},
 	"settings.language.coverage.app-tooltip": {
-		"message": "About {percentage}% of Noctrinth is available in this language."
+		"message": "About {percentage}% of Portalrinth is available in this language."
 	},
 	"noctrinth.settings.background.title": {
 		"message": "Background picture"
@@ -1350,22 +1350,22 @@
 		"message": "Softens it, so it stays behind what is in front of it."
 	},
 	"app.behavior-settings.refocus-on-game-close.description": {
-		"message": "Bring Noctrinth to the foreground when Minecraft exits."
+		"message": "Bring Portalrinth to the foreground when Minecraft exits."
 	},
 	"app.screenshots.selection.global-export-filename": {
-		"message": "Noctrinth screenshots.zip"
+		"message": "Portalrinth screenshots.zip"
 	},
 	"app.settings.game-options.compatibility.reason.launcher-controlled": {
-		"message": "This setting is managed by Noctrinth's launch settings."
+		"message": "This setting is managed by Portalrinth's launch settings."
 	},
 	"app.settings.resource-management.debug-info.description": {
 		"message": "Export app logs and diagnostic data to a ZIP file to attach to a bug report."
 	},
 	"app.settings.synced-options.game-settings.custom-empty": {
-		"message": "Settings added by mods will appear here after Noctrinth finds them in one of your instances."
+		"message": "Settings added by mods will appear here after Portalrinth finds them in one of your instances."
 	},
 	"app.settings.privacy.telemetry.description": {
-		"message": "Noctrinth sends no analytics or usage data, whichever way this is set. The switch is kept so the setting carries over to and from Modrinth App."
+		"message": "Portalrinth sends no analytics or usage data, whichever way this is set. The switch is kept so the setting carries over to and from Modrinth App."
 	},
 	"noctrinth.settings.background.drop-hint": {
 		"message": "Or drop a picture onto the window."

@@ -35,7 +35,7 @@ const messages = defineMessages({
 	author: { id: 'app.changelog.author', defaultMessage: 'Author' },
 	support: { id: 'app.changelog.support', defaultMessage: 'Support on Boosty' },
 	installed: { id: 'app.changelog.installed', defaultMessage: 'Installed' },
-	sourceNoctrinth: { id: 'app.changelog.source.noctrinth', defaultMessage: 'Noctrinth' },
+	sourceNoctrinth: { id: 'app.changelog.source.noctrinth', defaultMessage: 'Portalrinth' },
 	sourceModrinth: { id: 'app.changelog.source.modrinth', defaultMessage: 'Modrinth' },
 	modrinthNote: {
 		id: 'app.changelog.modrinth-note',
@@ -48,11 +48,11 @@ const messages = defineMessages({
 	},
 	noctrinthNote: {
 		id: 'app.changelog.noctrinth-note',
-		defaultMessage: 'The full Noctrinth changelog is also available online.',
+		defaultMessage: 'The full Portalrinth changelog is also available online.',
 	},
 	openNoctrinthChangelog: {
 		id: 'app.changelog.open-noctrinth',
-		defaultMessage: 'Open Noctrinth changelog',
+		defaultMessage: 'Open Portalrinth changelog',
 	},
 })
 
