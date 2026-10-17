@@ -1942,12 +1942,18 @@ impl CachedEntry {
                 const PROJECT_VERSION_CONCURRENCY: usize = 8;
 
                 use futures::stream::StreamExt;
-                let fetched = futures::stream::iter(keys.iter())
-                    .map(|key| {
+                // The ids are copied out first. Handing the stream a reference
+                // into the set means each future borrows from the closure's own
+                // argument, which the compiler cannot put a lifetime on.
+                let project_ids: Vec<String> =
+                    keys.iter().map(|key| key.to_string()).collect();
+
+                let fetched = futures::stream::iter(project_ids)
+                    .map(|project_id| {
                         let url = format!(
                             "{}project/{}/version?include_changelog=false",
                             env!("MODRINTH_API_URL"),
-                            key.to_string()
+                            project_id
                         );
 
                         async move {
@@ -1965,7 +1971,7 @@ impl CachedEntry {
                                 (
                                     CacheValue::ProjectVersions(
                                         CachedProjectVersions {
-                                            project_id: key.to_string(),
+                                            project_id,
                                             versions,
                                         },
                                     )
