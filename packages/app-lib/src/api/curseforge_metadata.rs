@@ -708,24 +708,26 @@ mod tests {
     }
 
     #[test]
-    fn a_key_that_is_only_whitespace_counts_as_no_key() {
+    fn the_key_in_force_is_the_persons_own_when_they_set_one() {
+        // One test rather than three on purpose: the two slots are process-wide,
+        // and tests run in parallel threads, so separate tests asserting on them
+        // would be asserting on each other's writes.
         set_api_key(Some("   ".to_string()));
-        assert!(api_key().is_none());
+        assert!(api_key().is_none(), "whitespace is not a key");
 
-        set_api_key(Some("real-key".to_string()));
-        assert_eq!(api_key().as_deref(), Some("real-key"));
-
-        set_api_key(None);
-        assert!(api_key().is_none());
-    }
-
-    #[test]
-    fn a_key_of_the_persons_wins_over_the_builds() {
         set_api_key(Some("build-key".to_string()));
-        adopt_user_key(Some("person-key"));
-
-        assert_eq!(api_key().as_deref(), Some("person-key"));
+        assert_eq!(api_key().as_deref(), Some("build-key"));
         assert!(is_available());
+
+        adopt_user_key(Some("person-key"));
+        assert_eq!(api_key().as_deref(), Some("person-key"));
+
+        adopt_user_key(Some("  \t "));
+        assert_eq!(
+            api_key().as_deref(),
+            Some("build-key"),
+            "a blank key must not shadow the build's with nothing"
+        );
 
         adopt_user_key(None);
         assert_eq!(
@@ -735,21 +737,7 @@ mod tests {
         );
 
         set_api_key(None);
+        adopt_user_key(None);
         assert!(!is_available());
-    }
-
-    #[test]
-    fn blank_your_own_key_counts_as_not_setting_one() {
-        set_api_key(None);
-        adopt_user_key(Some("  \t "));
-        assert!(!is_available());
-
-        set_api_key(Some("build-key".to_string()));
-        adopt_user_key(Some(" "));
-        assert_eq!(
-            api_key().as_deref(),
-            Some("build-key"),
-            "a blank key must not shadow the build's with nothing"
-        );
     }
 }

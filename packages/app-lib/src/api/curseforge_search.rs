@@ -232,7 +232,11 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
     let offset = query.index;
     let game_id = query.game_id.unwrap_or(GAME_ID_JAVA);
     let sort_field = query.sort_field.to_string();
-    let sort_order = query.sort_order.max(1).to_string();
+    // Which way round the caller wants, and the other way round for the mirrored
+    // window below — asking for the same slice from the far end only works if
+    // the order is the reverse of the one being reproduced.
+    let forward_order = if query.sort_order == 2 { "asc" } else { "desc" };
+    let mirror_order = if forward_order == "asc" { "desc" } else { "asc" };
     let game_version = query
         .game_version
         .as_deref()
@@ -271,7 +275,7 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
 
     // The page fits inside the forward window: ask for it directly.
     if offset + limit <= INDEX_WINDOW {
-        let (hits, total) = run_page(build(offset, "desc"), game_version).await?;
+        let (hits, total) = run_page(build(offset, forward_order), game_version).await?;
         return Ok(CurseforgeSearchPage {
             index: offset as usize,
             page_size: limit as usize,
@@ -284,7 +288,7 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
 
     // It does not. Find out how far the window reaches, then ask for the same
     // slice from the other end of the result set and turn it back around.
-    let (_, total) = run_page(build(0, "desc"), game_version).await?;
+    let (_, total) = run_page(build(0, forward_order), game_version).await?;
     let reachable = total.min(INDEX_WINDOW * 2);
     if offset >= reachable {
         return Ok(CurseforgeSearchPage {
@@ -312,7 +316,7 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
     }
 
     let (mut hits, _) =
-        run_page(build(mirror_index, "asc"), game_version).await?;
+        run_page(build(mirror_index, mirror_order), game_version).await?;
     hits.reverse();
     hits.truncate(mirror_take as usize);
     Ok(CurseforgeSearchPage {
