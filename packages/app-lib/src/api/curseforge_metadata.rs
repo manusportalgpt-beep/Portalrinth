@@ -68,7 +68,11 @@ pub fn set_api_key(key: Option<String>) {
     }
 }
 
-fn api_key() -> Option<String> {
+/// The key the frontend was built with, or `None` when this build has none.
+///
+/// Also read by `curseforge_search`, which cannot ask CurseForge anything
+/// without it either.
+pub fn api_key() -> Option<String> {
     API_KEY.read().ok().and_then(|slot| slot.clone())
 }
 
