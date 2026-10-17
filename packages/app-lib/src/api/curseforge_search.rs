@@ -297,7 +297,7 @@ pub async fn search_with_state(
                     display_name: found.name.clone(),
                     file_name: file.file_name.unwrap_or_default(),
                     game_version: file.game_version,
-                    loader: file.mod_loader.map(loader_name),
+                    loader: file.mod_loader.and_then(loader_name),
                     file_date: None,
                     sha1: None,
                 }),
