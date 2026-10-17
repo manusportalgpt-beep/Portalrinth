@@ -17,13 +17,13 @@ import { Button, Card, defineMessages, IconButton, ProgressBar, useVIntl } from 
 import { computed, ref, watch } from 'vue'
 
 import {
+	type CurseforgeFile,
 	curseforgeFiles,
+	type CurseforgeHit,
 	curseforgeProjectUrl,
 	installCurseforgeMod,
 	isCurseforgeAvailable,
 	searchCurseforge,
-	type CurseforgeFile,
-	type CurseforgeHit,
 } from '@/helpers/curseforge-api'
 
 const props = defineProps<{
@@ -200,7 +200,7 @@ async function toggleVersions(hit: CurseforgeHit) {
 			<span class="text-sm text-secondary">{{ formatMessage(messages.providerLabel) }}</span>
 			<div class="flex gap-1 rounded-lg bg-surface-3 p-1">
 				<Button
-					v-for="option in (['modrinth', 'both', 'curseforge'] as Provider[])"
+					v-for="option in ['modrinth', 'both', 'curseforge'] as Provider[]"
 					:key="option"
 					:color="provider === option ? 'brand' : 'secondary'"
 					size="sm"
@@ -290,9 +290,7 @@ async function toggleVersions(hit: CurseforgeHit) {
 					<p v-if="hit.summary" class="m-0 text-secondary">{{ hit.summary }}</p>
 					<p class="m-0 text-sm text-secondary">
 						{{ formatMessage(messages.downloads, { count: hit.download_count }) }}
-						<span v-if="!hit.latest_file">
-							· {{ formatMessage(messages.noFileForVersion) }}
-						</span>
+						<span v-if="!hit.latest_file"> · {{ formatMessage(messages.noFileForVersion) }} </span>
 					</p>
 
 					<ul
