@@ -125,21 +125,26 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ -f "$GITHUB_WORKSPACE/build.log" ]; then
-            tail -n 60 "$GITHUB_WORKSPACE/build.log" > "$RUNNER_TEMP/build-tail.log"
-            {
-              echo '### Build output, last 60 lines'
-              echo '```'
-              cat "$RUNNER_TEMP/build-tail.log"
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo '::error::The installer build failed. See the step summary for the last 60 lines.'
-          else
-            {
-              echo 'The build produced no output at all — it did not get as far as running.'
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo '::error::The installer build produced no output.'
+          if [ ! -f "$GITHUB_WORKSPACE/build.log" ]; then
+            echo '::error::The build produced no output at all — it never got as far as running.'
+            exit 0
           fi
+
+          {
+            echo '### Build output, last 60 lines'
+            echo '```'
+            tail -n 60 "$GITHUB_WORKSPACE/build.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # The same lines go into an annotation as well. The logs of a failed
+          # step need an account to read; annotations do not, so this is the
+          # only copy of the reason a build to try is visible to anyone but the
+          # person who pushed it.
+          tail -n 60 "$GITHUB_WORKSPACE/build.log" \
+            | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g' \
+            > "$RUNNER_TEMP/build-tail.txt"
+          echo "::error title=Installer build failed::$(cat "$RUNNER_TEMP/build-tail.txt")"
 
       - name: Upload the installer
         if: steps.build.outcome == 'success'
