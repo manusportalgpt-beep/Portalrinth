@@ -223,7 +223,7 @@ async fn port_from_log_file(
     .ok()?;
 
     let mut tail = String::new();
-    file.read_to_end(&mut tail).await.ok()?;
+    file.read_to_string(&mut tail).await.ok()?;
     tail.lines()
         .rev()
         .find_map(crate::state::lan::port_in_line)
@@ -246,7 +246,8 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
         return Err(crate::ErrorKind::InputError(
             "this world is not open to the network, open it to LAN in Minecraft first"
                 .to_string(),
-        ));
+        )
+        .as_error());
     };
 
     // Whatever was published for this copy before is taken down first, so that
@@ -273,6 +274,7 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
                 crate::ErrorKind::OtherError(format!(
                     "the relay did not return {name}"
                 ))
+                .as_error()
             })
     };
 
@@ -330,7 +332,7 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
 /// Stops publishing the world of a running copy.
 #[tracing::instrument]
 pub async fn stop(process_uuid: Uuid) -> crate::Result<()> {
-    let Some((session_id, tunnel)) = RELAYS.remove(&process_uuid) else {
+    let Some((_, tunnel)) = RELAYS.remove(&process_uuid) else {
         return Ok(());
     };
     tunnel.task.abort();
@@ -338,7 +340,7 @@ pub async fn stop(process_uuid: Uuid) -> crate::Result<()> {
     // The tunnel is already gone. The relay is told so that it stops handing the
     // address out; one that never hears is cleaned up by itself.
     if let Ok(state) = crate::State::get().await {
-        close_session(&state, &session_id, &tunnel.bearer).await;
+        close_session(&state, &tunnel.session_id, &tunnel.bearer).await;
     }
 
     Ok(())
@@ -351,14 +353,14 @@ pub async fn stop(process_uuid: Uuid) -> crate::Result<()> {
 pub fn detach_process(process_uuid: Uuid) {
     LOGS_CONSULTED.remove(&process_uuid);
 
-    let Some((session_id, tunnel)) = RELAYS.remove(&process_uuid) else {
+    let Some((_, tunnel)) = RELAYS.remove(&process_uuid) else {
         return;
     };
     tunnel.task.abort();
 
     tokio::spawn(async move {
         if let Ok(state) = crate::State::get().await {
-            close_session(&state, &session_id, &tunnel.bearer).await;
+            close_session(&state, &tunnel.session_id, &tunnel.bearer).await;
         }
     });
 }
@@ -426,6 +428,7 @@ async fn resolve_identity(
             crate::ErrorKind::InputError(
                 "sign in to an account first".to_string(),
             )
+            .as_error()
         })
 }
 
@@ -469,25 +472,42 @@ async fn identities(
         });
     }
 
-    for credentials in
-        crate::state::Credentials::get_all(&state.pool).await?
-    {
+    for (username, refresh_token, uuid) in microsoft_accounts(state).await? {
         // What is stored against a Microsoft account is the token Minecraft
         // accepts, and the relay is not Minecraft.
-        let Ok(refreshed) =
-            crate::state::oauth_refresh(&credentials.refresh_token).await
+        let Ok(refreshed) = crate::state::oauth_refresh(&refresh_token).await
         else {
             continue;
         };
         found.push(RelayIdentity::Online {
             provider: "msa",
-            username: credentials.offline_profile.name,
+            username,
             access_token: refreshed.value.access_token,
-            uuid: credentials.offline_profile.id,
+            uuid,
         });
     }
 
     Ok(found)
+}
+
+/// The Microsoft accounts, copied out of the map they are held in.
+///
+/// The token is exchanged for a live one over the network, and a borrow of the
+/// map cannot be held across that.
+async fn microsoft_accounts(
+    state: &crate::State,
+) -> crate::Result<Vec<(String, String, Uuid)>> {
+    let accounts = crate::state::Credentials::get_all(&state.pool).await?;
+    Ok(accounts
+        .iter()
+        .map(|entry| {
+            (
+                entry.offline_profile.name.clone(),
+                entry.refresh_token.clone(),
+                entry.offline_profile.id,
+            )
+        })
+        .collect())
 }
 
 /// A token the relay accepts.
@@ -543,6 +563,7 @@ async fn messenger_token(
             crate::ErrorKind::OtherError(
                 "the relay did not return a token".to_string(),
             )
+            .as_error()
         })
 }
 
@@ -579,7 +600,8 @@ async fn relay_request(
                 .as_str()
                 .unwrap_or("the relay refused the request")
                 .to_string(),
-        ));
+        )
+        .as_error());
     }
     Ok(body)
 }
