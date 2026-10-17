@@ -15,7 +15,12 @@ use std::sync::LazyLock;
 ///
 /// These end where the port begins, rather than being a word that could be
 /// reused by an unrelated line, because a number taken from a line that was
-/// never about serving is worse than no number at all.
+/// never about serving is worse than no number at all. The last two are the
+/// whole word on its own — the game says the port many different ways and in a
+/// language this does not have a phrase for, and "the word for port, followed
+/// by a number" is what they all have in common. What Minecraft logs about a
+/// port otherwise is rare, and a port found that way is only believed once
+/// something is listening on it.
 const HOSTING_MARKERS: &[&str] = &[
     "local game hosted on port",
     "integrated minecraft server on",
@@ -29,6 +34,8 @@ const HOSTING_MARKERS: &[&str] = &[
     "интегрированного сервера minecraft на порту",
     "сервер запущен на порту",
     "открыт lan на порту",
+    "порт",
+    "порту",
 ];
 
 /// Ports below this are not something Minecraft hands out for a world, and a
@@ -176,11 +183,10 @@ mod tests {
             ),
             Some(52123)
         );
-    }
-
-    #[test]
-    fn reads_a_port_written_without_a_space() {
-        assert_eq!(port_in_line("Local game hosted on port:52123"), Some(52123));
+        assert_eq!(
+            port_in_line("[12:34:56 [Сервер]: INFO]: Локальная игра запущена на порту 52123"),
+            Some(52123)
+        );
     }
 
     #[test]
@@ -202,6 +208,12 @@ mod tests {
             None
         );
         assert_eq!(port_in_line(""), None);
+    }
+
+    #[test]
+    fn reads_a_port_written_without_a_space() {
+        assert_eq!(port_in_line("Local game hosted on port:52123"), Some(52123));
+        assert_eq!(port_in_line("Локальная игра запущена на порту:52123"), Some(52123));
     }
 
     #[test]
