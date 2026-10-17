@@ -1,4 +1,46 @@
 {
+	"app.lan.action.publish": {
+		"message": "LAN megnyitása"
+	},
+	"app.lan.action.unpublish": {
+		"message": "Leállítás"
+	},
+	"app.lan.copied": {
+		"message": "Cím másolva"
+	},
+	"app.lan.description": {
+		"message": "Nyisd meg a világot LAN-ra a Minecraftben, majd publikáld innen."
+	},
+	"app.lan.empty-description": {
+		"message": "Indíts egy példányt, és megjelenik itt."
+	},
+	"app.lan.empty-heading": {
+		"message": "Nincs futó példány"
+	},
+	"app.lan.error-heading": {
+		"message": "Nem sikerült beolvasni a futó példányokat"
+	},
+	"app.lan.heading": {
+		"message": "LAN"
+	},
+	"app.lan.published": {
+		"message": "Publikálva itt: {address}"
+	},
+	"app.lan.state.closed": {
+		"message": "Nincs világ megnyitva a hálózatra"
+	},
+	"app.lan.state.lost": {
+		"message": "A relay megszakította a játékosokat"
+	},
+	"app.lan.state.ready": {
+		"message": "A Minecraft a(z) {port} porton hallgat"
+	},
+	"app.lan.stopped": {
+		"message": "Már nincs publikálva"
+	},
+	"app.nav.lan": {
+		"message": "LAN"
+	},
 	"app.settings.app-version": {
 		"message": "Noctrinth {version}"
 	},

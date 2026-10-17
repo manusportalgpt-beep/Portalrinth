@@ -10,8 +10,8 @@ import {
 	LogOutIcon,
 	PlayIcon,
 	PlusIcon,
+	RadioTowerIcon,
 	RefreshCwIcon,
-	ServerStackIcon,
 	SettingsIcon,
 	ShirtIcon,
 	SpinnerIcon,
@@ -643,9 +643,9 @@ const messages = defineMessages({
 		id: 'app.nav.home',
 		defaultMessage: 'Home',
 	},
-	modrinthHosting: {
-		id: 'app.nav.modrinth-hosting',
-		defaultMessage: 'Modrinth Hosting',
+	lan: {
+		id: 'app.nav.lan',
+		defaultMessage: 'LAN',
 	},
 	screenshots: {
 		id: 'app.nav.screenshots',
@@ -2333,16 +2333,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				<ImageIcon />
 			</NavButton>
 			<NavButton
-				v-tooltip.right="formatMessage(messages.modrinthHosting)"
-				to="/hosting/manage"
-				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
-				:is-subpage="
-					(r) =>
-						(r.path.startsWith('/hosting/manage/') && r.path !== '/hosting/manage/') ||
-						((r.path.startsWith('/browse') || r.path.startsWith('/project')) && r.query.sid)
-				"
+				v-tooltip.right="formatMessage(messages.lan)"
+				to="/lan"
+				:is-primary="(r) => r.path === '/lan'"
 			>
-				<ServerStackIcon />
+				<RadioTowerIcon />
 			</NavButton>
 			<suspense>
 				<QuickInstanceSwitcher>

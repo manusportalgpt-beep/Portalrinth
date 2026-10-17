@@ -14,6 +14,11 @@ export default new createRouter({
 			component: () => import('@/pages/Index.vue'),
 		},
 		{
+			path: '/lan',
+			name: 'LAN',
+			component: () => import('@/pages/Lan.vue'),
+		},
+		{
 			path: '/hosting/manage/',
 			name: 'Servers',
 			component: () => import('@/pages/Servers.vue'),

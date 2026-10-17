@@ -884,6 +884,45 @@
 	"app.library.search.type.shader": {
 		"message": "Есть шейдеры"
 	},
+	"app.lan.action.publish": {
+		"message": "Открыть LAN"
+	},
+	"app.lan.action.unpublish": {
+		"message": "Остановить"
+	},
+	"app.lan.copied": {
+		"message": "Адрес скопирован"
+	},
+	"app.lan.description": {
+		"message": "Откройте мир для сети в Minecraft, а потом опубликуйте его отсюда."
+	},
+	"app.lan.empty-description": {
+		"message": "Запустите сборку — она появится здесь."
+	},
+	"app.lan.empty-heading": {
+		"message": "Ничего не запущено"
+	},
+	"app.lan.error-heading": {
+		"message": "Не удалось прочитать запущенные сборки"
+	},
+	"app.lan.heading": {
+		"message": "LAN"
+	},
+	"app.lan.published": {
+		"message": "Опубликовано по адресу {address}"
+	},
+	"app.lan.state.closed": {
+		"message": "Мир не открыт для сети"
+	},
+	"app.lan.state.lost": {
+		"message": "Релиз перестал передавать игроков"
+	},
+	"app.lan.state.ready": {
+		"message": "Minecraft слушает порт {port}"
+	},
+	"app.lan.stopped": {
+		"message": "Больше не опубликовано"
+	},
 	"app.migration.modrinth.action.choose": {
 		"message": "Выбрать сборки"
 	},
@@ -1153,6 +1192,9 @@
 	},
 	"app.minecraft-auth-error.xsts-authorize.what": {
 		"message": "Сервисы Xbox отклонили запрос на авторизацию этого аккаунта в Minecraft, но не сообщили конкретное ограничение, которое Noctrinth умеет распознавать."
+	},
+	"app.nav.lan": {
+		"message": "LAN"
 	},
 	"app.nav.modrinth-hosting": {
 		"message": "Хостинг Modrinth"

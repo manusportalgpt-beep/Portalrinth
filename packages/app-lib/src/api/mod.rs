@@ -11,6 +11,7 @@ pub mod handler;
 pub mod instance;
 pub mod instance_recovery;
 pub mod jre;
+pub mod lan;
 pub mod launcher_search;
 pub mod logs;
 pub mod metadata;

@@ -365,6 +365,45 @@
 	"app.library.search.type.shader": {
 		"message": "Has shader packs"
 	},
+	"app.lan.action.publish": {
+		"message": "Open LAN"
+	},
+	"app.lan.action.unpublish": {
+		"message": "Stop"
+	},
+	"app.lan.copied": {
+		"message": "Address copied"
+	},
+	"app.lan.description": {
+		"message": "Open a world to LAN in Minecraft, then publish it from here."
+	},
+	"app.lan.empty-description": {
+		"message": "Start an instance and it will show up here."
+	},
+	"app.lan.empty-heading": {
+		"message": "Nothing is running"
+	},
+	"app.lan.error-heading": {
+		"message": "Failed to read running instances"
+	},
+	"app.lan.heading": {
+		"message": "LAN"
+	},
+	"app.lan.published": {
+		"message": "Published at {address}"
+	},
+	"app.lan.state.closed": {
+		"message": "No world is open to the network"
+	},
+	"app.lan.state.lost": {
+		"message": "The relay stopped carrying players"
+	},
+	"app.lan.state.ready": {
+		"message": "Minecraft is serving port {port}"
+	},
+	"app.lan.stopped": {
+		"message": "No longer published"
+	},
 	"app.migration.modrinth.action.choose": {
 		"message": "Choose instances"
 	},
@@ -634,6 +673,9 @@
 	},
 	"app.minecraft-auth-error.xsts-authorize.what": {
 		"message": "Xbox services rejected the request to authorize this account for Minecraft services, but did not return a specific account restriction that Noctrinth recognizes."
+	},
+	"app.nav.lan": {
+		"message": "LAN"
 	},
 	"app.notifications.accept": {
 		"message": "Accept"

@@ -991,7 +991,7 @@ async fn sisu_authenticate(
 }
 
 #[derive(Deserialize)]
-struct OAuthToken {
+pub struct OAuthToken {
     // pub token_type: String,
     // The Minecraft token obtained with this one lives far longer, and it is
     // the one credentials expire with, so this is of no use to us
@@ -1047,8 +1047,13 @@ async fn oauth_token(
     })
 }
 
+/// Exchanges a stored Microsoft refresh token for a live access token.
+///
+/// The Minecraft token in [`Credentials`] is not the Microsoft one, and
+/// anything outside Minecraft that wants to know who somebody is wants the
+/// latter.
 #[tracing::instrument]
-async fn oauth_refresh(
+pub async fn oauth_refresh(
     refresh_token: &str,
 ) -> Result<RequestWithDate<OAuthToken>, MinecraftAuthenticationError> {
     let mut query = HashMap::new();

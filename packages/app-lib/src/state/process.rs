@@ -503,6 +503,11 @@ impl ProcessManager {
 
     fn remove(&self, id: Uuid) {
         self.processes.remove(&id);
+
+        // The world this copy had open is gone with it, and so is the port it
+        // was on and anything published from it.
+        crate::state::lan::forget_process(&id.to_string());
+        crate::api::lan::detach_process(id);
     }
 }
 
@@ -889,7 +894,9 @@ impl Process {
         let event = &Self::without_session_id(event);
 
         if let Some(formatted) = Self::format_log4j_entry(event) {
-            push_log_line(process_uuid, formatted.trim_end().to_string());
+            let formatted = formatted.trim_end().to_string();
+            crate::state::lan::note_log_line(process_uuid, &formatted);
+            push_log_line(process_uuid, formatted);
         }
         if let Some(ref throwable) = event.throwable {
             for line in throwable.lines().filter(|l| !l.is_empty()) {
@@ -915,6 +922,7 @@ impl Process {
     fn emit_legacy_log(instance_id: &str, process_uuid: &str, message: &str) {
         let message = crate::api::logs::censor_session_ids(message.to_string());
 
+        crate::state::lan::note_log_line(process_uuid, &message);
         push_log_line(process_uuid, message.clone());
 
         #[cfg(feature = "tauri")]

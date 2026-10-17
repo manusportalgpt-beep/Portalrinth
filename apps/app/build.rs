@@ -617,6 +617,14 @@ fn main() {
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),
+            )
+            .plugin(
+                "noctrinth-lan",
+                InlinedPlugin::new()
+                    .commands(&["lan_list", "lan_start", "lan_stop"])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
             ),
     )
     .expect("Failed to run tauri-build");
