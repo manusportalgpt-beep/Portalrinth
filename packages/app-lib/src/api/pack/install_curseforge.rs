@@ -655,7 +655,8 @@ pub async fn install_curseforge_mod(
             .first()
             .and_then(|loader| u64::try_from(*loader).ok())
             .and_then(crate::api::curseforge_search::curseforge_loader_name)
-            .unwrap_or_default(),
+            .unwrap_or_default()
+            .to_string(),
         dependent_on: None,
     };
     let bytes = fetch_mirrors(
