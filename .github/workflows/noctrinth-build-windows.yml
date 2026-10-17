@@ -50,12 +50,6 @@ jobs:
           # the installer, and a shallow clone leaves it guessing.
           fetch-depth: 0
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
       - name: Enable Corepack
         run: corepack enable
 
@@ -100,26 +94,50 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      # The steps below write what they printed to `$GITHUB_WORKSPACE/logs/`
+      # and the report at the end lifts those into the step summary and into an
+      # annotation. The logs of a failed step are not readable without an
+      # account, so without this a failure here says only that it failed.
       - name: Report the toolchain
         shell: bash
         run: |
-          node --version
-          pnpm --version
-          pnpm --filter @modrinth/app exec tauri --version
-          rustc --version
+          mkdir -p "$GITHUB_WORKSPACE/logs"
+          {
+            echo "node $(node --version)"
+            echo "pnpm $(pnpm --version)"
+            echo "rustc $(rustc --version)"
+            echo "--- tauri --version ---"
+            pnpm --filter @modrinth/app exec tauri --version 2>&1
+          } | tee "$GITHUB_WORKSPACE/logs/00-toolchain.log"
 
       - name: Build the app frontend
         # The same build `beforeBuildCommand` in tauri.conf.json runs. Done as
-        # its own step so that a failure here is distinguishable from a failure
-        # in the Tauri build — the two look identical in the run's step list
-        # otherwise, and a failed step's log needs an account to read.
-        run: pnpm turbo run build --filter=@modrinth/app-frontend
-
-      - name: Build the installer
-        id: build
+        # its own step so a failure here is distinguishable from a failure in
+        # the Tauri build.
         shell: bash
-        working-directory: apps/app
-        continue-on-error: true
+        run: |
+          set +e
+          pnpm turbo run build --filter=@modrinth/app-frontend \
+            > "$GITHUB_WORKSPACE/logs/10-frontend.log" 2>&1
+          code=$?
+          tail -n 40 "$GITHUB_WORKSPACE/logs/10-frontend.log"
+          exit $code
+
+      # Not `tauri build`: this is the same compilation it starts with, run on
+      # its own so that a compiler or linker error is reported by cargo itself
+      # rather than by a wrapper. `cargo check` in CI never links, so a link
+      # error is only ever seen here.
+      - name: Compile the app
+        shell: bash
+        run: |
+          set +e
+          cargo build --release -p theseus_gui --features updater \
+            > "$GITHUB_WORKSPACE/logs/20-cargo.log" 2>&1
+          code=$?
+          tail -n 40 "$GITHUB_WORKSPACE/logs/20-cargo.log"
+          exit $code
+
+      - name: Bundle the installer
         # `--bundles nsis` is the one target that exists on Windows; the config
         # lists the macOS and Linux ones too, which Tauri skips on its own but
         # not before it has looked for their toolchains.
@@ -128,48 +146,17 @@ jobs:
         # `tauri.build.conf.json`, which turns off the updater artifacts: with
         # them on, the build stops and asks for a signing key that a build to
         # try has no business having.
-        #
-        # Everything is written to a file and then echoed, rather than piped
-        # through tee: a pipeline hides the command's own exit code behind
-        # tee's, and a build that fails with nothing printed looks exactly like
-        # one that was killed.
+        shell: bash
+        working-directory: apps/app
         run: |
           set +e
           pnpm tauri build --features updater --bundles nsis --config src/tauri.build.conf.json \
-            > "$GITHUB_WORKSPACE/build.log" 2>&1
+            > "$GITHUB_WORKSPACE/logs/30-tauri.log" 2>&1
           code=$?
-          cat "$GITHUB_WORKSPACE/build.log"
-          echo "### tauri build exited with $code" >> "$GITHUB_WORKSPACE/build.log"
+          tail -n 40 "$GITHUB_WORKSPACE/logs/30-tauri.log"
           exit $code
 
-      - name: Report what the build said
-        if: always()
-        shell: bash
-        run: |
-          log="$GITHUB_WORKSPACE/build.log"
-          if [ ! -f "$log" ]; then
-            echo '::error::The build produced no output at all — it never got as far as running.'
-            exit 0
-          fi
-
-          {
-            echo '### Build output, last 60 lines'
-            echo '```'
-            tail -n 60 "$log"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          # The same lines go into an annotation as well. The logs of a failed
-          # step need an account to read; annotations do not, so this is the
-          # only copy of the reason a build to try is visible to anyone but the
-          # person who pushed it.
-          tail -n 60 "$log" \
-            | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g' \
-            > "$RUNNER_TEMP/build-tail.txt"
-          echo "::error title=Installer build failed::$(cat "$RUNNER_TEMP/build-tail.txt")"
-
       - name: Upload the installer
-        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: Noctrinth-Windows-x64
@@ -177,6 +164,32 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Fail the run if the installer was not built
-        if: steps.build.outcome != 'success'
-        run: exit 1
+      - name: Report what each step said
+        if: always()
+        shell: bash
+        run: |
+          found=0
+          for log in "$GITHUB_WORKSPACE"/logs/*.log; do
+            [ -e "$log" ] || continue
+            found=1
+            {
+              echo "### $(basename "$log")"
+              echo '```'
+              tail -n 50 "$log"
+              echo '```'
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          if [ "$found" = 0 ]; then
+            echo '::error::No step wrote any output.'
+            exit 0
+          fi
+
+          # The last non-empty log goes into an annotation too, so that the
+          # reason this failed is visible to anyone but the person who pushed.
+          last=$(ls -t "$GITHUB_WORKSPACE"/logs/*.log 2>/dev/null | head -n 1)
+          tail -n 50 "$last" \
+            | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g' \
+            > "$RUNNER_TEMP/build-tail.txt"
+          echo "::error title=Windows build failed::$(cat "$RUNNER_TEMP/build-tail.txt")"
