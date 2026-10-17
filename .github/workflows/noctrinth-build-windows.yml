@@ -78,14 +78,18 @@ jobs:
         run: cp packages/app-lib/.env.prod packages/app-lib/.env
 
       - name: Prepare CurseForge API key
-        if: ${{ secrets.CURSEFORGE_API_KEY != '' }}
         shell: bash
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
+          # Checked here rather than in an `if:`, because the secrets context is
+          # not available in a step condition.
+          if [ -z "$CURSEFORGE_API_KEY" ]; then
+            echo "::notice::No CurseForge key configured. Importing a CurseForge modpack zip will not work in this build."
+            exit 0
+          fi
           # The key is read raw from this file by vite.config.ts (bypasses
-          # dotenv-expand so bcrypt-style `$` chars survive). Without it,
-          # importing a CurseForge modpack zip does not work.
+          # dotenv-expand so bcrypt-style `$` chars survive).
           printf 'VITE_CURSEFORGE_API_KEY=%s\n' "$CURSEFORGE_API_KEY" \
             > apps/app-frontend/.env.local
 
