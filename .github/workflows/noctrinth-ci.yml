@@ -135,7 +135,22 @@ jobs:
           exit $code
 
       - name: Run app-lib unit tests
-        run: cargo test -p theseus
+        run: |
+          cargo test -p theseus 2>&1 | tee "$RUNNER_TEMP/theseus-tests.log"
+          exit ${PIPESTATUS[0]}
+
+      # A failing test says nothing at all in the log by default, which is the
+      # same blind spot the step above exists to close for the compiler.
+      - name: Report which tests failed
+        if: failure()
+        run: |
+          set +e
+          grep -E "^(test |failures:|    [a-z_]+::)" "$RUNNER_TEMP/theseus-tests.log" \
+            | tail -n 40 \
+            | sed -e 's/%/%25/g' -e 's/\r/%0D/g' \
+            > "$RUNNER_TEMP/test-tail.txt"
+          echo "::error title=unit tests failed::$(cat "$RUNNER_TEMP/test-tail.txt")"
+          exit 0
 
       # The app crate carries a few of its own — how an error is classified on
       # its way to the interface, for one — and the check above already builds
