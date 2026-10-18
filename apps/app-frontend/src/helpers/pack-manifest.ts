@@ -13,6 +13,8 @@ export type PackEntryKind = 'mod' | 'resource_pack' | 'data_pack' | 'shader' | '
 
 export interface PackManifestEntry {
 	source: string
+	/** The string the installer matches on; never changes once read. */
+	key: string
 	id: string
 	file_id: string | null
 	path: string

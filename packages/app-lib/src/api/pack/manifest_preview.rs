@@ -43,6 +43,13 @@ pub enum PackEntryKind {
 pub struct PackManifestEntry {
     /// Where the pack says this comes from: `curseforge`, `modrinth` or `file`.
     pub source: String,
+    /// The one string that identifies this entry to the installer, and the only
+    /// one that does not change: a CurseForge file id, or a Modrinth hash. Names
+    /// and version ids come from a lookup and would name a different file if
+    /// they were used to decide what to install.
+    pub key: String,
+    /// The Modrinth sha1 of the file, which is the hash the API will name.
+    pub sha1: Option<String>,
     /// The CurseForge project id, or the Modrinth version id. Empty for a file
     /// the pack carries on its own.
     pub id: String,
@@ -227,6 +234,8 @@ fn curseforge_manifest(bytes: &[u8]) -> crate::Result<PackManifest> {
         .filter(|file| file.required)
         .map(|file| PackManifestEntry {
             source: "curseforge".to_string(),
+            key: file.file_id.map(|id| id.to_string()).unwrap_or_default(),
+            sha1: None,
             id: file.project_id.map(|id| id.to_string()).unwrap_or_default(),
             file_id: file.file_id.map(|id| id.to_string()),
             path: String::new(),
@@ -280,6 +289,8 @@ fn modrinth_manifest(bytes: &[u8]) -> crate::Result<PackManifest> {
         .iter()
         .map(|file| PackManifestEntry {
             source: "modrinth".to_string(),
+            key: file.hashes.get("sha512").cloned().unwrap_or_default(),
+            sha1: file.hashes.get("sha1").cloned(),
             id: file
                 .hashes
                 .get("sha512")
@@ -354,16 +365,108 @@ pub async fn resolve_pack_entries(
     manifest: PackManifest,
     state: &State,
 ) -> PackManifest {
-    let Some(key) = crate::api::curseforge_metadata::api_key() else {
-        return manifest;
-    };
-    let http = match crate::api::curseforge_search::build_client(&key) {
-        Ok(http) => http,
-        Err(_) => return manifest,
+    let mut resolved = manifest;
+
+    resolve_modrinth_entries(&mut resolved, state).await;
+    resolve_curseforge_entries(&mut resolved).await;
+
+    resolved
+}
+
+/// A Modrinth index carries hashes, and the API can name a version from a hash.
+///
+/// Asked in one request for the whole pack rather than per file: the endpoint
+/// takes a list, and a list is the difference between one round trip and three
+/// hundred. The projects those versions belong to are then asked about in one
+/// more, which is where the author and the icon come from.
+async fn resolve_modrinth_entries(manifest: &mut PackManifest, state: &State) {
+    let hashes: Vec<String> = manifest
+        .entries
+        .iter()
+        .filter(|entry| entry.source == "modrinth")
+        .filter_map(|entry| entry.sha1.clone())
+        .collect();
+    if hashes.is_empty() {
+        return;
+    }
+
+    let versions: std::collections::HashMap<String, crate::state::Version> =
+        match crate::util::fetch::fetch_json(
+            reqwest::Method::POST,
+            &format!("{}version_files", env!("MODRINTH_API_URL")),
+            None,
+            Some(serde_json::json!({ "algorithm": "sha1", "hashes": &hashes })),
+            Some("/v2/version_files"),
+            &state.api_semaphore,
+            &state.pool,
+        )
+        .await
+        {
+            Ok(versions) => versions,
+            Err(error) => {
+                // A missing name is a filename and nothing worse; the install
+                // still works, so this is not worth failing the whole preview.
+                tracing::warn!("Could not name Modrinth files in a modpack: {error}");
+                return;
+            }
+        };
+
+    let project_ids: Vec<&str> = versions
+        .values()
+        .map(|version| version.project_id.as_str())
+        .collect();
+    let projects = match crate::state::CachedEntry::get_many(
+        crate::state::CacheValueType::Project,
+        &project_ids,
+        Some(crate::util::fetch::CacheBehaviour::StaleWhileRevalidate),
+        &state.pool,
+        &state.api_semaphore,
+    )
+    .await
+    {
+        Ok(projects) => projects,
+        Err(_) => Vec::new(),
     };
 
-    let mut resolved = manifest;
-    for entry in &mut resolved.entries {
+    for entry in &mut manifest.entries {
+        if entry.source != "modrinth" {
+            continue;
+        }
+        let Some(hash) = entry.sha1.as_deref() else {
+            continue;
+        };
+        let Some(version) = versions.get(hash) else {
+            continue;
+        };
+
+        entry.title = version.name.clone();
+        entry.version = Some(version.version_number.clone());
+        entry.website_url = Some(format!(
+            "{}/{}",
+            env!("MODRINTH_URL").trim_end_matches('/'),
+            version.project_id
+        ));
+        entry.id = version.version_id.clone();
+
+        if let Some(project) = projects.iter().find(|project| project.id == version.project_id)
+        {
+            entry.icon_url = project.icon_url.clone();
+            entry.author = Some(project.display_name.clone().unwrap_or_else(|| project.title.clone()));
+            entry.description = Some(project.description.clone());
+entry.download_count = Some(project.downloads as u64);
+		}
+	}
+}
+
+async fn resolve_curseforge_entries(manifest: &mut PackManifest) {
+    let Some(key) = crate::api::curseforge_metadata::api_key() else {
+        return;
+    };
+    let Ok(http) = crate::api::curseforge_search::build_client(&key) else {
+        return;
+    };
+
+    for entry in &mut manifest.entries {
         if entry.source != "curseforge" || entry.id.is_empty() {
             continue;
         }
@@ -383,6 +486,7 @@ pub async fn resolve_pack_entries(
         entry.author = project.author_name.clone();
         entry.description = project.summary.clone();
         entry.download_count = Some(project.download_count);
+        entry.website_url = project.website_url.clone();
 
         // The version the pack pinned is the file it named, not the newest one:
         // asking for the newest would quietly change what is being installed.
@@ -402,7 +506,4 @@ pub async fn resolve_pack_entries(
             }
         }
     }
-
-    let _ = state;
-    resolved
 }

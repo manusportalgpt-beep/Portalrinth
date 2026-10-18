@@ -1579,7 +1579,7 @@ async fn install_pack_inner(
             )
             .await?
         }
-        CreatePackLocation::FromFile {
+CreatePackLocation::FromFile {
             path,
             curseforge_api_key,
             keep,
@@ -1626,6 +1626,7 @@ async fn install_pack_inner(
         false,
         reason,
         reporter,
+        keep,
     )
     .await?;
 

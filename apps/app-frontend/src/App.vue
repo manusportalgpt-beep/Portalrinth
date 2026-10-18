@@ -79,6 +79,7 @@ import MinecraftAccountProviderModal from '@/components/ui/modal/MinecraftAccoun
 import ModpackAlreadyInstalledModal from '@/components/ui/modal/ModpackAlreadyInstalledModal.vue'
 import ModrinthAccountRequiredModal from '@/components/ui/modal/ModrinthAccountRequiredModal.vue'
 import UpdateToPlayModal from '@/components/ui/modal/UpdateToPlayModal.vue'
+import PackManifestModal from '@/components/ui/modpack/PackManifestModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
 import NoctrinthBackdrop from '@/components/ui/NoctrinthBackdrop.vue'
 import NoctrinthCrashModal from '@/components/ui/NoctrinthCrashModal.vue'
@@ -1614,13 +1615,40 @@ function clearLiveNotifications() {
 	sharedInstanceInviteHandler.value?.clearNotifications()
 }
 
+const packManifestModal = ref()
+let packManifestChoice = null
+
+function resolvePackManifestChoice(kept) {
+	packManifestChoice?.(kept ? kept.map((entry) => entry.key) : null)
+	packManifestChoice = null
+}
+
 async function handleCommand(e) {
 	if (!e) return
+
+	/**
+	 * Shows the pack's manifest and waits for the answer.
+	 *
+	 * Returns the keys of the entries to install, or `null` when the person
+	 * cancelled — which is deliberately different from an empty list, because
+	 * "none of them" is a choice and "I did not want it" is not.
+	 */
+	function showPackManifest(path) {
+		return new Promise((resolve) => {
+			packManifestChoice = resolve
+			packManifestModal.value?.show(path)
+		})
+	}
 
 	if (e.event === 'RunMRPack') {
 		// RunMRPack should directly install a local mrpack given a path
 		if (e.path.endsWith('.mrpack')) {
-			const location = packLocationFromFile(e.path)
+			// What is in the pack is shown first, and the answer to it is what
+			// the instance is built from — the same list the install into an
+			// existing instance shows, so dropping a file anywhere behaves alike.
+			const kept = await showPackManifest(e.path)
+			if (!kept) return
+			const location = packLocationFromFile(e.path, kept)
 			const preview = await install_get_modpack_preview(location).catch(handleError)
 			if (preview?.unknownFile || preview?.externalFilesInModpack.length > 0) {
 				const splitPath = e.path.split(/[\\/]/)
@@ -2294,6 +2322,12 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			@saved="onCreationIconSaved"
 		/>
 		<UnknownPackWarningModal ref="unknownPackWarningModal" />
+		<PackManifestModal
+			ref="packManifestModal"
+			path=""
+			@hide="resolvePackManifestChoice(null)"
+			@confirm="resolvePackManifestChoice"
+		/>
 		<div
 			class="app-grid-navbar bg-bg-raised flex flex-col p-[0.5rem] pt-0 gap-[0.25rem] w-[--left-bar-width]"
 		>
