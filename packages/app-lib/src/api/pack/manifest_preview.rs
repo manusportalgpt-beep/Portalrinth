@@ -411,22 +411,27 @@ async fn resolve_modrinth_entries(manifest: &mut PackManifest, state: &State) {
             }
         };
 
-    let project_ids: Vec<&str> = versions
+    // The projects those versions belong to, in one request: the icon, the author
+    // and the download count all live on the project rather than the version.
+    // Asked directly rather than through the cache, because what is needed is
+    // four fields from each and the cache hands back entries whose ids are
+    // private to it.
+    let ids: Vec<String> = versions
         .values()
-        .map(|version| version.project_id.as_str())
+        .map(|version| version.project_id.clone())
         .collect();
-    let projects = match crate::state::CachedEntry::get_many(
-        crate::state::CacheValueType::Project,
-        &project_ids,
-        Some(crate::state::CacheBehaviour::StaleWhileRevalidate),
-        &state.pool,
+    let query = serde_json::to_string(&ids).unwrap_or_else(|_| "[]".to_string());
+    let projects: serde_json::Value = crate::util::fetch::fetch_json(
+        reqwest::Method::GET,
+        &format!("{}projects?ids={query}", env!("MODRINTH_API_URL")),
+        None,
+        None,
+        Some("/v2/projects"),
         &state.api_semaphore,
+        &state.pool,
     )
     .await
-    {
-        Ok(projects) => projects,
-        Err(_) => Vec::new(),
-    };
+    .unwrap_or(serde_json::Value::Array(Vec::new()));
 
     for entry in &mut manifest.entries {
         if entry.source != "modrinth" {
@@ -448,13 +453,25 @@ async fn resolve_modrinth_entries(manifest: &mut PackManifest, state: &State) {
         ));
         entry.id = version.id.clone();
 
-        if let Some(project) = projects.iter().find(|project| project.id == version.project_id)
+if let Some(project) = projects
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|project| project["id"].as_str() == Some(version.project_id.as_str()))
         {
-            entry.icon_url = project.icon_url.clone();
-            entry.author = Some(project.display_name.clone().unwrap_or_else(|| project.title.clone()));
-            entry.description = Some(project.description.clone());
-entry.download_count = Some(project.downloads as u64);
-		}
+            entry.icon_url = project["icon_url"].as_str().map(str::to_owned);
+            entry.author = Some(
+                project["display_name"]
+                    .as_str()
+                    .or_else(|| project["title"].as_str())
+                    .unwrap_or_default()
+                    .to_string(),
+            );
+            entry.description = project["description"].as_str().map(str::to_owned);
+            entry.download_count = project["downloads"].as_u64();
+        }
+    }
+}
 	}
 }
 
