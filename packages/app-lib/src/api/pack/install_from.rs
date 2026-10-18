@@ -235,16 +235,24 @@ pub async fn get_instance_from_pack(
             // CurseForge modpack but no API key -> there's no way the install
             // can succeed. Error here so no profile is created in the first
             // place - much better than installing-then-deleting.
+            //
+            // The key is taken from settings rather than from the argument: the
+            // argument only ever carried the key the frontend bundle was built
+            // with, so a person who set their own key - which is the only way to
+            // get one, since the built-in slot is usually empty - was told they
+            // had no key at all while one sat in their own settings.
+            let resolved_key = curseforge_api_key
+                .as_deref()
+                .map(str::trim)
+                .filter(|key| !key.is_empty())
+                .map(str::to_owned)
+                .or_else(|| crate::api::curseforge_metadata::api_key());
+            let valid_key = resolved_key.is_some();
             if has_cf_manifest && !has_mrpack_manifest {
-                let valid_key = curseforge_api_key
-                    .as_deref()
-                    .map(|k| !k.trim().is_empty())
-                    .unwrap_or(false);
                 if !valid_key {
                     return Err(crate::ErrorKind::InputError(
                         "This is a CurseForge modpack, but no CurseForge API \
-                         key is available. The launcher needs an API key to \
-                         resolve modpack files through CurseForge."
+                         key is available. Add one in settings first."
                             .to_string(),
                     )
                     .into());

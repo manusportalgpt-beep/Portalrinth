@@ -1599,12 +1599,17 @@ CreatePackLocation::FromFile {
             // else continues through the mrpack path (file-backed, so large
             // .mrpack files are not loaded into memory just for this check).
             if is_curseforge_zip(&path).await? {
+                // The key the person set is the one that must be used here.
+                // Reading it out of settings rather than off the argument is
+                // what makes a self-supplied key work at all: the argument only
+                // ever held the build's own key, and builds rarely carry one.
                 let api_key = curseforge_api_key
                     .filter(|k| !k.trim().is_empty())
+                    .or_else(crate::api::curseforge_metadata::api_key)
                     .ok_or_else(|| {
                         crate::ErrorKind::InputError(
                             "This is a CurseForge modpack, but no CurseForge \
-                             API key is available."
+                             API key is available. Add one in settings first."
                                 .to_string(),
                         )
                     })?;

@@ -10,7 +10,6 @@ import type { InstallProgressSecondary } from '@/generated/app-events/InstallPro
 import type { SharedInstanceUnavailableReason } from '@/generated/app-events/SharedInstanceUnavailableReason'
 import type { AppEvents } from '@/providers/app-events'
 
-import { CURSEFORGE_API_KEY } from './curseforge-key'
 import type { InstanceIconConfig, InstanceLink, InstanceLoader } from './types'
 
 export type {
@@ -35,8 +34,6 @@ export interface PackLocationVersionId {
 export interface PackLocationFile {
 	type: 'fromFile'
 	path: string
-	/** Lets the backend resolve CurseForge modpack zips imported from disk. */
-	curseforge_api_key?: string | null
 	/**
 	 * The entries a person kept after being shown what the pack contains.
 	 *
@@ -49,15 +46,17 @@ export interface PackLocationFile {
 export type CreatePackLocation = PackLocationVersionId | PackLocationFile
 
 /**
- * Build a `fromFile` pack location. Always stamps the CurseForge API key so a
- * CurseForge modpack zip picked from disk can be resolved by the backend —
- * without it the preview/install fails even when the key is configured.
+ * Build a `fromFile` pack location.
+ *
+ * The key is not sent. The backend reads the one in settings itself, which is
+ * the one a person can actually set - stamping the build's key here meant that
+ * anyone without a built-in key was told they had none, while the key in their
+ * own settings went unread.
  */
 export function packLocationFromFile(path: string, keep?: string[]): PackLocationFile {
 	return {
 		type: 'fromFile',
 		path,
-		curseforge_api_key: CURSEFORGE_API_KEY || null,
 		...(keep ? { keep } : {}),
 	}
 }

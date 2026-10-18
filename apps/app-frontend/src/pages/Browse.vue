@@ -1171,8 +1171,6 @@ const curseforgeNarrowing = computed(() => {
 	}
 })
 
-const hideModrinthResults = ref(false)
-
 /**
  * Which of the two places mods come from the search asks.
  *
@@ -1195,7 +1193,6 @@ async function refreshCurseforgeAvailability() {
 	curseforgeAvailable.value = await isCurseforgeAvailable()
 	if (!curseforgeAvailable.value && curseforgeProvider.value !== 'modrinth') {
 		curseforgeProvider.value = 'modrinth'
-		hideModrinthResults.value = false
 	}
 }
 
@@ -1212,10 +1209,6 @@ watch(
 		void refreshCurseforgeAvailability()
 	},
 )
-
-watch(curseforgeProvider, (provider) => {
-	hideModrinthResults.value = provider === 'curseforge'
-})
 
 const searchState = useBrowseSearch({
 	projectType,
