@@ -37,6 +37,8 @@ const props = defineProps<{
 	filter: string
 	gameVersion?: string | null
 	loader?: string | null
+	/** The tab being searched, which decides what counts as a result. */
+	projectType?: string
 	/** Without an instance there is nowhere to install into, so only browsing is offered. */
 	instanceId?: string | null
 }>()
@@ -102,6 +104,7 @@ async function runSearch() {
 			pageSize: 20,
 			gameVersion: props.gameVersion,
 			loader: props.loader,
+			kind: curseforgeKindFor(props.projectType ?? 'mod'),
 		})
 		hits.value = page.hits
 	} catch (error) {
@@ -120,6 +123,7 @@ watch(
 		() => props.filter,
 		() => props.gameVersion,
 		() => props.loader,
+		() => props.projectType,
 		() => props.available,
 	],
 	() => {

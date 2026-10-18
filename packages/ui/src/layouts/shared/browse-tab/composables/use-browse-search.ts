@@ -213,8 +213,21 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 	/** How many pages have already been appended below the first one. */
 	const loadedExtraPages = ref(0)
 	const loadingMore = ref(false)
+	/**
+	 * Set once a page comes back with nothing new in it.
+	 *
+	 * Without this the end-of-list marker stays in view after a page that added
+	 * nothing — which is what an empty page, a filtered one or a repeated one
+	 * all look like — and the observer asks again immediately, forever.
+	 */
+	const exhausted = ref(false)
 	const canLoadMore = computed(
-		() => effectiveInfiniteScroll.value && projectHits.value.length < totalHits.value,
+		() =>
+			effectiveInfiniteScroll.value &&
+			!exhausted.value &&
+			!loading.value &&
+			projectHits.value.length > 0 &&
+			projectHits.value.length < totalHits.value,
 	)
 
 	const pageCount = computed(() => {
@@ -382,6 +395,7 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 			} else {
 				projectHits.value = response.projectHits
 				loadedExtraPages.value = 0
+				exhausted.value = false
 			}
 			totalHits.value = response.total_hits
 			debug('refreshSearch complete', {
@@ -471,6 +485,9 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 			projectHits.value = [...projectHits.value, ...fresh]
 			totalHits.value = response.total_hits
 			loadedExtraPages.value += 1
+			if (!fresh.length) {
+				exhausted.value = true
+			}
 		} catch (err) {
 			debug('loadMore error', err)
 		} finally {

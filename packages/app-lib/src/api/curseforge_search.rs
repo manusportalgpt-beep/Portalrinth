@@ -29,11 +29,17 @@ use serde::Serialize;
 /// Minecraft: Java Edition.
 const GAME_ID_JAVA: u64 = 432;
 
-/// CurseForge's own class for "a mod". Also datapacks and resourcepacks, which
-/// are the same kind of thing to CurseForge and a different kind to us.
+/// CurseForge's own class for a mod.
 ///
-/// Passed by callers rather than defaulted here: sending it to a query that is
-/// not about mods is what makes CurseForge answer with nothing.
+/// A class is not the same thing as a project type: CurseForge groups resource
+/// packs and data packs together as "resource and data packs", and a shader is
+/// a resource pack to it and a separate tab here. Passing this class to a query
+/// that is not about mods is what makes CurseForge answer with nothing, which is
+/// why it is never sent unless a caller really asked for mods.
+///
+/// Every other class has no single number that covers it, so the other tabs are
+/// searched by name and narrowed afterwards. That is what the backend's
+/// `class_for_project_type` returns `None` for.
 pub const CLASS_ID_MODS: u64 = 6;
 
 /// CurseForge's own loader numbering. It is not ours and does not follow it.
@@ -137,6 +143,10 @@ pub struct CurseforgeSearchQuery {
     #[serde(default)]
     pub sort_order: u32,
     pub game_id: Option<u64>,
+    /// Which of the launcher's tabs this search is for. Decides the class, and
+    /// narrows the results when CurseForge has no class of its own for it.
+    #[serde(default)]
+    pub kind: Option<PackKind>,
 }
 
 fn default_page_size() -> u64 {
@@ -167,6 +177,74 @@ fn with_headers(request: reqwest::RequestBuilder, key: &str) -> reqwest::Request
     request
         .header("x-api-key", key)
         .header(reqwest::header::ACCEPT_ENCODING, "identity")
+}
+
+/// Maps one of the launcher's project types onto CurseForge's.
+///
+/// `None` means CurseForge has no class that is only this kind of thing, so the
+/// search is by name and is narrowed here instead: its resource packs and data
+/// packs live in one class together, and a shader is drawn as a resource pack
+/// there whatever this tab calls it.
+pub fn class_for_project_type(project_type: &str) -> Option<u64> {
+    match project_type {
+        "mod" => Some(CLASS_ID_MODS),
+        _ => None,
+    }
+}
+
+/// Whether a CurseForge project belongs on this tab.
+///
+/// The test is the project's own list of game versions: a resource pack
+/// declares `ResourcePack`, a data pack declares `DataPack`, and a shader
+/// declares `Shader`. Nothing about the name has to be guessed at.
+pub fn is_kind(project: &serde_json::Value, kind: PackKind) -> bool {
+    let types = project["gameTags"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|tag| tag.as_str())
+        .collect::<Vec<_>>();
+
+    let wanted = match kind {
+        PackKind::Mod => "Mod",
+        PackKind::ResourcePack => "ResourcePack",
+        PackKind::DataPack => "DataPack",
+        PackKind::Shader => "Shader",
+        PackKind::Modpack => "Modpack",
+    };
+
+    if types.iter().any(|tag| *tag == wanted) {
+        return true;
+    }
+    // A modpack declares no game tag at all; it is a modpack by being a project
+    // with sub-projects and no Minecraft version of its own.
+    kind == PackKind::Modpack
+        && project["parentProject"]["id"].as_u64().is_some()
+        && project["rootProject"]["id"].as_u64() != Some(0)
+}
+
+/// The tab of ours that a CurseForge result belongs on.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PackKind {
+    Mod,
+    ResourcePack,
+    DataPack,
+    Shader,
+    Modpack,
+}
+
+impl PackKind {
+    /// The tab this kind is drawn under, which is what the caller asked about.
+    pub fn as_project_type(self) -> &'static str {
+        match self {
+            PackKind::Mod => "mod",
+            PackKind::ResourcePack => "resourcepack",
+            PackKind::DataPack => "datapack",
+            PackKind::Shader => "shader",
+            PackKind::Modpack => "modpack",
+        }
+    }
 }
 
 /// One request, one JSON value, and an error that says what came back.
@@ -258,7 +336,11 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
                 ("sortField", sort_field.clone()),
                 ("sortOrder", order.to_string()),
             ]);
-        if let Some(class_id) = query.class_id {
+        // The class comes from the tab being searched, never from the caller's
+        // own field: a caller that said mod while looking at shaders is asking
+        // for the wrong thing, and one that sent a class for a tab CurseForge
+        // has no class for would get an empty answer every time.
+        if let Some(class_id) = query.kind.and_then(class_for_project_type) {
             request = request.query(&[("classId", class_id.to_string())]);
         }
         if let Some(category_id) = query.category_id {
@@ -275,7 +357,7 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
 
     // The page fits inside the forward window: ask for it directly.
     if offset + limit <= INDEX_WINDOW {
-        let (hits, total) = run_page(build(offset, forward_order), game_version).await?;
+        let (hits, total) = run_page(build(offset, forward_order), game_version, query.kind).await?;
         return Ok(CurseforgeSearchPage {
             index: offset as usize,
             page_size: limit as usize,
@@ -288,7 +370,7 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
 
     // It does not. Find out how far the window reaches, then ask for the same
     // slice from the other end of the result set and turn it back around.
-    let (_, total) = run_page(build(0, forward_order), game_version).await?;
+    let (_, total) = run_page(build(0, forward_order), game_version, query.kind).await?;
     let reachable = total.min(INDEX_WINDOW * 2);
     if offset >= reachable {
         return Ok(CurseforgeSearchPage {
@@ -316,7 +398,7 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
     }
 
     let (mut hits, _) =
-        run_page(build(mirror_index, mirror_order), game_version).await?;
+        run_page(build(mirror_index, mirror_order), game_version, query.kind).await?;
     hits.reverse();
     hits.truncate(mirror_take as usize);
     Ok(CurseforgeSearchPage {
@@ -332,6 +414,7 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
 async fn run_page(
     request: reqwest::RequestBuilder,
     game_version: Option<&str>,
+    kind: Option<PackKind>,
 ) -> crate::Result<(Vec<CurseforgeSearchHit>, u64)> {
     let body = json_response(request, "search").await?;
     if let Some(error) = body["error"].as_str() {
@@ -345,7 +428,15 @@ async fn run_page(
     let total = body["pagination"]["totalCount"]
         .as_u64()
         .unwrap_or(mods.len() as u64);
-    let hits = mods.iter().map(|found| to_hit(found, game_version)).collect();
+    // Narrowed to the tab that was asked about. CurseForge keeps resource
+    // packs and data packs in one class and draws a shader as a resource pack,
+    // so only mods can be asked for by class; the rest are recognised from the
+    // project's own game tags, which is a fact rather than a guess.
+    let hits = mods
+        .iter()
+        .filter(|found| kind.is_none_or(|kind| is_kind(found, kind)))
+        .map(|found| to_hit(found, game_version))
+        .collect();
 
     Ok((hits, total))
 }

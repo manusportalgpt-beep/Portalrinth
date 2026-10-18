@@ -176,7 +176,12 @@ const messages = defineMessages({
 
 <style scoped>
 .app-sidebar {
-	background: var(--brand-gradient-bg);
+	/* Glass: nothing painted behind the list, so what shows through is the
+	   window's own background blurred once rather than a second, darker copy of
+	   it. The faint tint is kept so the panel still reads as a panel. */
+	background: linear-gradient(0deg, rgba(77, 146, 39, 0.06) 0%, rgba(77, 146, 39, 0.02) 100%);
+	backdrop-filter: blur(24px);
+	-webkit-backdrop-filter: blur(24px);
 	--color-button-bg: var(--brand-gradient-button);
 	--surface-4: var(--brand-gradient-button);
 	--color-button-bg-hover: var(--brand-gradient-border);
@@ -190,6 +195,9 @@ const messages = defineMessages({
 }
 
 .sidebar-scroll-fade {
-	background: var(--brand-gradient-fade-out-color);
+	/* A fade to nothing, not to a colour. Fading to a colour paints that colour
+	   over the panel, which is how a transparent sidebar ends up with a black
+	   slab down one side of it. */
+	background: linear-gradient(to bottom, transparent, var(--brand-gradient-fade-out-color));
 }
 </style>
