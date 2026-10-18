@@ -446,7 +446,7 @@ async fn resolve_modrinth_entries(manifest: &mut PackManifest, state: &State) {
             env!("MODRINTH_URL").trim_end_matches('/'),
             version.project_id
         ));
-        entry.id = version.version_id.clone();
+        entry.id = version.id.clone();
 
         if let Some(project) = projects.iter().find(|project| project.id == version.project_id)
         {
