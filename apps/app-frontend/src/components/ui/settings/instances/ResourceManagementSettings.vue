@@ -150,6 +150,10 @@ const messages = defineMessages({
 		defaultMessage:
 			'CurseForge requires a key for searching, listing files and downloading. Leave this empty to use the key this build was made with, if it has one.',
 	},
+	curseforgeHint: {
+		id: 'app.settings.resource-management.curseforge.hint',
+		defaultMessage: 'Create an API token at',
+	},
 	curseforgeMissing: {
 		id: 'app.settings.resource-management.curseforge.missing',
 		defaultMessage:
@@ -370,6 +374,16 @@ async function findLauncherDir() {
 			<p class="m-0 leading-tight text-secondary">
 				{{ formatMessage(messages.curseforgeDescription) }}
 			</p>
+			<span class="text-sm text-secondary">
+				{{ formatMessage(messages.curseforgeHint) }}
+				<a
+					href="https://www.curseforge.com/account/api-tokens"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="font-semibold text-brand hover:underline"
+					>curseforge.com</a
+				>
+			</span>
 			<p class="m-0 leading-tight text-secondary">
 				{{
 					curseforgeAvailable

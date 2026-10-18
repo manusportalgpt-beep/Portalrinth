@@ -4130,6 +4130,9 @@
   "app.settings.resource-management.curseforge.description": {
     "message": "CurseForge requires a key for searching, listing files and downloading. Leave this empty to use the key this build was made with, if it has one."
   },
+  "app.settings.resource-management.curseforge.hint": {
+    "message": "Create an API token at"
+  },
   "app.settings.resource-management.curseforge.missing": {
     "message": "No key is configured, so CurseForge is not available anywhere in this launcher."
   },
