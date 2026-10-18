@@ -69,7 +69,7 @@ function loopbackOverride(port) {
 		},
 	}
 
-	const path = join(tmpdir(), `noctrinth-dev-override-${port}.json`)
+	const path = join(tmpdir(), `portalrinth-dev-override-${port}.json`)
 	writeFileSync(path, JSON.stringify(override), 'utf8')
 	return path
 }
@@ -172,7 +172,7 @@ if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true })
 
 console.log(`Launcher data: ${dataDir}`)
 console.log(
-	'Deep links: this run claims noctrinth:// and modrinth:// for the dev binary. Start the installed app once afterwards to hand them back.',
+	'Deep links: this run claims portalrinth:// and modrinth:// for the dev binary. Start the installed app once afterwards to hand them back.',
 )
 
 const child = spawn(

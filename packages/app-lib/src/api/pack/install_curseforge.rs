@@ -87,7 +87,7 @@ struct CfManifest {
     /// Name of the overrides folder inside the zip. Defaults to `overrides`.
     #[serde(default)]
     overrides: Option<String>,
-    /// Noctrinth's own: where the pack's picture lives, when the manifest says
+    /// Portalrinth's own: where the pack's picture lives, when the manifest says
     /// so at all. CurseForge's own format has no such field, but the exporters
     /// people actually use write one вЂ” as a URL on CurseForge's avatar CDN,
     /// which is the only copy of the picture a pack that ships no image file
@@ -424,7 +424,7 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
     extract_overrides(&pack_file, &manifest, instance_id, &reporter, &details)
         .await?;
 
-    // Noctrinth's own: a manifest has no icon field, so a pack's instance used
+    // Portalrinth's own: a manifest has no icon field, so a pack's instance used
     // to come out blank even when the zip was carrying the pack's picture all
     // along. Never worth failing an install over.
     if let Err(error) =

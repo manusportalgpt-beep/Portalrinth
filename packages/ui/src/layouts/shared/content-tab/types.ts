@@ -11,7 +11,7 @@ export type ContentCardProject = Pick<
 		Pick<Labrinth.Projects.v2.Project, 'license' | 'categories' | 'additional_categories'>
 	> & {
 		/**
-		 * Noctrinth's own: where a project that is not on Modrinth lives. Its
+		 * Portalrinth's own: where a project that is not on Modrinth lives. Its
 		 * `id` cannot be routed to a page in the app, so this is opened on the
 		 * web instead.
 		 */
@@ -29,7 +29,7 @@ export interface ContentOwner {
 	avatar_url?: string
 	type: 'user' | 'organization'
 	link?: string | RouteLocationRaw | (() => void)
-	/** Noctrinth's own, for the same reason as on the project. */
+	/** Portalrinth's own, for the same reason as on the project. */
 	external_url?: string | null
 }
 

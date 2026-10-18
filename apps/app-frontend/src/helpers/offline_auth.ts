@@ -16,28 +16,28 @@ export interface OfflineCredentials {
 
 /** Adds an account for this name, and makes it the one to play as. */
 export async function offline_add(username: string): Promise<OfflineCredentials> {
-	return await invoke('plugin:noctrinth-offline-auth|offline_add', { username })
+	return await invoke('plugin:portalrinth-offline-auth|offline_add', { username })
 }
 
 export async function offline_remove(uuid: string): Promise<void> {
-	return await invoke('plugin:noctrinth-offline-auth|offline_remove', { uuid })
+	return await invoke('plugin:portalrinth-offline-auth|offline_remove', { uuid })
 }
 
 export async function offline_users(): Promise<OfflineCredentials[]> {
-	return await invoke('plugin:noctrinth-offline-auth|offline_users')
+	return await invoke('plugin:portalrinth-offline-auth|offline_users')
 }
 
 export async function offline_get_default_user(): Promise<string | null> {
-	return await invoke('plugin:noctrinth-offline-auth|offline_get_default_user')
+	return await invoke('plugin:portalrinth-offline-auth|offline_get_default_user')
 }
 
 export async function offline_set_default_user(uuid: string): Promise<void> {
-	return await invoke('plugin:noctrinth-offline-auth|offline_set_default_user', { uuid })
+	return await invoke('plugin:portalrinth-offline-auth|offline_set_default_user', { uuid })
 }
 
 /** The UUID a name would play as, before anything is saved. */
 export async function offline_preview_uuid(username: string): Promise<string | null> {
-	return await invoke('plugin:noctrinth-offline-auth|offline_preview_uuid', { username })
+	return await invoke('plugin:portalrinth-offline-auth|offline_preview_uuid', { username })
 }
 
 export type PlayerCapeSource =
@@ -60,7 +60,7 @@ export type PlayerCapeSource =
  * is none to give.
  */
 export async function mojang_player_skin(id: string): Promise<string | null> {
-	const png = await invoke<number[] | null>('plugin:noctrinth-offline-auth|mojang_player_skin', {
+	const png = await invoke<number[] | null>('plugin:portalrinth-offline-auth|mojang_player_skin', {
 		id,
 	})
 	if (!png) return null
@@ -73,7 +73,7 @@ export async function offline_player_cape(
 	username: string,
 ): Promise<{ source: PlayerCapeSource; texture: string } | null> {
 	const cape = await invoke<{ source: PlayerCapeSource; png: number[] } | null>(
-		'plugin:noctrinth-offline-auth|offline_player_cape',
+		'plugin:portalrinth-offline-auth|offline_player_cape',
 		{ username },
 	)
 	if (!cape) return null

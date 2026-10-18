@@ -81,9 +81,9 @@ import ModrinthAccountRequiredModal from '@/components/ui/modal/ModrinthAccountR
 import UpdateToPlayModal from '@/components/ui/modal/UpdateToPlayModal.vue'
 import PackManifestModal from '@/components/ui/modpack/PackManifestModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
-import NoctrinthBackdrop from '@/components/ui/NoctrinthBackdrop.vue'
-import NoctrinthCrashModal from '@/components/ui/NoctrinthCrashModal.vue'
-import NoctrinthSwipeNavigation from '@/components/ui/NoctrinthSwipeNavigation.vue'
+import PortalrinthBackdrop from '@/components/ui/PortalrinthBackdrop.vue'
+import PortalrinthCrashModal from '@/components/ui/PortalrinthCrashModal.vue'
+import PortalrinthSwipeNavigation from '@/components/ui/PortalrinthSwipeNavigation.vue'
 import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
 import SharedInstanceInviteHandler from '@/components/ui/shared-instances/shared-instance-invite-handler/index.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
@@ -133,11 +133,11 @@ import {
 	removeUser,
 	setActive,
 } from '@/helpers/mr_auth.ts'
-import { loadBackground } from '@/helpers/noctrinth-background'
-import { prefetchRouteChunks, startProjectHoverPrefetch } from '@/helpers/noctrinth-prefetch'
-import { markSidebarMoving } from '@/helpers/noctrinth-sidebar-motion'
-import { cacheSplashCubeChoice } from '@/helpers/noctrinth-splash-cube'
-import { markThemeSettled, revealMainWindow } from '@/helpers/noctrinth-window-reveal'
+import { loadBackground } from '@/helpers/portalrinth-background'
+import { prefetchRouteChunks, startProjectHoverPrefetch } from '@/helpers/portalrinth-prefetch'
+import { markSidebarMoving } from '@/helpers/portalrinth-sidebar-motion'
+import { cacheSplashCubeChoice } from '@/helpers/portalrinth-splash-cube'
+import { markThemeSettled, revealMainWindow } from '@/helpers/portalrinth-window-reveal'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
 import { proxiedFetch as tauriFetch } from '@/helpers/proxy-fetch'
 import {
@@ -611,12 +611,12 @@ const messages = defineMessages({
 			'Minecraft authentication servers may be down right now. Check your internet connection and try again later.',
 	},
 	authUnreachableScope: {
-		id: 'noctrinth.auth-servers.unreachable.scope',
+		id: 'portalrinth.auth-servers.unreachable.scope',
 		defaultMessage:
 			'Signing in and playing with a Microsoft account may fail until then. Offline and Ely.by accounts are not affected.',
 	},
 	authUnreachableRetry: {
-		id: 'noctrinth.auth-servers.unreachable.retry',
+		id: 'portalrinth.auth-servers.unreachable.retry',
 		defaultMessage: 'Check again',
 	},
 	adsConsentTitle: {
@@ -2165,7 +2165,7 @@ async function installUpdate() {
 setAppUpdateActions({
 	download: downloadAvailableUpdate,
 	install: installUpdate,
-	changelog: () => openUrl('https://everelsu.github.io/Noctrinth/changelog/'),
+	changelog: () => openUrl('https://everelsu.github.io/Portalrinth/changelog/'),
 })
 
 async function openModrinthProjectLinkInApp(parsed) {
@@ -2267,7 +2267,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<SplashScreen v-if="!stateFailed" ref="splashScreen" data-tauri-drag-region />
 	<div id="teleports"></div>
 	<AccountSwitchOverlay :show="isSwitchingAccount" />
-	<NoctrinthBackdrop />
+	<PortalrinthBackdrop />
 	<div
 		v-if="stateInitialized"
 		class="app-grid-layout relative"
@@ -2552,8 +2552,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<NotificationPanel :has-sidebar="sidebarVisible" />
 	<PopupNotificationPanel :has-sidebar="sidebarVisible" />
 	<ErrorModal ref="errorModal" />
-	<NoctrinthCrashModal />
-	<NoctrinthSwipeNavigation />
+	<PortalrinthCrashModal />
+	<PortalrinthSwipeNavigation />
 	<MinecraftAuthErrorModal ref="minecraftAuthErrorModal" />
 	<MinecraftRequiredModal ref="minecraftRequiredModal" />
 	<ContentInstallModal

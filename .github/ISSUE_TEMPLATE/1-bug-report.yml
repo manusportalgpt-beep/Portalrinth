@@ -1,5 +1,5 @@
 name: 🐛 Bug report
-description: Something in Noctrinth isn't working right. ￣へ￣
+description: Something in Portalrinth isn't working right. ￣へ￣
 labels: [bug]
 type: 'bug'
 body:
@@ -7,16 +7,16 @@ body:
     attributes:
       label: Please confirm the following.
       options:
-        - label: I checked the [existing issues](https://github.com/Everelsu/Noctrinth/issues?q=is%3Aissue) for duplicate reports
+        - label: I checked the [existing issues](https://github.com/Everelsu/Portalrinth/issues?q=is%3Aissue) for duplicate reports
           required: true
-        - label: I have ensured my Noctrinth installation is up to date
+        - label: I have ensured my Portalrinth installation is up to date
           required: true
-        - label: This is a Noctrinth-specific issue, not a bug in the upstream [Modrinth App](https://github.com/modrinth/code/issues) that I should report there instead
+        - label: This is a Portalrinth-specific issue, not a bug in the upstream [Modrinth App](https://github.com/modrinth/code/issues) that I should report there instead
           required: true
   - type: input
     id: version
     attributes:
-      label: What version of Noctrinth are you using?
+      label: What version of Portalrinth are you using?
       description: Find this in ⚙️ Settings
     validations:
       required: true

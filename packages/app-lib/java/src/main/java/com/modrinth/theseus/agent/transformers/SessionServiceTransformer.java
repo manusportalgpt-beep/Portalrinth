@@ -95,7 +95,7 @@ public final class SessionServiceTransformer extends ClassNodeTransformer {
 
         /** What the original is renamed to. The {@code $} keeps it out of a second pass. */
         String wrappedName() {
-            return method + "$noctrinthOriginal";
+            return method + "$portalrinthOriginal";
         }
     }
 

@@ -181,8 +181,8 @@ const { formatMessage } = useVIntl()
 const messages = defineMessages({
 	play: { id: 'app.instance.action.play', defaultMessage: 'Play' },
 	stop: { id: 'app.instance.action.stop', defaultMessage: 'Stop' },
-	stopCopy: { id: 'noctrinth.instance.stop-copy', defaultMessage: 'Stop {name} · {time}' },
-	stopAllCopies: { id: 'noctrinth.instance.stop-all-copies', defaultMessage: 'Stop every copy' },
+	stopCopy: { id: 'portalrinth.instance.stop-copy', defaultMessage: 'Stop {name} · {time}' },
+	stopAllCopies: { id: 'portalrinth.instance.stop-all-copies', defaultMessage: 'Stop every copy' },
 	unknownAccount: {
 		id: 'instance.console.copy-unknown-account',
 		defaultMessage: 'Unknown account',

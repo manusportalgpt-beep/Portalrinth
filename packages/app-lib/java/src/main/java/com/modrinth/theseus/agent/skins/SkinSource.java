@@ -32,7 +32,7 @@ import java.util.concurrent.TimeoutException;
  * skin system that answers by name — Ely.by by default, which serves its own users' skins — with
  * Mojang itself behind it for the licensed players Ely.by has never heard of.
  *
- * <p>Disabled unless the launcher sets {@code noctrinth.skins.source}. Its value is a list
+ * <p>Disabled unless the launcher sets {@code portalrinth.skins.source}. Its value is a list
  * separated by commas: the base URL of anything serving {@code /textures/{name}}, the word
  * {@code mojang} for Mojang's own name lookup, {@code littleskin}, or the name of a cape service: {@code optifine},
  * {@code labymod}, {@code minecraftcapes}, {@code skinmc}. The first one that has heard of the player wins,
@@ -42,9 +42,9 @@ import java.util.concurrent.TimeoutException;
  * #PER_SOURCE_WAIT_MS}.
  */
 public final class SkinSource {
-    private static final String SOURCE_PROPERTY = "noctrinth.skins.source";
-    private static final String LOCAL_PROPERTY = "noctrinth.skins.local";
-    private static final String CACHE_PROPERTY = "noctrinth.skins.cache";
+    private static final String SOURCE_PROPERTY = "portalrinth.skins.source";
+    private static final String LOCAL_PROPERTY = "portalrinth.skins.local";
+    private static final String CACHE_PROPERTY = "portalrinth.skins.cache";
     private static final String DEBUG_PROPERTY = "modrinth.debugAgent";
 
     /** Minecraft's own limit on how long a name can be. */
@@ -168,7 +168,7 @@ public final class SkinSource {
             TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(64),
             runnable -> {
-                final Thread thread = new Thread(runnable, "noctrinth-skins");
+                final Thread thread = new Thread(runnable, "portalrinth-skins");
                 thread.setDaemon(true);
                 return thread;
             },
@@ -189,7 +189,7 @@ public final class SkinSource {
             TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(64),
             runnable -> {
-                final Thread thread = new Thread(runnable, "noctrinth-skins-source");
+                final Thread thread = new Thread(runnable, "portalrinth-skins-source");
                 thread.setDaemon(true);
                 return thread;
             },
@@ -203,7 +203,7 @@ public final class SkinSource {
     static {
         restore();
         if (cacheFile() != null) {
-            Runtime.getRuntime().addShutdownHook(new Thread(SkinSource::save, "noctrinth-skins-save"));
+            Runtime.getRuntime().addShutdownHook(new Thread(SkinSource::save, "portalrinth-skins-save"));
         }
     }
 
@@ -789,7 +789,7 @@ public final class SkinSource {
     private static Path convertedTexturesDir() {
         final String cache = System.getProperty(CACHE_PROPERTY);
         final Path beside = cache == null || cache.trim().isEmpty()
-                ? Paths.get(System.getProperty("java.io.tmpdir"), "noctrinth-skins")
+                ? Paths.get(System.getProperty("java.io.tmpdir"), "portalrinth-skins")
                 : Paths.get(cache.trim()).toAbsolutePath().getParent();
 
         return (beside == null ? Paths.get(".") : beside).resolve("converted-textures");
@@ -797,7 +797,7 @@ public final class SkinSource {
 
     static void debug(String message) {
         if (DEBUG) {
-            System.out.println("[noctrinth-skins] " + message);
+            System.out.println("[portalrinth-skins] " + message);
         }
     }
 

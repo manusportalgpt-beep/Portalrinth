@@ -64,7 +64,7 @@ async fn open_migrated_app_db(db_path: &Path) -> crate::Result<Pool<Sqlite>> {
 /// version make it compare a stored checksum against the other file's contents
 /// and refuse with "previously applied but has been modified" — leaving a
 /// launcher that will not open and an error naming a number rather than the two
-/// files behind it. Noctrinth adds migrations alongside upstream's, which is
+/// files behind it. Portalrinth adds migrations alongside upstream's, which is
 /// exactly how a version gets used twice; this checks before anything runs and
 /// says which files collided.
 async fn run_migrations(pool: &Pool<Sqlite>) -> crate::Result<()> {

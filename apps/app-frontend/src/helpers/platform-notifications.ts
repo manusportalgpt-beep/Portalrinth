@@ -235,7 +235,7 @@ export async function declineTeamInvite(teamId: string, userId: string): Promise
 // each launch — sessionStorage would be empty every time the user reopens
 // the app, defeating the cache.
 
-const CACHE_PREFIX = 'noctrinth:notifications:'
+const CACHE_PREFIX = 'portalrinth:notifications:'
 const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour — stale-while-revalidate covers drift
 
 interface CachedNotifications {

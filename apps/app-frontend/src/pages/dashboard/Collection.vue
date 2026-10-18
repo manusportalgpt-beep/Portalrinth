@@ -125,7 +125,7 @@ const searchQuery = ref('')
 
 type SortMode = 'name' | 'downloads' | 'followers' | 'updated'
 const SORT_OPTIONS: SortMode[] = ['name', 'downloads', 'followers', 'updated']
-const SORT_STORAGE_KEY = 'noctrinth:collection:followed-sort'
+const SORT_STORAGE_KEY = 'portalrinth:collection:followed-sort'
 
 function loadInitialSort(): SortMode {
 	try {

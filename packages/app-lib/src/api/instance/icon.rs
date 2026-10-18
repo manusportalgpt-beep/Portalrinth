@@ -22,7 +22,7 @@ const INSTANCE_ICON_MAX_DIMENSION: u32 = 512;
 const INSTANCE_ICON_MAX_SOURCE_DIMENSION: u32 = 8_192;
 const INSTANCE_ICON_MAX_DECODE_BYTES: u64 = 64 * 1024 * 1024;
 const GENERATED_ICON_SIZE: u32 = 256;
-/// Noctrinth's own: what an icon that was kept animated is stored as.
+/// Portalrinth's own: what an icon that was kept animated is stored as.
 const ANIMATED_EXTENSION: &str = "gif";
 const MAX_ICON_CONFIG_ID_LENGTH: usize = 64;
 const MAX_SYMBOL_BYTES: usize = 4 * 1024 * 1024;
@@ -179,7 +179,7 @@ pub(crate) async fn cache_icon(
             return Err(svg_not_supported_error());
         }
 
-        // Noctrinth's own: a GIF that moves is kept whole.
+        // Portalrinth's own: a GIF that moves is kept whole.
         if keep_as_animated_gif(&bytes) {
             return Ok((bytes, true));
         }
@@ -221,7 +221,7 @@ pub(crate) async fn cache_icon_from_path(
             return Err(svg_not_supported_error());
         }
 
-        // Noctrinth's own: read a small GIF whole so it can be kept whole.
+        // Portalrinth's own: read a small GIF whole so it can be kept whole.
         // Anything else is left to stream, so a picture far too big to be an
         // icon is never pulled into memory just to be rejected.
         if reader
@@ -371,7 +371,7 @@ async fn write_cached_icon(
     write_cached_icon_as(bytes, "png", state).await
 }
 
-/// Noctrinth's own: the same, for an icon that is not stored as a PNG.
+/// Portalrinth's own: the same, for an icon that is not stored as a PNG.
 ///
 /// The extension is the only thing that tells the frontend how to draw it —
 /// an `<img>` animates a `.gif` and does not animate a `.png`, whatever the
@@ -396,7 +396,7 @@ async fn write_cached_icon_as(
     Ok(io::canonicalize(path)?)
 }
 
-/// Noctrinth's own: whether these bytes are a GIF that moves, and small enough
+/// Portalrinth's own: whether these bytes are a GIF that moves, and small enough
 /// to keep as they are.
 ///
 /// Public because the thumbnailer has to ask the same question: it turns an
@@ -513,7 +513,7 @@ fn inspect_legacy_icon(icon_path: &Path) -> crate::Result<LegacyIconAction> {
         return Ok(LegacyIconAction::Keep);
     }
 
-    // Noctrinth's own: an icon that was kept animated must not be normalised
+    // Portalrinth's own: an icon that was kept animated must not be normalised
     // back into its first frame the next time the launcher starts.
     if metadata.len() < INSTANCE_ICON_MAX_BYTES as u64
         && format == Some(ImageFormat::Gif)

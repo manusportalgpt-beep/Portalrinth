@@ -80,7 +80,7 @@ class SkinFallbackTest {
         // Read by SkinSource when it is first touched, which is why this has to
         // happen before the hook runs for the first time.
         System.setProperty(
-                "noctrinth.skins.source",
+                "portalrinth.skins.source",
                 "http://127.0.0.1:" + emptySource.getLocalPort() + ",http://127.0.0.1:" + server.getLocalPort());
 
         service = transformedService();
@@ -93,7 +93,7 @@ class SkinFallbackTest {
         server.close();
         emptySourceThread.join(2000);
         serverThread.join(2000);
-        System.clearProperty("noctrinth.skins.source");
+        System.clearProperty("portalrinth.skins.source");
     }
 
     @Test

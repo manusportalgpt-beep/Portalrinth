@@ -15,7 +15,7 @@ import java.util.Map;
  * everyone sees them without the mod.
  */
 final class CustomSkinApiSource implements SkinSource.Source {
-    /** What names LittleSkin in {@code noctrinth.skins.source}. */
+    /** What names LittleSkin in {@code portalrinth.skins.source}. */
     static final String LITTLESKIN = "littleskin";
 
     private static final String LITTLESKIN_URL = "https://littleskin.cn";

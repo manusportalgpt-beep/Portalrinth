@@ -3,8 +3,8 @@ name = "theseus_gui"
 # The actual version is set by the theseus-build workflow on tagging
 version = "0.21.9"
 edition.workspace = true
-description = "Noctrinth is a desktop application for managing your Minecraft mods"
-repository = "https://github.com/Everelsu/Noctrinth"
+description = "Portalrinth is a desktop application for managing your Minecraft mods"
+repository = "https://github.com/Everelsu/Portalrinth"
 license = "GPL-3.0-only"
 
 [dependencies]

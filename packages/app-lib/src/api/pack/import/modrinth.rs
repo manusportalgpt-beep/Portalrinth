@@ -1,6 +1,6 @@
 //! Import instances from an existing Modrinth App installation.
 //!
-//! Noctrinth is a fork of the Modrinth App, so the two share an on-disk
+//! Portalrinth is a fork of the Modrinth App, so the two share an on-disk
 //! layout: instances live in `<data dir>/profiles/<folder>` and are plain
 //! `.minecraft` directories, while their metadata (name, icon, game version,
 //! loader) lives in the launcher's `app.db`. That makes the folder alone

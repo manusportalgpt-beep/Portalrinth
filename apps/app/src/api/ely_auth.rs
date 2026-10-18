@@ -483,7 +483,7 @@ async fn run_as_account<R: Runtime>(
     let call = call.trim_end().trim_end_matches(';');
     let script = format!(
         r#"(async function () {{
-    const report = function (result) {{ location.hash = 'noctrinth-{token}-' + result; }};
+    const report = function (result) {{ location.hash = 'portalrinth-{token}-' + result; }};
     try {{
         const page = await fetch('https://ely.by/', {{ credentials: 'same-origin' }}).then(function (r) {{ return r.text(); }});
         const found = page.match(/alight\.service\.currentUser\s*=\s*(\{{[\s\S]*?\}});/);
@@ -502,7 +502,7 @@ async fn run_as_account<R: Runtime>(
 
     run_in_skin_window(app.clone(), script)?;
 
-    let marker = format!("noctrinth-{token}-");
+    let marker = format!("portalrinth-{token}-");
     let started = std::time::Instant::now();
     let answer = loop {
         let fragment = app

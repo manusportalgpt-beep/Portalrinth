@@ -2,16 +2,16 @@
  * CurseForge API key — isolated in its own module so both `curseforge-api.ts`
  * and `pack.ts` can import it without creating a circular dependency.
  *
- * vite.config.ts injects `__NOCTRINTH_CURSEFORGE_KEY__` (read raw from
+ * vite.config.ts injects `__PORTALRINTH_CURSEFORGE_KEY__` (read raw from
  * .env.local) — see curseforge-api.ts for the full rationale.
  */
 
 import { invoke } from '@tauri-apps/api/core'
 
-declare const __NOCTRINTH_CURSEFORGE_KEY__: string
+declare const __PORTALRINTH_CURSEFORGE_KEY__: string
 
 export const CURSEFORGE_API_KEY: string =
-	typeof __NOCTRINTH_CURSEFORGE_KEY__ === 'string' ? __NOCTRINTH_CURSEFORGE_KEY__ : ''
+	typeof __PORTALRINTH_CURSEFORGE_KEY__ === 'string' ? __PORTALRINTH_CURSEFORGE_KEY__ : ''
 
 /**
  * Tells the backend what the key is, once, at startup.

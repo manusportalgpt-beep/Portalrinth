@@ -77,9 +77,9 @@
 				<!--
 					Play, Starting, Installing and Stop are one shape that flows between
 					them, with the second copy's button running out of it; see
-					NoctrinthLaunchButton. What it does not cover keeps upstream's buttons.
+					PortalrinthLaunchButton. What it does not cover keeps upstream's buttons.
 				-->
-				<NoctrinthLaunchButton
+				<PortalrinthLaunchButton
 					v-if="launchState"
 					:state="launchState"
 					:again-visible="playing && !isInstalling"
@@ -186,7 +186,9 @@ import {
 } from '@modrinth/ui'
 import { computed } from 'vue'
 
-import NoctrinthLaunchButton, { type LaunchState } from '@/components/ui/NoctrinthLaunchButton.vue'
+import PortalrinthLaunchButton, {
+	type LaunchState,
+} from '@/components/ui/PortalrinthLaunchButton.vue'
 import type { GameInstance } from '@/helpers/types'
 
 import InstanceHeaderServerMetadata from './instance-page-header-server-metadata.vue'

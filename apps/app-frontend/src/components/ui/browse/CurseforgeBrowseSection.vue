@@ -28,7 +28,7 @@ import {
 	installCurseforgeMod,
 	searchCurseforge,
 } from '@/helpers/curseforge-api'
-import { needsNoTranslation, resolveTarget, translateText } from '@/helpers/noctrinth-translate'
+import { needsNoTranslation, resolveTarget, translateText } from '@/helpers/portalrinth-translate'
 
 const props = defineProps<{
 	provider: 'modrinth' | 'both' | 'curseforge'

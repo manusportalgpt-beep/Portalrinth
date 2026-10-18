@@ -42,14 +42,14 @@ impl ContentSourceKind {
         )
     }
 
-    /// Noctrinth's own: whether the ids this entry carries are CurseForge's
+    /// Portalrinth's own: whether the ids this entry carries are CurseForge's
     /// numeric ones rather than Modrinth's, which is what decides whether they
     /// can go into the Modrinth hash cache.
     pub fn has_curseforge_ids(self) -> bool {
         matches!(self, Self::CurseForge | Self::CurseForgeModpack)
     }
 
-    /// Noctrinth's own: whether an entry of this kind belongs to a pack that
+    /// Portalrinth's own: whether an entry of this kind belongs to a pack that
     /// is being listed as `filter`.
     ///
     /// A pack installed from a CurseForge zip is linked as an imported modpack

@@ -62,7 +62,7 @@ public final class TheseusAgent {
 
             // The player's own skin is on screen from the moment they spawn, so
             // it is the one worth having before anything asks.
-            SkinSource.prefetch(System.getProperty("noctrinth.skins.self"));
+            SkinSource.prefetch(System.getProperty("portalrinth.skins.self"));
         }
 
         instrumentation.addTransformer((loader, className, classBeingRedefined, protectionDomain, classData) -> {

@@ -24,7 +24,7 @@ use crate::{
 
 pub mod atlauncher;
 pub mod curseforge;
-/// Noctrinth's own: what copying a CurseForge instance's folder leaves behind.
+/// Portalrinth's own: what copying a CurseForge instance's folder leaves behind.
 mod curseforge_completion;
 pub mod gdlauncher;
 pub mod mmc;
@@ -263,7 +263,7 @@ async fn import_instance_inner(
 }
 
 /// Deletes an already-imported instance from the launcher it came from, for
-/// users migrating rather than trying Noctrinth alongside their old launcher.
+/// users migrating rather than trying Portalrinth alongside their old launcher.
 ///
 /// Only supported for Modrinth App: deleting from a launcher the user may
 /// still be using is destructive enough that it is offered exactly where the

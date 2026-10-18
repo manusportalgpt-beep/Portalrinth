@@ -74,7 +74,7 @@ pub async fn import_curseforge(
     // Recache Curseforge Icon if it exists
     let mut icon = None;
 
-    // Noctrinth's own: `profileImagePath` is an absolute path into the
+    // Portalrinth's own: `profileImagePath` is an absolute path into the
     // CurseForge installation, so it is routinely dead by the time an instance
     // is imported. The picture is looked for in the folder as well, and a dead
     // path now falls through to the thumbnail instead of ruling it out.
@@ -197,7 +197,7 @@ pub async fn import_curseforge(
     )
     .await?;
 
-    // Noctrinth's own, and the reason this does not call `finish_import`: the
+    // Portalrinth's own, and the reason this does not call `finish_import`: the
     // copy is not the whole pack. Whatever the instance says it has but did
     // not bring is fetched before Minecraft is installed, so the instance is
     // whole by the time the job finishes rather than a mod short.

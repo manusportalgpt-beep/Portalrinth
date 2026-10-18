@@ -9,9 +9,9 @@
  * Kept in sync with `DEEP_LINK_SCHEME` in
  * `packages/app-lib/src/api/handler.rs`.
  */
-export const APP_DEEP_LINK_SCHEME = 'noctrinth'
+export const APP_DEEP_LINK_SCHEME = 'portalrinth'
 
-/** Builds a deep link into the desktop app, e.g. `noctrinth://mod/sodium`. */
+/** Builds a deep link into the desktop app, e.g. `portalrinth://mod/sodium`. */
 export function appDeepLink(path: string): string {
 	return `${APP_DEEP_LINK_SCHEME}://${path.replace(/^\/+/, '')}`
 }

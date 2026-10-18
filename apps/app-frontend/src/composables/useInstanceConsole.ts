@@ -99,7 +99,7 @@ async function clearLive(instanceId: string): Promise<void> {
 
 async function destroy(instanceId: string): Promise<void> {
 	instances.delete(instanceId)
-	// Noctrinth: a game that is still running is still printing, and leaving
+	// Portalrinth: a game that is still running is still printing, and leaving
 	// its page for the home screen used to wipe everything it had printed, so
 	// the Logs tab came back empty. Its buffer is kept until it has stopped.
 	const running = await get_by_instance_id(instanceId).catch(() => [])

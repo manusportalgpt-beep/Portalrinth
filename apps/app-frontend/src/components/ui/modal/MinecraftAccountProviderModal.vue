@@ -2,7 +2,7 @@
 /**
  * Asks which kind of Minecraft account is being added.
  *
- * Noctrinth signs in with two account systems, Microsoft and Ely.by, and plays
+ * Portalrinth signs in with two account systems, Microsoft and Ely.by, and plays
  * without one at all under a name of the player's choosing. The accounts card
  * offers all three, but everything else that says "sign in to Minecraft" — the
  * getting started checklist, most of all, which is the first thing a new

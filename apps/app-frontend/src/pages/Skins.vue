@@ -32,7 +32,7 @@ import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vu
 
 import EarsModIcon from '@/assets/skins/ears-mod.png'
 import EditSkinModal from '@/components/ui/skin/EditSkinModal.vue'
-import NoctrinthElySkinModal from '@/components/ui/skin/NoctrinthElySkinModal.vue'
+import PortalrinthElySkinModal from '@/components/ui/skin/PortalrinthElySkinModal.vue'
 import VirtualSkinSectionList from '@/components/ui/skin/VirtualSkinSectionList.vue'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { handleSevereError } from '@/composables/use-error.js'
@@ -345,7 +345,7 @@ watch(
 )
 
 const CAPE_SOURCE_NAMES: Record<PlayerCapeSource, string> = {
-	local: 'Noctrinth',
+	local: 'Portalrinth',
 	ely_by: 'Ely.by',
 	mojang: 'Minecraft',
 	little_skin: 'LittleSkin',
@@ -683,7 +683,7 @@ function reportElySignInNeeded() {
 	})
 }
 
-const elyEditModal = useTemplateRef<InstanceType<typeof NoctrinthElySkinModal>>('elyEditModal')
+const elyEditModal = useTemplateRef<InstanceType<typeof PortalrinthElySkinModal>>('elyEditModal')
 const elyEditSaving = ref(false)
 
 function openElyEdit(skin: Skin, event: MouseEvent) {
@@ -1814,7 +1814,7 @@ async function checkUserChanges() {
 		class="hidden"
 		@change="onElyUploadChange"
 	/>
-	<NoctrinthElySkinModal
+	<PortalrinthElySkinModal
 		ref="elyEditModal"
 		:saving="elyEditSaving"
 		@save="saveElyEdit"

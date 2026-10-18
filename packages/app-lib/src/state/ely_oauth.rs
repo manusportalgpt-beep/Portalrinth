@@ -36,11 +36,11 @@ use uuid::Uuid;
 
 use crate::util::fetch::INSECURE_REQWEST_CLIENT;
 
-/// Noctrinth's application at <https://account.ely.by/dev/applications>.
+/// Portalrinth's application at <https://account.ely.by/dev/applications>.
 ///
 /// Public, in the OAuth sense and in the plain one: it identifies the
 /// application and protects nothing.
-const CLIENT_ID: &str = "noctrinth";
+const CLIENT_ID: &str = "portalrinth";
 
 /// Where the player is sent to sign in.
 const AUTHORIZE_URL: &str = "https://account.ely.by/oauth2/v1";
@@ -63,7 +63,7 @@ const ACCOUNT_INFO_URL: &str = "https://account.ely.by/api/account/v1/info";
 /// compares it character for character and refuses to begin otherwise. A page
 /// is published there anyway, so that a player who somehow arrives at it is met
 /// by something that explains itself.
-pub const REDIRECT_URI: &str = "https://everelsu.github.io/Noctrinth/oauth/ely";
+pub const REDIRECT_URI: &str = "https://everelsu.github.io/Portalrinth/oauth/ely";
 
 /// What the launcher asks to be allowed to do.
 ///

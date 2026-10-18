@@ -8,8 +8,8 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import dayjs from 'dayjs'
 import { computed, onMounted, ref } from 'vue'
 
-import { noctrinthChangelogFeedQueryOptions } from '@/features/news/noctrinth-news'
-import { NOCTRINTH_CHANGELOG } from '@/helpers/noctrinth-changelog'
+import { portalrinthChangelogFeedQueryOptions } from '@/features/news/portalrinth-news'
+import { PORTALRINTH_CHANGELOG } from '@/helpers/portalrinth-changelog'
 import { renderChangelog } from '@/helpers/render-changelog'
 
 const { formatMessage } = useVIntl()
@@ -35,7 +35,7 @@ const messages = defineMessages({
 	author: { id: 'app.changelog.author', defaultMessage: 'Author' },
 	support: { id: 'app.changelog.support', defaultMessage: 'Support on Boosty' },
 	installed: { id: 'app.changelog.installed', defaultMessage: 'Installed' },
-	sourceNoctrinth: { id: 'app.changelog.source.noctrinth', defaultMessage: 'Portalrinth' },
+	sourcePortalrinth: { id: 'app.changelog.source.portalrinth', defaultMessage: 'Portalrinth' },
 	sourceModrinth: { id: 'app.changelog.source.modrinth', defaultMessage: 'Modrinth' },
 	modrinthNote: {
 		id: 'app.changelog.modrinth-note',
@@ -46,12 +46,12 @@ const messages = defineMessages({
 		id: 'app.changelog.open-modrinth',
 		defaultMessage: 'Open Modrinth changelog',
 	},
-	noctrinthNote: {
-		id: 'app.changelog.noctrinth-note',
+	portalrinthNote: {
+		id: 'app.changelog.portalrinth-note',
 		defaultMessage: 'The full Portalrinth changelog is also available online.',
 	},
-	openNoctrinthChangelog: {
-		id: 'app.changelog.open-noctrinth',
+	openPortalrinthChangelog: {
+		id: 'app.changelog.open-portalrinth',
 		defaultMessage: 'Open Portalrinth changelog',
 	},
 })
@@ -68,13 +68,15 @@ interface ChangelogEntry {
 	sections: ChangelogSection[]
 }
 
-type ChangelogSource = 'noctrinth' | 'modrinth'
+type ChangelogSource = 'portalrinth' | 'modrinth'
 
-const source = ref<ChangelogSource>('noctrinth')
-const sourceOptions: ChangelogSource[] = ['noctrinth', 'modrinth']
+const source = ref<ChangelogSource>('portalrinth')
+const sourceOptions: ChangelogSource[] = ['portalrinth', 'modrinth']
 
 function formatSourceLabel(option: ChangelogSource): string {
-	return formatMessage(option === 'noctrinth' ? messages.sourceNoctrinth : messages.sourceModrinth)
+	return formatMessage(
+		option === 'portalrinth' ? messages.sourcePortalrinth : messages.sourceModrinth,
+	)
 }
 
 const NEWLINE = String.fromCharCode(10)
@@ -117,10 +119,10 @@ function parseBody(body: string): ChangelogSection[] {
  * whenever a release has come out since, or an entry was corrected. Shared with
  * the sidebar's News, so the two read one fetch.
  */
-const feed = useQuery(noctrinthChangelogFeedQueryOptions())
+const feed = useQuery(portalrinthChangelogFeedQueryOptions())
 
-const noctrinthChangelog = computed<ChangelogEntry[]>(() =>
-	(feed.data.value ?? NOCTRINTH_CHANGELOG).map((entry) => ({
+const portalrinthChangelog = computed<ChangelogEntry[]>(() =>
+	(feed.data.value ?? PORTALRINTH_CHANGELOG).map((entry) => ({
 		version: entry.version,
 		date: dayjs(entry.date).format('MMM D, YYYY'),
 		sections: parseBody(entry.body),
@@ -158,7 +160,7 @@ function hideUnloadableImage(event: Event): void {
 }
 
 const entries = computed<ChangelogEntry[]>(() =>
-	source.value === 'noctrinth' ? noctrinthChangelog.value : modrinthChangelog.value,
+	source.value === 'portalrinth' ? portalrinthChangelog.value : modrinthChangelog.value,
 )
 </script>
 
@@ -238,11 +240,11 @@ const entries = computed<ChangelogEntry[]>(() =>
 		</div>
 		<div v-else class="flex flex-col gap-2">
 			<p class="m-0 text-sm text-secondary">
-				{{ formatMessage(messages.noctrinthNote) }}
+				{{ formatMessage(messages.portalrinthNote) }}
 			</p>
-			<Button @click="openUrl('https://everelsu.github.io/Noctrinth/changelog/')">
+			<Button @click="openUrl('https://everelsu.github.io/Portalrinth/changelog/')">
 				<ExternalIcon />
-				{{ formatMessage(messages.openNoctrinthChangelog) }}
+				{{ formatMessage(messages.openPortalrinthChangelog) }}
 			</Button>
 		</div>
 	</div>

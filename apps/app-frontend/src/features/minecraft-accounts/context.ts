@@ -9,9 +9,9 @@ export interface MinecraftAccountsActions {
 	setEquippedSkin: (skin: Skin) => Promise<void>
 	setLoginDisabled: (disabled: boolean) => void
 	login: () => Promise<void>
-	/** Noctrinth: the account the card has selected, whichever kind it is. */
+	/** Portalrinth: the account the card has selected, whichever kind it is. */
 	readonly selectedAccount: unknown
-	/** Noctrinth: the Ely.by and offline sign-ins the card owns. */
+	/** Portalrinth: the Ely.by and offline sign-ins the card owns. */
 	showElyLogin: () => void
 	showOfflineLogin: () => void
 }

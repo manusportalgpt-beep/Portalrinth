@@ -967,7 +967,7 @@ async fn content_files_to_content_items(
     cache_behaviour: Option<CacheBehaviour>,
     state: &State,
 ) -> crate::Result<Vec<ContentItem>> {
-    // Noctrinth's own: a CurseForge file's entry carries CurseForge's numeric
+    // Portalrinth's own: a CurseForge file's entry carries CurseForge's numeric
     // ids in the same two columns a Modrinth file's carries Modrinth's, so the
     // two have to be told apart before either is looked up. Asking Modrinth
     // about "627196" was never going to answer, and asking it three hundred
@@ -1054,7 +1054,7 @@ async fn content_files_to_content_items(
             let owner = project.and_then(|project| {
                 resolve_owner(project, &meta.teams, &meta.organizations)
             });
-            // Noctrinth's own: what CurseForge answered, in the shape the row
+            // Portalrinth's own: what CurseForge answered, in the shape the row
             // draws. Only reached for a file whose ids were CurseForge's, so
             // it can never stand in for a Modrinth answer.
             let curseforge_meta =
@@ -1297,7 +1297,7 @@ fn content_item_project(project: &Project) -> ContentItemProject {
     }
 }
 
-/// Noctrinth's own: a CurseForge project in the shape a content row draws.
+/// Portalrinth's own: a CurseForge project in the shape a content row draws.
 ///
 /// CurseForge publishes no licence with a project, and a row that claimed one
 /// would be inventing it, so it is left saying exactly that.
@@ -1320,7 +1320,7 @@ fn curseforge_content_item_project(
     }
 }
 
-/// Noctrinth's own: the author CurseForge names, when it names one.
+/// Portalrinth's own: the author CurseForge names, when it names one.
 fn curseforge_content_item_owner(
     project: &crate::api::curseforge_metadata::CurseforgeProject,
 ) -> Option<ContentItemOwner> {

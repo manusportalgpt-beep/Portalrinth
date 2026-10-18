@@ -4,7 +4,7 @@ import { ButtonLink, defineMessages, NewsArticleCard, useVIntl } from '@modrinth
 import { useQuery } from '@tanstack/vue-query'
 import { computed, watch } from 'vue'
 
-import { useNoctrinthNews } from './noctrinth-news'
+import { usePortalrinthNews } from './portalrinth-news'
 import { newsArticlesQueryOptions } from './queries'
 
 const { formatMessage } = useVIntl()
@@ -20,10 +20,10 @@ const messages = defineMessages({
 })
 
 const { data: modrinthNews, error } = useQuery(newsArticlesQueryOptions())
-// Noctrinth: its own articles mixed in with Modrinth's, newest first.
-const noctrinthNews = useNoctrinthNews()
+// Portalrinth: its own articles mixed in with Modrinth's, newest first.
+const portalrinthNews = usePortalrinthNews()
 const news = computed(() =>
-	[...noctrinthNews.value, ...(modrinthNews.value ?? [])]
+	[...portalrinthNews.value, ...(modrinthNews.value ?? [])]
 		.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 		.slice(0, 4),
 )

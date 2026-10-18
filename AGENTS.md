@@ -85,11 +85,29 @@ A capability that no control reaches is not a capability, and a control that lea
 
 A half-landed feature that a person can reach is a bug, even when every line of it is correct.
 
-### 3. Always do the Noctrinth Windows build
+### 3. Every icon belongs to the interface it sits in
+
+An icon is drawn in the same system as everything else around it, or it is not drawn: the same stroke weight and corner radius as its neighbours, the same size step as the row it is in, the same colour rules, the same meaning for the same shape. An icon that has been picked from somewhere else and dropped in is the one thing on screen that tells a person the interface was assembled rather than designed.
+
+Before an icon is used, check it against the ones already beside it. If it does not belong, redraw it — do not ship it next to its neighbours and hope.
+
+### 4. One structure everywhere, down to the buttons
+
+The interface is one system: the same row height, the same padding, the same radius, the same two sizes of heading, the same weight of label, the same place a control sits inside a group, the same way a thing opens and closes, the same easing and the same duration for every movement of the same kind. Two screens of the same app must look like they were drawn by the same hand at the same time, and that has to be true of the parts that are easy to skip: the button labels, the empty states, the tooltips, the spinner, the transition on a disclosure.
+
+If a change makes one place look different from every other place, the change is wrong, not the other place.
+
+### 5. Every change is in service of the person using it
+
+The test of a change is not that it works. It is that it makes the next thing easier to do, and the one after that. It should remove a decision, shorten a path, make something legible that was not, or remove a way to get something wrong. It should never add a step, a setting to explain, a name to learn, or a place where the same question is answered differently.
+
+If a change cannot be said as what is easier because of it, it is not finished.
+
+### 6. Always do the Portalrinth Windows build
 
 Every finished change is built for Windows before it is called done, and the resulting installer is handed over. A change that only passes CI has not proved it runs: the CI job type-checks and lints, while the build is what catches the missing toolchain file, the mis-named icon, the bundle that will not package, and the panic that only happens once the window exists.
 
-The build to run is `.github/workflows/noctrinth-build-windows.yml`, and only that one. Push to `main` to start it, then report the run link and the artifact name. Nothing else counts as the build: not CI going green, not a passing `cargo check`, not a local build of one crate.
+The build to run is `.github/workflows/portalrinth-build-windows.yml`, and only that one. Push to `main` to start it, then report the run link and the artifact name. Nothing else counts as the build: not CI going green, not a passing `cargo check`, not a local build of one crate.
 
 If the build fails, that is the task finishing late rather than a separate problem to report.
 

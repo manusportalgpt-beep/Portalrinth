@@ -1343,7 +1343,12 @@ provideBrowseManager({
 	selectableProjectTypes,
 	showProjectTypeTabs: computed(() => !isServerContext.value),
 	variant: 'app',
-	hideProjectHits: computed(() => hideModrinthResults.value),
+	// Modrinth's own results are never hidden.
+	//
+	// The switch chooses whether CurseForge is asked as well, not instead:
+	// hiding Modrinth while CurseForge had nothing to say left a person staring
+	// at an empty page, which is what a broken search looks like.
+	hideProjectHits: computed(() => false),
 	showProviderSwitch: computed(() => !isServerContext.value),
 	getCardActions,
 	installContext,

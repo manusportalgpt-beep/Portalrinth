@@ -287,13 +287,13 @@ pub fn get_jvm_arguments(
     // their own skin system can still do it with a `-D` of their own.
     if let Some(skins) = skins {
         parsed_arguments.extend_from_slice(&[
-            format!("-Dnoctrinth.skins.source={}", skins.sources),
-            format!("-Dnoctrinth.skins.self={}", skins.player_name),
-            format!("-Dnoctrinth.skins.local={}", skins.local_dir.display()),
-            format!("-Dnoctrinth.skins.cache={}", skins.cache_file.display()),
+            format!("-Dportalrinth.skins.source={}", skins.sources),
+            format!("-Dportalrinth.skins.self={}", skins.player_name),
+            format!("-Dportalrinth.skins.local={}", skins.local_dir.display()),
+            format!("-Dportalrinth.skins.cache={}", skins.cache_file.display()),
         ]);
         if let Some(proxy) = &skins.proxy {
-            parsed_arguments.push(format!("-Dnoctrinth.skins.proxy={proxy}"));
+            parsed_arguments.push(format!("-Dportalrinth.skins.proxy={proxy}"));
         }
     }
 

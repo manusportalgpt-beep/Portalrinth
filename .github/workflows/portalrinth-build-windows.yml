@@ -1,0 +1,196 @@
+name: Portalrinth Windows build
+
+# Builds one Windows x64 installer and leaves it in the run's artifacts.
+#
+# The release workflows already build Windows, but they do it as a side effect
+# of a tagged release: they need the updater signing key, they create a release
+# (draft or not), and they run for all three platforms. None of that is wanted
+# when the question is simply "what does the current `main` look like on
+# Windows", which is what this is for.
+#
+# Because nothing is signed, the installer cannot update itself and is not
+# published anywhere — it is a build to try, not a release. Use
+# `portalrinth-release.yml` for anything that ships.
+#
+# WHAT IS DIFFERENT FROM THE RELEASE BUILD
+#   * `tauri.build.conf.json` turns off `createUpdaterArtifacts`, which would
+#     otherwise fail the build asking for `TAURI_SIGNING_PRIVATE_KEY`.
+#   * No tag, no release, no `latest.json`, no updater branch.
+#   * Windows only — the other two platforms cost three times as much runner
+#     time and nothing here is platform-specific.
+#
+# HOW TO RUN IT
+#   Push the branch this workflow watches:
+#     git checkout -b windows-build main
+#     git push origin windows-build
+#   or press "Run workflow" on the Actions page.
+
+on:
+  push:
+    branches: [windows-build]
+  workflow_dispatch:
+
+concurrency:
+  group: portalrinth-build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # windows-latest is x64, and the only Windows target Tauri produces here.
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Tauri reads the tag and the commit for the version it stamps into
+          # the installer, and a shallow clone leaves it guessing.
+          fetch-depth: 0
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+
+      - name: Prepare app-lib environment
+        shell: bash
+        run: cp packages/app-lib/.env.prod packages/app-lib/.env
+
+      - name: Prepare CurseForge API key
+        shell: bash
+        env:
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        run: |
+          # Checked here rather than in an `if:`, because the secrets context is
+          # not available in a step condition.
+          if [ -z "$CURSEFORGE_API_KEY" ]; then
+            echo "::notice::No CurseForge key configured. Importing a CurseForge modpack zip will not work in this build."
+            exit 0
+          fi
+          # The key is read raw from this file by vite.config.ts (bypasses
+          # dotenv-expand so bcrypt-style `$` chars survive).
+          printf 'VITE_CURSEFORGE_API_KEY=%s\n' "$CURSEFORGE_API_KEY" \
+            > apps/app-frontend/.env.local
+
+      - name: Sync versions from the VERSION file
+        shell: bash
+        run: node scripts/sync-version.mjs
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # The steps below write what they printed to `$GITHUB_WORKSPACE/logs/`
+      # and the report at the end lifts those into the step summary and into an
+      # annotation. The logs of a failed step are not readable without an
+      # account, so without this a failure here says only that it failed.
+      - name: Report the toolchain
+        shell: bash
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/logs"
+          {
+            echo "node $(node --version)"
+            echo "pnpm $(pnpm --version)"
+            echo "rustc $(rustc --version)"
+            echo "--- tauri --version ---"
+            pnpm --filter @modrinth/app exec tauri --version 2>&1
+          } | tee "$GITHUB_WORKSPACE/logs/00-toolchain.log"
+
+      - name: Build the app frontend
+        # The same build `beforeBuildCommand` in tauri.conf.json runs. Done as
+        # its own step so a failure here is distinguishable from a failure in
+        # the Tauri build.
+        shell: bash
+        run: |
+          set +e
+          pnpm turbo run build --filter=@modrinth/app-frontend \
+            > "$GITHUB_WORKSPACE/logs/10-frontend.log" 2>&1
+          code=$?
+          tail -n 40 "$GITHUB_WORKSPACE/logs/10-frontend.log"
+          exit $code
+
+      # Not `tauri build`: this is the same compilation it starts with, run on
+      # its own so that a compiler or linker error is reported by cargo itself
+      # rather than by a wrapper. `cargo check` in CI never links, so a link
+      # error is only ever seen here.
+      - name: Compile the app
+        shell: bash
+        run: |
+          set +e
+          cargo build --release -p theseus_gui --features updater \
+            > "$GITHUB_WORKSPACE/logs/20-cargo.log" 2>&1
+          code=$?
+          tail -n 40 "$GITHUB_WORKSPACE/logs/20-cargo.log"
+          exit $code
+
+      - name: Bundle the installer
+        # `--bundles nsis` is the one target that exists on Windows; the config
+        # lists the macOS and Linux ones too, which Tauri skips on its own but
+        # not before it has looked for their toolchains.
+        #
+        # `--features updater` matches the release build. What is different is
+        # `tauri.build.conf.json`, which turns off the updater artifacts: with
+        # them on, the build stops and asks for a signing key that a build to
+        # try has no business having. It sits beside tauri.conf.json rather than
+        # next to it in `src/`, because that is where it is passed from.
+        shell: bash
+        working-directory: apps/app
+        run: |
+          set +e
+          pnpm tauri build --features updater --bundles nsis --config tauri.build.conf.json \
+            > "$GITHUB_WORKSPACE/logs/30-tauri.log" 2>&1
+          code=$?
+          tail -n 40 "$GITHUB_WORKSPACE/logs/30-tauri.log"
+          exit $code
+
+      - name: Upload the installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Portalrinth-Windows-x64
+          path: target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Report what each step said
+        if: always()
+        shell: bash
+        run: |
+          found=0
+          for log in "$GITHUB_WORKSPACE"/logs/*.log; do
+            [ -e "$log" ] || continue
+            found=1
+            {
+              echo "### $(basename "$log")"
+              echo '```'
+              tail -n 50 "$log"
+              echo '```'
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          if [ "$found" = 0 ]; then
+            echo '::error::No step wrote any output.'
+            exit 0
+          fi
+
+          # The last non-empty log goes into an annotation too, so that the
+          # reason this failed is visible to anyone but the person who pushed.
+          last=$(ls -t "$GITHUB_WORKSPACE"/logs/*.log 2>/dev/null | head -n 1)
+          tail -n 50 "$last" \
+            | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g' \
+            > "$RUNNER_TEMP/build-tail.txt"
+          echo "::error title=Windows build failed::$(cat "$RUNNER_TEMP/build-tail.txt")"

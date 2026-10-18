@@ -8,14 +8,14 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/app-frontend/src/helpers/noctrinth-changelog.ts'
+      - 'apps/app-frontend/src/helpers/portalrinth-changelog.ts'
       - 'apps/app-frontend/src/changelog/screenshots/**'
       - 'packages/blog/changelog.ts'
-      - 'apps/app/icons/noctrinth.svg'
+      - 'apps/app/icons/portalrinth.svg'
       - 'scripts/build-changelog-site.mjs'
       - 'scripts/lib/**'
       - 'news/**'
-      - '.github/assets/noctrinth-banner.svg'
+      - '.github/assets/portalrinth-banner.svg'
       - '.github/assets/social-preview.png'
       - '.github/assets/screenshots/**'
       - 'VERSION'
