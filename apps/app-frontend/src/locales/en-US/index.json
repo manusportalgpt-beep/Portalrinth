@@ -4932,7 +4932,7 @@
     "message": "Install"
   },
   "browse.curseforge.installing": {
-    "message": "Installing…"
+    "message": "Installing..."
   },
   "browse.curseforge.no-file-for-version": {
     "message": "No file for this game version"
