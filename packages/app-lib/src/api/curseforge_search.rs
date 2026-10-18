@@ -91,6 +91,12 @@ pub struct CurseforgeSearchHit {
     pub author_name: Option<String>,
     pub download_count: u64,
     pub date_modified: Option<String>,
+    /// CurseForge's own category names, in the language it was asked in.
+    ///
+    /// Modrinth draws a project's tags on its card, and a CurseForge result with
+    /// none of them reads as a card that is missing something rather than as a
+    /// result from a service that classifies things differently.
+    pub categories: Vec<String>,
     /// The newest file for the version that was asked about, when the project
     /// has one. Without this a search result cannot be installed from, because
     /// the id of the file to download is not in a search answer.
@@ -168,15 +174,52 @@ fn client() -> crate::Result<reqwest::Client> {
         })
 }
 
+/// The language CurseForge should write its text in.
+///
+/// A copy of the launcher's own, refreshed whenever settings are read or
+/// written, because `with_headers` is called from the middle of a search and
+/// cannot go and read the database on every file.
+static LANGUAGE: std::sync::RwLock<String> = std::sync::RwLock::new(String::new());
+
+pub fn set_language(locale: Option<&str>) {
+    let locale = locale.unwrap_or_default().trim();
+    if locale.is_empty() {
+        return;
+    }
+    if let Ok(mut slot) = LANGUAGE.write() {
+        // CurseForge names its locales the way the web site does, with a
+        // hyphen, and answers in English for anything it does not know.
+        *slot = if locale.contains('-') {
+            locale.to_string()
+        } else {
+            format!("{locale}-{}", locale.split('-').next().unwrap_or(locale))
+        };
+    }
+}
+
+fn language() -> String {
+    LANGUAGE
+        .read()
+        .ok()
+        .filter(|locale| !locale.is_empty())
+        .map(|locale| locale.clone())
+        .unwrap_or_else(|| "en-US".to_string())
+}
+
 /// Puts on the two headers every CurseForge request needs.
 ///
 /// `Accept-Encoding: identity` because their edge sometimes answers a compressed
 /// request with an HTML failure of its own, and a launcher that only ever sees
 /// the parse error has nothing to report.
+///
+/// `Accept-Language` because CurseForge writes its summaries and categories in
+/// the language it is asked in, and a launcher running in Russian should be
+/// reading Russian rather than English because of which service answered.
 fn with_headers(request: reqwest::RequestBuilder, key: &str) -> reqwest::RequestBuilder {
     request
         .header("x-api-key", key)
         .header(reqwest::header::ACCEPT_ENCODING, "identity")
+        .header(reqwest::header::ACCEPT_LANGUAGE, language())
 }
 
 /// Maps one of the launcher's project types onto CurseForge's.
@@ -709,6 +752,173 @@ pub async fn file(
     Ok(to_file(&body["data"]))
 }
 
+/// What one file needs alongside it.
+///
+/// CurseForge's own three kinds, kept apart because they are three different
+/// answers: `Required` is a file that will not run without, `Optional` is one
+/// that works but is better with, and `Embedded` is already inside this file
+/// and must not be fetched again. `Tool` is a whole other application.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum DependencyKind {
+    Required,
+    Optional,
+    Embedded,
+    Tool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct CurseforgeDependency {
+    pub kind: DependencyKind,
+    pub mod_id: u64,
+    pub file_id: Option<u64>,
+}
+
+/// The dependencies of one file, as CurseForge states them.
+pub async fn dependencies(
+    http: &reqwest::Client,
+    key: &str,
+    mod_id: u64,
+    file_id: u64,
+) -> crate::Result<Vec<CurseforgeDependency>> {
+    let body = json_response(
+        with_headers(
+            http.get(format!(
+                "https://api.curseforge.com/v1/mods/{mod_id}/files/{file_id}"
+            )),
+            key,
+        ),
+        "dependency lookup",
+    )
+    .await?;
+
+    Ok(body["data"]["dependencies"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|dependency| {
+            Some(CurseforgeDependency {
+                kind: match dependency["dependencyType"].as_u64()? {
+                    1 => DependencyKind::Required,
+                    2 => DependencyKind::Optional,
+                    3 => DependencyKind::Embedded,
+                    _ => DependencyKind::Tool,
+                },
+                mod_id: dependency["modId"].as_u64()?,
+                file_id: dependency["fileId"].as_u64(),
+            })
+        })
+        .collect())
+}
+
+/// The file that stands in for a dependency when the pack named none.
+///
+/// A dependency is a project, not a file: "needs Fabric API" does not say which
+/// build of it. The newest release that supports the game version and loader
+/// already being installed is the one that matches, and the newest release is
+/// what a person would have picked by hand.
+pub async fn best_file_for(
+    http: &reqwest::Client,
+    key: &str,
+    mod_id: u64,
+    game_version: Option<&str>,
+    loader: Option<&str>,
+) -> crate::Result<CurseforgeFile> {
+    let mut files = files(mod_id, game_version, loader).await?;
+    files.sort_by(|left, right| right.file_date.cmp(&left.file_date));
+
+    files.into_iter().next().ok_or_else(|| {
+        crate::ErrorKind::InputError(format!(
+            "CurseForge project {mod_id} has no file for this game version"
+        ))
+        .as_error()
+    })
+}
+
+/// What CurseForge itself can be filtered by.
+///
+/// CurseForge's world is not Modrinth's: its classes, its category ids and the
+/// game versions it knows are its own, and asking Modrinth for them returns
+/// nothing that lines up. So they are asked of CurseForge and offered as they
+/// are, rather than translated into ours and back.
+#[derive(Serialize, Clone, Debug)]
+pub struct CurseforgeFilters {
+    pub classes: Vec<CurseforgeNamedId>,
+    pub categories: Vec<CurseforgeNamedId>,
+    pub game_versions: Vec<CurseforgeNamedId>,
+    pub loaders: Vec<CurseforgeNamedId>,
+    pub sort_fields: Vec<CurseforgeNamedId>,
+}
+
+#[derive(Serialize, Clone, Debug)]
+pub struct CurseforgeNamedId {
+    pub id: String,
+    pub name: String,
+    /// Only classes have a slug the web site uses; kept with the rest rather
+    /// than in a type of its own for four fields.
+    pub slug: Option<String>,
+}
+
+pub async fn filters(http: &reqwest::Client, key: &str) -> crate::Result<CurseforgeFilters> {
+    let named = |value: serde_json::Value, slug: bool| -> Vec<CurseforgeNamedId> {
+        value
+            .as_array()
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|entry| CurseforgeNamedId {
+                id: entry["id"].to_string().trim_matches('"').to_string(),
+                name: entry["name"].as_str().unwrap_or_default().to_string(),
+                slug: slug
+                    .then(|| entry["slug"].as_str().map(str::to_owned))
+                    .flatten(),
+            })
+            .collect()
+    };
+
+    let [classes, categories, game_versions, loaders] = [
+        json_response(
+            with_headers(http.get("https://api.curseforge.com/v1/classes"), key),
+            "class lookup",
+        )
+        .await?,
+        json_response(
+            with_headers(http.get("https://api.curseforge.com/v1/categories"), key),
+            "category lookup",
+        )
+        .await?,
+        json_response(
+            with_headers(http.get("https://api.curseforge.com/v1/game/versions"), key),
+            "game version lookup",
+        )
+        .await?,
+        json_response(
+            with_headers(http.get("https://api.curseforge.com/v1/loaders"), key),
+            "loader lookup",
+        )
+        .await?,
+    ];
+
+    // CurseForge's own sort fields, which are the ones its web site offers and
+    // which its ordering numbers refer to.
+    let sort_fields = vec![
+        CurseforgeNamedId { id: "1".into(), name: "Relevancy".into(), slug: None },
+        CurseforgeNamedId { id: "2".into(), name: "Total downloads".into(), slug: None },
+        CurseforgeNamedId { id: "3".into(), name: "Newest files".into(), slug: None },
+        CurseforgeNamedId { id: "4".into(), name: "Updated".into(), slug: None },
+        CurseforgeNamedId { id: "5".into(), name: "Name".into(), slug: None },
+    ];
+
+    Ok(CurseforgeFilters {
+        classes: named(classes, true),
+        categories: named(categories, true),
+        game_versions: named(game_versions, false),
+        loaders: named(loaders, false),
+        sort_fields,
+    })
+}
+
 /// Whether this launcher can ask CurseForge anything at all.
 pub fn is_available() -> bool {
     crate::api::curseforge_metadata::api_key().is_some()
@@ -757,6 +967,13 @@ fn to_hit(found: &serde_json::Value, game_version: Option<&str>) -> CurseforgeSe
             .map(str::to_owned),
         download_count: found["downloadCount"].as_u64().unwrap_or_default(),
         date_modified: found["dateModified"].as_str().map(str::to_owned),
+        categories: found["categories"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|category| category["name"].as_str())
+            .map(str::to_owned)
+            .collect(),
     }
 }
 

@@ -244,6 +244,18 @@ async function toggleVersions(hit: CurseforgeHit) {
 				</template>
 
 				<p v-if="hit.summary" class="m-0 text-secondary">{{ hit.summary }}</p>
+				<ul
+					v-if="hit.categories?.length"
+					class="mt-1 flex list-none flex-wrap gap-1 p-0 text-xs text-secondary"
+				>
+					<li
+						v-for="category in hit.categories"
+						:key="category"
+						class="rounded bg-surface-3 px-1.5 py-0.5"
+					>
+						{{ category }}
+					</li>
+				</ul>
 				<p class="m-0 text-sm text-secondary">
 					{{ formatMessage(messages.downloads, { count: hit.download_count }) }}
 					<span v-if="!hit.latest_file"> · {{ formatMessage(messages.noFileForVersion) }} </span>

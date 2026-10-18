@@ -55,6 +55,8 @@ export interface CurseforgeHit {
 	author_name: string | null
 	download_count: number
 	date_modified: string | null
+	/** CurseForge's own category names, in the language it was asked in. */
+	categories: string[]
 	/** The file to install for the version searched for, when the project has one. */
 	latest_file: CurseforgeFile | null
 }

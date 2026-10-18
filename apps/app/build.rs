@@ -9,7 +9,7 @@ fn main() {
 
     // Which build of this version this is.
     //
-    // A release can be rebuilt under the number it already went out as вЂ” a
+    // A release can be rebuilt under the number it already went out as РІР‚вЂќ a
     // micropatch, when the version itself may not move (it is upstream's to
     // set). Nothing about the version tells those builds apart, so VERSION
     // carries a build number after a `+`, as semver build metadata: `0.18.2+1`
@@ -545,7 +545,7 @@ fn main() {
                     ),
             )
             // Noctrinth's own. A plugin that is not declared here has every one
-            // of its commands denied by the ACL at runtime, silently вЂ” the
+            // of its commands denied by the ACL at runtime, silently РІР‚вЂќ the
             // frontend's `invoke` simply rejects, which reads as the feature
             // being broken rather than as a permission being missing. Adding a
             // plugin in `main.rs` is only half of adding a plugin.
@@ -620,6 +620,7 @@ fn main() {
                         "curseforge_files",
                         "curseforge_download_urls",
                         "curseforge_install_mod",
+                        "curseforge_filters",
                         "pack_manifest",
                     ])
                     .default_permission(
