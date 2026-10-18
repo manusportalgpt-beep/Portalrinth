@@ -681,15 +681,14 @@ pub async fn download_urls(mod_id: u64, file_id: u64) -> crate::Result<Vec<Strin
 
 /// A client for talking to CurseForge, with the key already on it.
 ///
-/// Public because the modpack preview asks about the same API and has to reach
-/// it the same way — a second client built here would be a second place for the
-/// proxy setting to be quietly forgotten.
-pub fn build_client(key: &str) -> crate::Result<reqwest::Client> {
-    let http = client()?;
-    // A request builder rather than a default header, because the key is the
-    // only thing that varies and the rest of the client is the launcher's.
-    let _ = key;
-    Ok(http)
+/// Public because the modpack preview and the dependency walker ask about the
+/// same API and have to reach it the same way — a second client built here would
+/// be a second place for the proxy setting to be quietly forgotten.
+///
+/// The key is not baked into it: it goes on each request instead, because it is
+/// the only thing that varies and everything else is the launcher's.
+pub fn build_client(_key: &str) -> crate::Result<reqwest::Client> {
+    client()
 }
 
 /// One project's own record: what the search answer carries, for one id.

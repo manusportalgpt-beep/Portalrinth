@@ -44,7 +44,7 @@ export interface AccentPreset {
 	dark: string
 }
 
-export const DEFAULT_ACCENT_PRESET = 'theme'
+export const DEFAULT_ACCENT_PRESET = 'crimson'
 
 /** The id the wheel writes under, and the one a colour of its own takes. */
 export const CUSTOM_ACCENT_ID = 'custom'
@@ -59,13 +59,20 @@ const DEFAULT_CUSTOM_ACCENT = '#4d9227'
  */
 export const ACCENT_PRESETS: AccentPreset[] = [
 	{ id: 'theme', name: 'Theme', light: '#8e32f3', dark: '#c78aff' },
+	// The dark and the light are the same hue at two depths: a brighter accent
+	// carries further on a light theme, and a deeper one does not turn to mud on
+	// a dark one. Kept as one entry so nobody has to invent the pair twice.
+	{ id: 'crimson', name: 'Crimson', light: '#c1121f', dark: '#ff4d5e' },
+	{ id: 'blood', name: 'Blood', light: '#8b0f1c', dark: '#e0364a' },
+	{ id: 'ember', name: 'Ember', light: '#c9510c', dark: '#ff8f4a' },
+	{ id: 'sunset', name: 'Sunset', light: '#b8336a', dark: '#ff6ba5' },
 	{ id: 'amethyst', name: 'Amethyst', light: '#7b2cbf', dark: '#a855f7' },
 	{ id: 'nightshade', name: 'Nightshade', light: '#5b45d6', dark: '#8b7bff' },
 	{ id: 'midnight', name: 'Midnight', light: '#1f68c0', dark: '#4f9cff' },
 	{ id: 'glacier', name: 'Glacier', light: '#0e8fa8', dark: '#3ad2ec' },
 	{ id: 'verdant', name: 'Verdant', light: '#0faa4f', dark: '#42e686' },
+	{ id: 'moss', name: 'Moss', light: '#4a6b16', dark: '#9fd356' },
 	{ id: 'lantern', name: 'Lantern', light: '#a86a00', dark: '#ffc857' },
-	{ id: 'ember', name: 'Ember', light: '#c9510c', dark: '#ff8f4a' },
 	{ id: 'rose', name: 'Rose', light: '#cb2245', dark: '#ff6f95' },
 ]
 
