@@ -59,7 +59,7 @@
 	"productName": "Portalrinth",
 	"version": "../app-frontend/package.json",
 	"mainBinaryName": "Portalrinth",
-	"identifier": "com.noctrinth.app",
+	"identifier": "com.portalrinth.app",
 	"plugins": {
 		"deep-link": {
 			"desktop": {

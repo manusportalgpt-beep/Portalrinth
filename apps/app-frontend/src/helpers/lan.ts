@@ -32,15 +32,15 @@ export interface LanRelayInfo {
 
 /** Every copy of an instance that is running, with the state of its world. */
 export async function list_lan_relays(): Promise<LanRelayInfo[]> {
-	return await invoke('plugin:noctrinth-lan|lan_list')
+	return await invoke('plugin:portalrinth-lan|lan_list')
 }
 
 /** Publishes the world one running copy of an instance has open. */
 export async function start_lan_relay(processUuid: string): Promise<LanRelayInfo> {
-	return await invoke('plugin:noctrinth-lan|lan_start', { processUuid })
+	return await invoke('plugin:portalrinth-lan|lan_start', { processUuid })
 }
 
 /** Takes a published world back down. */
 export async function stop_lan_relay(processUuid: string): Promise<void> {
-	await invoke('plugin:noctrinth-lan|lan_stop', { processUuid })
+	await invoke('plugin:portalrinth-lan|lan_stop', { processUuid })
 }

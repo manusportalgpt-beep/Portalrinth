@@ -51,7 +51,7 @@ export const PACK_ENTRY_KINDS: PackEntryKind[] = [
 ]
 
 export async function readPackManifest(path: string): Promise<PackManifest> {
-	const manifest = await invoke<PackManifest>('plugin:noctrinth-curseforge|pack_manifest', {
+	const manifest = await invoke<PackManifest>('plugin:portalrinth-curseforge|pack_manifest', {
 		path,
 	})
 

@@ -124,7 +124,7 @@
 		"noctrinth-clipboard:default",
 		"noctrinth-crash:default",
 		"noctrinth-recovery:default",
-		"noctrinth-curseforge:default",
-		"noctrinth-lan:default"
+		"portalrinth-curseforge:default",
+		"portalrinth-lan:default"
 	]
 }

@@ -611,7 +611,7 @@ fn main() {
                     ),
             )
             .plugin(
-                "noctrinth-curseforge",
+                "portalrinth-curseforge",
                 InlinedPlugin::new()
                     .commands(&[
                         "curseforge_set_api_key",
@@ -628,7 +628,7 @@ fn main() {
                     ),
             )
             .plugin(
-                "noctrinth-lan",
+                "portalrinth-lan",
                 InlinedPlugin::new()
                     .commands(&["lan_list", "lan_start", "lan_stop"])
                     .default_permission(

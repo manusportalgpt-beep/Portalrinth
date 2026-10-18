@@ -708,7 +708,7 @@ export const NOCTRINTH_CHANGELOG: NoctrinthVersionEntry[] = [
 - Signed application updates delivered through GitHub Releases.
 
 ### Changed
-- Rebranded to Noctrinth: new logo, generated app icons and the \`com.noctrinth.app\` bundle identifier.
+- Rebranded to Noctrinth: new logo, generated app icons and the \`com.portalrinth.app\` bundle identifier.
 - The embedded sign-in WebView was replaced with a loopback HTTP redirect for the Modrinth OAuth flow.
 - Exactly one account is active across the Microsoft and Ely.by providers.
 - Recoloured the interface to a purple brand scheme.

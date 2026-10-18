@@ -1280,9 +1280,6 @@
   "app.nav.modrinth-account": {
     "message": "משתמש Modrinth"
   },
-  "app.nav.modrinth-hosting": {
-    "message": "שרתי Modrinth"
-  },
   "app.nav.remove-account": {
     "message": "מחק חשבון"
   },

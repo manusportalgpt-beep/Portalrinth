@@ -22,7 +22,7 @@ use theseus::curseforge_search::{
 };
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
-    tauri::plugin::Builder::new("noctrinth-curseforge")
+    tauri::plugin::Builder::new("portalrinth-curseforge")
         .invoke_handler(tauri::generate_handler![
             curseforge_set_api_key,
             curseforge_is_available,

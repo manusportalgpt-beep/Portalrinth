@@ -87,7 +87,7 @@ export interface CurseforgeSearchOptions {
 /** Whether this launcher can ask CurseForge anything. */
 export async function isCurseforgeAvailable(): Promise<boolean> {
 	try {
-		return await invoke<boolean>('plugin:noctrinth-curseforge|curseforge_is_available')
+		return await invoke<boolean>('plugin:portalrinth-curseforge|curseforge_is_available')
 	} catch {
 		return false
 	}
@@ -103,7 +103,7 @@ export async function searchCurseforge(
 	const gameVersion =
 		options.gameVersion && options.gameVersion !== ANY_VERSION ? options.gameVersion : null
 
-	return await invoke<CurseforgeSearchPage>('plugin:noctrinth-curseforge|curseforge_search', {
+	return await invoke<CurseforgeSearchPage>('plugin:portalrinth-curseforge|curseforge_search', {
 		query: {
 			searchFilter: options.filter,
 			index: options.index ?? 0,
@@ -125,7 +125,7 @@ export async function curseforgeFiles(
 	gameVersion?: string | null,
 	loader?: string | null,
 ): Promise<CurseforgeFile[]> {
-	return await invoke<CurseforgeFile[]>('plugin:noctrinth-curseforge|curseforge_files', {
+	return await invoke<CurseforgeFile[]>('plugin:portalrinth-curseforge|curseforge_files', {
 		modId: Number(modId),
 		gameVersion: gameVersion && gameVersion !== ANY_VERSION ? gameVersion : null,
 		loader: loader ?? null,
@@ -137,7 +137,7 @@ export async function installCurseforgeMod(
 	modId: string,
 	fileId: string,
 ): Promise<string> {
-	return await invoke<string>('plugin:noctrinth-curseforge|curseforge_install_mod', {
+	return await invoke<string>('plugin:portalrinth-curseforge|curseforge_install_mod', {
 		instanceId,
 		modId: Number(modId),
 		fileId: Number(fileId),
