@@ -61,7 +61,7 @@ pub async fn store_verify(
 pub async fn settings_get() -> Result<Settings> {
     let res = settings::get().await?;
     curseforge_metadata::adopt_user_key(res.curseforge_api_key.as_deref());
-    theseus::curseforge_search::set_language(res.locale.as_deref());
+    theseus::curseforge_search::set_language(res.locale.as_str());
     Ok(res)
 }
 
@@ -70,7 +70,7 @@ pub async fn settings_get() -> Result<Settings> {
 #[tauri::command]
 pub async fn settings_set(settings: Settings) -> Result<()> {
     curseforge_metadata::adopt_user_key(settings.curseforge_api_key.as_deref());
-    theseus::curseforge_search::set_language(settings.locale.as_deref());
+    theseus::curseforge_search::set_language(settings.locale.as_str());
     settings::set(settings).await?;
     Ok(())
 }

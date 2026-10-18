@@ -65,7 +65,7 @@ pub async fn curseforge_files(
 }
 
 /// What CurseForge itself can be filtered by, in CurseForge's own words.
-///#[tauri::command]
+#[tauri::command]
 pub async fn curseforge_filters() -> Result<CurseforgeFilters> {
     let key = curseforge_metadata::api_key().ok_or_else(|| {
         TheseusError::from(TheseusErrorKind::InputError(
