@@ -29,7 +29,7 @@ import { getVersion } from '@tauri-apps/api/app'
 import { platform as getOsPlatform, version as getOsVersion } from '@tauri-apps/plugin-os'
 import { computed, provide, ref } from 'vue'
 
-import NoctrinthIcon from '@/assets/noctrinth-icon.svg?component'
+import PortalrinthIcon from '@/assets/portalrinth-icon.png'
 import PrivacySettings from '@/components/ui/settings/account/PrivacySettings.vue'
 import ProfileSettings from '@/components/ui/settings/account/ProfileSettings.vue'
 import SocialSettings from '@/components/ui/settings/account/SocialSettings.vue'
@@ -384,7 +384,7 @@ const messages = defineMessages({
 						}"
 						@click="devModeCount"
 					>
-						<NoctrinthIcon aria-hidden="true" class="w-6 h-6" />
+						<PortalrinthIcon aria-hidden="true" class="w-6 h-6" />
 					</button>
 					<div v-if="appInfo" class="max-w-[200px]">
 						<p class="m-0">
