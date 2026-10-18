@@ -82,6 +82,12 @@ onBeforeUnmount(clearStopTimer)
 
 <template>
 	<span class="noctrinth-logo" :class="{ 'is-loading': active, 'is-working': working }">
+		<img
+			src="@/assets/portalrinth-icon.png"
+			alt=""
+			class="noctrinth-logo__icon"
+			aria-hidden="true"
+		/>
 		<NoctrinthTextLogo class="noctrinth-logo__mark" />
 		<span class="noctrinth-logo__sweep" aria-hidden="true" />
 	</span>
@@ -92,6 +98,19 @@ onBeforeUnmount(clearStopTimer)
 	position: relative;
 	display: inline-flex;
 	align-items: center;
+	gap: 0.5rem;
+}
+
+/*
+ * The app's own icon, at the same height as the lettering. The wordmark alone
+ * is a name; this is what the window, the taskbar and the installer all show,
+ * so it belongs beside it rather than in one of those places.
+ */
+.noctrinth-logo__icon {
+	height: 100%;
+	width: auto;
+	border-radius: 0.25rem;
+	object-fit: contain;
 }
 
 .noctrinth-logo__mark {

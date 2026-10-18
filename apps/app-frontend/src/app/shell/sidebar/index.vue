@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { defineMessages, useScrollIndicator, useVIntl } from '@modrinth/ui'
+import { ChevronRightIcon } from '@modrinth/assets'
+import { defineMessages, IconButton, useScrollIndicator, useVIntl } from '@modrinth/ui'
 import { OverlayScrollbars } from 'overlayscrollbars'
 import { computed, onMounted, onScopeDispose, ref, watch } from 'vue'
 
@@ -53,6 +54,19 @@ const appTheme = useTheme()
 const { hasLoggedIntoMinecraft, hasLoggedIntoModrinth, showChecklist } = injectOnboardingChecklist()
 const showFriendsList = computed(() => !showChecklist.value || hasLoggedIntoModrinth.value)
 const accounts = ref<InstanceType<typeof AccountsCard> | null>(null)
+
+/**
+ * Whether the panel is folded away.
+ *
+ * Kept here rather than in the window state because it is about this panel only,
+ * and it survives navigation: the point of folding it is to make room for what
+ * was opened, so reopening it every time the route changes defeats it.
+ */
+const collapsed = ref(false)
+
+function toggleCollapsed() {
+	collapsed.value = !collapsed.value
+}
 const friends = ref<InstanceType<typeof FriendsList> | null>(null)
 const scrollContainer = ref<HTMLElement | null>(null)
 const scrollViewport = ref<HTMLElement | null>(null)
@@ -109,12 +123,15 @@ const messages = defineMessages({
 
 <template>
 	<div
-		class="app-sidebar mt-px relative flex h-[calc(100vh-var(--top-bar-height))] w-[300px] shrink-0 flex-col overflow-visible border-0 border-l-[1px] border-solid border-[--brand-gradient-border] before:pointer-events-none before:absolute before:inset-y-0 before:-left-8 before:w-8 before:content-['']"
-		:class="{
-			'before:shadow-[-15px_0_15px_-15px_rgba(0,0,0,0.1)_inset]': appTheme.advancedRendering,
-		}"
+		class="app-sidebar mt-px relative flex h-[calc(100vh-var(--top-bar-height))] shrink-0 flex-col overflow-visible border-0 border-l-[1px] border-solid border-[--brand-gradient-border] before:pointer-events-none before:absolute before:inset-y-0 before:-left-8 before:w-8 before:content-[''] transition-[width] duration-200 motion-reduce:transition-none"
+		:class="[
+			collapsed ? 'w-[3.5rem]' : 'w-[300px]',
+			{
+				'before:shadow-[-15px_0_15px_-15px_rgba(0,0,0,0.1)_inset]': appTheme.advancedRendering,
+			},
+		]"
 	>
-		<div class="relative flex min-h-0 grow shrink flex-col">
+		<div v-show="!collapsed" class="relative flex min-h-0 grow shrink flex-col">
 			<div
 				ref="scrollContainer"
 				v-overlay-scrollbars="scrollbarOptions"
@@ -170,7 +187,25 @@ const messages = defineMessages({
 				aria-hidden="true"
 			/>
 		</div>
-		<Promotion v-if="showAd" @upgrade-height="upgradeHeight = $event" />
+		<Promotion v-if="showAd && !collapsed" @upgrade-height="upgradeHeight = $event" />
+
+		<!--
+			The way out of the panel is its own bottom corner, where the eye
+			already is after reading down a list, rather than a chevron at the top
+			that has to be found before anything can be done.
+		-->
+		<div
+			class="flex shrink-0 justify-end border-0 border-t-[1px] border-solid p-2 border-[--brand-gradient-border]"
+		>
+			<IconButton
+				:label="collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'"
+				:title="collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'"
+				@click="toggleCollapsed"
+			>
+				<ChevronRightIcon v-if="collapsed" class="rotate-180" />
+				<ChevronRightIcon v-else />
+			</IconButton>
+		</div>
 	</div>
 </template>
 
