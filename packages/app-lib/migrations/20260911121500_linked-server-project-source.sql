@@ -1,7 +1,7 @@
 -- Upstream's migration, renumbered.
 --
 -- It arrived as `20260911120000_linked-server-project-source.sql`, the exact
--- version Portalrinth's own `20260911120000_offline-accounts.sql` already
+-- version Noctrinth's own `20260911120000_offline-accounts.sql` already
 -- occupies, and a version is a primary key in `_sqlx_migrations`: two files
 -- sharing one cannot both be applied. Renumbering the fork's file instead was
 -- not an option — it has shipped, so every installed copy has 20260911120000

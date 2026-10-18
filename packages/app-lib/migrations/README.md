@@ -17,3 +17,9 @@ counting `121500`, `121501`, … within a day. Upstream lands on the hour, so a
 collision needs them to pick a quarter past — which they never have.
 
 Never renumber or edit a migration that has been released. Add a new one.
+
+That includes the parts of the file nobody reads. sqlx keeps a checksum of the
+whole file, so changing a comment in a migration that has already run is
+indistinguishable from changing what it did: every installed copy refuses to open
+its database and the launcher will not start. A rename that touches a migration
+folder has to leave the files in it byte for byte.

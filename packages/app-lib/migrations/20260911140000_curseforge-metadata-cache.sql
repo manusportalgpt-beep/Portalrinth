@@ -1,4 +1,4 @@
--- Portalrinth's own: names, pictures and authors for content that came from
+-- Noctrinth's own: names, pictures and authors for content that came from
 -- CurseForge.
 --
 -- The launcher learns what an installed file is by hashing it and asking
