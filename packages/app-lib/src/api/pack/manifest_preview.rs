@@ -472,8 +472,6 @@ if let Some(project) = projects
         }
     }
 }
-	}
-}
 
 async fn resolve_curseforge_entries(manifest: &mut PackManifest) {
     let Some(key) = crate::api::curseforge_metadata::api_key() else {
