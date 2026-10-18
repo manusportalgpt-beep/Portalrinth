@@ -17,11 +17,11 @@
 use std::collections::HashMap;
 use std::path::Path;
 
+use async_zip::base::read::seek::ZipFileReader;
 use serde::{Deserialize, Serialize};
 
 use crate::state::State;
 use crate::util::io;
-use zip::ZipFileReader;
 
 /// The four things a pack is made of, which is also how they are shown.
 ///
@@ -143,7 +143,7 @@ struct ModrinthIndexFile {
 #[tracing::instrument(skip_all)]
 pub async fn read_pack_manifest(path: &Path) -> crate::Result<PackManifest> {
     let bytes = bytes::Bytes::from(io::read(path).await?);
-    let entries = zip_entries(&bytes).await?;
+    let entries = zip_manifest(&bytes).await?;
 
     if let Some(manifest) = entry_bytes(&entries, "manifest.json") {
         return curseforge_manifest(manifest);
@@ -160,50 +160,52 @@ pub async fn read_pack_manifest(path: &Path) -> crate::Result<PackManifest> {
     .as_error())
 }
 
-/// The archives entries that are small enough to be worth keeping: manifests and
-/// indexes, never the mod files themselves.
-async fn zip_entries(pack: &bytes::Bytes) -> crate::Result<Vec<(String, bytes::Bytes)>> {
-    use std::io::Read;
+/// Reads the one manifest out of the archive, whichever of the two it is.
+///
+/// Only that entry is pulled out. A pack of three hundred megabytes should not
+/// be read in order to be listed.
+async fn zip_manifest(pack: &bytes::Bytes) -> crate::Result<Vec<(String, bytes::Bytes)>> {
+    use std::io::Cursor;
 
-    let cursor = std::io::Cursor::new(pack.to_vec());
-    let reader = tokio::task::spawn_blocking(move || {
-        let mut zip = ZipFileReader::new(cursor).map_err(zip_error)?;
-        let mut found = Vec::new();
-        for index in 0..zip.file().entries().len() {
-            let (name, is_file) = zip
-                .file()
-                .entries()
-                .get(index)
-                .and_then(|entry| Some((entry.filename().ok()?.to_string(), entry.is_file())))
-                .ok_or_else(|| crate::ErrorKind::OtherError("unreadable archive".to_string()))?;
-            if !is_file {
-                continue;
-            }
-            if name == "manifest.json"
-                || name == "modrinth.index.json"
-                || name.ends_with("/manifest.json")
-                || name.ends_with("/modrinth.index.json")
-            {
-                let mut bytes = Vec::new();
-                zip.reader(index)
-                    .read_to_end(&mut bytes)
-                    .map_err(|error| {
-                        crate::ErrorKind::OtherError(format!(
-                            "could not read {name} out of the archive: {error}"
-                        ))
-                    })?;
-                found.push((name, bytes::Bytes::from(bytes)));
-            }
+    let mut reader = ZipFileReader::with_tokio(Cursor::new(pack)).await.map_err(|error| {
+        crate::ErrorKind::InputError(format!(
+            "This file could not be opened as an archive: {error}"
+        ))
+        .as_error()
+    })?;
+
+    let wanted: Vec<usize> = reader
+        .file()
+        .entries()
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| {
+            matches!(entry.filename().as_str(), Ok(name)
+                if name == "manifest.json"
+                    || name == "modrinth.index.json"
+                    || name.ends_with("/manifest.json")
+                    || name.ends_with("/modrinth.index.json"))
+        })
+        .map(|(index, _)| index)
+        .collect();
+
+    let mut found = Vec::new();
+    for index in wanted {
+        let mut text = String::new();
+        {
+            let mut entry = reader.reader_with_entry(index).await?;
+            entry.read_to_string_checked(&mut text).await?;
         }
-        Ok::<_, crate::Error>(found)
-    })
-    .await
-    .map_err(|error| {
-        crate::ErrorKind::OtherError(format!("reading the archive failed: {error}"))
-            .as_error()
-    })??;
-
-    Ok(reader)
+        let name = reader
+            .file()
+            .entries()
+            .get(index)
+            .and_then(|entry| entry.filename().ok())
+            .unwrap_or_default()
+            .to_string();
+        found.push((name, bytes::Bytes::from(text.into_bytes())));
+    }
+    Ok(found)
 }
 
 fn entry_bytes<'a>(
@@ -214,11 +216,6 @@ fn entry_bytes<'a>(
         .iter()
         .find(|(entry, _)| entry == name || entry.ends_with(&format!("/{name}")))
         .map(|(_, bytes)| &bytes[..])
-}
-
-fn zip_error(error: zip::result::ZipError) -> crate::Error {
-    crate::ErrorKind::OtherError(format!("this file is not a readable archive: {error}"))
-        .as_error()
 }
 
 async fn curseforge_manifest(bytes: &[u8]) -> crate::Result<PackManifest> {

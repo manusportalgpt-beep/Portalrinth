@@ -2,7 +2,7 @@
 /**
  * What a modpack file contains, shown before anything is installed.
  *
- * The list is long Р Р†Р вЂљРІР‚Сњ a big pack is several hundred entries Р Р†Р вЂљРІР‚Сњ and the questions
+ * The list is long - a big pack is several hundred entries - and the questions
  * a person actually has about it are "what is in here", "which of these are
  * only resource packs", "what does this one do" and "I do not want that one".
  * So: split by class, searchable, each row carrying what is known about it, and
@@ -12,7 +12,7 @@
  * would not, and the caller decides; pretending it had already installed half
  * the pack would be a lie with a spinner on it.
  */
-import { BoxIcon, DownloadIcon, EyeOffIcon, GlobeIcon, SettingsSliderIcon } from '@modrinth/assets'
+import { BoxIcon, CogIcon, DownloadIcon, EyeOffIcon, GlobeIcon } from '@modrinth/assets'
 import { Button, defineMessages, IconButton, Input, Toggle, useVIntl } from '@modrinth/ui'
 import { computed, ref, watch } from 'vue'
 
@@ -26,7 +26,7 @@ import {
 } from '@/helpers/pack-manifest'
 
 const props = defineProps<{
-	/** The archive to read. Changing it re-reads, which is the whole point. */
+	/** The archive to read when the modal opens on its own. */
 	path: string
 }>()
 
@@ -38,9 +38,8 @@ const emit = defineEmits<{
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
-	title: { id: 'pack-manifest.title', defaultMessage: "What's in this modpack" },
-	reading: { id: 'pack-manifest.reading', defaultMessage: 'Reading the manifestР Р†Р вЂљР’В¦' },
-	failed: { id: 'pack-manifest.failed', defaultMessage: 'This file could not be read' },
+	title: { id: 'pack-manifest.title', defaultMessage: 'What is in this modpack' },
+	reading: { id: 'pack-manifest.reading', defaultMessage: 'Reading the manifest' },
 	search: {
 		id: 'pack-manifest.search',
 		defaultMessage: 'Search by name, author or version',
@@ -57,6 +56,7 @@ const messages = defineMessages({
 	installAll: { id: 'pack-manifest.install-all', defaultMessage: 'Install all' },
 	installNone: { id: 'pack-manifest.install-none', defaultMessage: 'Install none' },
 	remove: { id: 'pack-manifest.remove', defaultMessage: 'Remove' },
+	openPage: { id: 'pack-manifest.open-page', defaultMessage: 'Open the project page' },
 	confirm: { id: 'pack-manifest.confirm', defaultMessage: 'Install the selected' },
 	cancel: { id: 'pack-manifest.cancel', defaultMessage: 'Cancel' },
 	counts: {
@@ -80,10 +80,11 @@ const manifest = ref<PackManifest | null>(null)
 const reading = ref(true)
 const failure = ref<string | null>(null)
 const words = ref('')
-/** `null` means every class at once, which is what the list starts on. */
+/** `all` means every class at once, which is what the list starts on. */
 const classFilter = ref<PackEntryKind | 'all'>('all')
 
 async function read() {
+	if (!archivePath.value) return
 	reading.value = true
 	failure.value = null
 	try {
@@ -109,29 +110,18 @@ const counts = computed(() => {
 const kept = computed(() => (manifest.value?.entries ?? []).filter((entry) => entry.enabled).length)
 const total = computed(() => manifest.value?.entries.length ?? 0)
 
-/**
- * The classes worth drawing, and only those that are actually in the pack: an
- * empty section is a heading with nothing under it.
- */
-const sections = computed(() =>
-	PACK_ENTRY_KINDS.filter((kind) => (counts.value[kind] ?? 0) > 0)
-		.map((kind) => ({
-			kind,
-			label: formatMessage(
-				kind === 'mod'
-					? messages.mod
-					: kind === 'resource_pack'
-						? messages.resourcePack
-						: kind === 'data_pack'
-							? messages.dataPack
-							: kind === 'shader'
-								? messages.shader
-								: messages.other,
-			),
-			entries: matching(manifest.value?.entries ?? [], kind),
-		}))
-		.filter((section) => section.entries.length > 0),
-)
+const labelOf = (kind: PackEntryKind) =>
+	formatMessage(
+		kind === 'mod'
+			? messages.mod
+			: kind === 'resource_pack'
+				? messages.resourcePack
+				: kind === 'data_pack'
+					? messages.dataPack
+					: kind === 'shader'
+						? messages.shader
+						: messages.other,
+	)
 
 function matching(entries: PackManifestEntry[], kind: PackEntryKind | 'all') {
 	const needle = words.value.trim().toLowerCase()
@@ -143,6 +133,16 @@ function matching(entries: PackManifestEntry[], kind: PackEntryKind | 'all') {
 			.some((field) => String(field).toLowerCase().includes(needle))
 	})
 }
+
+/**
+ * The classes worth drawing, and only those actually in the pack: an empty
+ * section is a heading with nothing under it.
+ */
+const sections = computed(() =>
+	PACK_ENTRY_KINDS.filter((kind) => (counts.value[kind] ?? 0) > 0)
+		.map((kind) => ({ kind, entries: matching(manifest.value?.entries ?? [], kind) }))
+		.filter((section) => section.entries.length > 0),
+)
 
 function setAll(enabled: boolean) {
 	for (const entry of manifest.value?.entries ?? []) entry.enabled = enabled
@@ -161,24 +161,29 @@ function openExternally(url: string) {
 <template>
 	<ModalWrapper ref="modal" :header="formatMessage(messages.title)">
 		<div class="flex min-w-[26rem] flex-col gap-3">
-			<p v-if="reading" class="m-0 text-sm text-secondary">{{ formatMessage(messages.reading) }}</p>
+			<p v-if="reading" class="m-0 text-sm text-secondary">
+				{{ formatMessage(messages.reading) }}
+			</p>
 			<p v-else-if="failure" class="m-0 text-sm text-red-500">{{ failure }}</p>
 
 			<template v-else-if="manifest">
 				<p class="m-0 text-sm text-secondary">
 					<strong class="text-contrast">{{ manifest.name ?? archivePath }}</strong>
-					<span v-if="manifest.game_version"> Р вЂ™Р’В· {{ manifest.game_version }}</span>
-					<span v-if="manifest.loader">
-						Р вЂ™Р’В· {{ manifest.loader }}
-						{{ manifest.loader_version ?? '' }}
-					</span>
-					<span v-if="manifest.version"> Р вЂ™Р’В· {{ manifest.version }}</span>
+					<template v-if="manifest.game_version">
+						<span> - {{ manifest.game_version }}</span>
+					</template>
+					<template v-if="manifest.loader">
+						<span> - {{ manifest.loader }} {{ manifest.loader_version ?? '' }} </span>
+					</template>
+					<template v-if="manifest.version">
+						<span>- {{ manifest.version }}</span>
+					</template>
 				</p>
 				<p v-if="manifest.summary" class="m-0 text-sm text-secondary">
 					{{ manifest.summary }}
 				</p>
 
-				<div class="mt-3 flex flex-wrap items-center gap-2">
+				<div class="flex flex-wrap items-center gap-2">
 					<Input
 						v-model="words"
 						:icon="BoxIcon"
@@ -200,23 +205,12 @@ function openExternally(url: string) {
 							size="sm"
 							@click="classFilter = kind"
 						>
-							{{
-								kind === 'mod'
-									? formatMessage(messages.mod)
-									: kind === 'resource_pack'
-										? formatMessage(messages.resourcePack)
-										: kind === 'data_pack'
-											? formatMessage(messages.dataPack)
-											: kind === 'shader'
-												? formatMessage(messages.shader)
-												: formatMessage(messages.other)
-							}}
-							({{ counts[kind] }})
+							{{ labelOf(kind) }} ({{ counts[kind] }})
 						</Button>
 					</div>
 				</div>
 
-				<div class="mt-2 flex items-center gap-2">
+				<div class="flex items-center gap-2">
 					<span class="text-sm text-secondary">
 						{{ formatMessage(messages.counts, { kept, total }) }}
 					</span>
@@ -228,57 +222,61 @@ function openExternally(url: string) {
 					</Button>
 				</div>
 
-				<div class="mt-3 flex max-h-[24rem] flex-col gap-4 overflow-y-auto pr-1">
+				<div class="flex max-h-[24rem] flex-col gap-4 overflow-y-auto pr-1">
 					<section v-for="section in sections" :key="section.kind">
 						<h3 class="m-0 mb-1 text-sm font-semibold text-contrast">
-							{{ section.label }}
+							{{ labelOf(section.kind) }}
 							<span class="text-secondary">({{ section.entries.length }})</span>
 						</h3>
 
 						<div
 							v-for="entry in section.entries"
 							:key="`${entry.source}-${entry.id}-${entry.path}`"
-							class="rounded-lg border border-surface-5 bg-surface-2 p-2"
+							class="flex items-center gap-3 rounded-lg border border-surface-5 bg-surface-2 p-2"
 						>
-							<div class="flex w-full items-center gap-3">
-								<img
-									v-if="entry.icon_url"
-									:src="entry.icon_url"
-									:alt="entry.title"
-									class="h-10 w-10 shrink-0 rounded"
-								/>
-								<CogIcon v-else class="h-10 w-10 shrink-0 text-contrast" />
+							<img
+								v-if="entry.icon_url"
+								:src="entry.icon_url"
+								:alt="entry.title"
+								class="h-10 w-10 shrink-0 rounded"
+							/>
+							<CogIcon v-else class="h-10 w-10 shrink-0 text-contrast" />
 
-								<div class="flex min-w-0 flex-1 flex-col">
-									<strong class="truncate text-contrast">{{ entry.title }}</strong>
-									<span class="truncate text-xs text-secondary">
-										<span v-if="entry.author">{{ entry.author }}</span>
-										<span v-if="entry.version"> Р вЂ™Р’В· {{ entry.version }}</span>
-										<span v-if="!entry.version && entry.path"> Р вЂ™Р’В· {{ entry.path }}</span>
-									</span>
-								</div>
-
-								<IconButton
-									v-if="entry.website_url"
-									v-tooltip="entry.website_url"
-									label="Open the project's page"
-									@click="openExternally(entry.website_url)"
-								>
-									<GlobeIcon />
-								</IconButton>
-								<IconButton
-									v-tooltip="formatMessage(messages.remove)"
-									:label="formatMessage(messages.remove)"
-									@click="remove(entry)"
-								>
-									<EyeOffIcon />
-								</IconButton>
-								<Toggle
-									:model-value="entry.enabled"
-									:label="formatMessage(messages.enable)"
-									@update:model-value="entry.enabled = $event"
-								/>
+							<div class="flex min-w-0 flex-1 flex-col">
+								<strong class="truncate text-contrast">{{ entry.title }}</strong>
+								<span class="truncate text-xs text-secondary">
+									<template v-if="entry.author">
+										<span>{{ entry.author }}</span>
+									</template>
+									<template v-if="entry.version">
+										<span> - {{ entry.version }}</span>
+									</template>
+									<template v-else-if="entry.path">
+										<span>- {{ entry.path }}</span>
+									</template>
+								</span>
 							</div>
+
+							<IconButton
+								v-if="entry.website_url"
+								v-tooltip="formatMessage(messages.openPage)"
+								:label="formatMessage(messages.openPage)"
+								@click="openExternally(entry.website_url)"
+							>
+								<GlobeIcon />
+							</IconButton>
+							<IconButton
+								v-tooltip="formatMessage(messages.remove)"
+								:label="formatMessage(messages.remove)"
+								@click="remove(entry)"
+							>
+								<EyeOffIcon />
+							</IconButton>
+							<Toggle
+								:model-value="entry.enabled"
+								:label="formatMessage(messages.enable)"
+								@update:model-value="entry.enabled = $event"
+							/>
 						</div>
 					</section>
 
@@ -289,7 +287,9 @@ function openExternally(url: string) {
 			</template>
 
 			<div class="flex items-center gap-2">
-				<Button size="sm" @click="emit('hide')">{{ formatMessage(messages.cancel) }}</Button>
+				<Button size="sm" @click="emit('hide')">
+					{{ formatMessage(messages.cancel) }}
+				</Button>
 				<Button
 					color="green"
 					:disabled="reading || !manifest"
