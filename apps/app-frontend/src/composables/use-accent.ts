@@ -1,5 +1,5 @@
 /**
- * Noctrinth's accent presets.
+ * Portalrinth's accent presets.
  *
  * A theme fixes its accent at one colour, and the accent is most of what the
  * interface's own character comes from — so this is a second, smaller choice
@@ -89,7 +89,7 @@ const ACCENT_VARIABLES = [
 	// carrying a theme class of its own — the splash screen does — re-declares
 	// every colour the theme defines on itself, which would drop the accent
 	// chosen for the window; such a place can reach for this instead.
-	'--noctrinth-accent',
+	'--portalrinth-accent',
 	'--color-brand',
 	'--color-brand-highlight',
 	'--color-brand-shadow',
@@ -296,7 +296,7 @@ export function findAccentPreset(id: string): AccentPreset | undefined {
  * opens in the right colour rather than repainting itself once the settings
  * arrive.
  */
-const CACHE_KEY = 'noctrinth-accent'
+const CACHE_KEY = 'portalrinth-accent'
 
 function readCache(): { preset: string; tint: boolean } {
 	try {
@@ -410,7 +410,7 @@ watch(
 		// the window, and nothing waits on it.
 		const preset = findAccentPreset(id)
 		if (preset) {
-			void import('@/helpers/noctrinth-window-icon').then(({ paintWindowIcon }) =>
+			void import('@/helpers/portalrinth-window-icon').then(({ paintWindowIcon }) =>
 				paintWindowIcon(
 					accentColorFor(preset),
 					// The shortcuts go back to the executable's icon only when that

@@ -68,7 +68,7 @@ import {
 	set_screenshot_group_memberships,
 } from '@/helpers/instance'
 import { MAX_INSTANCE_GROUP_NAME_LENGTH } from '@/helpers/instance-groups'
-import { copyFilesToClipboard } from '@/helpers/noctrinth-clipboard'
+import { copyFilesToClipboard } from '@/helpers/portalrinth-clipboard'
 import {
 	instanceListQueryOptions,
 	instanceScreenshotsQueryOptions,

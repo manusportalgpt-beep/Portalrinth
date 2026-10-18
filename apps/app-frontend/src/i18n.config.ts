@@ -7,7 +7,7 @@ import {
 import englishUi from '@modrinth/ui/src/locales/en-US/index.json'
 import { createI18n } from 'vue-i18n'
 
-import { applyNoctrinthMessages } from '@/helpers/noctrinth-locales'
+import { applyPortalrinthMessages } from '@/helpers/portalrinth-locales'
 
 import englishApp from './locales/en-US/index.json'
 
@@ -22,14 +22,14 @@ const uiLocaleUrls = import.meta.glob<string>('../../../packages/ui/src/locales/
 	import: 'default',
 })
 
-// Noctrinth's own strings, kept in their own folder so upstream's catalogues
-// can be taken exactly as they come. See helpers/noctrinth-locales.ts.
-const noctrinthOverrides = import.meta.glob<{ default: CrowdinMessages }>(
-	'./locales-noctrinth/*/messages.json',
+// Portalrinth's own strings, kept in their own folder so upstream's catalogues
+// can be taken exactly as they come. See helpers/portalrinth-locales.ts.
+const portalrinthOverrides = import.meta.glob<{ default: CrowdinMessages }>(
+	'./locales-portalrinth/*/messages.json',
 	{ eager: true },
 )
-const noctrinthFallbacks = import.meta.glob<{ default: CrowdinMessages }>(
-	'./locales-noctrinth/*/fallback.json',
+const portalrinthFallbacks = import.meta.glob<{ default: CrowdinMessages }>(
+	'./locales-portalrinth/*/fallback.json',
 	{ eager: true },
 )
 
@@ -40,13 +40,13 @@ const i18n = createI18n({
 	messageCompiler: createMessageCompiler(),
 	missingWarn: false,
 	fallbackWarn: false,
-	messages: applyNoctrinthMessages(
+	messages: applyPortalrinthMessages(
 		buildLocaleMessages({
 			'./app/en-US/index.json': { default: englishApp },
 			'./ui/en-US/index.json': { default: englishUi },
 		}),
-		noctrinthOverrides,
-		noctrinthFallbacks,
+		portalrinthOverrides,
+		portalrinthFallbacks,
 	),
 })
 
@@ -75,13 +75,13 @@ export async function setLocale(requestedLocale: string): Promise<void> {
 					([app, ui]) =>
 						// The fork's strings go on as the catalogue is built, which is
 						// once per locale now rather than once at startup.
-						applyNoctrinthMessages(
+						applyPortalrinthMessages(
 							buildLocaleMessages({
 								[`./app/${locale}/index.json`]: { default: app },
 								[`./ui/${locale}/index.json`]: { default: ui },
 							}),
-							noctrinthOverrides,
-							noctrinthFallbacks,
+							portalrinthOverrides,
+							portalrinthFallbacks,
 						)[locale],
 				)
 				.finally(() => pendingLocales.delete(locale))

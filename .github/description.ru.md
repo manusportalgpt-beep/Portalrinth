@@ -29,14 +29,14 @@
 
 ### Установка
 
-Установщики для Windows, macOS (Intel и Apple Silicon) и Linux лежат в [релизах на GitHub](https://github.com/Everelsu/Noctrinth/releases/latest). Обновления приходят сами, переустанавливать ничего не нужно.
+Установщики для Windows, macOS (Intel и Apple Silicon) и Linux лежат в [релизах на GitHub](https://github.com/Everelsu/Portalrinth/releases/latest). Обновления приходят сами, переустанавливать ничего не нужно.
 
 Уже сидишь на Modrinth App? Открой Portalrinth, и он сам предложит перенести сборки. Импорт из Prism, MultiMC, ATLauncher, GDLauncher и CurseForge тоже есть: **Создать сборку → Импорт**.
 
 ### Ссылки
 
-- [Исходный код](https://github.com/Everelsu/Noctrinth) — лицензия GPL-3.0
-- [Список изменений](https://everelsu.github.io/Noctrinth/)
-- [Сообщить об ошибке](https://github.com/Everelsu/Noctrinth/issues)
+- [Исходный код](https://github.com/Everelsu/Portalrinth) — лицензия GPL-3.0
+- [Список изменений](https://everelsu.github.io/Portalrinth/)
+- [Сообщить об ошибке](https://github.com/Everelsu/Portalrinth/issues)
 
 > Portalrinth — независимый форк, он не связан с Rinth, Inc. и не одобрен ею.

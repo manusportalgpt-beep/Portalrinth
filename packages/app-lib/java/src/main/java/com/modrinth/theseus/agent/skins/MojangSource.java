@@ -21,7 +21,7 @@ import java.util.concurrent.FutureTask;
  * that a server would have sent.
  */
 final class MojangSource implements SkinSource.Source {
-    /** What names this one in {@code noctrinth.skins.source}. */
+    /** What names this one in {@code portalrinth.skins.source}. */
     static final String NAME = "mojang";
 
     private static final String PROFILES_URL = "https://api.mojang.com/users/profiles/minecraft/";

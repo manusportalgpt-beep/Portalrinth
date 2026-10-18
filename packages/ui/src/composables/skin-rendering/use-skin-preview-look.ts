@@ -18,7 +18,7 @@ const IDLE_SECONDS = 4
 const FOLLOW_RATE = 6
 
 /**
- * Noctrinth's own: the player's head follows the pointer while it is near
+ * Portalrinth's own: the player's head follows the pointer while it is near
  * them, the way a player in the game turns to look at you, and settles back to
  * looking ahead once the pointer stops or goes elsewhere.
  *

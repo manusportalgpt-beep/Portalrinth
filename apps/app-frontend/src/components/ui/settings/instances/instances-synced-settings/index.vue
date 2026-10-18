@@ -11,8 +11,8 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, nextTick, onScopeDispose, ref } from 'vue'
 
-import NoctrinthRecoverInstances from '@/components/ui/settings/instances/NoctrinthRecoverInstances.vue'
-import NoctrinthSkinLookupSetting from '@/components/ui/settings/instances/NoctrinthSkinLookupSetting.vue'
+import PortalrinthRecoverInstances from '@/components/ui/settings/instances/PortalrinthRecoverInstances.vue'
+import PortalrinthSkinLookupSetting from '@/components/ui/settings/instances/PortalrinthSkinLookupSetting.vue'
 import { gameSettingsKeys } from '@/helpers/game-options'
 import {
 	type GlobalSyncedOptions,
@@ -635,9 +635,9 @@ onScopeDispose(clearBaseSource)
 			</div>
 		</section>
 
-		<NoctrinthSkinLookupSetting />
+		<PortalrinthSkinLookupSetting />
 
-		<NoctrinthRecoverInstances />
+		<PortalrinthRecoverInstances />
 
 		<LaunchOptions />
 	</div>

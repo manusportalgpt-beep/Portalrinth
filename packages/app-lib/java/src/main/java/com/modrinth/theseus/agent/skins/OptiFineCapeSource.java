@@ -15,7 +15,7 @@ import java.util.Map;
  * a time now, which is what a cape-only source needs. See {@link SkinSource}.
  */
 final class OptiFineCapeSource implements SkinSource.Source {
-    /** What names this one in {@code noctrinth.skins.source}. */
+    /** What names this one in {@code portalrinth.skins.source}. */
     static final String NAME = "optifine";
 
     private static final String CAPES_URL = "http://s.optifine.net/capes/";

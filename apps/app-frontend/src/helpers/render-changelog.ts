@@ -15,7 +15,7 @@ import { md } from '@modrinth/utils'
 import { FilterXSS } from 'xss'
 
 /** Where changelog screenshots are published. */
-const SCREENSHOT_BASE = 'https://everelsu.github.io/Noctrinth'
+const SCREENSHOT_BASE = 'https://everelsu.github.io/Portalrinth'
 
 const changelogXss = new FilterXSS({
 	whiteList: {

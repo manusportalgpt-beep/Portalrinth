@@ -28,7 +28,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **OS and version**
-Noctrinth 0.18.0
+Portalrinth 0.18.0
 windows 10.0.26200
 
 you can copy that from settings.

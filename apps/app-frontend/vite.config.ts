@@ -128,7 +128,7 @@ export default defineConfig({
 	envPrefix: ['VITE_', 'TAURI_', 'MODRINTH_', 'SHARED_INSTANCES_'],
 	define: {
 		// CurseForge key — read raw above to survive dotenv-expand untouched
-		__NOCTRINTH_CURSEFORGE_KEY__: JSON.stringify(curseForgeApiKey),
+		__PORTALRINTH_CURSEFORGE_KEY__: JSON.stringify(curseForgeApiKey),
 	},
 	build: {
 		rolldownOptions: {

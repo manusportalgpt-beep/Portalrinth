@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<NoctrinthTranslationSettings class="mb-6" />
+		<PortalrinthTranslationSettings class="mb-6" />
 		<SharedLanguageSettings ref="languageSettings" product="app" :persist-locale="persistLocale" />
 	</div>
 </template>
@@ -12,7 +12,7 @@ import { inject, onBeforeUnmount, onMounted, ref } from 'vue'
 import { get, set } from '@/helpers/settings.ts'
 import { appSettingsModalContextKey } from '@/providers/app-settings-modal'
 
-import NoctrinthTranslationSettings from './NoctrinthTranslationSettings.vue'
+import PortalrinthTranslationSettings from './PortalrinthTranslationSettings.vue'
 
 const settingsModal = inject(appSettingsModalContextKey, null)
 const languageSettings = ref<InstanceType<typeof SharedLanguageSettings> | null>(null)

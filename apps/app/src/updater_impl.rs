@@ -57,7 +57,7 @@ pub fn self_update_blocker() -> Option<String> {
     // read-only mounts in one go. The rename needs write access to the
     // directory, not just to the file.
     let probe =
-        parent.join(format!(".noctrinth-update-check-{}", std::process::id()));
+        parent.join(format!(".portalrinth-update-check-{}", std::process::id()));
     match std::fs::File::create(&probe) {
         Ok(_) => {
             let _ = std::fs::remove_file(&probe);
@@ -65,7 +65,7 @@ pub fn self_update_blocker() -> Option<String> {
         }
         Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
             Some(format!(
-                "Noctrinth is installed in {}, which this user cannot write to, \
+                "Portalrinth is installed in {}, which this user cannot write to, \
                  so it cannot replace itself there.\n\n\
                  If you installed the .deb, update through your package manager \
                  or install the new .deb from the releases page. If you are \

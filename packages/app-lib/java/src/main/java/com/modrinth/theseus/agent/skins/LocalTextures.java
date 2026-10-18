@@ -53,7 +53,7 @@ final class LocalTextures {
     private static final int ATTEMPTS = 3;
 
     private static final ExecutorService POOL = Executors.newCachedThreadPool(runnable -> {
-        final Thread thread = new Thread(runnable, "noctrinth-skins-relay");
+        final Thread thread = new Thread(runnable, "portalrinth-skins-relay");
         thread.setDaemon(true);
         return thread;
     });
@@ -242,7 +242,7 @@ final class LocalTextures {
             });
 
             // Its own thread would otherwise keep the game from ever exiting.
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> server.stop(0), "noctrinth-skins-stop"));
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> server.stop(0), "portalrinth-skins-stop"));
 
             server.start();
             origin = "http://" + server.getAddress().getAddress().getHostAddress() + ":"

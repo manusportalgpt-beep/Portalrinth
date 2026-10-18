@@ -2,7 +2,7 @@ import { type AbstractWebNotificationManager, provideInstanceImport } from '@mod
 import { open } from '@tauri-apps/plugin-dialog'
 
 import { get_importable_instances, import_instance } from '@/helpers/import.js'
-import { findLauncherPaths } from '@/helpers/noctrinth-recovery'
+import { findLauncherPaths } from '@/helpers/portalrinth-recovery'
 
 /** Launcher type identifiers understood by the backend, with how they're shown. */
 const LAUNCHERS = [

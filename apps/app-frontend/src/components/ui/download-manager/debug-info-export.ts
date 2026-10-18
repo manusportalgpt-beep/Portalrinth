@@ -37,7 +37,7 @@ export async function exportDebugInfo(title: string) {
 	try {
 		path = await save({
 			title,
-			defaultPath: `noctrinth-debug-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`,
+			defaultPath: `portalrinth-debug-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`,
 			filters: [{ name: 'ZIP', extensions: ['zip'] }],
 		})
 	} finally {

@@ -23,7 +23,7 @@ use std::path::{Path, PathBuf};
 
 /// Records what was installed, so the state can still be judged after the
 /// instance itself changes underneath it.
-const MARKER_FILE: &str = ".noctrinth-modern-java.json";
+const MARKER_FILE: &str = ".portalrinth-modern-java.json";
 
 /// The Forge component bundled in an archive.
 const FORGE_COMPONENT: &str = "net.minecraftforge.json";

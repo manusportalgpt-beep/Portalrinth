@@ -14,7 +14,7 @@ fn main() {
     // set). Nothing about the version tells those builds apart, so VERSION
     // carries a build number after a `+`, as semver build metadata: `0.18.2+1`
     // is the second build of 0.18.2. The updater compares it against the one in
-    // the manifest; see `noctrinth_patch` in main.rs.
+    // the manifest; see `portalrinth_patch` in main.rs.
     println!("cargo:rerun-if-changed=../../VERSION");
     let patch = std::fs::read_to_string("../../VERSION")
         .ok()
@@ -25,7 +25,7 @@ fn main() {
                 .map(|(_, build)| build.to_string())
         })
         .unwrap_or_else(|| "0".to_string());
-    println!("cargo:rustc-env=NOCTRINTH_PATCH={patch}");
+    println!("cargo:rustc-env=PORTALRINTH_PATCH={patch}");
 
     // Sadly, there is no better way to do it right now
     // You could try parsing source code here and detecting #[tauri::command]
@@ -544,13 +544,13 @@ fn main() {
                         DefaultPermissionRule::AllowAllCommands,
                     ),
             )
-            // Noctrinth's own. A plugin that is not declared here has every one
+            // Portalrinth's own. A plugin that is not declared here has every one
             // of its commands denied by the ACL at runtime, silently РІР‚вЂќ the
             // frontend's `invoke` simply rejects, which reads as the feature
             // being broken rather than as a permission being missing. Adding a
             // plugin in `main.rs` is only half of adding a plugin.
             .plugin(
-                "noctrinth-offline-auth",
+                "portalrinth-offline-auth",
                 InlinedPlugin::new()
                     .commands(&[
                         "offline_add",
@@ -567,7 +567,7 @@ fn main() {
                     ),
             )
             .plugin(
-                "noctrinth-background",
+                "portalrinth-background",
                 InlinedPlugin::new()
                     .commands(&[
                         "background_set",
@@ -579,7 +579,7 @@ fn main() {
                     ),
             )
             .plugin(
-                "noctrinth-clipboard",
+                "portalrinth-clipboard",
                 InlinedPlugin::new()
                     .commands(&["clipboard_copy_files"])
                     .default_permission(
@@ -587,7 +587,7 @@ fn main() {
                     ),
             )
             .plugin(
-                "noctrinth-crash",
+                "portalrinth-crash",
                 InlinedPlugin::new()
                     .commands(&[
                         "crash_analyze_instance",
@@ -599,7 +599,7 @@ fn main() {
                     ),
             )
             .plugin(
-                "noctrinth-recovery",
+                "portalrinth-recovery",
                 InlinedPlugin::new()
                     .commands(&[
                         "recovery_scan_for_orphans",

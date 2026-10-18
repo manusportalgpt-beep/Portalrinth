@@ -1,5 +1,5 @@
 /**
- * Analytics is disabled in Noctrinth.
+ * Analytics is disabled in Portalrinth.
  *
  * Upstream Modrinth ships PostHog analytics pointed at `posthog.modrinth.com`.
  * For this fork those requests would only hammer Modrinth's servers with no

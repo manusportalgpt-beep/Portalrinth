@@ -4,9 +4,9 @@
 			What the launcher itself made of the files this instance last wrote.
 			Upstream's banner above the console is mclo.gs reading the live log;
 			this one reads the crash report and the JVM's own error file too, and
-			says so without a connection. See helpers/noctrinth-crash.ts.
+			says so without a connection. See helpers/portalrinth-crash.ts.
 		-->
-		<NoctrinthCrashDiagnosis
+		<PortalrinthCrashDiagnosis
 			v-if="localFindings.length"
 			:instance-id="instanceId"
 			:findings="localFindings"
@@ -18,7 +18,7 @@
 			running twice, so each copy gets its own. One copy, or none, is the page
 			as it has always been: the live log alongside every log kept on disk.
 		-->
-		<NoctrinthCopiesConsole v-if="runningCopies.length > 1" :copies="runningCopies" />
+		<PortalrinthCopiesConsole v-if="runningCopies.length > 1" :copies="runningCopies" />
 		<ConsolePageLayout v-else />
 	</div>
 </template>
@@ -35,12 +35,12 @@ import {
 import { useQuery } from '@tanstack/vue-query'
 import { computed, onBeforeUnmount, ref, shallowRef, triggerRef, watch, watchEffect } from 'vue'
 
-import NoctrinthCopiesConsole from '@/components/ui/NoctrinthCopiesConsole.vue'
-import NoctrinthCrashDiagnosis from '@/components/ui/NoctrinthCrashDiagnosis.vue'
+import PortalrinthCopiesConsole from '@/components/ui/PortalrinthCopiesConsole.vue'
+import PortalrinthCrashDiagnosis from '@/components/ui/PortalrinthCrashDiagnosis.vue'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useInstanceConsole } from '@/composables/useInstanceConsole'
 import { delete_logs_by_filename, get_output_by_filename } from '@/helpers/logs.js'
-import { analyzeCrashText, analyzeInstanceCrash } from '@/helpers/noctrinth-crash'
+import { analyzeCrashText, analyzeInstanceCrash } from '@/helpers/portalrinth-crash'
 
 import { injectInstancePage } from '../instance-context'
 import { instanceKeys, instanceProcessesQueryOptions } from '../query-options'

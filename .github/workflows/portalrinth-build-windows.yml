@@ -1,0 +1,155 @@
+name: Portalrinth Windows build
+
+# Builds one Windows x64 installer and leaves it in the run's artifacts.
+#
+# The release workflows already build Windows, but they do it as a side effect
+# of a tagged release: they need the updater signing key, they create a release
+# (draft or not), and they run for all three platforms. None of that is wanted
+# when the question is simply "what does the current `main` look like on
+# Windows", which is what this is for.
+#
+# Because nothing is signed, the installer cannot update itself and is not
+# published anywhere — it is a build to try, not a release. Use
+# `portalrinth-release.yml` for anything that ships.
+#
+# WHAT IS DIFFERENT FROM THE RELEASE BUILD
+#   * `tauri.build.conf.json` turns off `createUpdaterArtifacts`, which would
+#     otherwise fail the build asking for `TAURI_SIGNING_PRIVATE_KEY`.
+#   * No tag, no release, no `latest.json`, no updater branch.
+#   * Windows only — the other two platforms cost three times as much runner
+#     time and nothing here is platform-specific.
+#
+# HOW TO RUN IT
+#   Push the branch this workflow watches:
+#     git checkout -b windows-build main
+#     git push origin windows-build
+#   or press "Run workflow" on the Actions page.
+
+on:
+  push:
+    branches: [windows-build]
+  workflow_dispatch:
+
+concurrency:
+  group: portalrinth-build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # windows-latest is x64, and the only Windows target Tauri produces here.
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Tauri reads the tag and the commit for the version it stamps into
+          # the installer, and a shallow clone leaves it guessing.
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+
+      - name: Prepare app-lib environment
+        shell: bash
+        run: cp packages/app-lib/.env.prod packages/app-lib/.env
+
+      - name: Prepare CurseForge API key
+        shell: bash
+        env:
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        run: |
+          # Checked here rather than in an `if:`, because the secrets context is
+          # not available in a step condition.
+          if [ -z "$CURSEFORGE_API_KEY" ]; then
+            echo "::notice::No CurseForge key configured. Importing a CurseForge modpack zip will not work in this build."
+            exit 0
+          fi
+          # The key is read raw from this file by vite.config.ts (bypasses
+          # dotenv-expand so bcrypt-style `$` chars survive).
+          printf 'VITE_CURSEFORGE_API_KEY=%s\n' "$CURSEFORGE_API_KEY" \
+            > apps/app-frontend/.env.local
+
+      - name: Sync versions from the VERSION file
+        shell: bash
+        run: node scripts/sync-version.mjs
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build the installer
+        id: build
+        shell: bash
+        working-directory: apps/app
+        continue-on-error: true
+        # `--bundles nsis` is the one target that exists on Windows; the config
+        # lists the macOS and Linux ones too, which Tauri skips on its own but
+        # not before it has looked for their toolchains.
+        #
+        # `--features updater` matches the release build. What is different is
+        # `tauri.build.conf.json`, which turns off the updater artifacts: with
+        # them on, the build stops and asks for a signing key that a build to
+        # try has no business having.
+        #
+        # The output is teed to a file so that a failure can be read from the run
+        # page without an account — the logs of a failed step are not public.
+        run: |
+          pnpm tauri build --features updater --bundles nsis --config src/tauri.build.conf.json 2>&1 \
+            | tee "$GITHUB_WORKSPACE/build.log"
+          exit "${PIPESTATUS[0]}"
+
+      - name: Report what the build said
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "$GITHUB_WORKSPACE/build.log" ]; then
+            tail -n 60 "$GITHUB_WORKSPACE/build.log" > "$RUNNER_TEMP/build-tail.log"
+            {
+              echo '### Build output, last 60 lines'
+              echo '```'
+              cat "$RUNNER_TEMP/build-tail.log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo '::error::The installer build failed. See the step summary for the last 60 lines.'
+          else
+            {
+              echo 'The build produced no output at all — it did not get as far as running.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo '::error::The installer build produced no output.'
+          fi
+
+      - name: Upload the installer
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Portalrinth-Windows-x64
+          path: target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Fail the run if the installer was not built
+        if: steps.build.outcome != 'success'
+        run: exit 1

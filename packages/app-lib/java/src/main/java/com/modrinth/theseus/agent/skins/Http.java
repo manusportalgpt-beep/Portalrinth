@@ -28,7 +28,7 @@ final class Http {
      * proxy to reach Mojang quickly is on a network where the lookups need one as well, and without
      * it a licensed player's skin arrives after the game has stopped waiting for it.
      */
-    private static final Proxy PROXY = parseProxy(System.getProperty("noctrinth.skins.proxy"));
+    private static final Proxy PROXY = parseProxy(System.getProperty("portalrinth.skins.proxy"));
 
     private Http() {}
 
@@ -45,7 +45,7 @@ final class Http {
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
         connection.setRequestProperty("Accept", "application/json");
-        connection.setRequestProperty("User-Agent", "Noctrinth");
+        connection.setRequestProperty("User-Agent", "Portalrinth");
 
         try {
             final int status = status(connection, url);
@@ -187,7 +187,7 @@ final class Http {
         final HttpURLConnection connection = open(url);
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
-        connection.setRequestProperty("User-Agent", "Noctrinth");
+        connection.setRequestProperty("User-Agent", "Portalrinth");
 
         try {
             final int status = status(connection, url);

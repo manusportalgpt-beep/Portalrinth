@@ -1,6 +1,6 @@
 # Changelog screenshots
 
-Images referenced from the entries in `../../helpers/noctrinth-changelog.ts`.
+Images referenced from the entries in `../../helpers/portalrinth-changelog.ts`.
 The reference is the published path, which mirrors this folder:
 
 ```markdown

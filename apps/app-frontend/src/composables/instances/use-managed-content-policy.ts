@@ -7,7 +7,7 @@ const managedSourceKinds = new Set([
 	'shared_instance',
 	'modrinth_modpack',
 	'imported_modpack',
-	// Noctrinth's own: what a CurseForge pack's own files are stamped with.
+	// Portalrinth's own: what a CurseForge pack's own files are stamped with.
 	'curseforge_modpack',
 ])
 

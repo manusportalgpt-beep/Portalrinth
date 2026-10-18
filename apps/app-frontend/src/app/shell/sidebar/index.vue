@@ -12,7 +12,7 @@ import type { MinecraftAccountsActions } from '@/features/minecraft-accounts/con
 import NewsSidebar from '@/features/news/news-sidebar.vue'
 import OnboardingChecklist from '@/features/onboarding/checklist.vue'
 import type { ModrinthCredentials } from '@/helpers/mr_auth'
-import { SIDEBAR_MOTION_MS } from '@/helpers/noctrinth-sidebar-motion'
+import { SIDEBAR_MOTION_MS } from '@/helpers/portalrinth-sidebar-motion'
 import { injectOnboardingChecklist } from '@/providers/onboarding-checklist'
 
 import Promotion from './promotion.vue'
@@ -26,7 +26,7 @@ const props = defineProps<{
 }>()
 
 /**
- * Noctrinth: the default content stays up until the column has finished
+ * Portalrinth: the default content stays up until the column has finished
  * closing (App.vue's `.app-contents` transition), so what slides away is the
  * sidebar and not an empty panel.
  */
@@ -45,7 +45,7 @@ onScopeDispose(() => clearTimeout(hideContentTimer))
 const emit = defineEmits<{
 	'create-instance': []
 	'login-modrinth': []
-	/** Noctrinth: adding a Minecraft account asks which kind first. */
+	/** Portalrinth: adding a Minecraft account asks which kind first. */
 	'add-minecraft-account': []
 }>()
 

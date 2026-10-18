@@ -48,7 +48,7 @@ fn names_of(launcher: ImportLauncherType) -> &'static [&'static str] {
         }
         ImportLauncherType::Curseforge => &["curseforge", "CurseForge"],
         ImportLauncherType::ModrinthApp => {
-            &["ModrinthApp", "com.modrinth.theseus", "Noctrinth"]
+            &["ModrinthApp", "com.modrinth.theseus", "Portalrinth"]
         }
         ImportLauncherType::Unknown => &[],
     }
@@ -238,7 +238,7 @@ mod tests {
 
     #[test]
     fn a_folder_with_the_right_name_and_nothing_in_it_is_not_a_launcher() {
-        let empty = std::env::temp_dir().join("noctrinth-not-a-multimc");
+        let empty = std::env::temp_dir().join("portalrinth-not-a-multimc");
         let _ = std::fs::create_dir_all(&empty);
 
         assert!(!is_really(ImportLauncherType::MultiMC, &empty));
@@ -253,13 +253,13 @@ mod tests {
     fn a_path_that_is_not_there_is_never_offered() {
         assert!(!is_really(
             ImportLauncherType::PrismLauncher,
-            Path::new("/noctrinth/nowhere/at/all"),
+            Path::new("/portalrinth/nowhere/at/all"),
         ));
     }
 
     #[test]
     fn polymc_counts_as_a_prism_launcher() {
-        let folder = std::env::temp_dir().join("noctrinth-polymc");
+        let folder = std::env::temp_dir().join("portalrinth-polymc");
         let _ = std::fs::create_dir_all(&folder);
         let _ = std::fs::write(folder.join("polymc.cfg"), "");
 
@@ -278,14 +278,14 @@ mod tests {
     /// same folder — and it was being offered once per name.
     #[test]
     fn one_folder_is_offered_once_however_it_is_spelled() {
-        let folder = std::env::temp_dir().join("noctrinth-one-multimc");
+        let folder = std::env::temp_dir().join("portalrinth-one-multimc");
         let _ = std::fs::remove_dir_all(&folder);
         std::fs::create_dir_all(&folder).unwrap();
         std::fs::write(folder.join("multimc.cfg"), "").unwrap();
 
         let spellings = [
             folder.clone(),
-            folder.join(".").join("..").join("noctrinth-one-multimc"),
+            folder.join(".").join("..").join("portalrinth-one-multimc"),
         ];
 
         let mut found = Vec::new();

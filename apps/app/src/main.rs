@@ -196,8 +196,8 @@ async fn set_restart_after_pending_update(
 /// metadata: zero for a version as it first went out, and one more for every
 /// rebuild published under that same number.
 #[cfg(feature = "updater")]
-fn noctrinth_patch() -> u32 {
-    env!("NOCTRINTH_PATCH").trim().parse().unwrap_or(0)
+fn portalrinth_patch() -> u32 {
+    env!("PORTALRINTH_PATCH").trim().parse().unwrap_or(0)
 }
 
 /// The same number, as the updater manifest gives it.
@@ -207,7 +207,7 @@ fn noctrinth_patch() -> u32 {
 /// a manifest from before this existed, counts as the version's first build.
 #[cfg(feature = "updater")]
 fn manifest_patch(notes: Option<&str>) -> u32 {
-    const MARKER: &str = "noctrinth-patch:";
+    const MARKER: &str = "portalrinth-patch:";
 
     notes
         .and_then(|notes| notes.split(MARKER).nth(1))
@@ -318,7 +318,7 @@ fn main() {
                     // is newer is the number the release carries, not its date
                     // — a manifest is written minutes after the binaries it
                     // describes, and a build must never offer itself an update.
-                    manifest_patch(release.notes.as_deref()) > noctrinth_patch()
+                    manifest_patch(release.notes.as_deref()) > portalrinth_patch()
                 })
                 .build(),
         );
@@ -411,7 +411,7 @@ fn main() {
             // registers them once, which leaves two gaps: an existing install
             // never picks up a scheme added in a later version, and `modrinth://`
             // is shared with Modrinth App, where whoever registered last wins.
-            // Doing it here means launching Noctrinth is enough to take the
+            // Doing it here means launching Portalrinth is enough to take the
             // schemes back. macOS registers them from the bundle's Info.plist
             // and rejects this call, so it is skipped there.
             #[cfg(not(target_os = "macos"))]
@@ -480,13 +480,13 @@ fn main() {
         .plugin(api::install::init())
         .plugin(api::instance::init())
         .plugin(api::logs::init())
-        .plugin(api::noctrinth_background::init())
-        .plugin(api::noctrinth_clipboard::init())
-        .plugin(api::noctrinth_crash::init())
-        .plugin(api::noctrinth_curseforge::init())
-        .plugin(api::noctrinth_lan::init())
-        .plugin(api::noctrinth_offline_auth::init())
-        .plugin(api::noctrinth_recovery::init())
+        .plugin(api::portalrinth_background::init())
+        .plugin(api::portalrinth_clipboard::init())
+        .plugin(api::portalrinth_crash::init())
+        .plugin(api::portalrinth_curseforge::init())
+        .plugin(api::portalrinth_lan::init())
+        .plugin(api::portalrinth_offline_auth::init())
+        .plugin(api::portalrinth_recovery::init())
         .plugin(api::jre::init())
         .plugin(api::metadata::init())
         .plugin(api::minecraft_skins::init())

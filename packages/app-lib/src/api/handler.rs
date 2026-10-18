@@ -14,17 +14,17 @@ use urlencoding::decode;
 ///
 /// Kept in sync with `deep-link.desktop.schemes` in `apps/app/tauri.conf.json`
 /// and `APP_DEEP_LINK_SCHEME` in `packages/ui/src/utils/deep-link.ts`.
-pub const DEEP_LINK_SCHEME: &str = "noctrinth";
+pub const DEEP_LINK_SCHEME: &str = "portalrinth";
 
 /// Modrinth's scheme. The app registers it as well, so install links on
-/// modrinth.com open Noctrinth — the whole point of a launcher that speaks the
+/// modrinth.com open Portalrinth — the whole point of a launcher that speaks the
 /// same API. Older shortcuts written before the rename land here too.
 const MODRINTH_DEEP_LINK_SCHEME: &str = "modrinth";
 
 /// Handles external functions (such as through URL deep linkage)
 /// Link is extracted value (link) in somewhat URL format, such as
 /// subdomain1/subdomain2
-/// (Does not include the `noctrinth://` prefix)
+/// (Does not include the `portalrinth://` prefix)
 pub async fn handle_url(sublink: &str) -> crate::Result<CommandPayload> {
     Ok(match sublink.split_once('/') {
         // /mod/{id}   -    Installs a mod of mod id
@@ -137,7 +137,7 @@ pub async fn parse_command(
 ) -> crate::Result<CommandPayload> {
     tracing::debug!("Parsing external command");
 
-    // noctrinth://some-command
+    // portalrinth://some-command
     // This occurs when following a web redirect link
     if let Some(sublink) = strip_deep_link_scheme(command_string) {
         Ok(handle_url(sublink).await?)

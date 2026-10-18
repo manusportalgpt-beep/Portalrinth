@@ -284,7 +284,7 @@ const tableItems = computed<ContentCardTableItem[]>(() =>
 			title: item.embedded_metadata?.name ?? item.file_name,
 			icon_url: item.embedded_metadata?.icon_url ?? null,
 		},
-		// Noctrinth's own: a project that is not on Modrinth links out to where
+		// Portalrinth's own: a project that is not on Modrinth links out to where
 		// it does live — its id routes nowhere in the app.
 		projectLink: item.project?.external_url
 			? item.project.external_url

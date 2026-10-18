@@ -13,7 +13,7 @@ static THUMBNAIL_WORKER: Semaphore = Semaphore::const_new(1);
 static GENERATED_THUMBNAILS: AtomicUsize = AtomicUsize::new(0);
 const CACHE_LIMIT: u64 = 128 * 1024 * 1024;
 
-/// Noctrinth's own: the most of a file that has to be read to tell whether it
+/// Portalrinth's own: the most of a file that has to be read to tell whether it
 /// is a GIF worth serving whole. Comfortably over the cap an instance icon is
 /// held to, and small enough that a large picture is never pulled into memory
 /// just to be turned down.
@@ -73,7 +73,7 @@ fn create_thumbnail(
         return Ok(target);
     }
 
-    // Noctrinth's own: a thumbnail is a still PNG, which for a GIF means the
+    // Portalrinth's own: a thumbnail is a still PNG, which for a GIF means the
     // first frame and nothing else — and the library grid is the one place an
     // instance's icon is most on show. One small enough to serve as it is goes
     // out unchanged; anything larger still gets a thumbnail, because a grid is
@@ -107,7 +107,7 @@ fn create_thumbnail(
     Ok(target)
 }
 
-/// Noctrinth's own: whether this file is a GIF the launcher would have kept
+/// Portalrinth's own: whether this file is a GIF the launcher would have kept
 /// animated, asked of the file rather than of bytes already in hand.
 fn is_animated_gif(path: &Path) -> bool {
     path.extension()

@@ -38,7 +38,7 @@ import {
 	SIDEBAR_WIDTH,
 	sidebarMoving,
 	sidebarOpening,
-} from '@/helpers/noctrinth-sidebar-motion'
+} from '@/helpers/portalrinth-sidebar-motion'
 
 const INSTANCE_GRID_OBSERVER_ACTIVATION_DELAY = 500
 
@@ -97,9 +97,9 @@ const {
 } = useScrollViewport()
 const { width: measuredGridWidth } = useElementSize(instanceGridContent)
 /**
- * Noctrinth: while the sidebar slides, the grid is laid out once for the width
+ * Portalrinth: while the sidebar slides, the grid is laid out once for the width
  * it is heading to and the cards travel there with it (see
- * `noctrinth-sidebar-motion`), instead of being re-laid out every frame.
+ * `portalrinth-sidebar-motion`), instead of being re-laid out every frame.
  */
 const gridWidth = ref(measuredGridWidth.value)
 const cardsTravelling = ref(false)
@@ -150,7 +150,7 @@ watch(
 )
 const remSize = ref(16)
 const gap = computed(() => remSize.value * 0.75)
-/** Noctrinth: a compact card keeps one width; more room fits more of them. */
+/** Portalrinth: a compact card keeps one width; more room fits more of them. */
 const compactCardWidth = computed(() => remSize.value * 18)
 const columnCount = computed(() => {
 	const minWidth = compactMode.value

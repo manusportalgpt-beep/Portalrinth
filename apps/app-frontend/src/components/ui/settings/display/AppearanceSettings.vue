@@ -13,7 +13,7 @@ import {
 import { platform } from '@tauri-apps/plugin-os'
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-import NoctrinthBackgroundSettings from '@/components/ui/settings/display/NoctrinthBackgroundSettings.vue'
+import PortalrinthBackgroundSettings from '@/components/ui/settings/display/PortalrinthBackgroundSettings.vue'
 import {
 	ACCENT_PRESETS,
 	accentColorFor,
@@ -252,7 +252,7 @@ provideAppearanceSettings({
 <template>
 	<AppearanceSettingsLayout />
 
-	<!-- Noctrinth's own: the shared layout has no notion of an accent that can
+	<!-- Portalrinth's own: the shared layout has no notion of an accent that can
 	     be chosen, so the picker is added here rather than to it. -->
 	<div class="mt-6 flex flex-col gap-3">
 		<div>
@@ -323,7 +323,7 @@ provideAppearanceSettings({
 		</div>
 	</div>
 
-	<NoctrinthBackgroundSettings />
+	<PortalrinthBackgroundSettings />
 </template>
 
 <style scoped>

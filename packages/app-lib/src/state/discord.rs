@@ -28,7 +28,7 @@ impl DiscordGuard {
     /// Starts the Discord thread. It connects on the first activity it is
     /// given, and never just to clear one.
     pub fn init() -> crate::Result<DiscordGuard> {
-        // Noctrinth's own Discord application, registered at
+        // Portalrinth's own Discord application, registered at
         // https://discord.com/developers/applications — not Modrinth's, which
         // is where the name Discord shows on the presence comes from.
         //
@@ -108,8 +108,8 @@ fn run(mut client: DiscordIpcClient, receiver: mpsc::Receiver<Presence>) {
 
                 let activity = Activity::new().state(&text).assets(
                     Assets::new()
-                        .large_image("noctrinth_simple")
-                        .large_text("Noctrinth"),
+                        .large_image("portalrinth_simple")
+                        .large_text("Portalrinth"),
                 );
                 if client.set_activity(activity.clone()).is_err()
                     && reconnect_if_fail

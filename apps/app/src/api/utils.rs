@@ -66,7 +66,7 @@ pub enum OS {
 }
 
 /// Gets OS
-/// Noctrinth's own: writes one step of the interface's own start-up into the
+/// Portalrinth's own: writes one step of the interface's own start-up into the
 /// launcher log.
 ///
 /// The interface already measures its start-up, step by step, and already
@@ -81,7 +81,7 @@ pub enum OS {
 /// interpreted.
 #[tauri::command]
 pub fn log_startup_event(event: String, details: String) {
-    tracing::info!(target: "noctrinth::startup", "Startup: {event} {details}");
+    tracing::info!(target: "portalrinth::startup", "Startup: {event} {details}");
 }
 
 #[tauri::command]

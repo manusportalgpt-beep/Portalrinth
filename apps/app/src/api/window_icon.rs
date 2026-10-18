@@ -88,7 +88,7 @@ pub async fn paint_shortcut_icons<R: Runtime>(
                 .filter(|c| c.is_ascii_alphanumeric())
                 .take(32)
                 .collect();
-            let path = dir.join(format!("noctrinth-{safe_key}.ico"));
+            let path = dir.join(format!("portalrinth-{safe_key}.ico"));
             std::fs::write(&path, encode_ico(&images))?;
             Some(path)
         };

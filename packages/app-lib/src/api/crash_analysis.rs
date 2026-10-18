@@ -1370,7 +1370,7 @@ fn working_mods_path(state: &State, instance_path: &str) -> PathBuf {
     state
         .directories
         .caches_dir()
-        .join("noctrinth-working-mods")
+        .join("portalrinth-working-mods")
         .join(format!("{instance_path}.json"))
 }
 

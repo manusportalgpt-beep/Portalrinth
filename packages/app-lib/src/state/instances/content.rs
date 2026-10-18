@@ -57,7 +57,7 @@ pub struct ContentItemProject {
     pub license: License,
     pub categories: Vec<String>,
     pub additional_categories: Vec<String>,
-    /// Noctrinth's own: where this project lives when it does not live on
+    /// Portalrinth's own: where this project lives when it does not live on
     /// Modrinth. The frontend routes a project by its id, which only works for
     /// a Modrinth id — a CurseForge project has to be opened on the web
     /// instead, so it says so here rather than being linked into a page that
@@ -81,7 +81,7 @@ pub struct ContentItemOwner {
     pub avatar_url: Option<String>,
     #[serde(rename = "type")]
     pub owner_type: OwnerType,
-    /// Noctrinth's own, for the same reason as on the project: an author who
+    /// Portalrinth's own, for the same reason as on the project: an author who
     /// is not a Modrinth user has no Modrinth page to be sent to.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub external_url: Option<String>,

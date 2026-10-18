@@ -1,4 +1,4 @@
--- Noctrinth's own: files a CurseForge modpack brought with it used to be
+-- Portalrinth's own: files a CurseForge modpack brought with it used to be
 -- stamped `curseforge`, the same as a CurseForge mod the user adds by hand.
 -- The pack's content list only ever asks for `imported_modpack`, so an
 -- instance installed from a CurseForge zip showed an empty pack with every one
