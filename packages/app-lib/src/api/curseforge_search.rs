@@ -340,7 +340,9 @@ pub async fn search(query: &CurseforgeSearchQuery) -> crate::Result<CurseforgeSe
         // own field: a caller that said mod while looking at shaders is asking
         // for the wrong thing, and one that sent a class for a tab CurseForge
         // has no class for would get an empty answer every time.
-        if let Some(class_id) = query.kind.and_then(class_for_project_type) {
+        if let Some(class_id) =
+            query.kind.and_then(|kind| class_for_project_type(kind.as_project_type()))
+        {
             request = request.query(&[("classId", class_id.to_string())]);
         }
         if let Some(category_id) = query.category_id {
