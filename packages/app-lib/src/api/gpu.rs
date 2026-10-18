@@ -42,7 +42,14 @@ pub enum GpuPreference {
 }
 
 impl GpuPreference {
-    fn from_registry_value(value: &str) -> Self {
+    /// Reads the preference out of the string the registry holds.
+///
+/// Only the Windows build calls this, so every other platform sees it as dead
+/// and says so. It is not dead code that happens to be unused - it is the one
+/// place the registry's spelling of the value is turned into a preference, and
+/// both the Windows path and its tests go through it.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn from_registry_value(value: &str) -> Self {
         // Stored as `GpuPreference=N;`, sometimes alongside other fields.
         for part in value.split(';') {
             if let Some(number) = part.trim().strip_prefix("GpuPreference=") {
