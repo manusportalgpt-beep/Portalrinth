@@ -1,8 +1,4 @@
-import {
-	defineMessages,
-	injectNotificationManager,
-	useVIntl,
-} from '@modrinth/ui'
+import { defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed } from 'vue'
 
@@ -64,17 +60,11 @@ export function useLanRelays() {
 	})
 
 	function isPublishing(processUuid: string) {
-		return (
-			startMutation.isPending.value &&
-			startMutation.variables.value === processUuid
-		)
+		return startMutation.isPending.value && startMutation.variables.value === processUuid
 	}
 
 	function isStopping(processUuid: string) {
-		return (
-			stopMutation.isPending.value &&
-			stopMutation.variables.value === processUuid
-		)
+		return stopMutation.isPending.value && stopMutation.variables.value === processUuid
 	}
 
 	async function copyAddress(address: string) {

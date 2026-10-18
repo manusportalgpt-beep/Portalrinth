@@ -30,6 +30,8 @@ use reqwest::Method;
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt;
 
+use crate::api::curseforge_search::DependencyKind;
+
 use crate::install::{
     InstallErrorContext, InstallPhaseDetails, InstallPhaseId, InstallProgress,
     InstallProgressReporter,
@@ -620,7 +622,8 @@ pub async fn install_curseforge_mod(
 ) -> crate::Result<String> {
     let Some(key) = crate::api::curseforge_metadata::api_key() else {
         return Err(crate::ErrorKind::InputError(
-            "this build has no CurseForge key, so CurseForge mods cannot be fetched"
+            "No CurseForge API key is configured, so CurseForge content cannot be \
+             fetched. One can be added in Settings, Resources."
                 .to_string(),
         )
         .as_error());
@@ -702,7 +705,155 @@ pub async fn install_curseforge_mod(
     Ok(safe_file_name)
 }
 
-/// Noctrinth's own: names a CurseForge pack ships its own picture under, in
+/// How deep the dependencies of a dependency are followed.
+/// Three is not arbitrary and not endless: it covers the shape almost every
+/// real case has — a mod needs a library, which needs its own library — and
+/// stops before a chain long enough to be a loop wearing a disguise. Anything
+/// deeper is reported rather than installed, so it is a decision somebody can
+/// make rather than a limit they never learn about.
+const MAX_DEPENDENCY_DEPTH: usize = 3;
+
+/// What one CurseForge file needs installed alongside it, found by following
+/// the graph the API describes.
+///
+/// Dependencies are fetched before the file that needed them, not after: a mod
+/// that is installed on its own and then has its library added is a mod that
+/// will have crashed once in between, and the crash is what somebody files the
+/// report about.
+pub(crate) async fn install_dependencies_of(
+    instance_id: &str,
+    mod_id: u64,
+    file_id: u64,
+    game_version: Option<&str>,
+    loader: Option<&str>,
+    state: &State,
+) -> crate::Result<Vec<String>> {
+    let Some(key) = crate::api::curseforge_metadata::api_key() else {
+        return Ok(Vec::new());
+    };
+    let http = crate::api::curseforge_search::build_client(&key)?;
+
+    let mut installed = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let mut queue = std::collections::VecDeque::new();
+    queue.push_back((mod_id, file_id, 0usize));
+
+    while let Some((parent_mod, parent_file, depth)) = queue.pop_front() {
+        if depth >= MAX_DEPENDENCY_DEPTH {
+            continue;
+        }
+
+        let wanted =
+            match crate::api::curseforge_search::dependencies(&http, &key, parent_mod, parent_file)
+                .await
+            {
+                Ok(dependencies) => dependencies,
+                // A dependency list that cannot be read is not a reason to fail
+                // the install the person actually asked for.
+                Err(error) => {
+                    tracing::warn!("Could not read CurseForge dependencies: {error}");
+                    Vec::new()
+                }
+            };
+
+        for dependency in wanted {
+            // Embedded is already inside the file, and a tool is a different
+            // application entirely: neither is something to drop into mods.
+            if !matches!(dependency.kind, DependencyKind::Required) {
+                continue;
+            }
+            if !seen.insert(dependency.mod_id) {
+                continue;
+            }
+
+            // A dependency names the file when the author pinned one, and the
+            // project alone when they left it to the person installing it.
+            let file = match dependency.file_id {
+                Some(file_id) => crate::api::curseforge_search::file(
+                    &http,
+                    &key,
+                    dependency.mod_id,
+                    file_id,
+                )
+                .await
+                .ok(),
+                None => crate::api::curseforge_search::best_file_for(
+                    dependency.mod_id,
+                    game_version,
+                    loader,
+                )
+                .await
+                .ok(),
+            };
+            let Some(file) = file else {
+                tracing::warn!(
+                    "CurseForge dependency {dependency_mod_id} has nothing for this game version",
+                    dependency_mod_id = dependency.mod_id
+                );
+                continue;
+            };
+
+            let child_file_id: u64 = file.id.parse().unwrap_or_default();
+            let name =
+                install_standalone_curseforge_file(instance_id, dependency.mod_id, &file, state)
+                    .await?;
+            installed.push(name);
+            queue.push_back((dependency.mod_id, child_file_id, depth + 1));
+        }
+    }
+
+    Ok(installed)
+}
+
+/// Puts one already-resolved CurseForge file into an instance.
+async fn install_standalone_curseforge_file(
+    instance_id: &str,
+    mod_id: u64,
+    file: &crate::api::curseforge_search::CurseforgeFile,
+    state: &State,
+) -> crate::Result<String> {
+    let file_id: u64 = file.id.parse().unwrap_or_default();
+    let mirrors = crate::api::curseforge_search::download_urls(mod_id, file_id).await?;
+    let mirrors: Vec<&str> = mirrors.iter().map(String::as_str).collect();
+    if mirrors.is_empty() {
+        return Err(crate::ErrorKind::InputError(format!(
+            "no download URL could be determined for CurseForge file {file_id}"
+        ))
+        .as_error());
+    }
+
+    let bytes = fetch_mirrors(
+        &mirrors,
+        file.sha1.as_deref(),
+        Some(&DownloadMeta {
+            reason: DownloadReason::Standalone,
+            game_version: file.game_version.clone().unwrap_or_default(),
+            loader: file.loader.clone().unwrap_or_default(),
+            dependent_on: None,
+        }),
+        None,
+        &state.fetch_semaphore,
+        &state.pool,
+    )
+    .await?;
+
+    let safe_file_name = sanitize_filename(&file.file_name);
+    let _permit = state.install_db_semaphore.acquire().await?;
+    crate::state::instances::commands::add_project_bytes(
+        instance_id,
+        &safe_file_name,
+        bytes,
+        file.sha1.as_deref(),
+        None,
+        ContentSourceKind::CurseForge,
+        Some(&mod_id.to_string()),
+        Some(&file.id),
+        state,
+    )
+    .await?;
+
+    Ok(safe_file_name)
+}
 /// the order they are preferred.
 const PACK_ICON_STEMS: [&str; 5] =
     ["icon", "pack", "modpack-icon", "logo", "thumbnail"];
@@ -830,7 +981,7 @@ async fn apply_pack_icon(
             icon_path: Some(Some(icon_path.to_string_lossy().to_string())),
             ..EditInstance::default()
         },
-    )
+)
     .await?;
 
     Ok(())

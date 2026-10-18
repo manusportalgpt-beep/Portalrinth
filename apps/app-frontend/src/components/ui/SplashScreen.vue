@@ -9,7 +9,16 @@
 		<div class="splash-cube" aria-hidden="true"></div>
 		<div class="splash-glow" aria-hidden="true"></div>
 		<div class="splash-content" data-tauri-drag-region>
-			<NoctrinthAppLogo class="splash-logo" />
+			<!--
+				The wordmark as a wave: two copies of it sliding past each other at
+				different speeds, so the light in it moves even though nothing on
+				screen is being redrawn. On the compositor, which is the only thing
+				that is free while the app underneath is starting.
+			-->
+			<div class="splash-wave" aria-hidden="true">
+				<img class="splash-wave__layer splash-wave__layer--back" :src="WAVE" alt="" />
+				<img class="splash-wave__layer splash-wave__layer--front" :src="WAVE" alt="" />
+			</div>
 			<div
 				class="splash-bar"
 				role="progressbar"
@@ -49,7 +58,7 @@ import { injectLoadingState } from '@modrinth/ui'
 import { onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import NoctrinthAppLogo from '@/assets/modrinth_app.svg?component'
+import WAVE from '@/assets/portalrinth-icon.png'
 import { useAppEvent } from '@/composables/use-app-event'
 import { rollSplashCubeInverted } from '@/helpers/noctrinth-splash-cube'
 import { themeReady } from '@/helpers/noctrinth-window-reveal'
@@ -249,6 +258,76 @@ useAppEvent('loading', (e) => {
 .splash-logo {
 	height: 2.25rem;
 	width: fit-content;
+}
+
+/*
+ * The wave.
+ *
+ * Two copies of the wordmark, the same picture at two depths, sliding past one
+ * another at different speeds and in opposite directions. Neither is redrawn:
+ * both are the same bitmap moved by `transform`, so the compositor carries them
+ * however busy the main thread is underneath - which, during startup, it is.
+ *
+ * The seam between the two copies is closed by the front layer being opaque and
+ * the back one faint, so the eye reads one moving picture rather than two
+ * images and a join. The bar is clipped to the window so each copy can run off
+ * its edge and come back the other side without anything spilling into the
+ * layout.
+ */
+.splash-wave {
+	position: relative;
+	display: flex;
+	overflow: hidden;
+	height: 2.5rem;
+	width: min(28rem, 80vw);
+	mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+}
+
+.splash-wave__layer {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 100%;
+	width: 200%;
+	max-width: none;
+	object-fit: cover;
+	object-position: left center;
+	will-change: transform;
+}
+
+.splash-wave__layer--back {
+	opacity: 0.35;
+	animation: splash-wave-drift 7s linear infinite;
+}
+
+.splash-wave__layer--front {
+	animation: splash-wave-drift 11s linear infinite reverse;
+}
+
+@keyframes splash-wave-drift {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+/*
+ * Anyone who has asked for less motion gets the wordmark, still and complete.
+ * The picture is what says the app is starting; the movement only says it is
+ * still working.
+ */
+@media (prefers-reduced-motion: reduce) {
+	.splash-wave__layer--back {
+		display: none;
+	}
+
+	.splash-wave__layer--front {
+		animation: none;
+		width: 100%;
+	}
 }
 
 .splash-bar {

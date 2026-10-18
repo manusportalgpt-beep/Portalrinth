@@ -8,7 +8,7 @@ use theseus::lan::{self, LanRelayInfo};
 use uuid::Uuid;
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
-    tauri::plugin::Builder::new("noctrinth-lan")
+    tauri::plugin::Builder::new("portalrinth-lan")
         .invoke_handler(tauri::generate_handler![
             lan_list,
             lan_start,

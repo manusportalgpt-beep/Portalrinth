@@ -13,14 +13,16 @@
 //! looks like one with nothing to find rather than one that is broken.
 
 use crate::api::Result;
+use theseus::{Error as TheseusError, ErrorKind as TheseusErrorKind};
 use theseus::curseforge_metadata;
 use theseus::pack::manifest_preview::PackManifest;
 use theseus::curseforge_search::{
+    CurseforgeFilters,
     self, CurseforgeFile, CurseforgeSearchPage, CurseforgeSearchQuery,
 };
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
-    tauri::plugin::Builder::new("noctrinth-curseforge")
+    tauri::plugin::Builder::new("portalrinth-curseforge")
         .invoke_handler(tauri::generate_handler![
             curseforge_set_api_key,
             curseforge_is_available,
@@ -28,6 +30,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             curseforge_files,
             curseforge_download_urls,
             curseforge_install_mod,
+            curseforge_filters,
             pack_manifest,
         ])
         .build()
@@ -59,6 +62,18 @@ pub async fn curseforge_files(
     loader: Option<String>,
 ) -> Result<Vec<CurseforgeFile>> {
     Ok(curseforge_search::files(mod_id, game_version.as_deref(), loader.as_deref()).await?)
+}
+
+/// What CurseForge itself can be filtered by, in CurseForge's own words.
+#[tauri::command]
+pub async fn curseforge_filters() -> Result<CurseforgeFilters> {
+    let key = curseforge_metadata::api_key().ok_or_else(|| {
+        TheseusError::from(TheseusErrorKind::InputError(
+            "no CurseForge key is configured".to_string(),
+        ))
+    })?;
+    let http = theseus::curseforge_search::build_client(&key)?;
+    Ok(theseus::curseforge_search::filters(&http, &key).await?)
 }
 
 /// What is inside a modpack file, read before anything is installed.

@@ -31,6 +31,14 @@ use uuid::Uuid;
 /// Where worlds opened to the network are published.
 const RELAY_BASE: &str = "https://uprojects.site";
 
+/// How the relay is asked to identify itself, which is the name the service
+/// that runs it expects.
+///
+/// Not the launcher's own: the relay serves more than one client and decides
+/// what to answer from this, so sending something it does not recognise is
+/// answered with a refusal rather than with a session.
+const RELAY_USER_AGENT: &str = "Undefined-Client";
+
 /// How much of a log to read when the launcher has to catch up on what a running
 /// game said before it was watching. The line that matters is among the last,
 /// and a Minecraft log runs to tens of megabytes over a long session.
@@ -582,7 +590,7 @@ async fn messenger_token(
 
     let response = crate::util::fetch::REQWEST_CLIENT
         .post(format!("{RELAY_BASE}/client/api/messenger/session"))
-        .header("User-Agent", crate::launcher_user_agent())
+        .header("User-Agent", RELAY_USER_AGENT)
         .header("Accept", "application/json")
         .json(&serde_json::json!({
             "provider": provider,
@@ -630,7 +638,7 @@ async fn relay_request(
 
     let mut request = crate::util::fetch::REQWEST_CLIENT
         .request(method, format!("{RELAY_BASE}/client/api/relay{path}"))
-        .header("User-Agent", crate::launcher_user_agent())
+        .header("User-Agent", RELAY_USER_AGENT)
         .header("Accept", "application/json");
     if !bearer.is_empty() {
         request = request.bearer_auth(bearer);

@@ -22,7 +22,7 @@ export const CURSEFORGE_API_KEY: string =
  * the backend then skips CurseForge lookups instead of waiting on them.
  */
 export async function registerCurseforgeApiKey(): Promise<void> {
-	await invoke('plugin:noctrinth-curseforge|curseforge_set_api_key', {
+	await invoke('plugin:portalrinth-curseforge|curseforge_set_api_key', {
 		key: CURSEFORGE_API_KEY || null,
 	})
 }

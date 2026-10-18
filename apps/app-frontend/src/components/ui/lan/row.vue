@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import {
-	CopyIcon,
-	PowerIcon,
-	RadioTowerIcon,
-	TriangleAlertIcon,
-} from '@modrinth/assets'
+import { CopyIcon, PowerIcon, RadioTowerIcon, TriangleAlertIcon } from '@modrinth/assets'
 import { Avatar, Button, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed } from 'vue'
 
@@ -61,29 +56,15 @@ function copyAddress() {
 </script>
 
 <template>
-	<div
-		class="flex flex-col gap-3 rounded-xl border border-solid border-surface-5 bg-surface-4 p-4"
-	>
+	<div class="flex flex-col gap-3 rounded-xl border border-solid border-surface-5 bg-surface-4 p-4">
 		<div class="flex items-center gap-3">
-			<Avatar
-				:src="iconUrl"
-				:tint-by="relay.instance_id"
-				alt=""
-				size="2rem"
-				class="shrink-0"
-			/>
+			<Avatar :src="iconUrl" :tint-by="relay.instance_id" alt="" size="2rem" class="shrink-0" />
 			<div class="flex min-w-0 flex-col">
 				<span class="truncate font-bold text-contrast">{{ relay.instance_name }}</span>
 				<span class="truncate text-sm text-secondary">{{ relay.account_name }}</span>
 			</div>
 			<div class="ml-auto flex shrink-0 items-center gap-2">
-				<Button
-					v-if="address"
-					size="sm"
-					type="outlined"
-					color="brand"
-					@click="copyAddress"
-				>
+				<Button v-if="address" size="sm" type="outlined" color="brand" @click="copyAddress">
 					<CopyIcon />
 					{{ address }}
 				</Button>
@@ -110,7 +91,11 @@ function copyAddress() {
 			</div>
 		</div>
 
-		<div v-if="detail" class="flex items-center gap-1.5 text-sm" :class="failed ? 'text-orange' : 'text-secondary'">
+		<div
+			v-if="detail"
+			class="flex items-center gap-1.5 text-sm"
+			:class="failed ? 'text-orange' : 'text-secondary'"
+		>
 			<TriangleAlertIcon v-if="failed" class="shrink-0" />
 			<span class="truncate">{{ detail }}</span>
 		</div>

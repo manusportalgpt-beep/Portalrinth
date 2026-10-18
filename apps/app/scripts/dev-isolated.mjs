@@ -26,7 +26,7 @@ const repoRoot = resolve(appDir, '..', '..')
 function defaultDataDir() {
 	// Mirrors the launcher's own base directory, with a `-dev` suffix, so dev
 	// data sits beside the real thing instead of inside the repository.
-	const identifier = 'com.noctrinth.app-dev'
+	const identifier = 'com.portalrinth.app-dev'
 	if (process.platform === 'win32') {
 		return join(process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming'), identifier)
 	}

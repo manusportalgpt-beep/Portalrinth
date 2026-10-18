@@ -1376,9 +1376,6 @@
   "app.nav.modrinth-account": {
     "message": "Modrinth账户"
   },
-  "app.nav.modrinth-hosting": {
-    "message": "Modrinth Hosting"
-  },
   "app.nav.remove-account": {
     "message": "移除账户"
   },

@@ -31,8 +31,7 @@ const messages = defineMessages({
 	errorHeading: { id: 'app.lan.error-heading', defaultMessage: 'Failed to read running instances' },
 })
 
-const { relays, relaysQuery, start, stop, isPublishing, isStopping, copyAddress } =
-	useLanRelays()
+const { relays, relaysQuery, start, stop, isPublishing, isStopping, copyAddress } = useLanRelays()
 
 const instancesQuery = useQuery(instanceListQueryOptions())
 const iconsByInstance = computed(

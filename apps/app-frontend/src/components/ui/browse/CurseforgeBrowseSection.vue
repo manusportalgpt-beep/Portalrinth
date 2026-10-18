@@ -18,7 +18,7 @@
  */
 import { BoxIcon, DownloadIcon, ExternalIcon } from '@modrinth/assets'
 import { Button, Card, defineMessages, IconButton, ProgressBar, useVIntl } from '@modrinth/ui'
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 
 import {
 	type CurseforgeFile,
@@ -28,6 +28,7 @@ import {
 	installCurseforgeMod,
 	searchCurseforge,
 } from '@/helpers/curseforge-api'
+import { needsNoTranslation, resolveTarget, translateText } from '@/helpers/noctrinth-translate'
 
 const props = defineProps<{
 	provider: 'modrinth' | 'both' | 'curseforge'
@@ -56,7 +57,7 @@ const messages = defineMessages({
 		defaultMessage: 'Type something to search CurseForge.',
 	},
 	install: { id: 'browse.curseforge.install', defaultMessage: 'Install' },
-	installing: { id: 'browse.curseforge.installing', defaultMessage: 'Installing…' },
+	installing: { id: 'browse.curseforge.installing', defaultMessage: 'Installing...' },
 	openOnCurseforge: {
 		id: 'browse.curseforge.open',
 		defaultMessage: 'Open on CurseForge',
@@ -175,6 +176,61 @@ async function toggleVersions(hit: CurseforgeHit) {
 		filesByProject.value = { ...filesByProject.value, [hit.id]: [] }
 	}
 }
+/**
+ * The same translation the rest of the launcher uses, applied to CurseForge's
+ * own text.
+ *
+ * Keys are the entry's own identity, so a name that appears on several rows is
+ * asked about once rather than once per row, and a result that arrives from
+ * somewhere else and carries the same text is not paid for twice.
+ */
+const translated = reactive<Record<string, string>>({})
+const appSettings = useAppSettings()
+
+function translationKey(id: string, field: string, text: string) {
+	return `${field}:${id}:${text}`
+}
+
+async function translateHit(hit: CurseforgeHit) {
+	const target = resolveTarget(appSettings.locale)
+	if (!target) return
+
+	const fields: [string, string | null | undefined][] = [
+		['title', hit.title],
+		['author', hit.author],
+		['summary', hit.description],
+	]
+
+	await Promise.all(
+		fields.map(async ([field, text]) => {
+			if (!text || needsNoTranslation(text, target)) return
+			const key = translationKey(hit.id, field, text)
+			if (translated[key]) return
+			try {
+				const result = await translateText(text, target)
+				if (result && result !== text) translated[key] = result
+			} catch {
+				// A translation that could not be fetched leaves the original,
+				// which is still something a person can read.
+			}
+		}),
+	)
+}
+
+watch(
+	hits,
+	(list) => {
+		for (const hit of list) void translateHit(hit)
+	},
+	{ immediate: true },
+)
+
+/** The field as translated, or as CurseForge wrote it. */
+function textOf(hit: CurseforgeHit, field: 'title' | 'author' | 'description') {
+	const text = hit[field]
+	if (!text) return null
+	return translated[translationKey(hit.id, field, text)] ?? text
+}
 </script>
 
 <template>
@@ -205,9 +261,9 @@ async function toggleVersions(hit: CurseforgeHit) {
 						/>
 						<BoxIcon v-else class="h-12 w-12 shrink-0 text-contrast" />
 						<div class="flex min-w-0 flex-col">
-							<strong class="truncate text-contrast">{{ hit.name }}</strong>
+							<strong class="truncate text-contrast">{{ textOf(hit, 'title') ?? hit.name }}</strong>
 							<span v-if="hit.author_name" class="truncate text-sm text-secondary">
-								{{ hit.author_name }}
+								{{ textOf(hit, 'author') ?? hit.author_name }}
 							</span>
 						</div>
 
@@ -243,10 +299,24 @@ async function toggleVersions(hit: CurseforgeHit) {
 					</div>
 				</template>
 
-				<p v-if="hit.summary" class="m-0 text-secondary">{{ hit.summary }}</p>
+				<p v-if="hit.description" class="m-0 text-secondary">
+					{{ textOf(hit, 'description') ?? hit.description }}
+				</p>
+				<ul
+					v-if="hit.categories?.length"
+					class="mt-1 flex list-none flex-wrap gap-1 p-0 text-xs text-secondary"
+				>
+					<li
+						v-for="category in hit.categories"
+						:key="category"
+						class="rounded bg-surface-3 px-1.5 py-0.5"
+					>
+						{{ category }}
+					</li>
+				</ul>
 				<p class="m-0 text-sm text-secondary">
 					{{ formatMessage(messages.downloads, { count: hit.download_count }) }}
-					<span v-if="!hit.latest_file"> · {{ formatMessage(messages.noFileForVersion) }} </span>
+					<span v-if="!hit.latest_file"> - {{ formatMessage(messages.noFileForVersion) }}</span>
 				</p>
 
 				<ul

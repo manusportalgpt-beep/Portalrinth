@@ -1364,9 +1364,6 @@
   "app.nav.modrinth-account": {
     "message": "Modrinth 계정"
   },
-  "app.nav.modrinth-hosting": {
-    "message": "Modrinth 호스팅"
-  },
   "app.nav.remove-account": {
     "message": "계정 제거"
   },

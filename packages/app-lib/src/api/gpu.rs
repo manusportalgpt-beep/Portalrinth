@@ -42,7 +42,14 @@ pub enum GpuPreference {
 }
 
 impl GpuPreference {
-    fn from_registry_value(value: &str) -> Self {
+    /// Reads the preference out of the string the registry holds.
+///
+/// Only the Windows build calls this, so every other platform sees it as dead
+/// and says so. It is not dead code that happens to be unused - it is the one
+/// place the registry's spelling of the value is turned into a preference, and
+/// both the Windows path and its tests go through it.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn from_registry_value(value: &str) -> Self {
         // Stored as `GpuPreference=N;`, sometimes alongside other fields.
         for part in value.split(';') {
             if let Some(number) = part.trim().strip_prefix("GpuPreference=") {
@@ -56,7 +63,14 @@ impl GpuPreference {
         Self::Auto
     }
 
-    fn to_registry_value(self) -> Option<String> {
+    /// The registry spelling of a preference.
+///
+/// Only the Windows build writes it, so every other platform sees this as dead
+/// and says so. It is not dead code that happens to be unused: it is the one
+/// place a preference becomes the string the registry holds, and the Windows
+/// path and its tests both go through it.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn to_registry_value(self) -> Option<String> {
         match self {
             // Windows treats a missing entry and `=0` alike; removing it keeps
             // the registry from filling up with runtimes that no longer exist.
@@ -85,6 +99,10 @@ pub struct JavaGpuStatus {
 /// Integrated parts are named for the CPU line rather than a card, and vendors
 /// are consistent enough about it for a hint. It only ever changes wording, so
 /// a wrong guess costs nothing.
+///
+/// Its caller is Windows-only, since it reads the adapter names out of the
+/// registry, so every other platform sees this as dead and says so.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 fn looks_integrated(name: &str) -> bool {
     let name = name.to_lowercase();
     const INTEGRATED_MARKERS: [&str; 7] = [

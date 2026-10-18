@@ -1367,9 +1367,6 @@
   "app.nav.modrinth-account": {
     "message": "Обліковий запис Modrinth"
   },
-  "app.nav.modrinth-hosting": {
-    "message": "Modrinth Hosting"
-  },
   "app.nav.remove-account": {
     "message": "Вилучити обліковий запис"
   },
