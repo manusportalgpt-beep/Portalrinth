@@ -1,11 +1,11 @@
 // The site's look, taken from Modrinth's own dark theme
-// (packages/assets/styles/variables.scss) with Noctrinth's purple as the brand,
+// (packages/assets/styles/variables.scss) with Portalrinth's purple as the brand,
 // and the page frame every page shares: the bar along the top, the footer, and
 // the English/Russian switch.
 
-export const REPO = 'https://github.com/Everelsu/Noctrinth'
+export const REPO = 'https://github.com/Everelsu/Portalrinth'
 /** Where the site is published, for the links that have to be absolute (the news feed). */
-export const SITE_URL = 'https://everelsu.github.io/Noctrinth'
+export const SITE_URL = 'https://everelsu.github.io/Portalrinth'
 
 /** One string in both languages; the stylesheet shows the one the page is in. */
 export function t(en, ru) {
@@ -15,7 +15,7 @@ export function t(en, ru) {
 const LANG_BOOT = `
 	(function () {
 		var saved = null;
-		try { saved = localStorage.getItem('noctrinth-lang'); } catch (e) {}
+		try { saved = localStorage.getItem('portalrinth-lang'); } catch (e) {}
 		var lang = saved || ((navigator.language || '').toLowerCase().indexOf('ru') === 0 ? 'ru' : 'en');
 		document.documentElement.setAttribute('data-lang', lang);
 		document.documentElement.lang = lang;
@@ -30,7 +30,7 @@ const LANG_TOGGLE = `
 				var next = document.documentElement.getAttribute('data-lang') === 'ru' ? 'en' : 'ru';
 				document.documentElement.setAttribute('data-lang', next);
 				document.documentElement.lang = next;
-				try { localStorage.setItem('noctrinth-lang', next); } catch (e) {}
+				try { localStorage.setItem('portalrinth-lang', next); } catch (e) {}
 			});
 		}
 	})();
@@ -230,7 +230,7 @@ export function page({
 	<meta property="og:image" content="${SITE_URL}/assets/social-preview.png">
 	<meta name="twitter:card" content="summary_large_image">
 	<link rel="icon" type="image/svg+xml" href="${prefix}logo.svg">
-	<link rel="alternate" type="application/json" title="Noctrinth news" href="${prefix}news/feed/articles.json">
+	<link rel="alternate" type="application/json" title="Portalrinth news" href="${prefix}news/feed/articles.json">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -241,7 +241,7 @@ export function page({
 <body>
 	<nav class="nav">
 		<div class="container container--wide nav__inner">
-			<a class="nav__brand" href="${prefix || './'}"><span class="nav__logo" role="img" aria-label="Noctrinth"></span><span>Noctrinth</span></a>
+			<a class="nav__brand" href="${prefix || './'}"><span class="nav__logo" role="img" aria-label="Portalrinth"></span><span>Portalrinth</span></a>
 			<div class="nav__links">
 				${link('news/', t('News', 'Новости'), 'news')}
 				${link('changelog/', t('Changelog', 'Изменения'), 'changelog')}
@@ -258,8 +258,8 @@ export function page({
 	<footer class="footer">
 		<div class="container container--wide footer__row">
 			<span>${t(
-				'Noctrinth is an independent fork of the Modrinth App, not affiliated with or endorsed by Rinth, Inc.',
-				'Noctrinth — независимый форк Modrinth App, не связанный с Rinth, Inc. и не одобренный ею.',
+				'Portalrinth is an independent fork of the Modrinth App, not affiliated with or endorsed by Rinth, Inc.',
+				'Portalrinth — независимый форк Modrinth App, не связанный с Rinth, Inc. и не одобренный ею.',
 			)}</span>
 			<span><a href="${REPO}" rel="noopener">GitHub</a> · <a href="${REPO}/issues" rel="noopener">Issues</a> · <a href="${prefix}news/feed/rss.xml">RSS</a> · GPL-3.0</span>
 		</div>

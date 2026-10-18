@@ -1,6 +1,6 @@
 // Reading changelog entries out of a `changelog.ts` source.
 //
-// Both Noctrinth's changelog and upstream's are a TypeScript array of objects
+// Both Portalrinth's changelog and upstream's are a TypeScript array of objects
 // with a template-literal `body`, and two different things want to read them:
 // the Pages site that lists every entry, and the release workflow that puts one
 // of them in a GitHub release. They read it the same way, from here, so that a
@@ -9,8 +9,8 @@
 
 import { readFileSync } from 'node:fs'
 
-/** Where Noctrinth's own entries live. */
-export const NOCTRINTH_CHANGELOG_SRC = 'apps/app-frontend/src/helpers/noctrinth-changelog.ts'
+/** Where Portalrinth's own entries live. */
+export const PORTALRINTH_CHANGELOG_SRC = 'apps/app-frontend/src/helpers/portalrinth-changelog.ts'
 
 /**
  * Pulls every `{ ... body: `...` ... }` object out of a changelog source and
@@ -36,7 +36,7 @@ export function readEntries(path) {
 	return parseEntries(readFileSync(path, 'utf-8'))
 }
 
-/** The Noctrinth entry for a version, or undefined if it has none yet. */
-export function findNoctrinthEntry(version, path = NOCTRINTH_CHANGELOG_SRC) {
+/** The Portalrinth entry for a version, or undefined if it has none yet. */
+export function findPortalrinthEntry(version, path = PORTALRINTH_CHANGELOG_SRC) {
 	return readEntries(path).find((entry) => entry.version === version)
 }

@@ -502,17 +502,17 @@ function readMessageFile(filePath: string): MessageFile {
 }
 
 /**
- * Overlays Noctrinth's own catalogue, the way the app does when it boots.
+ * Overlays Portalrinth's own catalogue, the way the app does when it boots.
  *
- * `src/locales-noctrinth/<locale>/` carries the fork's strings: `fallback.json`
+ * `src/locales-portalrinth/<locale>/` carries the fork's strings: `fallback.json`
  * translates upstream strings Crowdin has not covered yet, `messages.json` the
  * fork's own and the handful upstream says differently. Counting only
  * `src/locales/` reports a language as far less finished than it is on screen —
  * which is what the settings page was showing. Precedence follows
- * `applyNoctrinthMessages`: fallbacks fill gaps, the fork's own messages win.
+ * `applyPortalrinthMessages`: fallbacks fill gaps, the fork's own messages win.
  */
 function applyForkCatalog(merged: MessageFile, scopeDir: string, locale: string): void {
-	const forkDirectory = path.join(scopeDir, 'src/locales-noctrinth', locale)
+	const forkDirectory = path.join(scopeDir, 'src/locales-portalrinth', locale)
 
 	for (const [key, entry] of Object.entries(
 		readMessageFile(path.join(forkDirectory, 'fallback.json')),

@@ -1,4 +1,4 @@
-// Noctrinth's news: articles, as opposed to the changelog's release notes.
+// Portalrinth's news: articles, as opposed to the changelog's release notes.
 //
 // One folder per article under news/, the way Modrinth's own blog keeps them
 // (packages/blog): `article.md` with a title, summary and date at the top, an
@@ -211,7 +211,7 @@ export function renderArticle(article) {
 /**
  * The feed the launcher reads, in modrinth.com/news/feed/articles.json's shape.
  *
- * `title_ru` and `summary_ru` are Noctrinth's own additions, for a launcher in
+ * `title_ru` and `summary_ru` are Portalrinth's own additions, for a launcher in
  * Russian; anything that only knows Modrinth's shape reads past them.
  */
 export function newsFeed(articles) {
@@ -246,9 +246,9 @@ export function rssFeed(articles) {
 	return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
 	<channel>
-		<title>Noctrinth News</title>
+		<title>Portalrinth News</title>
 		<link>${SITE_URL}/news/</link>
-		<description>News from Noctrinth, a Modrinth App fork.</description>${items}
+		<description>News from Portalrinth, a Modrinth App fork.</description>${items}
 	</channel>
 </rss>
 `

@@ -1,9 +1,9 @@
-# Noctrinth news
+# Portalrinth news
 
-Articles for the news page at https://everelsu.github.io/Noctrinth/news/ and for the
+Articles for the news page at https://everelsu.github.io/Portalrinth/news/ and for the
 News sidebar in the launcher, which reads them from `news/feed/articles.json` and shows
 them next to Modrinth's. Release notes do not go here: those are the changelog
-(`apps/app-frontend/src/helpers/noctrinth-changelog.ts`).
+(`apps/app-frontend/src/helpers/portalrinth-changelog.ts`).
 
 One folder per article. The folder name is the article's address
 (`/news/article/<folder>/`).

@@ -1,4 +1,4 @@
-// The site's front page: what Noctrinth is, the download for this computer,
+// The site's front page: what Portalrinth is, the download for this computer,
 // what it adds over the Modrinth App, the latest news and a few answers.
 
 import { articleCard, NEWS_CSS } from './site-news.mjs'
@@ -25,8 +25,8 @@ const FEATURES = [
 		media: 'assets/skin-preview.gif',
 		title: t('Everyone sees everyone', 'Все видят всех'),
 		text: t(
-			'Offline servers send no skins, so everyone is Steve. Noctrinth finds each player by name on Ely.by, Mojang and LittleSkin, with capes from OptiFine, LabyMod and MinecraftCapes. No mod needed.',
-			'Офлайн-серверы не передают скины, и все ходят Стивами. Noctrinth находит каждого игрока по нику в Ely.by, Mojang и LittleSkin, а плащи берёт из OptiFine, LabyMod и MinecraftCapes. Моды не нужны.',
+			'Offline servers send no skins, so everyone is Steve. Portalrinth finds each player by name on Ely.by, Mojang and LittleSkin, with capes from OptiFine, LabyMod and MinecraftCapes. No mod needed.',
+			'Офлайн-серверы не передают скины, и все ходят Стивами. Portalrinth находит каждого игрока по нику в Ely.by, Mojang и LittleSkin, а плащи берёт из OptiFine, LabyMod и MinecraftCapes. Моды не нужны.',
 		),
 	},
 	{
@@ -78,8 +78,8 @@ const FAQ = [
 	{
 		q: t('Is this the Modrinth App?', 'Это Modrinth App?'),
 		a: t(
-			'It is a fork of it. Noctrinth follows every Modrinth App release and keeps its version number, and adds what is listed above. It is not affiliated with Modrinth.',
-			'Это его форк. Noctrinth повторяет каждый релиз Modrinth App с тем же номером версии и добавляет то, что перечислено выше. С Modrinth он не связан.',
+			'It is a fork of it. Portalrinth follows every Modrinth App release and keeps its version number, and adds what is listed above. It is not affiliated with Modrinth.',
+			'Это его форк. Portalrinth повторяет каждый релиз Modrinth App с тем же номером версии и добавляет то, что перечислено выше. С Modrinth он не связан.',
 		),
 	},
 	{
@@ -95,8 +95,8 @@ const FAQ = [
 			'Переедут ли сборки из Modrinth App?',
 		),
 		a: t(
-			'Yes. Open Noctrinth and a banner offers to import them. Prism, MultiMC, ATLauncher, GDLauncher and CurseForge are under Create instance → Import.',
-			'Да. Открой Noctrinth, и баннер предложит их импортировать. Prism, MultiMC, ATLauncher, GDLauncher и CurseForge — в «Создать сборку → Импорт».',
+			'Yes. Open Portalrinth and a banner offers to import them. Prism, MultiMC, ATLauncher, GDLauncher and CurseForge are under Create instance → Import.',
+			'Да. Открой Portalrinth, и баннер предложит их импортировать. Prism, MultiMC, ATLauncher, GDLauncher и CurseForge — в «Создать сборку → Импорт».',
 		),
 	},
 	{
@@ -161,10 +161,10 @@ const HOME_CSS = `
 export function renderHome({ version, articles }) {
 	const asset = (name) => `${REPO}/releases/latest/download/${name}`
 	const downloads = {
-		windows: asset(`Noctrinth_${version}_x64-setup.exe`),
-		macos: asset(`Noctrinth_${version}_universal.dmg`),
-		appimage: asset(`Noctrinth_${version}_amd64.AppImage`),
-		deb: asset(`Noctrinth_${version}_amd64.deb`),
+		windows: asset(`Portalrinth_${version}_x64-setup.exe`),
+		macos: asset(`Portalrinth_${version}_universal.dmg`),
+		appimage: asset(`Portalrinth_${version}_amd64.AppImage`),
+		deb: asset(`Portalrinth_${version}_amd64.deb`),
 	}
 
 	const features = FEATURES.map(
@@ -194,7 +194,7 @@ export function renderHome({ version, articles }) {
 
 	const body = `
 	<header class="hero">
-		<img class="hero__banner" src="assets/noctrinth-banner.svg" alt="Noctrinth">
+		<img class="hero__banner" src="assets/portalrinth-banner.svg" alt="Portalrinth">
 		<div class="hero__body">
 			<p class="hero__lead">${t(
 				'Ely.by, offline accounts and CurseForge packs, in the Modrinth App you already know.',
@@ -241,7 +241,7 @@ export function renderHome({ version, articles }) {
 	</main>`
 
 	return page({
-		title: 'Noctrinth — Minecraft launcher',
+		title: 'Portalrinth — Minecraft launcher',
 		current: 'home',
 		css: NEWS_CSS + HOME_CSS,
 		body,
@@ -271,7 +271,7 @@ function downloadScript(version) {
 		}
 		apply(${JSON.stringify(version)});
 
-		fetch('https://api.github.com/repos/Everelsu/Noctrinth/releases/latest')
+		fetch('https://api.github.com/repos/Everelsu/Portalrinth/releases/latest')
 			.then(function (r) { return r.ok ? r.json() : null; })
 			.then(function (release) {
 				if (!release || !release.assets) return;

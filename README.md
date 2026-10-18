@@ -1,11 +1,11 @@
-<img src=".github/assets/noctrinth-banner.svg" alt="Portalrinth" width="100%"/>
+<img src=".github/assets/portalrinth-banner.svg" alt="Portalrinth" width="100%"/>
 
 <div align="center">
 
-[![Release](https://img.shields.io/github/v/release/Everelsu/Noctrinth?include_prereleases&style=for-the-badge&logo=github&logoColor=white&label=Release&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Noctrinth/releases)
-[![Downloads](https://img.shields.io/github/downloads/manusportalgpt-beep/Portalrinth/total?style=for-the-badge&logo=github&logoColor=white&label=Downloads&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Noctrinth/releases)
+[![Release](https://img.shields.io/github/v/release/Everelsu/Portalrinth?include_prereleases&style=for-the-badge&logo=github&logoColor=white&label=Release&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/releases)
+[![Downloads](https://img.shields.io/github/downloads/manusportalgpt-beep/Portalrinth/total?style=for-the-badge&logo=github&logoColor=white&label=Downloads&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/releases)
 [![License](https://img.shields.io/badge/License-GPL--3.0-ac51fb?style=for-the-badge&logo=gnu&logoColor=white&labelColor=16181c)](apps/app/LICENSE)
-[![Stars](https://img.shields.io/github/stars/Everelsu/Noctrinth?style=for-the-badge&logo=github&logoColor=white&label=Stars&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Noctrinth/stargazers)
+[![Stars](https://img.shields.io/github/stars/Everelsu/Portalrinth?style=for-the-badge&logo=github&logoColor=white&label=Stars&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/stargazers)
 
 **English** · [Русский](README.ru.md)
 
@@ -13,11 +13,11 @@
 
 🌙 A Modrinth App fork that speaks Ely.by, installs CurseForge packs and gives every player on an offline server their skin 🚀
 
-<a href="https://github.com/Everelsu/Noctrinth/releases/latest"><img src=".github/assets/readme/download-windows.svg" alt="Download for Windows" height="56"/></a>
-<a href="https://github.com/Everelsu/Noctrinth/releases/latest"><img src=".github/assets/readme/download-macos.svg" alt="Download for macOS" height="56"/></a>
-<a href="https://github.com/Everelsu/Noctrinth/releases/latest"><img src=".github/assets/readme/download-linux.svg" alt="Download for Linux" height="56"/></a>
+<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-windows.svg" alt="Download for Windows" height="56"/></a>
+<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-macos.svg" alt="Download for macOS" height="56"/></a>
+<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-linux.svg" alt="Download for Linux" height="56"/></a>
 
-[Changelog](https://everelsu.github.io/Noctrinth/) · [Releases](https://github.com/Everelsu/Noctrinth/releases) · [Issues](https://github.com/Everelsu/Noctrinth/issues) · [Discussions](https://github.com/Everelsu/Noctrinth/discussions) · [Upstream](https://github.com/modrinth/code)
+[Changelog](https://everelsu.github.io/Portalrinth/) · [Releases](https://github.com/Everelsu/Portalrinth/releases) · [Issues](https://github.com/Everelsu/Portalrinth/issues) · [Discussions](https://github.com/Everelsu/Portalrinth/discussions) · [Upstream](https://github.com/modrinth/code)
 
 </div>
 
@@ -83,7 +83,7 @@ The Modrinth App is a genuinely good launcher, but it only knows Microsoft accou
 
 ### Install
 
-Grab the installer for your platform from the [latest release](https://github.com/Everelsu/Noctrinth/releases/latest):
+Grab the installer for your platform from the [latest release](https://github.com/Everelsu/Portalrinth/releases/latest):
 
 | Platform | Notes                               |
 | -------- | ----------------------------------- |
@@ -142,11 +142,11 @@ A fix between upstream releases ships as a micropatch (`0.21.6+1`), which instal
 
 ## Contributing
 
-Bug reports and pull requests are welcome — [open an issue](https://github.com/Everelsu/Noctrinth/issues) to start.
+Bug reports and pull requests are welcome — [open an issue](https://github.com/Everelsu/Portalrinth/issues) to start.
 
 Found a bug that isn't Portalrinth-specific? It belongs [upstream](https://github.com/modrinth/code/issues); fixing it there means everyone gets it, and it reaches this fork on the next sync.
 
-If Portalrinth helped you, [give it a star](https://github.com/Everelsu/Noctrinth/stargazers).
+If Portalrinth helped you, [give it a star](https://github.com/Everelsu/Portalrinth/stargazers).
 
 ## License
 

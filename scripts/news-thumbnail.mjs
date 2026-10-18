@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Draws a news thumbnail in the style of Modrinth's blog, in Noctrinth's
+// Draws a news thumbnail in the style of Modrinth's blog, in Portalrinth's
 // purple: isometric blocks in the back, a simplified picture of the thing the
 // article is about in front, all as plain shapes.
 //
