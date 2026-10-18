@@ -338,19 +338,19 @@
   "app.changelog.modrinth-note": {
     "message": "Showing recent releases. The full Modrinth App changelog is available on their website."
   },
-  "app.changelog.noctrinth-note": {
-    "message": "The full Portalrinth changelog is also available online."
-  },
   "app.changelog.open-modrinth": {
     "message": "Open Modrinth changelog"
   },
-  "app.changelog.open-noctrinth": {
+  "app.changelog.open-portalrinth": {
     "message": "Open Portalrinth changelog"
+  },
+  "app.changelog.portalrinth-note": {
+    "message": "The full Portalrinth changelog is also available online."
   },
   "app.changelog.source.modrinth": {
     "message": "Modrinth"
   },
-  "app.changelog.source.noctrinth": {
+  "app.changelog.source.portalrinth": {
     "message": "Portalrinth"
   },
   "app.changelog.support": {
@@ -4490,6 +4490,15 @@
   "app.settings.tabs.synced-options": {
     "message": "Synced settings"
   },
+  "app.sidebar.collapse": {
+    "message": "Collapse the sidebar"
+  },
+  "app.sidebar.expand": {
+    "message": "Expand the sidebar"
+  },
+  "app.sidebar.friends": {
+    "message": "Friends"
+  },
   "app.sidebar.playing-as": {
     "message": "Playing as"
   },
@@ -6350,132 +6359,6 @@
   "modal.modrinth-account-required.waiting-for-browser": {
     "message": "Waiting for browser confirmation..."
   },
-  "noctrinth.auth-servers.unreachable.retry": {
-    "message": "Check again"
-  },
-  "noctrinth.auth-servers.unreachable.scope": {
-    "message": "Signing in and playing with a Microsoft account may fail until then. Offline and Ely.by accounts are not affected."
-  },
-  "noctrinth.instance.stop-all-copies": {
-    "message": "Stop every copy"
-  },
-  "noctrinth.instance.stop-copy": {
-    "message": "Stop {name} · {time}"
-  },
-  "noctrinth.settings.background.blur.description": {
-    "message": "Softens it, so it stays behind what is in front of it."
-  },
-  "noctrinth.settings.background.blur.title": {
-    "message": "Blur the picture"
-  },
-  "noctrinth.settings.background.change": {
-    "message": "Change picture"
-  },
-  "noctrinth.settings.background.choose": {
-    "message": "Choose picture"
-  },
-  "noctrinth.settings.background.description": {
-    "message": "A picture behind the launcher, showing through its frame and, a little, through the cards on a page."
-  },
-  "noctrinth.settings.background.dim.description": {
-    "message": "For a bright or busy picture, so what is over it stays easy to read."
-  },
-  "noctrinth.settings.background.dim.title": {
-    "message": "Darken the picture"
-  },
-  "noctrinth.settings.background.drop-here": {
-    "message": "Drop it here"
-  },
-  "noctrinth.settings.background.drop-hint": {
-    "message": "Or drop a picture onto the window."
-  },
-  "noctrinth.settings.background.remove": {
-    "message": "Remove"
-  },
-  "noctrinth.settings.background.title": {
-    "message": "Background picture"
-  },
-  "noctrinth.settings.splash-cube.description": {
-    "message": "Which cube the splash screen shows. Takes effect on the next launch."
-  },
-  "noctrinth.settings.splash-cube.inverted": {
-    "message": "Inverted: black on white, white on black"
-  },
-  "noctrinth.settings.splash-cube.random": {
-    "message": "Random every launch"
-  },
-  "noctrinth.settings.splash-cube.theme": {
-    "message": "Matches the theme (rarely the other way round)"
-  },
-  "noctrinth.settings.splash-cube.title": {
-    "message": "Splash cube"
-  },
-  "noctrinth.settings.translation.auto": {
-    "message": "Translate as soon as a description opens"
-  },
-  "noctrinth.settings.translation.deepl": {
-    "message": "DeepL: more natural, needs your own free API key"
-  },
-  "noctrinth.settings.translation.deepl-key": {
-    "message": "DeepL API key"
-  },
-  "noctrinth.settings.translation.deepl-key-hint": {
-    "message": "A free key translates 500,000 characters a month. Get one at"
-  },
-  "noctrinth.settings.translation.description": {
-    "message": "Offers to translate a project's description into your language, with a switch back to the original."
-  },
-  "noctrinth.settings.translation.google": {
-    "message": "Google Translate: free, no key needed"
-  },
-  "noctrinth.settings.translation.precheck": {
-    "message": "Check the language first, and hide the button when there is nothing to translate"
-  },
-  "noctrinth.settings.translation.service": {
-    "message": "Service"
-  },
-  "noctrinth.settings.translation.skip": {
-    "message": "Languages you read anyway"
-  },
-  "noctrinth.settings.translation.skip-hint": {
-    "message": "Descriptions in these are left as they are."
-  },
-  "noctrinth.settings.translation.target": {
-    "message": "Translate into"
-  },
-  "noctrinth.settings.translation.target-app": {
-    "message": "The launcher's language ({language})"
-  },
-  "noctrinth.settings.translation.test": {
-    "message": "Test the service"
-  },
-  "noctrinth.settings.translation.test-ok": {
-    "message": "Works, {milliseconds} ms: \"{text}\""
-  },
-  "noctrinth.settings.translation.title": {
-    "message": "Translate descriptions"
-  },
-  "noctrinth.translate.button": {
-    "message": "Translate to {language}"
-  },
-  "noctrinth.translate.failed": {
-    "message": "Couldn't translate it: {reason}"
-  },
-  "noctrinth.translate.original": {
-    "message": "Original"
-  },
-  "noctrinth.translate.retry": {
-    "message": "Try again"
-  },
-  "noctrinth.translate.source-language": {
-    "message": "Written in {language}"
-  },
-  "noctrinth.translate.translated-by": {
-    "message": "Translated by {service}"
-  },
-  "noctrinth.translate.translating": {
-    "message": "Translating..."
-  },
   "notifications.back": {
     "message": "Back"
   },
@@ -6623,6 +6506,132 @@
   "pack-manifest.title": {
     "message": "What is in this modpack"
   },
+  "portalrinth.auth-servers.unreachable.retry": {
+    "message": "Check again"
+  },
+  "portalrinth.auth-servers.unreachable.scope": {
+    "message": "Signing in and playing with a Microsoft account may fail until then. Offline and Ely.by accounts are not affected."
+  },
+  "portalrinth.instance.stop-all-copies": {
+    "message": "Stop every copy"
+  },
+  "portalrinth.instance.stop-copy": {
+    "message": "Stop {name} · {time}"
+  },
+  "portalrinth.settings.background.blur.description": {
+    "message": "Softens it, so it stays behind what is in front of it."
+  },
+  "portalrinth.settings.background.blur.title": {
+    "message": "Blur the picture"
+  },
+  "portalrinth.settings.background.change": {
+    "message": "Change picture"
+  },
+  "portalrinth.settings.background.choose": {
+    "message": "Choose picture"
+  },
+  "portalrinth.settings.background.description": {
+    "message": "A picture behind the launcher, showing through its frame and, a little, through the cards on a page."
+  },
+  "portalrinth.settings.background.dim.description": {
+    "message": "For a bright or busy picture, so what is over it stays easy to read."
+  },
+  "portalrinth.settings.background.dim.title": {
+    "message": "Darken the picture"
+  },
+  "portalrinth.settings.background.drop-here": {
+    "message": "Drop it here"
+  },
+  "portalrinth.settings.background.drop-hint": {
+    "message": "Or drop a picture onto the window."
+  },
+  "portalrinth.settings.background.remove": {
+    "message": "Remove"
+  },
+  "portalrinth.settings.background.title": {
+    "message": "Background picture"
+  },
+  "portalrinth.settings.splash-cube.description": {
+    "message": "Which cube the splash screen shows. Takes effect on the next launch."
+  },
+  "portalrinth.settings.splash-cube.inverted": {
+    "message": "Inverted: black on white, white on black"
+  },
+  "portalrinth.settings.splash-cube.random": {
+    "message": "Random every launch"
+  },
+  "portalrinth.settings.splash-cube.theme": {
+    "message": "Matches the theme (rarely the other way round)"
+  },
+  "portalrinth.settings.splash-cube.title": {
+    "message": "Splash cube"
+  },
+  "portalrinth.settings.translation.auto": {
+    "message": "Translate as soon as a description opens"
+  },
+  "portalrinth.settings.translation.deepl": {
+    "message": "DeepL: more natural, needs your own free API key"
+  },
+  "portalrinth.settings.translation.deepl-key": {
+    "message": "DeepL API key"
+  },
+  "portalrinth.settings.translation.deepl-key-hint": {
+    "message": "A free key translates 500,000 characters a month. Get one at"
+  },
+  "portalrinth.settings.translation.description": {
+    "message": "Offers to translate a project's description into your language, with a switch back to the original."
+  },
+  "portalrinth.settings.translation.google": {
+    "message": "Google Translate: free, no key needed"
+  },
+  "portalrinth.settings.translation.precheck": {
+    "message": "Check the language first, and hide the button when there is nothing to translate"
+  },
+  "portalrinth.settings.translation.service": {
+    "message": "Service"
+  },
+  "portalrinth.settings.translation.skip": {
+    "message": "Languages you read anyway"
+  },
+  "portalrinth.settings.translation.skip-hint": {
+    "message": "Descriptions in these are left as they are."
+  },
+  "portalrinth.settings.translation.target": {
+    "message": "Translate into"
+  },
+  "portalrinth.settings.translation.target-app": {
+    "message": "The launcher's language ({language})"
+  },
+  "portalrinth.settings.translation.test": {
+    "message": "Test the service"
+  },
+  "portalrinth.settings.translation.test-ok": {
+    "message": "Works, {milliseconds} ms: \"{text}\""
+  },
+  "portalrinth.settings.translation.title": {
+    "message": "Translate descriptions"
+  },
+  "portalrinth.translate.button": {
+    "message": "Translate to {language}"
+  },
+  "portalrinth.translate.failed": {
+    "message": "Couldn't translate it: {reason}"
+  },
+  "portalrinth.translate.original": {
+    "message": "Original"
+  },
+  "portalrinth.translate.retry": {
+    "message": "Try again"
+  },
+  "portalrinth.translate.source-language": {
+    "message": "Written in {language}"
+  },
+  "portalrinth.translate.translated-by": {
+    "message": "Translated by {service}"
+  },
+  "portalrinth.translate.translating": {
+    "message": "Translating..."
+  },
   "search.filter.locked.instance": {
     "message": "Provided by the instance"
   },
@@ -6637,9 +6646,6 @@
   },
   "search.filter.locked.server-environment.title": {
     "message": "Only client-side mods can be added to the server instance"
-  },
-  "settings.appearance.accent-wheel.brightness": {
-    "message": "Brightness"
   },
   "settings.sidebar.label.account": {
     "message": "Account"
