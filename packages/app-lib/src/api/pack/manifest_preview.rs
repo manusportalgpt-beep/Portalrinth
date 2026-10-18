@@ -174,34 +174,28 @@ async fn zip_manifest(pack: &bytes::Bytes) -> crate::Result<Vec<(String, bytes::
         .as_error()
     })?;
 
-    let wanted: Vec<usize> = reader
+    let wanted: Vec<(usize, String)> = reader
         .file()
         .entries()
         .iter()
         .enumerate()
-        .filter(|(_, entry)| {
-            matches!(entry.filename().as_str(), Ok(name)
-                if name == "manifest.json"
-                    || name == "modrinth.index.json"
-                    || name.ends_with("/manifest.json")
-                    || name.ends_with("/modrinth.index.json"))
+        .filter_map(|(index, entry)| {
+            let name = entry.filename().as_str().ok()?;
+            let wanted = name == "manifest.json"
+                || name == "modrinth.index.json"
+                || name.ends_with("/manifest.json")
+                || name.ends_with("/modrinth.index.json");
+            wanted.then(|| (index, name.to_string()))
         })
-        .map(|(index, _)| index)
         .collect();
 
     let mut found = Vec::new();
-    for index in wanted {
+    for (index, name) in wanted {
         let mut text = String::new();
         {
             let mut entry = reader.reader_with_entry(index).await?;
             entry.read_to_string_checked(&mut text).await?;
         }
-        let name = reader
-            .file()
-            .entries()
-            .get(index)
-            .map(|entry| entry.filename().to_string())
-            .unwrap_or_default();
         found.push((name, bytes::Bytes::from(text.into_bytes())));
     }
     Ok(found)
@@ -402,7 +396,7 @@ pub async fn resolve_pack_entries(
             )
             .await
         {
-            entry.version = file.display_name.clone();
+            entry.version = Some(file.display_name.clone());
             if entry.path.is_empty() {
                 entry.path = file.file_name.clone();
             }
