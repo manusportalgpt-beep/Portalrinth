@@ -218,7 +218,7 @@ fn entry_bytes<'a>(
         .map(|(_, bytes)| &bytes[..])
 }
 
-async fn curseforge_manifest(bytes: &[u8]) -> crate::Result<PackManifest> {
+fn curseforge_manifest(bytes: &[u8]) -> crate::Result<PackManifest> {
     let manifest: CurseforgeManifest = serde_json::from_slice(bytes)?;
     let loader = manifest
         .minecraft
@@ -260,7 +260,7 @@ async fn curseforge_manifest(bytes: &[u8]) -> crate::Result<PackManifest> {
     })
 }
 
-async fn modrinth_manifest(bytes: &[u8]) -> crate::Result<PackManifest> {
+fn modrinth_manifest(bytes: &[u8]) -> crate::Result<PackManifest> {
     let index: ModrinthIndex = serde_json::from_slice(bytes)?;
     let game_version = index
         .dependencies
