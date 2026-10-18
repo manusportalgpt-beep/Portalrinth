@@ -514,12 +514,14 @@ pub(crate) fn install_zipped_mrpack_files_with_reporter(
     ignore_lock: bool,
     reason: DownloadReason,
     reporter: InstallProgressReporter,
+    keep: Option<Vec<String>>,
 ) -> impl Future<Output = crate::Result<String>> + Send + 'static {
     Box::pin(install_zipped_mrpack_files_with_reporter_inner(
         create_pack,
         ignore_lock,
         reason,
         reporter,
+        keep,
     ))
 }
 
@@ -528,6 +530,7 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
     ignore_lock: bool,
     reason: DownloadReason,
     reporter: InstallProgressReporter,
+    keep: Option<Vec<String>>,
 ) -> crate::Result<String> {
     let state = &State::get().await?;
 
@@ -588,11 +591,28 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
     manifest.push_str(&zip_reader.read_entry_to_string(manifest_idx).await?);
 
     let pack: PackFormat = serde_json::from_str(&manifest)?;
+    let mut pack = pack;
     if &*pack.game != "minecraft" {
         return Err(crate::ErrorKind::InputError(
             "Pack does not support Minecraft".to_string(),
         )
         .into());
+    }
+
+    // Only what a person kept after being shown the list. The list is matched by
+    // any of the file's hashes rather than by one in particular, because the
+    // preview shows sha512 while the rest of this code path has always used
+    // sha1, and neither is the right one to insist on.
+    //
+    // Taken here rather than at each place that reads the files, so every
+    // count, every progress total and every download below sees the same list.
+    if let Some(keep) = keep {
+        let wanted: std::collections::HashSet<&str> =
+            keep.iter().map(String::as_str).collect();
+        pack.files.retain(|file| {
+            file.hashes.values().any(|hash| wanted.contains(hash.as_str()))
+                || wanted.contains(file.path.as_str())
+        });
     }
 
     reporter

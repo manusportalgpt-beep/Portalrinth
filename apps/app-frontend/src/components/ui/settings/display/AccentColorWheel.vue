@@ -12,7 +12,7 @@
  * theme, and costs nothing to repaint on every drag frame.
  */
 import { defineMessages, Slider, useVIntl } from '@modrinth/ui'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
 	/** The accent in force, as `#rrggbb`. */
@@ -98,6 +98,22 @@ function hsvToRgb(hue: number, saturation: number, value: number): [number, numb
 
 const current = computed(() => rgbToHsv(parseHex(props.modelValue) ?? [145, 40, 100]))
 
+/**
+ * Brightness is held here rather than read back out of the colour.
+ *
+ * Reading it from the colour means every step of the drag is round-tripped
+ * through a hex string and back, and a slider fed by its own output lags the
+ * cursor by however long that takes — which is what made it feel like it was
+ * moving on its own.
+ */
+const brightness = ref(Math.round(current.value.value * 100))
+watch(
+	() => props.modelValue,
+	(hex) => {
+		brightness.value = Math.round(rgbToHsv(parseHex(hex) ?? [145, 40, 100]).value * 100)
+	},
+)
+
 const wheelStyle = computed(() => ({
 	width: `${SIZE}px`,
 	height: `${SIZE}px`,
@@ -158,10 +174,11 @@ function endDrag() {
 }
 
 function setBrightness(value: number | [number, number]) {
-	const brightness = Array.isArray(value) ? value[0] : value
+	const next = Array.isArray(value) ? value[0] : value
+	brightness.value = next
 	emit(
 		'update:modelValue',
-		toHex(hsvToRgb(current.value.hue, current.value.saturation, clamp(brightness / 100, 0, 1))),
+		toHex(hsvToRgb(current.value.hue, current.value.saturation, clamp(next / 100, 0, 1))),
 	)
 }
 </script>
@@ -206,7 +223,7 @@ function setBrightness(value: number | [number, number]) {
 			<div class="h-3 w-full rounded" :style="brightnessStyle" aria-hidden="true" />
 			<Slider
 				id="accent-brightness"
-				:model-value="Math.round(current.value * 100)"
+				v-model="brightness"
 				:min="0"
 				:max="100"
 				:step="1"

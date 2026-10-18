@@ -566,29 +566,54 @@ fn offline_identity(identity: &RelayIdentity) -> String {
     format!("portal-offline:{uuid}")
 }
 
+/// Trades an account's own token for the relay's bearer token.
+///
+/// This one endpoint is *not* under the relay's prefix. Everything the relay
+/// itself serves lives under `/client/api/relay`, and the messenger session is
+/// the launcher-facing service that hands out the tokens for it — asking for it
+/// through the relay's own prefix is asking a door that does not exist, and the
+/// only answer that comes back is that the request was refused.
 async fn messenger_token(
     state: &crate::State,
     provider: &str,
     access_token: &str,
 ) -> crate::Result<String> {
-    let response = relay_request(
-        state,
-        reqwest::Method::POST,
-        "/client/api/messenger/session",
-        "",
-        Some(serde_json::json!({
+    let _permit = state.api_semaphore.0.acquire().await?;
+
+    let response = crate::util::fetch::REQWEST_CLIENT
+        .post(format!("{RELAY_BASE}/client/api/messenger/session"))
+        .header("User-Agent", crate::launcher_user_agent())
+        .header("Accept", "application/json")
+        .json(&serde_json::json!({
             "provider": provider,
             "accessToken": access_token,
-        })),
-    )
-    .await?;
+        }))
+        .send()
+        .await
+        .map_err(|source| crate::ErrorKind::FetchError(source).as_error())?;
 
-    response["token"]
-        .as_str()
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+    if !status.is_success() {
+        return Err(crate::ErrorKind::OtherError(format!(
+            "the messenger would not issue a relay token: HTTP {status}"
+        ))
+        .as_error());
+    }
+
+    serde_json::from_str::<serde_json::Value>(&body)
+        .map_err(|error| {
+            crate::ErrorKind::OtherError(format!(
+                "the messenger's answer was not JSON: {error}"
+            ))
+            .as_error()
+        })?
+        .get("token")
+        .and_then(|token| token.as_str())
         .map(String::from)
         .ok_or_else(|| {
             crate::ErrorKind::OtherError(
-                "the relay did not return a token".to_string(),
+                "the messenger did not return a token".to_string(),
             )
             .as_error()
         })
@@ -604,7 +629,7 @@ async fn relay_request(
     let _permit = state.api_semaphore.0.acquire().await?;
 
     let mut request = crate::util::fetch::REQWEST_CLIENT
-        .request(method, format!("{RELAY_BASE}{path}"))
+        .request(method, format!("{RELAY_BASE}/client/api/relay{path}"))
         .header("User-Agent", crate::launcher_user_agent())
         .header("Accept", "application/json");
     if !bearer.is_empty() {

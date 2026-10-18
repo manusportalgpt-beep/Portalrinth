@@ -17,6 +17,7 @@ import {
 	DEFAULT_ACCENT_PRESET,
 	findAccentPreset,
 	setAccentPreset,
+	setCustomAccentColor,
 	useAccentPreset,
 } from '@/composables/use-accent.ts'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
@@ -44,6 +45,16 @@ const savedAccent = ref({
 })
 
 const { formatMessage } = useVIntl()
+
+// The wheel repaints as it is dragged, which it can only do if the colour it
+// picked is given to the accent store rather than only being held in the form.
+// Without this the swatch moved and nothing else did.
+watch(
+	() => current.value.accentColor,
+	(hex) => {
+		if (hex) setCustomAccentColor(hex)
+	},
+)
 
 const messages = defineMessages({
 	accentTitle: {

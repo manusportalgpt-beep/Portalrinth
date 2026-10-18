@@ -86,6 +86,8 @@ export interface BrowseManagerContext {
 	 * other provider is asked with.
 	 */
 	hideProjectHits?: Ref<boolean>
+	/** Whether the sidebar draws the slot where the host puts its provider switch. */
+	showProviderSwitch?: ComputedRef<boolean>
 	hiddenFilterTypes?: ComputedRef<string[]>
 	advancedFiltersCollapsed?: Ref<boolean>
 	dismissedPhotosensitivityFilterWarning?: Ref<boolean>

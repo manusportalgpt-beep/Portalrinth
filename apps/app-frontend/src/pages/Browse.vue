@@ -1203,8 +1203,11 @@ onMounted(() => {
 	void refreshCurseforgeAvailability()
 })
 
+// The settings are a reactive object, not a ref: reading `.value` off one
+// gives undefined, and the property lookup on that throws the moment the
+// watcher below is set up — which takes the whole page with it.
 watch(
-	() => appSettings.value.curseforge_api_key,
+	() => appSettings.curseforge_api_key,
 	() => {
 		void refreshCurseforgeAvailability()
 	},
@@ -1340,7 +1343,8 @@ provideBrowseManager({
 	selectableProjectTypes,
 	showProjectTypeTabs: computed(() => !isServerContext.value),
 	variant: 'app',
-	hideProjectHits: hideModrinthResults,
+	hideProjectHits: computed(() => hideModrinthResults.value),
+	showProviderSwitch: computed(() => !isServerContext.value),
 	getCardActions,
 	installContext,
 	providedFilters: combinedProvidedFilters,
@@ -1407,26 +1411,14 @@ provideBrowseManager({
 					</template>
 				</ContextMenu>
 				<CurseforgeBrowseSection
-					v-if="projectType === 'mod'"
 					:provider="curseforgeProvider"
 					:available="curseforgeAvailable"
 					:filter="searchState.query.value"
 					:game-version="curseforgeNarrowing.gameVersion"
 					:loader="curseforgeNarrowing.loader"
+					:project-type="projectType"
 					:instance-id="instance?.id ?? null"
 				/>
-			</template>
-			<template #above-search>
-				<div v-if="projectType === 'mod'" class="flex flex-wrap items-center gap-2 pt-4">
-					<ProviderSwitch
-						:provider="curseforgeProvider"
-						:disabled="!curseforgeAvailable"
-						@select="curseforgeProvider = $event"
-					/>
-					<p v-if="!curseforgeAvailable" class="m-0 text-sm text-secondary">
-						{{ formatMessage(messages.curseforgeNoKey) }}
-					</p>
-				</div>
 			</template>
 		</BrowsePageLayout>
 		<CreationFlowModal
@@ -1444,7 +1436,20 @@ provideBrowseManager({
 			@create="handleServerModpackFlowCreate"
 		/>
 		<Teleport v-if="browseRouteActive" to="#sidebar-teleport-target">
-			<BrowseSidebar />
+			<BrowseSidebar>
+				<template #provider-switch>
+					<div class="flex flex-col gap-2">
+						<ProviderSwitch
+							:provider="curseforgeProvider"
+							:disabled="!curseforgeAvailable"
+							@select="curseforgeProvider = $event"
+						/>
+						<p v-if="!curseforgeAvailable" class="m-0 text-sm leading-tight text-secondary">
+							{{ formatMessage(messages.curseforgeNoKey) }}
+						</p>
+					</div>
+				</template>
+			</BrowseSidebar>
 		</Teleport>
 	</div>
 </template>

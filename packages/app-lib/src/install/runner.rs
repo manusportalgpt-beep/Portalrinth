@@ -1553,6 +1553,10 @@ async fn install_pack_inner(
         )
         .await?;
 
+    // Which entries the person kept after being shown the manifest, if they were
+    // shown one. Bound outside the match because both branches need it and the
+    // CurseForge one leaves the function before the second can be reached.
+    let mut keep_entries: Option<Vec<String>> = None;
     let create_pack = match location {
         CreatePackLocation::FromVersionId {
             project_id,
@@ -1579,7 +1583,7 @@ async fn install_pack_inner(
             )
             .await?
         }
-        CreatePackLocation::FromFile {
+CreatePackLocation::FromFile {
             path,
             curseforge_api_key,
             keep,
@@ -1612,11 +1616,12 @@ async fn install_pack_inner(
                     &instance_id,
                     reason,
                     reporter,
-                    keep.as_deref(),
+                    keep_entries.as_deref(),
                 )
                 .await?;
                 return Ok(());
             }
+            keep_entries = keep;
             generate_pack_from_file(path, instance_id.clone()).await?
         }
     };
@@ -1626,6 +1631,7 @@ async fn install_pack_inner(
         false,
         reason,
         reporter,
+        keep_entries,
     )
     .await?;
 
@@ -1772,14 +1778,14 @@ async fn update_backup_scope(
                 ))
                 .await?
             }
-            CreatePackLocation::FromFile { path, .. } => {
-                // A CurseForge zip is not an mrpack and lists its overrides
-                // differently; backing up the whole instance is the safe answer.
-                if is_curseforge_zip(&path).await? {
-                    return Ok(None);
-                }
-                generate_pack_from_file(path, instance_id.clone()).await?
-            }
+CreatePackLocation::FromFile { path, .. } => {
+				// A CurseForge zip is not an mrpack and lists its overrides
+				// differently; backing up the whole instance is the safe answer.
+				if is_curseforge_zip(&path).await? {
+					return Ok(None);
+				}
+				generate_pack_from_file(path, instance_id.clone()).await?
+			}
         };
         paths.extend(mrpack_instance_paths(&pack.file).await?);
     }

@@ -219,7 +219,7 @@ const manifestModal = ref()
 let manifestChoice: ((kept: string[] | null) => void) | null = null
 
 function resolveManifestChoice(kept: PackManifestEntry[] | null) {
-	manifestChoice?.(kept ? kept.map((entry) => entry.file_id ?? entry.id) : null)
+	manifestChoice?.(kept ? kept.map((entry) => entry.key) : null)
 	manifestChoice = null
 }
 

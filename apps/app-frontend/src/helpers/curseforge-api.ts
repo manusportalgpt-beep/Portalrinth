@@ -19,6 +19,22 @@ import { CURSEFORGE_API_KEY } from './curseforge-key'
 /** The dropdown's own way of saying "any version", which CurseForge reads as a version. */
 const ANY_VERSION = 'All'
 
+/** The tabs CurseForge is searched from, named the way ours are. */
+export type CurseforgeKind = 'mod' | 'resource_pack' | 'data_pack' | 'shader' | 'modpack'
+
+const KIND_OF_PROJECT_TYPE: Record<string, CurseforgeKind> = {
+	mod: 'mod',
+	resourcepack: 'resource_pack',
+	datapack: 'data_pack',
+	shader: 'shader',
+	modpack: 'modpack',
+}
+
+/** The CurseForge kind that goes with one of the launcher's project types. */
+export function curseforgeKindFor(projectType: string): CurseforgeKind | undefined {
+	return KIND_OF_PROJECT_TYPE[projectType]
+}
+
 export interface CurseforgeFile {
 	id: string
 	mod_id: string
@@ -62,6 +78,8 @@ export interface CurseforgeSearchOptions {
 	loader?: string | null
 	sortField?: number
 	sortOrder?: number
+	/** Which of the launcher's tabs this is for; decides the class. */
+	kind?: CurseforgeKind
 }
 
 /** Whether this launcher can ask CurseForge anything. */
@@ -95,6 +113,7 @@ export async function searchCurseforge(
 			category_id: null,
 			sort_field: options.sortField ?? 2,
 			sort_order: options.sortOrder ?? 1,
+			kind: options.kind ?? null,
 		},
 	})
 }
