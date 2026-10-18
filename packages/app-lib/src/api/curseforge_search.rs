@@ -174,52 +174,20 @@ fn client() -> crate::Result<reqwest::Client> {
         })
 }
 
-/// The language CurseForge should write its text in.
-///
-/// A copy of the launcher's own, refreshed whenever settings are read or
-/// written, because `with_headers` is called from the middle of a search and
-/// cannot go and read the database on every file.
-static LANGUAGE: std::sync::RwLock<String> = std::sync::RwLock::new(String::new());
-
-pub fn set_language(locale: Option<&str>) {
-    let locale = locale.unwrap_or_default().trim();
-    if locale.is_empty() {
-        return;
-    }
-    if let Ok(mut slot) = LANGUAGE.write() {
-        // CurseForge names its locales the way the web site does, with a
-        // hyphen, and answers in English for anything it does not know.
-        *slot = if locale.contains('-') {
-            locale.to_string()
-        } else {
-            format!("{locale}-{}", locale.split('-').next().unwrap_or(locale))
-        };
-    }
-}
-
-fn language() -> String {
-    LANGUAGE
-        .read()
-        .ok()
-        .filter(|locale| !locale.is_empty())
-        .map(|locale| locale.clone())
-        .unwrap_or_else(|| "en-US".to_string())
-}
-
 /// Puts on the two headers every CurseForge request needs.
 ///
 /// `Accept-Encoding: identity` because their edge sometimes answers a compressed
 /// request with an HTML failure of its own, and a launcher that only ever sees
 /// the parse error has nothing to report.
 ///
-/// `Accept-Language` because CurseForge writes its summaries and categories in
-/// the language it is asked in, and a launcher running in Russian should be
-/// reading Russian rather than English because of which service answered.
+/// Nothing is asked about language. CurseForge writes what it wrote, and it is
+/// translated afterwards by the same facility that translates everything else
+/// in the launcher — one translator, one switch in settings, one set of rules
+/// about what it costs.
 fn with_headers(request: reqwest::RequestBuilder, key: &str) -> reqwest::RequestBuilder {
     request
         .header("x-api-key", key)
         .header(reqwest::header::ACCEPT_ENCODING, "identity")
-        .header(reqwest::header::ACCEPT_LANGUAGE, language())
 }
 
 /// Maps one of the launcher's project types onto CurseForge's.

@@ -299,6 +299,58 @@ const detections = new Map<string, Promise<string | null>>()
  * Google, which has a cheap way to ask; `null` when it cannot say, which shows
  * the button rather than hiding it.
  */
+/**
+ * Translates one plain string - a name, an author, a summary - with the same
+ * provider, the same switch and the same rules as everything else.
+ *
+ * CurseForge's text goes through here rather than being asked for in another
+ * language: one translator with one switch in settings is worth more than two
+ * translations with two switches, and a person who has turned translation off
+ * gets English rather than a surprise in whichever language a service guessed.
+ *
+ * Cached by text and target, and a string already in the target language is
+ * returned untouched - asking again would cost a request to be told nothing.
+ */
+export function translateText(text: string, target: string): Promise<string> {
+	if (!text.trim() || needsNoTranslation(text, target)) return Promise.resolve(text)
+
+	const key = `text\n${translationSettings.provider}\n${target}\n${text}`
+	let pending = plainTranslations.get(key)
+	if (!pending) {
+		pending = translateTextUncached(text, target, provider)
+		pending.catch(() => plainTranslations.delete(key))
+		plainTranslations.set(key, pending)
+	}
+	return pending
+}
+
+const plainTranslations = new Map<string, Promise<string>>()
+
+async function translateTextUncached(
+	text: string,
+	target: string,
+	provider: TranslationProviderId,
+): Promise<string> {
+	// The batch endpoints take HTML and hand back HTML, so a bare name goes
+	// through as one and is stripped again on the way out.
+	const [translated] = await BATCH[provider]([escapeForHtml(text)], targetFor(provider, target))
+	return unescapeHtml(translated.text)
+}
+
+function escapeForHtml(value: string): string {
+	return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+}
+
+function unescapeHtml(value: string): string {
+	const doc = new DOMParser().parseFromString(`<body>${value}</body>`, 'text/html')
+	return (doc.body.textContent ?? '').trim()
+}
+
+/** DeepL wants its own spelling of the target; everything else takes it as it is. */
+function targetFor(provider: TranslationProviderId, target: string): string {
+	return provider === 'deepl' ? deeplTarget(target) : target
+}
+
 export function detectLanguage(html: string): Promise<string | null> {
 	const text = new DOMParser()
 		.parseFromString(`<body>${html}</body>`, 'text/html')
