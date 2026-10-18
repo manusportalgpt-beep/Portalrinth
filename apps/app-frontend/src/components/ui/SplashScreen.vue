@@ -183,6 +183,7 @@ useAppEvent('loading', (e) => {
 	--splash-cube-image: url('@/assets/loading/noctrinth-cube-dark.webp');
 	--splash-cube-strength: 0.5;
 	--splash-glow-strength: 16%;
+	/* The mark, in the accent the interface is drawn in. */
 }
 
 :global(html.light-mode .splash-screen) {
@@ -285,6 +286,13 @@ useAppEvent('loading', (e) => {
 }
 
 .splash-wave__layer {
+	/*
+	 * The mark is a picture of a logo in one colour, and the interface is
+	 * drawn in another. Tinting it with the accent is what makes the loading
+	 * screen part of the same app as everything it uncovers, rather than a
+	 * picture of a different one.
+	 */
+	background: var(--color-brand);
 	position: absolute;
 	top: 0;
 	left: 0;

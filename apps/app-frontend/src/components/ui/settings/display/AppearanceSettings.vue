@@ -4,6 +4,7 @@ import {
 	defineMessages,
 	injectAuth,
 	injectUserPreferences,
+	Input,
 	provideAppearanceSettings,
 	Toggle,
 	useSavable,
@@ -14,6 +15,8 @@ import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import NoctrinthBackgroundSettings from '@/components/ui/settings/display/NoctrinthBackgroundSettings.vue'
 import {
+	ACCENT_PRESETS,
+	accentColorFor,
 	DEFAULT_ACCENT_PRESET,
 	findAccentPreset,
 	setAccentPreset,
@@ -24,8 +27,6 @@ import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { type ColorTheme, isDarkTheme, useTheme } from '@/composables/use-theme.ts'
 import { type AppSettings, get, set } from '@/helpers/settings.ts'
 import { appSettingsModalContextKey } from '@/providers/app-settings-modal'
-
-import AccentColorWheel from './AccentColorWheel.vue'
 
 const theme = useTheme()
 const appSettings = useAppSettings()
@@ -134,6 +135,24 @@ const { saved, current, changes, saving, hasChanges, reset, save } = useSavable(
 		savedAccent.value = { preset: value.accentPreset, tint: value.accentTintBackground }
 	},
 )
+
+// Names for the colour circles, so the tooltip says what the colour is called
+// rather than leaving a colour with no name at all.
+const presetNames = {
+	theme: { id: 'app.appearance-settings.accent.theme', defaultMessage: 'Theme' },
+	crimson: { id: 'app.appearance-settings.accent.crimson', defaultMessage: 'Crimson' },
+	blood: { id: 'app.appearance-settings.accent.blood', defaultMessage: 'Blood' },
+	ember: { id: 'app.appearance-settings.accent.ember', defaultMessage: 'Ember' },
+	sunset: { id: 'app.appearance-settings.accent.sunset', defaultMessage: 'Sunset' },
+	amethyst: { id: 'app.appearance-settings.accent.amethyst', defaultMessage: 'Amethyst' },
+	nightshade: { id: 'app.appearance-settings.accent.nightshade', defaultMessage: 'Nightshade' },
+	midnight: { id: 'app.appearance-settings.accent.midnight', defaultMessage: 'Midnight' },
+	glacier: { id: 'app.appearance-settings.accent.glacier', defaultMessage: 'Glacier' },
+	verdant: { id: 'app.appearance-settings.accent.verdant', defaultMessage: 'Verdant' },
+	moss: { id: 'app.appearance-settings.accent.moss', defaultMessage: 'Moss' },
+	lantern: { id: 'app.appearance-settings.accent.lantern', defaultMessage: 'Lantern' },
+	rose: { id: 'app.appearance-settings.accent.rose', defaultMessage: 'Rose' },
+}
 
 const themeOptions = computed(() =>
 	theme.options.filter(
@@ -244,7 +263,47 @@ provideAppearanceSettings({
 				{{ formatMessage(messages.accentDescription) }}
 			</p>
 		</div>
-		<AccentColorWheel v-model="current.accentColor" />
+		<!--
+			The colours as themselves: a circle of the colour, named by nothing.
+			Someone who wants the interface to be a particular colour should be
+			able to see that colour rather than read its name, and a row of names
+			cannot show twelve of them at once without becoming a list.
+		-->
+		<div class="flex flex-wrap items-center gap-2">
+			<button
+				v-for="preset in ACCENT_PRESETS"
+				:key="preset.id"
+				type="button"
+				:title="formatMessage(presetNames[preset.id] ?? preset.name)"
+				:aria-label="formatMessage(presetNames[preset.id] ?? preset.name)"
+				:aria-pressed="current.accentPreset === preset.id"
+				class="h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 motion-reduce:transition-none"
+				:class="
+					current.accentPreset === preset.id ? 'border-contrast scale-110' : 'border-transparent'
+				"
+				:style="{ background: accentColorFor(preset, theme.active) }"
+				@click="current.accentPreset = preset.id"
+			/>
+		</div>
+
+		<!--
+			And a way to put a colour nothing else offers. Free-form, because the
+			one somebody wants is often not on any list.
+		-->
+		<div class="mt-2 flex items-center gap-2">
+			<span
+				class="h-8 w-8 shrink-0 rounded-full border border-surface-5"
+				:style="{ background: current.accentColor }"
+				aria-hidden="true"
+			/>
+			<Input
+				id="accent-custom-color"
+				v-model="current.accentColor"
+				type="text"
+				placeholder="#c1121f"
+				wrapper-class="w-full max-w-[14rem]"
+			/>
+		</div>
 
 		<div class="mt-3 flex items-center justify-between gap-4">
 			<div class="min-w-0">
