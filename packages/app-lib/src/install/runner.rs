@@ -1778,15 +1778,14 @@ async fn update_backup_scope(
                 ))
                 .await?
             }
-            CreatePackLocation::FromFile { path, .. } => {
-                // A CurseForge zip is not an mrpack and lists its overrides
-                // differently; backing up the whole instance is the safe answer.
-                if is_curseforge_zip(&path).await? {
-                    return Ok(None);
-                }
-                keep_entries = keep;
-            generate_pack_from_file(path, instance_id.clone()).await?
-            }
+CreatePackLocation::FromFile { path, .. } => {
+				// A CurseForge zip is not an mrpack and lists its overrides
+				// differently; backing up the whole instance is the safe answer.
+				if is_curseforge_zip(&path).await? {
+					return Ok(None);
+				}
+				generate_pack_from_file(path, instance_id.clone()).await?
+			}
         };
         paths.extend(mrpack_instance_paths(&pack.file).await?);
     }
