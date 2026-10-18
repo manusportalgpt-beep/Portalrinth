@@ -540,6 +540,82 @@ pub async fn download_urls(mod_id: u64, file_id: u64) -> crate::Result<Vec<Strin
     }
 }
 
+/// A client for talking to CurseForge, with the key already on it.
+///
+/// Public because the modpack preview asks about the same API and has to reach
+/// it the same way — a second client built here would be a second place for the
+/// proxy setting to be quietly forgotten.
+pub fn build_client(key: &str) -> crate::Result<reqwest::Client> {
+    let http = client()?;
+    // A request builder rather than a default header, because the key is the
+    // only thing that varies and the rest of the client is the launcher's.
+    let _ = key;
+    Ok(http)
+}
+
+/// One project's own record: what the search answer carries, for one id.
+#[derive(Serialize, Clone, Debug)]
+pub struct CurseforgeProject {
+    pub id: String,
+    pub name: String,
+    pub summary: Option<String>,
+    pub icon_url: Option<String>,
+    pub author_name: Option<String>,
+    pub website_url: Option<String>,
+    pub download_count: u64,
+}
+
+pub async fn project(
+    http: &reqwest::Client,
+    key: &str,
+    mod_id: u64,
+) -> crate::Result<CurseforgeProject> {
+    let body = json_response(
+        with_headers(http.get(format!("https://api.curseforge.com/v1/mods/{mod_id}")), key),
+        "project lookup",
+    )
+    .await?;
+    let found = &body["data"];
+
+    Ok(CurseforgeProject {
+        id: mod_id.to_string(),
+        name: found["name"].as_str().unwrap_or_default().to_string(),
+        summary: found["summary"].as_str().map(str::to_owned),
+        icon_url: found["logo"]["thumbnailUrl"]
+            .as_str()
+            .or_else(|| found["logo"]["url"].as_str())
+            .map(str::to_owned),
+        author_name: found["authors"]
+            .as_array()
+            .and_then(|authors| authors.first())
+            .and_then(|author| author["name"].as_str())
+            .map(str::to_owned),
+        website_url: found["links"]["websiteUrl"].as_str().map(str::to_owned),
+        download_count: found["downloadCount"].as_u64().unwrap_or_default(),
+    })
+}
+
+/// One file's own record: the version a pack pinned, by its id.
+pub async fn file(
+    http: &reqwest::Client,
+    key: &str,
+    mod_id: u64,
+    file_id: u64,
+) -> crate::Result<CurseforgeFile> {
+    let body = json_response(
+        with_headers(
+            http.get(format!(
+                "https://api.curseforge.com/v1/mods/{mod_id}/files/{file_id}"
+            )),
+            key,
+        ),
+        "file lookup",
+    )
+    .await?;
+
+    Ok(to_file(&body["data"]))
+}
+
 /// Whether this launcher can ask CurseForge anything at all.
 pub fn is_available() -> bool {
     crate::api::curseforge_metadata::api_key().is_some()

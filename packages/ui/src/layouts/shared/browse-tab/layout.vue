@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
 import { RotateCounterClockwiseIcon, SearchIcon } from '@modrinth/assets'
-import { computed, ref, toValue } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, toValue } from 'vue'
 
 import Admonition from '#ui/components/base/Admonition.vue'
 import { Button, IconButton } from '#ui/components/base/buttons'
@@ -14,7 +14,6 @@ import ProjectCard from '#ui/components/project/card/ProjectCard.vue'
 import ProjectCardList from '#ui/components/project/ProjectCardList.vue'
 import SearchFilterControl from '#ui/components/search/SearchFilterControl.vue'
 import { defineMessages, useVIntl } from '#ui/composables/i18n'
-import { useStickyObserver } from '#ui/composables/sticky-observer'
 import { commonMessages, formatProjectTypeSentence } from '#ui/utils/common-messages'
 import type { SortType } from '#ui/utils/search'
 
@@ -26,11 +25,6 @@ import type { CardAction } from './types'
 const ctx = injectBrowseManager()
 const { formatMessage } = useVIntl()
 const lockedMessages = computed(() => toValue(ctx.lockedFilterMessages))
-const stickyInstallHeaderRef = ref<HTMLElement | null>(null)
-const { isStuck: isInstallHeaderStuck } = useStickyObserver(
-	stickyInstallHeaderRef,
-	'BrowseInstallHeader',
-)
 
 const sortOptions = computed<ComboboxOption<SortType>[]>(() =>
 	ctx.effectiveSortTypes.value.map((st) => ({
@@ -124,41 +118,77 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 
 	return Array.from(tags)
 }
+
+const loadMoreSentinel = ref<HTMLElement | null>(null)
+let loadMoreObserver: IntersectionObserver | null = null
+
+/**
+ * Asks for the next page when the end of the list comes into view.
+ *
+ * `rootMargin` gives it a screen's worth of warning, so the next page is on its
+ * way before the end arrives rather than after it.
+ */
+onMounted(() => {
+	loadMoreObserver = new IntersectionObserver(
+		(entries) => {
+			if (entries.some((entry) => entry.isIntersecting)) {
+				void ctx.loadMore()
+			}
+		},
+		{ rootMargin: '800px 0px' },
+	)
+	if (loadMoreSentinel.value) {
+		loadMoreObserver.observe(loadMoreSentinel.value)
+	}
+})
+
+onBeforeUnmount(() => {
+	loadMoreObserver?.disconnect()
+	loadMoreObserver = null
+})
 </script>
 
 <template>
-	<template v-if="ctx.installContext?.value && ctx.variant !== 'web'">
-		<div
-			ref="stickyInstallHeaderRef"
-			class="sticky top-0 z-20 -mx-6 -mt-6 mb-4 rounded-tl-[--radius-xl] border-0 border-b border-solid bg-surface-1 px-6 py-4 border-surface-5"
-			:class="[isInstallHeaderStuck ? 'border-t' : '']"
-		>
-			<BrowseInstallHeader />
-		</div>
-	</template>
+	<!--
+		The tabs, the provider switch and the search box travel together. They are
+		what a person reaches for halfway down a long list of results, and having
+		them scroll away means every change of mind costs a scroll back to the top.
+	-->
+	<div
+		class="sticky top-0 z-20 -mx-6 -mt-6 border-0 border-b border-solid bg-surface-1 px-6 pb-3 border-surface-5"
+	>
+		<template v-if="ctx.installContext?.value && ctx.variant !== 'web'">
+			<div class="pt-4">
+				<BrowseInstallHeader />
+			</div>
+		</template>
+
+		<NavTabs
+			v-if="ctx.showProjectTypeTabs.value"
+			:links="ctx.selectableProjectTypes.value"
+			:replace="ctx.variant === 'app'"
+			class="pt-4"
+		/>
+
+		<slot name="above-search" />
+
+		<Input
+			v-model="ctx.query.value"
+			:icon="SearchIcon"
+			type="text"
+			autocomplete="off"
+			:placeholder="
+				formatMessage(messages.searchPlaceholder, {
+					projectType: formatProjectTypeSentence(formatMessage, ctx.projectType.value, 2),
+				})
+			"
+			clearable
+			wrapper-class="w-full"
+			size="large"
+			@clear="ctx.clearSearch()"
+		/>
+	</div>
 	<SelectedProjectsFloatingBar v-if="ctx.installContext?.value && ctx.variant !== 'web'" />
-
-	<NavTabs
-		v-if="ctx.showProjectTypeTabs.value"
-		:links="ctx.selectableProjectTypes.value"
-		:replace="ctx.variant === 'app'"
-	/>
-
-	<Input
-		v-model="ctx.query.value"
-		:icon="SearchIcon"
-		type="text"
-		autocomplete="off"
-		:placeholder="
-			formatMessage(messages.searchPlaceholder, {
-				projectType: formatProjectTypeSentence(formatMessage, ctx.projectType.value, 2),
-			})
-		"
-		clearable
-		wrapper-class="w-full"
-		size="large"
-		@clear="ctx.clearSearch()"
-	/>
 
 	<Admonition
 		v-if="ctx.linkOverridesAdvancedPrefs.value"
@@ -226,6 +256,7 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 		</IconButton>
 
 		<Pagination
+			v-if="!ctx.infiniteScroll?.value"
 			:page="ctx.currentPage.value"
 			:count="ctx.pageCount.value"
 			:class="ctx.variant === 'web' ? 'mx-auto sm:ml-auto sm:mr-0' : 'ml-auto'"
@@ -413,13 +444,30 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 			</template>
 		</ProjectCardList>
 
-		<div :class="ctx.variant === 'web' ? 'pagination-after mt-3' : 'flex justify-end mt-3'">
+		<div
+			v-if="!ctx.infiniteScroll?.value"
+			:class="ctx.variant === 'web' ? 'pagination-after mt-3' : 'flex justify-end mt-3'"
+		>
 			<Pagination
 				:page="ctx.currentPage.value"
 				:count="ctx.pageCount.value"
 				:class="ctx.variant === 'web' ? 'justify-end' : 'pagination-after'"
 				@switch-page="ctx.setPage"
 			/>
+		</div>
+
+		<!--
+			The end of the list, which is also the thing that asks for what comes
+			next. It watches itself rather than the scroll position: an observer on
+			a marker is the same answer whether the list is short, the window is
+			short, or the person is already past the bottom when it appears.
+		-->
+		<div v-if="ctx.infiniteScroll?.value" ref="loadMoreSentinel" class="h-px w-full" />
+		<div
+			v-if="ctx.infiniteScroll?.value && ctx.loadingMore?.value"
+			class="flex justify-center py-6"
+		>
+			<component :is="ctx.loadingComponent ?? LoadingIndicator" />
 		</div>
 	</div>
 

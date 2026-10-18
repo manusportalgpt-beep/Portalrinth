@@ -105,6 +105,14 @@ pub enum CreatePackLocation {
         // resolved through the CurseForge API. Ignored for .mrpack files.
         #[serde(default)]
         curseforge_api_key: Option<String>,
+        /// The entries a person kept after being shown what the pack contains.
+        ///
+        /// Absent means all of them, which is what every caller that has not
+        /// shown a list wants. Present — even empty — means only these, because
+        /// "they switched everything off" is an answer and must not be read as
+        /// "they never looked".
+        #[serde(default)]
+        keep: Option<Vec<String>>,
     },
 }
 
@@ -201,6 +209,8 @@ pub async fn get_instance_from_pack(
         CreatePackLocation::FromFile {
             path,
             curseforge_api_key,
+            // The preview names; the installer is told which entries to keep.
+            keep: _,
         } => {
             // Detect what kind of modpack this is so we can fail BEFORE the
             // frontend creates an empty profile that we'd then have to delete

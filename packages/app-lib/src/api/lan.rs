@@ -300,15 +300,22 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
 
     let session_id = field("sessionId")?;
     let tunnel_token = field("tunnelToken")?;
-    let public_host = field("publicHost")?;
     let public_port = session["publicPort"].as_u64().ok_or_else(|| {
         crate::ErrorKind::OtherError(
             "the relay did not return a usable public port".to_string(),
         )
     })? as u16;
+    // The host the tunnel is carried over is the one a player is given; the
+    // relay names it `tunnelHost` and only sometimes repeats it as
+    // `publicHost`, so it is taken from whichever is there.
+    let public_host = session["publicHost"]
+        .as_str()
+        .or(session["tunnelHost"].as_str())
+        .map(String::from)
+        .unwrap_or_else(|| RELAY_BASE.trim_start_matches("https://").to_string());
     let tunnel_host = session["tunnelHost"]
         .as_str()
-        .unwrap_or_else(|| RELAY_BASE.trim_start_matches("https://"))
+        .unwrap_or(public_host.as_str())
         .to_string();
     let tunnel_port = session["tunnelPort"].as_u64().unwrap_or(25570) as u16;
 
@@ -567,7 +574,7 @@ async fn messenger_token(
     let response = relay_request(
         state,
         reqwest::Method::POST,
-        "/messenger/session",
+        "/client/api/messenger/session",
         "",
         Some(serde_json::json!({
             "provider": provider,
@@ -597,7 +604,7 @@ async fn relay_request(
     let _permit = state.api_semaphore.0.acquire().await?;
 
     let mut request = crate::util::fetch::REQWEST_CLIENT
-        .request(method, format!("{RELAY_BASE}/client/api/relay{path}"))
+        .request(method, format!("{RELAY_BASE}{path}"))
         .header("User-Agent", crate::launcher_user_agent())
         .header("Accept", "application/json");
     if !bearer.is_empty() {

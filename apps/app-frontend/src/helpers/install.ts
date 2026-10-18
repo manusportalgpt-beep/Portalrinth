@@ -37,6 +37,13 @@ export interface PackLocationFile {
 	path: string
 	/** Lets the backend resolve CurseForge modpack zips imported from disk. */
 	curseforge_api_key?: string | null
+	/**
+	 * The entries a person kept after being shown what the pack contains.
+	 *
+	 * Absent installs all of them. Present — even empty — installs only these,
+	 * so "they switched everything off" is not read as "they never looked".
+	 */
+	keep?: string[] | null
 }
 
 export type CreatePackLocation = PackLocationVersionId | PackLocationFile
@@ -46,11 +53,12 @@ export type CreatePackLocation = PackLocationVersionId | PackLocationFile
  * CurseForge modpack zip picked from disk can be resolved by the backend —
  * without it the preview/install fails even when the key is configured.
  */
-export function packLocationFromFile(path: string): PackLocationFile {
+export function packLocationFromFile(path: string, keep?: string[]): PackLocationFile {
 	return {
 		type: 'fromFile',
 		path,
 		curseforge_api_key: CURSEFORGE_API_KEY || null,
+		...(keep ? { keep } : {}),
 	}
 }
 

@@ -125,6 +125,11 @@ export type AppSettings = {
 	 */
 	curseforge_api_key?: string | null
 
+	/**
+	 * Whether browse results arrive by scrolling instead of by turning pages.
+	 */
+	browse_infinite_scroll?: boolean
+
 	version: number
 }
 

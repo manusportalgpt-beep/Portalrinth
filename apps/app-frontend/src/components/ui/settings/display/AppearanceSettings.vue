@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { CheckIcon } from '@modrinth/assets'
 import {
 	AppearanceSettingsLayout,
 	defineMessages,
@@ -15,9 +14,6 @@ import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import NoctrinthBackgroundSettings from '@/components/ui/settings/display/NoctrinthBackgroundSettings.vue'
 import {
-	ACCENT_PRESETS,
-	accentColorFor,
-	type AccentPreset,
 	DEFAULT_ACCENT_PRESET,
 	findAccentPreset,
 	setAccentPreset,
@@ -28,6 +24,8 @@ import { type ColorTheme, isDarkTheme, useTheme } from '@/composables/use-theme.
 import { type AppSettings, get, set } from '@/helpers/settings.ts'
 import { appSettingsModalContextKey } from '@/providers/app-settings-modal'
 
+import AccentColorWheel from './AccentColorWheel.vue'
+
 const theme = useTheme()
 const appSettings = useAppSettings()
 const auth = injectAuth()
@@ -37,7 +35,7 @@ const os = platform()
 const accent = useAccentPreset()
 
 // The accent lives in a store of its own that the picker repaints as you move
-// through it, so what was saved has to be kept apart from it — otherwise the
+// through it, so what was saved has to be kept apart from it РІР‚вЂќ otherwise the
 // preview would read back as the saved value and nothing would count as a
 // change. Upstream keeps the theme apart the same way, through `theme.preview`.
 const savedAccent = ref({
@@ -64,28 +62,9 @@ const messages = defineMessages({
 	accentTintDescription: {
 		id: 'app.appearance-settings.accent-tint.description',
 		defaultMessage:
-			"Gives the app's greys — its backgrounds and its panels — a faint cast of the same colour. The accent, the sidebar and the loading bar follow the preset either way.",
+			"Gives the app's greys РІР‚вЂќ its backgrounds and its panels РІР‚вЂќ a faint cast of the same colour. The accent, the sidebar and the loading bar follow the preset either way.",
 	},
 })
-
-// Names live in their own map so each preset carries a message id of its own,
-// rather than being labelled by whatever its list entry happens to say.
-const presetNames = defineMessages({
-	theme: { id: 'app.appearance-settings.accent.theme', defaultMessage: 'Theme' },
-	amethyst: { id: 'app.appearance-settings.accent.amethyst', defaultMessage: 'Amethyst' },
-	nightshade: { id: 'app.appearance-settings.accent.nightshade', defaultMessage: 'Nightshade' },
-	midnight: { id: 'app.appearance-settings.accent.midnight', defaultMessage: 'Midnight' },
-	glacier: { id: 'app.appearance-settings.accent.glacier', defaultMessage: 'Glacier' },
-	verdant: { id: 'app.appearance-settings.accent.verdant', defaultMessage: 'Verdant' },
-	lantern: { id: 'app.appearance-settings.accent.lantern', defaultMessage: 'Lantern' },
-	ember: { id: 'app.appearance-settings.accent.ember', defaultMessage: 'Ember' },
-	rose: { id: 'app.appearance-settings.accent.rose', defaultMessage: 'Rose' },
-})
-
-function presetName(preset: AccentPreset): string {
-	const message = presetNames[preset.id as keyof typeof presetNames]
-	return message ? formatMessage(message) : preset.name
-}
 
 type AppearanceSettingsState = {
 	theme: ColorTheme
@@ -104,6 +83,7 @@ function getAppearanceSettingsState(): AppearanceSettingsState {
 		nativeDecorations: appSettings.nativeDecorations,
 		accentPreset: savedAccent.value.preset,
 		accentTintBackground: savedAccent.value.tint,
+		accentColor: accent.customColor.value,
 	}
 }
 
@@ -129,6 +109,7 @@ const { saved, current, changes, saving, hasChanges, reset, save } = useSavable(
 			native_decorations: value.nativeDecorations,
 			accent_preset: value.accentPreset,
 			accent_tint_background: value.accentTintBackground,
+			accent_custom_color: value.accentColor,
 		}
 
 		await set(nextSettings)
@@ -171,7 +152,7 @@ function setNativeDecorations(enabled: boolean): void {
 
 // The accent is previewed the same way the theme is: the whole app recolours
 // while the slider moves, and closing the tab without saving puts back what was
-// saved — which `useSavable` has already restored into `saved` by then.
+// saved РІР‚вЂќ which `useSavable` has already restored into `saved` by then.
 watch([() => current.value.accentPreset, () => current.value.accentTintBackground], ([id, tint]) =>
 	setAccentPreset(id, tint),
 )
@@ -252,23 +233,7 @@ provideAppearanceSettings({
 				{{ formatMessage(messages.accentDescription) }}
 			</p>
 		</div>
-		<div class="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2">
-			<button
-				v-for="preset in ACCENT_PRESETS"
-				:key="preset.id"
-				type="button"
-				class="accent-option flex items-center gap-3 rounded-xl border border-solid border-button-border bg-button-bg p-3 text-left"
-				:class="{ 'accent-option--selected': current.accentPreset === preset.id }"
-				:style="{ '--accent-swatch': accentColorFor(preset, theme.active) }"
-				:aria-pressed="current.accentPreset === preset.id"
-				@click="current.accentPreset = preset.id"
-			>
-				<span class="accent-option__swatch" aria-hidden="true">
-					<CheckIcon v-if="current.accentPreset === preset.id" class="size-4 text-contrast" />
-				</span>
-				<span class="truncate font-medium text-contrast">{{ presetName(preset) }}</span>
-			</button>
-		</div>
+		<AccentColorWheel v-model="current.accentColor" />
 
 		<div class="mt-3 flex items-center justify-between gap-4">
 			<div class="min-w-0">

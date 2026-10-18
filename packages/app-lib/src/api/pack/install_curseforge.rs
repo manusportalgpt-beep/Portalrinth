@@ -13,7 +13,7 @@
 //!      through the CurseForge API, downloads them concurrently (with a CDN
 //!      fallback for author-restricted files), records each as
 //!      `CurseForge`-sourced content, extracts `overrides/`, and installs
-//!      Minecraft — reporting phase/progress through the job reporter.
+//!      Minecraft вЂ” reporting phase/progress through the job reporter.
 //!
 //! The pure zip-inspection helpers are also used by `install_from.rs` and the
 //! job runner to route a dropped `.zip` to the right format.
@@ -87,7 +87,7 @@ struct CfManifest {
     overrides: Option<String>,
     /// Noctrinth's own: where the pack's picture lives, when the manifest says
     /// so at all. CurseForge's own format has no such field, but the exporters
-    /// people actually use write one — as a URL on CurseForge's avatar CDN,
+    /// people actually use write one вЂ” as a URL on CurseForge's avatar CDN,
     /// which is the only copy of the picture a pack that ships no image file
     /// has anywhere.
     #[serde(
@@ -160,7 +160,7 @@ impl CfFileData {
             .map(|h| h.value.as_str())
     }
 
-    /// Reconstruct the public CDN URL from the numeric file id — works even
+    /// Reconstruct the public CDN URL from the numeric file id вЂ” works even
     /// when the author disabled API distribution (which only nulls
     /// `download_url`). Same workaround MultiMC / Prism use.
     fn cdn_fallback_url(&self) -> Option<String> {
@@ -228,7 +228,7 @@ async fn read_manifest(pack_file: &bytes::Bytes) -> crate::Result<CfManifest> {
         .position(|f| matches!(f.filename().as_str(), Ok("manifest.json")))
     else {
         return Err(crate::ErrorKind::InputError(
-            "No manifest.json found — not a CurseForge modpack".to_string(),
+            "No manifest.json found вЂ” not a CurseForge modpack".to_string(),
         )
         .into());
     };
@@ -241,7 +241,7 @@ async fn read_manifest(pack_file: &bytes::Bytes) -> crate::Result<CfManifest> {
     Ok(serde_json::from_str(&manifest_str)?)
 }
 
-/// Pack metadata extracted from a CurseForge modpack zip — used by the
+/// Pack metadata extracted from a CurseForge modpack zip вЂ” used by the
 /// creation-modal preview and the job runner so the instance is created with
 /// the pack's real name, Minecraft version and loader instead of placeholders.
 pub struct CurseforgePackMeta {
@@ -280,6 +280,7 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
     instance_id: &str,
     reason: DownloadReason,
     reporter: InstallProgressReporter,
+    keep: Option<&[String]>,
 ) -> crate::Result<String> {
     let state = State::get().await?;
 
@@ -318,8 +319,14 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
                 .build(),
         )
         .await?;
+    // Only what a person kept after being shown the list. None means they
+    // were never shown one, which is every caller outside the preview.
+    let keep_ids: Option<std::collections::HashSet<i64>> = keep.map(|keep| {
+        keep.iter().filter_map(|id| id.parse().ok()).collect()
+    });
     let resolved =
-        resolve_manifest_files(&state, &manifest, curseforge_api_key).await?;
+        resolve_manifest_files(&state, &manifest, curseforge_api_key, keep_ids.as_ref())
+            .await?;
 
     // Download every resolved mod file concurrently and record each as
     // CurseForge-sourced content. Failures are collected and reported
@@ -400,7 +407,7 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
             .collect::<Vec<_>>()
             .join("\n");
         let suffix = if failures.len() > CF_MAX_LISTED_FAILURES {
-            format!("\n… and {} more", failures.len() - CF_MAX_LISTED_FAILURES)
+            format!("\nвЂ¦ and {} more", failures.len() - CF_MAX_LISTED_FAILURES)
         } else {
             String::new()
         };
@@ -436,7 +443,7 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
 }
 
 /// Apply the pack's name, version tag, Minecraft version, and loader to the
-/// instance — the CurseForge analogue of `set_instance_information`.
+/// instance вЂ” the CurseForge analogue of `set_instance_information`.
 async fn apply_manifest_to_instance(
     instance_id: &str,
     manifest: &CfManifest,
@@ -483,8 +490,14 @@ async fn resolve_manifest_files(
     state: &State,
     manifest: &CfManifest,
     curseforge_api_key: &str,
+    keep: Option<&std::collections::HashSet<i64>>,
 ) -> crate::Result<Vec<CfFileData>> {
-    let file_ids: Vec<i64> = manifest.files.iter().map(|f| f.file_id).collect();
+    let file_ids: Vec<i64> = manifest
+        .files
+        .iter()
+        .map(|f| f.file_id)
+        .filter(|id| keep.is_none_or(|keep| keep.contains(id)))
+        .collect();
     if file_ids.is_empty() {
         return Ok(Vec::new());
     }
@@ -506,7 +519,7 @@ async fn resolve_manifest_files(
         serde_json::from_slice(&body)?
     };
 
-    // The bulk endpoint silently drops some ids (and de-dups) — re-fetch the
+    // The bulk endpoint silently drops some ids (and de-dups) вЂ” re-fetch the
     // missing ones individually, the same strategy XMCL uses.
     let returned: HashSet<i64> = resolved.data.iter().map(|f| f.id).collect();
     let missing: Vec<&CfManifestFile> = manifest
@@ -571,7 +584,7 @@ async fn download_cf_file(
     let cf_project_id = cf_file.mod_id.to_string();
     let cf_file_id = cf_file.id.to_string();
     // Serialize the DB-and-filesystem bookkeeping while the downloads above
-    // still run in parallel — mirrors the mrpack installer's use of the
+    // still run in parallel вЂ” mirrors the mrpack installer's use of the
     // install DB semaphore.
     let _permit = state.install_db_semaphore.acquire().await?;
     crate::state::instances::commands::add_project_bytes(
@@ -580,7 +593,7 @@ async fn download_cf_file(
         bytes,
         cf_file.sha1(),
         None,
-        // The pack's own, as against a CurseForge mod the user adds later —
+        // The pack's own, as against a CurseForge mod the user adds later вЂ”
         // which is what tells the pack's content list from everything beside
         // it. Both carry CurseForge ids; only this one is part of the pack.
         ContentSourceKind::CurseForgeModpack,
@@ -699,7 +712,7 @@ const PACK_ICON_STEMS: [&str; 5] =
 const PACK_ICON_EXTENSIONS: [&str; 6] =
     ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
 
-/// How well a zip entry does as the pack's picture — lower is better, `None`
+/// How well a zip entry does as the pack's picture вЂ” lower is better, `None`
 /// means it is not one.
 ///
 /// Only the zip's root and the root of a folder inside it are considered: a
@@ -760,14 +773,14 @@ async fn pack_icon_from_zip(
 }
 
 /// Gives the instance the pack's picture, if the pack has one and the instance
-/// has not been given one already — a reinstall over an instance the user has
+/// has not been given one already вЂ” a reinstall over an instance the user has
 /// since chosen an icon for leaves that choice alone.
 ///
 /// A pack carries its picture one of two ways, and most carry it only the
 /// second: as an image file in the zip, or as a URL in the manifest pointing
 /// at CurseForge's avatar CDN. A zip holding several hundred mods and no
 /// picture at all is the common case, so the URL is not a fallback worth
-/// skipping — without it such a pack installs blank.
+/// skipping вЂ” without it such a pack installs blank.
 async fn apply_pack_icon(
     pack_file: &bytes::Bytes,
     manifest: &CfManifest,
@@ -784,7 +797,7 @@ async fn apply_pack_icon(
     let icon_bytes = match pack_icon_from_zip(pack_file).await? {
         Some(bytes) => bytes::Bytes::from(bytes),
         None => {
-            // Fetched only over TLS, and only from the manifest's own field —
+            // Fetched only over TLS, and only from the manifest's own field вЂ”
             // the same footing as the mod download URLs beside it.
             let Some(url) = manifest
                 .image
@@ -1007,7 +1020,7 @@ mod tests {
         entries.sort_by_key(|name| pack_icon_rank(name).unwrap());
 
         // Root before overrides, then `icon` before `pack`, then png before
-        // jpg — so a pack that ships several is read the way a person would.
+        // jpg вЂ” so a pack that ships several is read the way a person would.
         assert_eq!(entries[0], "icon.jpg");
         assert_eq!(entries[1], "pack.png");
         assert_eq!(entries[2], "overrides/icon.png");
