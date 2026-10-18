@@ -48,6 +48,12 @@ export const DEFAULT_ACCENT_PRESET = 'crimson'
 
 /** The id the wheel writes under, and the one a colour of its own takes. */
 export const CUSTOM_ACCENT_ID = 'custom'
+
+/**
+ * The one id that is not a colour but an instruction: leave the interface in
+ * whatever the theme drew it in. Everything else on the swatch row paints.
+ */
+export const THEME_ACCENT_ID = 'theme'
 const DEFAULT_CUSTOM_ACCENT = '#4d9227'
 
 /**
@@ -337,7 +343,8 @@ const THEME_ACCENTS: Record<string, string> = { retro: '#4d9227' }
 
 export function accentColorFor(preset: AccentPreset, active: string = theme.active): string {
 	if (preset.id === CUSTOM_ACCENT_ID) return customColor.value
-	if (preset.id === DEFAULT_ACCENT_PRESET && THEME_ACCENTS[active]) return THEME_ACCENTS[active]
+	if (preset.id === THEME_ACCENT_ID)
+		return THEME_ACCENTS[active] ?? (active === 'light' ? preset.light : preset.dark)
 	return active === 'light' ? preset.light : preset.dark
 }
 
@@ -353,7 +360,12 @@ function apply(id: string, tint: boolean): void {
 	// A colour of someone's own is not a preset; it is drawn from where the wheel
 	// left it, and everything below works on it exactly as on one.
 	const hex = id === CUSTOM_ACCENT_ID ? customColor.value : null
-	if (id === DEFAULT_ACCENT_PRESET) return
+
+	// Only `theme` is a request to leave the interface as the theme drew it.
+	// Every other id, the default one included, is a colour to paint: the default
+	// being crimson means crimson is what has to appear, not a reason to do
+	// nothing and let the theme's purple show through underneath.
+	if (id === THEME_ACCENT_ID) return
 
 	const preset = findAccentPreset(id)
 	if (!preset && !hex) return
@@ -414,8 +426,11 @@ watch(
 				paintWindowIcon(
 					accentColorFor(preset),
 					// The shortcuts go back to the executable's icon only when that
-					// icon is the right colour, which it is not for a green theme.
-					preset.id === DEFAULT_ACCENT_PRESET && !THEME_ACCENTS[theme.active],
+					// icon is the right colour. It never is once an accent other than
+					// the theme's own has been chosen, and the default - crimson -
+					// is such a choice, so this asks about the theme rather than
+					// about whether the preset happens to be the default.
+					preset.id === THEME_ACCENT_ID,
 				),
 			)
 		}

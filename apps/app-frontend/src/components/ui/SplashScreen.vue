@@ -10,15 +10,14 @@
 		<div class="splash-glow" aria-hidden="true"></div>
 		<div class="splash-content" data-tauri-drag-region>
 			<!--
-				The wordmark as a wave: two copies of it sliding past each other at
-				different speeds, so the light in it moves even though nothing on
-				screen is being redrawn. On the compositor, which is the only thing
-				that is free while the app underneath is starting.
+				One mark, ours, turning slowly behind the name. The accent is painted
+				onto it with a mask rather than laid under it as a background: the
+				mark is a bitmap with opaque pixels of its own, so a background
+				behind one is never seen, and the mark would stay the colour of the
+				picture instead of the colour of the interface.
 			-->
-			<div class="splash-wave" aria-hidden="true">
-				<img class="splash-wave__layer splash-wave__layer--back" :src="WAVE" alt="" />
-				<img class="splash-wave__layer splash-wave__layer--front" :src="WAVE" alt="" />
-			</div>
+			<div class="splash-mark" aria-hidden="true"></div>
+			<span class="splash-name">Portalrinth</span>
 			<div
 				class="splash-bar"
 				role="progressbar"
@@ -58,7 +57,6 @@ import { injectLoadingState } from '@modrinth/ui'
 import { onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import WAVE from '@/assets/portalrinth-icon.png'
 import { useAppEvent } from '@/composables/use-app-event'
 import { rollSplashCubeInverted } from '@/helpers/portalrinth-splash-cube'
 import { themeReady } from '@/helpers/portalrinth-window-reveal'
@@ -256,88 +254,67 @@ useAppEvent('loading', (e) => {
 	will-change: transform;
 }
 
-.splash-logo {
-	height: 2.25rem;
-	width: fit-content;
+/*
+ * One mark, ours, in the accent the rest of the interface is drawn in.
+ *
+ * The accent is a mask, not a background behind the picture. A bitmap of a logo
+ * has opaque pixels of its own colour; anything painted underneath it is never
+ * seen, which is exactly why the mark used to stay the colour of the artwork
+ * while everything around it turned red. As a mask, the shape is taken from the
+ * artwork and the colour is taken from the interface.
+ *
+ * It turns on the compositor, for the same reason the bar crawls there: during
+ * start-up the main thread has the least time to give, and this screen exists
+ * during exactly that.
+ */
+.splash-mark {
+	width: 5.5rem;
+	height: 5.5rem;
+	/*
+	 * The accent is a mask, not a background behind the picture. A bitmap of a
+	 * logo has opaque pixels of its own colour, so anything painted underneath
+	 * one is never seen - which is exactly why the mark used to keep the colour
+	 * of the artwork while everything around it turned red. As a mask the shape
+	 * comes from the artwork and the colour comes from the interface.
+	 */
+	mask: url('@/assets/portalrinth-icon.png') center / contain no-repeat;
+	-webkit-mask: url('@/assets/portalrinth-icon.png') center / contain no-repeat;
+	background: var(--color-brand);
+	will-change: transform;
+	animation: splash-turn 14s linear infinite;
 }
 
 /*
- * The wave.
- *
- * Two copies of the wordmark, the same picture at two depths, sliding past one
- * another at different speeds and in opposite directions. Neither is redrawn:
- * both are the same bitmap moved by `transform`, so the compositor carries them
- * however busy the main thread is underneath - which, during startup, it is.
- *
- * The seam between the two copies is closed by the front layer being opaque and
- * the back one faint, so the eye reads one moving picture rather than two
- * images and a join. The bar is clipped to the window so each copy can run off
- * its edge and come back the other side without anything spilling into the
- * layout.
+ * The name under it, so the loading screen says what is loading. The weight and
+ * the tracking are the app's own: it is the same wordmark as everywhere else,
+ * not a title invented for this screen.
  */
-.splash-wave {
-	position: relative;
-	display: flex;
-	overflow: hidden;
-	height: 2.5rem;
-	width: min(28rem, 80vw);
-	mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
-	-webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+.splash-name {
+	font-size: 1.25rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	color: var(--color-contrast);
 }
 
-.splash-wave__layer {
-	/*
-	 * The mark is a picture of a logo in one colour, and the interface is
-	 * drawn in another. Tinting it with the accent is what makes the loading
-	 * screen part of the same app as everything it uncovers, rather than a
-	 * picture of a different one.
-	 */
-	background: var(--color-brand);
-	position: absolute;
-	top: 0;
-	left: 0;
-	height: 100%;
-	width: 200%;
-	max-width: none;
-	object-fit: cover;
-	object-position: left center;
-	will-change: transform;
-}
-
-.splash-wave__layer--back {
-	opacity: 0.35;
-	animation: splash-wave-drift 7s linear infinite;
-}
-
-.splash-wave__layer--front {
-	animation: splash-wave-drift 11s linear infinite reverse;
-}
-
-@keyframes splash-wave-drift {
+@keyframes splash-turn {
 	from {
-		transform: translateX(0);
+		transform: rotate(0turn);
 	}
 	to {
-		transform: translateX(-50%);
+		transform: rotate(1turn);
 	}
 }
 
 /*
- * Anyone who has asked for less motion gets the wordmark, still and complete.
- * The picture is what says the app is starting; the movement only says it is
- * still working.
+ * Less motion asked for: the mark stays, still and complete, in the accent. The
+ * picture says the app is starting; the movement only says it is still working,
+ * and that is the part being given up.
  */
 @media (prefers-reduced-motion: reduce) {
-	.splash-wave__layer--back {
-		display: none;
-	}
-
-	.splash-wave__layer--front {
+	.splash-mark {
 		animation: none;
-		width: 100%;
 	}
 }
-
 .splash-bar {
 	width: 18rem;
 	height: 0.375rem;
