@@ -418,7 +418,7 @@ async fn resolve_modrinth_entries(manifest: &mut PackManifest, state: &State) {
     let projects = match crate::state::CachedEntry::get_many(
         crate::state::CacheValueType::Project,
         &project_ids,
-        Some(crate::util::fetch::CacheBehaviour::StaleWhileRevalidate),
+        Some(crate::state::CacheBehaviour::StaleWhileRevalidate),
         &state.pool,
         &state.api_semaphore,
     )
