@@ -661,7 +661,12 @@ pub async fn download_urls(mod_id: u64, file_id: u64) -> crate::Result<Vec<Strin
             .as_str()
             .unwrap_or("mod.jar")
             .to_string();
-        Ok::<_, crate::Error>(vec![cdn_path(file_id, &file_name)])
+        // Built by hand, so the same host is tried on each of the three names
+        // rather than once: a file an author has restricted from API
+        // distribution can still be unreachable on one host and reachable on
+        // the next, and one guess is not a fallback chain.
+        let path = cdn_path(file_id, &file_name);
+        Ok::<_, crate::Error>(download_url_candidates(&path))
     };
 
     match fallback().await {

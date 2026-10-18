@@ -622,7 +622,8 @@ pub async fn install_curseforge_mod(
 ) -> crate::Result<String> {
     let Some(key) = crate::api::curseforge_metadata::api_key() else {
         return Err(crate::ErrorKind::InputError(
-            "this build has no CurseForge key, so CurseForge mods cannot be fetched"
+            "No CurseForge API key is configured, so CurseForge content cannot be \
+             fetched. One can be added in Settings, Resources."
                 .to_string(),
         )
         .as_error());
