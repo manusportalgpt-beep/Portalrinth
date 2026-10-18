@@ -821,8 +821,6 @@ pub async fn dependencies(
 /// already being installed is the one that matches, and the newest release is
 /// what a person would have picked by hand.
 pub async fn best_file_for(
-    http: &reqwest::Client,
-    key: &str,
     mod_id: u64,
     game_version: Option<&str>,
     loader: Option<&str>,

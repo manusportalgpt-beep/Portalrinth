@@ -778,8 +778,6 @@ pub(crate) async fn install_dependencies_of(
                 .await
                 .ok(),
                 None => crate::api::curseforge_search::best_file_for(
-                    &http,
-                    &key,
                     dependency.mod_id,
                     game_version,
                     loader,
