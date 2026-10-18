@@ -670,9 +670,7 @@ pub async fn download_urls(mod_id: u64, file_id: u64) -> crate::Result<Vec<Strin
     };
 
     match fallback().await {
-        Ok(mut urls) => {
-            Ok(urls)
-        }
+        Ok(urls) => Ok(urls),
         Err(error) => Err(crate::ErrorKind::OtherError(format!(
             "CurseForge gave no download address for file {file_id}: {}",
             error.raw
