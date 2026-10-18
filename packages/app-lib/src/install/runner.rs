@@ -1582,6 +1582,7 @@ async fn install_pack_inner(
         CreatePackLocation::FromFile {
             path,
             curseforge_api_key,
+            keep,
         } => {
             reporter
                 .set_context(
@@ -1611,6 +1612,7 @@ async fn install_pack_inner(
                     &instance_id,
                     reason,
                     reporter,
+                    keep.as_deref(),
                 )
                 .await?;
                 return Ok(());

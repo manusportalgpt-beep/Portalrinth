@@ -1,8 +1,8 @@
 //! Handing the backend the CurseForge key the frontend was built with, and
 //! asking CurseForge things with it.
 //!
-//! The key is a build-time constant of the frontend's — vite bakes it into the
-//! bundle — and until now it only ever travelled as an argument on a modpack
+//! The key is a build-time constant of the frontend's вЂ” vite bakes it into the
+//! bundle вЂ” and until now it only ever travelled as an argument on a modpack
 //! install. Naming what a CurseForge file is needs it too, from deep inside the
 //! content listing where no such argument reaches, so the frontend says once at
 //! startup what the key is and the backend keeps it.
@@ -14,6 +14,7 @@
 
 use crate::api::Result;
 use theseus::curseforge_metadata;
+use theseus::pack::manifest_preview::PackManifest;
 use theseus::curseforge_search::{
     self, CurseforgeFile, CurseforgeSearchPage, CurseforgeSearchQuery,
 };
@@ -27,6 +28,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             curseforge_files,
             curseforge_download_urls,
             curseforge_install_mod,
+            pack_manifest,
         ])
         .build()
 }
@@ -57,6 +59,14 @@ pub async fn curseforge_files(
     loader: Option<String>,
 ) -> Result<Vec<CurseforgeFile>> {
     Ok(curseforge_search::files(mod_id, game_version.as_deref(), loader.as_deref()).await?)
+}
+
+/// What is inside a modpack file, read before anything is installed.
+#[tauri::command]
+pub async fn pack_manifest(path: String) -> Result<PackManifest> {
+    let state = theseus::State::get().await?;
+    let manifest = theseus::pack::manifest_preview::read_pack_manifest(std::path::Path::new(&path)).await?;
+    Ok(theseus::pack::manifest_preview::resolve_pack_entries(manifest, &state).await)
 }
 
 /// Where one file can be fetched from, most likely first.

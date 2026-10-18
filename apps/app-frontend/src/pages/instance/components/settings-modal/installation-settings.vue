@@ -15,6 +15,7 @@ import type { GameVersionTag, PlatformTag } from '@modrinth/utils'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, ref } from 'vue'
 
+import PackManifestModal from '@/components/ui/modpack/PackManifestModal.vue'
 import { useManagedContentPolicy } from '@/composables/instances/use-managed-content-policy'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { trackEvent } from '@/helpers/analytics'
@@ -33,6 +34,7 @@ import {
 	update_repair_modrinth,
 } from '@/helpers/instance'
 import { get_loader_versions } from '@/helpers/metadata'
+import type { PackManifestEntry } from '@/helpers/pack-manifest'
 import { get_game_versions, get_loaders } from '@/helpers/tags'
 import { injectAppEvents } from '@/providers/app-events'
 import { provideInstanceBackup } from '@/providers/instance-backup'
@@ -193,14 +195,32 @@ async function installLocalModpackFromPicker() {
 	const picked = await filePicker.pickModpackFile({ readFile: false })
 	if (!picked?.path) return false
 
+	// What is in the pack is shown before it is installed, not after: the list
+	// is long and half of it may be resource packs somebody does not want, and
+	// taking a mod back out afterwards is a worse answer than never adding it.
+	manifestModal.value?.show(picked.path)
+
+	const kept = await new Promise<string[] | null>((resolve) => {
+		manifestChoice.value = resolve
+	})
+	if (!kept) return false
+
 	const job = await install_pack_to_existing_instance(
 		instance.value.id,
-		packLocationFromFile(picked.path),
+		packLocationFromFile(picked.path, kept),
 	).catch(handleError)
 	if (!job) return false
 
 	const completed = await wait_for_install_job(appEvents, job.job_id).catch(handleError)
 	return !!completed
+}
+
+const manifestModal = ref()
+let manifestChoice: ((kept: string[] | null) => void) | null = null
+
+function resolveManifestChoice(kept: PackManifestEntry[] | null) {
+	manifestChoice?.(kept ? kept.map((entry) => entry.file_id ?? entry.id) : null)
+	manifestChoice = null
 }
 
 provideInstanceBackup(instance)
@@ -498,4 +518,10 @@ provideInstallationSettings({
 			/>
 		</template>
 	</InstallationSettingsLayout>
+	<PackManifestModal
+		ref="manifestModal"
+		path=""
+		@hide="resolveManifestChoice(null)"
+		@confirm="resolveManifestChoice"
+	/>
 </template>
