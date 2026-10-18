@@ -99,6 +99,10 @@ pub struct JavaGpuStatus {
 /// Integrated parts are named for the CPU line rather than a card, and vendors
 /// are consistent enough about it for a hint. It only ever changes wording, so
 /// a wrong guess costs nothing.
+///
+/// Its caller is Windows-only, since it reads the adapter names out of the
+/// registry, so every other platform sees this as dead and says so.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 fn looks_integrated(name: &str) -> bool {
     let name = name.to_lowercase();
     const INTEGRATED_MARKERS: [&str; 7] = [
