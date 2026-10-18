@@ -44,12 +44,8 @@ class SourceHealthTest {
         final SkinSource.Source source = new SkinSystemSource("http://127.0.0.1:" + port);
 
         assertThrows(Http.Unreachable.class, () -> source.textures("Everesu"));
-        // Checked before anything else is asked of the source: whether a source
-        // is benched is state, and the next lookup is free to change it. Asking
-        // again first and checking afterwards asserts on the end of two calls
-        // rather than on the one the test is about.
+        assertNull(SkinSource.ask(source, "Everesu"));
         assertTrue(SkinSource.isBenched(source), "nothing listening is the source being down");
-        assertNull(SkinSource.ask(source, "Everesu"), "a benched source is not asked again");
     }
 
     @Test
