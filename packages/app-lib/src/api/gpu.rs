@@ -63,7 +63,14 @@ fn from_registry_value(value: &str) -> Self {
         Self::Auto
     }
 
-    fn to_registry_value(self) -> Option<String> {
+    /// The registry spelling of a preference.
+///
+/// Only the Windows build writes it, so every other platform sees this as dead
+/// and says so. It is not dead code that happens to be unused: it is the one
+/// place a preference becomes the string the registry holds, and the Windows
+/// path and its tests both go through it.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn to_registry_value(self) -> Option<String> {
         match self {
             // Windows treats a missing entry and `=0` alike; removing it keeps
             // the registry from filling up with runtimes that no longer exist.
