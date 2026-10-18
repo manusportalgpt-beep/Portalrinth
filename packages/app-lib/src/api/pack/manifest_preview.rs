@@ -200,9 +200,8 @@ async fn zip_manifest(pack: &bytes::Bytes) -> crate::Result<Vec<(String, bytes::
             .file()
             .entries()
             .get(index)
-            .and_then(|entry| entry.filename().ok())
-            .unwrap_or_default()
-            .to_string();
+            .map(|entry| entry.filename().to_string())
+            .unwrap_or_default();
         found.push((name, bytes::Bytes::from(text.into_bytes())));
     }
     Ok(found)
@@ -393,13 +392,15 @@ pub async fn resolve_pack_entries(
 
         // The version the pack pinned is the file it named, not the newest one:
         // asking for the newest would quietly change what is being installed.
-        if let Some(file) = crate::api::curseforge_search::file(
-            &http,
-            &key,
-            entry.id.parse().unwrap_or_default(),
-            entry.file_id.as_deref().and_then(|id| id.parse().ok()).unwrap_or_default(),
-        )
-        .await
+        let pinned = entry.file_id.as_deref().and_then(|id| id.parse().ok());
+        if let Some(id) = pinned
+            && let Ok(file) = crate::api::curseforge_search::file(
+                &http,
+                &key,
+                entry.id.parse().unwrap_or_default(),
+                id,
+            )
+            .await
         {
             entry.version = file.display_name.clone();
             if entry.path.is_empty() {

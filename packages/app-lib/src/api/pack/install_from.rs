@@ -209,7 +209,8 @@ pub async fn get_instance_from_pack(
         CreatePackLocation::FromFile {
             path,
             curseforge_api_key,
-            keep,
+            // The preview names; the installer is told which entries to keep.
+            keep: _,
         } => {
             // Detect what kind of modpack this is so we can fail BEFORE the
             // frontend creates an empty profile that we'd then have to delete
