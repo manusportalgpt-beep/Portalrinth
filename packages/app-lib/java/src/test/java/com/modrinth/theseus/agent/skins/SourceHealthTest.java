@@ -43,14 +43,13 @@ class SourceHealthTest {
         }
         final SkinSource.Source source = new SkinSystemSource("http://127.0.0.1:" + port);
 
-        // What matters is that the lookup fails and is treated as the source
-        // being down. How it fails differs by platform: on Linux a closed
-        // loopback port is refused at once, while on Windows the connection can
-        // sit until it times out. Asserting one specific failure is asserting
-        // about the operating system rather than about the skin system.
-        assertThrows(RuntimeException.class, () -> source.textures("Everesu"));
-        assertNull(SkinSource.ask(source, "Everesu"));
+        assertThrows(Http.Unreachable.class, () -> source.textures("Everesu"));
+        // Checked before anything else is asked of the source: whether a source
+        // is benched is state, and the next lookup is free to change it. Asking
+        // again first and checking afterwards asserts on the end of two calls
+        // rather than on the one the test is about.
         assertTrue(SkinSource.isBenched(source), "nothing listening is the source being down");
+        assertNull(SkinSource.ask(source, "Everesu"), "a benched source is not asked again");
     }
 
     @Test
