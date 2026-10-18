@@ -985,21 +985,6 @@ async fn apply_pack_icon(
 )
     .await?;
 
-    // Its dependencies are put in first. A mod installed on its own and given
-    // its library afterwards is a mod that will have crashed in between, and
-    // the crash is what gets reported.
-    let wanted_version = download_meta.game_version.clone();
-    let wanted_loader = download_meta.loader.clone();
-    install_dependencies_of(
-        instance_id,
-        mod_id,
-        file_id,
-        Some(wanted_version.as_str()),
-        Some(wanted_loader.as_str()),
-        state,
-    )
-    .await?;
-
     Ok(safe_file_name)
 }
 
