@@ -985,7 +985,7 @@ async fn apply_pack_icon(
 )
     .await?;
 
-    Ok(safe_file_name)
+    Ok(())
 }
 
 /// Extract the modpack's overrides folder into the instance directory,
