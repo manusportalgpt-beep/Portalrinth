@@ -44,11 +44,6 @@ export interface BrowseManagerContext {
 	excludeLoaders: ComputedRef<boolean>
 	refreshSearch: () => Promise<void>
 	setPage: (page: number) => Promise<void>
-	/** Appends the next page below the ones shown, for scrolling instead of paging. */
-	loadMore: () => Promise<void>
-	loadingMore: Ref<boolean>
-	canLoadMore: ComputedRef<boolean>
-	infiniteScroll: ComputedRef<boolean>
 	clearSearch: () => void
 	onFilterChange: () => void
 	linkOverridesAdvancedPrefs: Ref<boolean>
@@ -80,14 +75,6 @@ export interface BrowseManagerContext {
 	serverOnly?: Ref<boolean>
 	showServerOnly?: ComputedRef<boolean>
 	serverOnlyLabel?: ComputedRef<string>
-	/**
-	 * Draws no Modrinth results at all, for when another provider is answering
-	 * the search instead. The filters and the search box stay: they are what the
-	 * other provider is asked with.
-	 */
-	hideProjectHits?: Ref<boolean>
-	/** Whether the sidebar draws the slot where the host puts its provider switch. */
-	showProviderSwitch?: ComputedRef<boolean>
 	hiddenFilterTypes?: ComputedRef<string[]>
 	advancedFiltersCollapsed?: Ref<boolean>
 	dismissedPhotosensitivityFilterWarning?: Ref<boolean>

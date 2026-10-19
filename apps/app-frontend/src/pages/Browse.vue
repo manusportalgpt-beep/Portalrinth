@@ -34,17 +34,14 @@ import {
 } from '@modrinth/ui'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import type { Ref } from 'vue'
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import type { LocationQuery } from 'vue-router'
 import { useRoute, useRouter } from 'vue-router'
 
-import CurseforgeBrowseSection from '@/components/ui/browse/CurseforgeBrowseSection.vue'
-import ProviderSwitch from '@/components/ui/browse/ProviderSwitch.vue'
 import { useAppServerBrowse } from '@/composables/browse/use-app-server-browse'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { get_project, get_search_results_v3, get_version_many } from '@/helpers/cache.js'
-import { isCurseforgeAvailable } from '@/helpers/curseforge-api'
 import {
 	get_installed_project_ids as getInstalledProjectIds,
 	getInstanceIconUrl,
@@ -548,11 +545,6 @@ onBeforeUnmount(() => {
 })
 
 const messages = defineMessages({
-	curseforgeNoKey: {
-		id: 'app.browse.curseforge-no-key',
-		defaultMessage:
-			'CurseForge is unavailable: no API key is configured. One can be added in Settings → Resources.',
-	},
 	addServersToInstance: {
 		id: 'app.browse.add-servers-to-instance',
 		defaultMessage: 'Adding server to instance',
@@ -1156,67 +1148,12 @@ const lockedFilterMessages = computed(() => ({
 	providedBy: formatMessage(messages.providedByInstance),
 }))
 
-/**
- * The game version and loader CurseForge should be asked about, taken from the
- * same filters Modrinth is searched with so the two are never asked different
- * questions about the same instance.
- */
-const curseforgeNarrowing = computed(() => {
-	const filters = searchState.currentFilters.value
-	const optionOf = (type: string) => filters.find((f) => f.type === type)?.option ?? null
-
-	return {
-		gameVersion: (instance.value?.game_version ?? optionOf('game_version')) || null,
-		loader: (instance.value?.loader ?? optionOf('categories:loader')) || null,
-	}
-})
-
-/**
- * Which of the two places mods come from the search asks.
- *
- * Owned here because the switch sits above the search box and the results below
- * it, and two components each holding their own copy of the answer would drift
- * apart the first time either changed.
- */
-const curseforgeProvider = ref<'modrinth' | 'both' | 'curseforge'>('modrinth')
-const curseforgeAvailable = ref(false)
-
-/**
- * Whether a key is in force, asked again whenever settings change.
- *
- * A key can be pasted, changed or cleared while the tab is open, and this is
- * the thing that decides whether the CurseForge mark does anything. Asking once
- * on mount is how a switch ends up sitting there doing nothing after a key has
- * just been added.
- */
-async function refreshCurseforgeAvailability() {
-	curseforgeAvailable.value = await isCurseforgeAvailable()
-	if (!curseforgeAvailable.value && curseforgeProvider.value !== 'modrinth') {
-		curseforgeProvider.value = 'modrinth'
-	}
-}
-
-onMounted(() => {
-	void refreshCurseforgeAvailability()
-})
-
-// The settings are a reactive object, not a ref: reading `.value` off one
-// gives undefined, and the property lookup on that throws the moment the
-// watcher below is set up — which takes the whole page with it.
-watch(
-	() => appSettings.curseforge_api_key,
-	() => {
-		void refreshCurseforgeAvailability()
-	},
-)
-
 const searchState = useBrowseSearch({
 	projectType,
 	tags,
 	active: browseRouteActive,
 	providedFilters: combinedProvidedFilters,
 	search,
-	infiniteScroll: computed(() => appSettings.value.browse_infinite_scroll !== false),
 	persistentQueryParams: ['i', 'ai', 'shi', 'sid', 'wid', 'from'],
 	getExtraQueryParams: () => ({
 		sid: serverIdQuery.value || undefined,
@@ -1336,13 +1273,6 @@ provideBrowseManager({
 	selectableProjectTypes,
 	showProjectTypeTabs: computed(() => !isServerContext.value),
 	variant: 'app',
-	// Modrinth's own results are never hidden.
-	//
-	// The switch chooses whether CurseForge is asked as well, not instead:
-	// hiding Modrinth while CurseForge had nothing to say left a person staring
-	// at an empty page, which is what a broken search looks like.
-	hideProjectHits: computed(() => false),
-	showProviderSwitch: computed(() => !isServerContext.value),
 	getCardActions,
 	installContext,
 	providedFilters: combinedProvidedFilters,
@@ -1408,15 +1338,6 @@ provideBrowseManager({
 						<GlobeIcon /> {{ option.label }} <ExternalIcon />
 					</template>
 				</ContextMenu>
-				<CurseforgeBrowseSection
-					:provider="curseforgeProvider"
-					:available="curseforgeAvailable"
-					:filter="searchState.query.value"
-					:game-version="curseforgeNarrowing.gameVersion"
-					:loader="curseforgeNarrowing.loader"
-					:project-type="projectType"
-					:instance-id="instance?.id ?? null"
-				/>
 			</template>
 		</BrowsePageLayout>
 		<CreationFlowModal
@@ -1434,20 +1355,7 @@ provideBrowseManager({
 			@create="handleServerModpackFlowCreate"
 		/>
 		<Teleport v-if="browseRouteActive" to="#sidebar-teleport-target">
-			<BrowseSidebar>
-				<template #provider-switch>
-					<div class="flex flex-col gap-2">
-						<ProviderSwitch
-							:provider="curseforgeProvider"
-							:disabled="!curseforgeAvailable"
-							@select="curseforgeProvider = $event"
-						/>
-						<p v-if="!curseforgeAvailable" class="m-0 text-sm leading-tight text-secondary">
-							{{ formatMessage(messages.curseforgeNoKey) }}
-						</p>
-					</div>
-				</template>
-			</BrowseSidebar>
+			<BrowseSidebar />
 		</Teleport>
 	</div>
 </template>

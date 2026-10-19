@@ -287,9 +287,6 @@
   "app.browse.back-to-instance": {
     "message": "Back to instance"
   },
-  "app.browse.curseforge-no-key": {
-    "message": "CurseForge is unavailable: no API key is configured. One can be added in Settings → Resources."
-  },
   "app.browse.discover-project-type": {
     "message": "Discover {projectType}"
   },
@@ -4933,45 +4930,6 @@
   },
   "app.world.world-item.players-online": {
     "message": "{count} online"
-  },
-  "browse.curseforge.downloads": {
-    "message": "{count, plural, one {# download} other {# downloads}}"
-  },
-  "browse.curseforge.empty-filter": {
-    "message": "Type something to search CurseForge."
-  },
-  "browse.curseforge.install": {
-    "message": "Install"
-  },
-  "browse.curseforge.installing": {
-    "message": "Installing..."
-  },
-  "browse.curseforge.no-file-for-version": {
-    "message": "No file for this game version"
-  },
-  "browse.curseforge.no-results": {
-    "message": "Nothing on CurseForge matches these words."
-  },
-  "browse.curseforge.open": {
-    "message": "Open on CurseForge"
-  },
-  "browse.curseforge.other-versions": {
-    "message": "Other versions"
-  },
-  "browse.curseforge.section-title": {
-    "message": "From CurseForge"
-  },
-  "browse.provider.both": {
-    "message": "Search both Modrinth and CurseForge"
-  },
-  "browse.provider.both-short": {
-    "message": "Both"
-  },
-  "browse.provider.curseforge": {
-    "message": "CurseForge"
-  },
-  "browse.provider.modrinth": {
-    "message": "Modrinth"
   },
   "button.switch-version": {
     "message": "Switch version"

@@ -377,6 +377,57 @@
   "console.actions.share": {
     "defaultMessage": "Share"
   },
+  "console.crash.problems-detected": {
+    "defaultMessage": "{count, plural, one {# problem} other {# problems}} detected"
+  },
+  "console.delete-modal.header": {
+    "defaultMessage": "Delete log file"
+  },
+  "console.delete-modal.irreversible": {
+    "defaultMessage": "This is irreversible"
+  },
+  "console.delete-modal.warning": {
+    "defaultMessage": "Deleting this log file cannot be undone. Are you sure you want to continue?"
+  },
+  "console.empty-state.instance": {
+    "defaultMessage": "Start your instance in the top right to start receiving live logs!"
+  },
+  "console.empty-state.server": {
+    "defaultMessage": "Welcome to your Modrinth Server! Press the green start button to start your server!"
+  },
+  "console.filter.all": {
+    "defaultMessage": "All"
+  },
+  "console.filter.debug": {
+    "defaultMessage": "Debug"
+  },
+  "console.filter.error": {
+    "defaultMessage": "Error"
+  },
+  "console.filter.info": {
+    "defaultMessage": "Info"
+  },
+  "console.filter.trace": {
+    "defaultMessage": "Trace"
+  },
+  "console.filter.warn": {
+    "defaultMessage": "Warn"
+  },
+  "console.search.placeholder": {
+    "defaultMessage": "Search logs"
+  },
+  "console.share-modal.header": {
+    "defaultMessage": "Share Logs"
+  },
+  "console.terminal.input-disabled": {
+    "defaultMessage": "Command input disabled"
+  },
+  "console.terminal.send-command": {
+    "defaultMessage": "Send a command"
+  },
+  "console.terminal.server-not-running": {
+    "defaultMessage": "Server is not running"
+  },
   "content-type.content.lowercase": {
     "defaultMessage": "content"
   },
@@ -1009,6 +1060,12 @@
   },
   "creation-flow.modal.import-instance.custom-launcher.name": {
     "defaultMessage": "Custom ({pathName})"
+  },
+  "creation-flow.modal.import-instance.delete-source.description": {
+    "defaultMessage": "Deletes each imported instance's files from the other launcher, so they aren't stored twice. Leave this off to keep both copies."
+  },
+  "creation-flow.modal.import-instance.delete-source.label": {
+    "defaultMessage": "Remove from {launcher} after importing"
   },
   "creation-flow.modal.import-instance.detecting-launcher-instances": {
     "defaultMessage": "Detecting launcher instances..."
@@ -4607,6 +4664,27 @@
   "search.server_content_type.vanilla": {
     "defaultMessage": "Vanilla"
   },
+  "search.sort.date-published": {
+    "defaultMessage": "Date published"
+  },
+  "search.sort.date-updated": {
+    "defaultMessage": "Date updated"
+  },
+  "search.sort.downloads": {
+    "defaultMessage": "Downloads"
+  },
+  "search.sort.followers": {
+    "defaultMessage": "Followers"
+  },
+  "search.sort.players": {
+    "defaultMessage": "Players"
+  },
+  "search.sort.relevance": {
+    "defaultMessage": "Relevance"
+  },
+  "search.sort.verified-plays": {
+    "defaultMessage": "Verified Plays"
+  },
   "servers.access-page.activity-log-filter.action-group.backups": {
     "defaultMessage": "Backups"
   },
@@ -6427,6 +6505,12 @@
   },
   "sharing.invite-players-toast.server-suffix": {
     "defaultMessage": "server."
+  },
+  "skin.preview.drag-to-rotate": {
+    "defaultMessage": "Drag to rotate"
+  },
+  "skin.preview.scroll-to-zoom": {
+    "defaultMessage": "Scroll to zoom"
   },
   "skins.select": {
     "defaultMessage": "Select skin"

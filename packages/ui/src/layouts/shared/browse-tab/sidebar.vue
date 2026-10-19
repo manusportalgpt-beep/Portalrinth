@@ -6,7 +6,7 @@ import { IconButton } from '#ui/components/base/buttons'
 import Toggle from '#ui/components/base/Toggle.vue'
 import PhotosensitivityWarningModal from '#ui/components/modal/PhotosensitivityWarningModal.vue'
 import SearchSidebarFilter from '#ui/components/search/SearchSidebarFilter.vue'
-import { defineMessages, useVIntl } from '#ui/composables/i18n'
+import { useVIntl } from '#ui/composables/i18n'
 import { useAdvancedPrefs } from '#ui/utils/advanced-filter-preferences'
 import { commonMessages } from '#ui/utils/common-messages'
 
@@ -17,10 +17,6 @@ const PHOTOSENSITIVITY_FILTER_OPTION = 'epilepsy_triggers'
 
 const ctx = injectBrowseManager()
 const { formatMessage } = useVIntl()
-
-const platformMessages = defineMessages({
-	title: { id: 'browse.platform.title', defaultMessage: 'Platform' },
-})
 const advancedPrefs = useAdvancedPrefs()
 
 const isApp = computed(() => ctx.variant === 'app')
@@ -162,27 +158,6 @@ function getFilterOpenByDefault(filterId: string): boolean {
 			<IconButton label="Close" @click="closeFiltersMenu">
 				<XIcon />
 			</IconButton>
-		</div>
-
-		<!--
-			Where mods may come from. It is a filter like any other and lives with
-			the other filters rather than above the search box: the search box is
-			for words, this is about where the answers may come from. The switch
-			itself comes from the host through a slot, because which services exist
-			is not a thing the shared layout should know.
-		-->
-		<div
-			v-if="ctx.showProviderSwitch?.value"
-			:class="
-				isApp
-					? 'flex flex-col gap-3 border-0 border-b-[1px] p-4 last:border-b-0 border-[--brand-gradient-border] border-solid'
-					: 'card-shadow flex flex-col gap-3 rounded-2xl bg-bg-raised border-solid border-surface-4 border p-4'
-			"
-		>
-			<h3 class="m-0 text-base font-medium text-contrast">
-				{{ formatMessage(platformMessages.title) }}
-			</h3>
-			<slot name="provider-switch" />
 		</div>
 
 		<div
