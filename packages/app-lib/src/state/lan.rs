@@ -125,17 +125,19 @@ const LEAVE_MARKERS: &[&str] = &[
 pub fn players_in_lines<'a>(lines: impl Iterator<Item = &'a str>) -> Vec<String> {
     let mut players: Vec<String> = Vec::new();
     for line in lines {
-        let words = words_of(line);
-        if let Some(name) = name_before_marker(&words, JOIN_MARKERS) {
+        if let Some(name) = name_before_marker_in_line(line, JOIN_MARKERS) {
             if !players.contains(&name) {
                 players.push(name);
             }
             continue;
         }
-        if let Some(name) = name_before_marker(&words, LEAVE_MARKERS)
-            && let Some(at) = players.iter().position(|player| *player == name)
-        {
-            players.remove(at);
+        if let Some(name) = name_before_marker_in_line(line, LEAVE_MARKERS) {
+            // Not a let chain: the borrow of the list would then be held for
+            // the whole of the body, and the list is what is being changed
+            // in it.
+            if let Some(at) = players.iter().position(|player| *player == name) {
+                players.remove(at);
+            }
         }
     }
     players
@@ -143,19 +145,28 @@ pub fn players_in_lines<'a>(lines: impl Iterator<Item = &'a str>) -> Vec<String>
 
 /// The name in front of a phrase, which is how the game writes it: the name,
 /// then what it did.
-fn name_before_marker(words: &[String], markers: &[&str]) -> Option<String> {
+///
+/// Taken out of the line itself rather than out of the words, because the words
+/// are lowercased to be compared and a name is not: a player called MEM4UK
+/// would be shown as mem4uk.
+fn name_before_marker_in_line(line: &str, markers: &[&str]) -> Option<String> {
+    let lower = line.to_lowercase();
     for marker in markers {
-        let marker_words: Vec<&str> = marker.split(' ').collect();
-        let at = words.windows(marker_words.len()).position(|window| {
-            window
-                .iter()
-                .map(String::as_str)
-                .eq(marker_words.iter().copied())
-        })?;
-        if at == 0 {
-            return None;
+        let Some(at) = lower.find(marker) else {
+            continue;
+        };
+        let before = &line[..at];
+        let name: String = before
+            .chars()
+            .rev()
+            .take_while(|character| character.is_alphanumeric() || *character == '_')
+            .collect::<Vec<char>>()
+            .into_iter()
+            .rev()
+            .collect();
+        if !name.is_empty() {
+            return Some(name);
         }
-        return Some(words[at - 1].clone());
     }
     None
 }

@@ -390,6 +390,9 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
         public_host: Some(public_host),
         public_port: Some(public_port),
         error: None,
+        // The world is being published, and the game is still the one that
+        // says who is in it.
+        players: Vec::new(),
     })
 }
 
