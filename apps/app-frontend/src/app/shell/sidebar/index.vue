@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ChevronRightIcon, SearchIcon, UserIcon, UserPlusIcon } from '@modrinth/assets'
-import { defineMessages, IconButton, useScrollIndicator, useVIntl } from '@modrinth/ui'
+import { defineMessages, IconButton, UserAvatar, useScrollIndicator, useVIntl } from '@modrinth/ui'
 import { OverlayScrollbars } from 'overlayscrollbars'
 import { computed, onMounted, onScopeDispose, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 import { useTheme } from '@/composables/use-theme'
 import PrideFundraiserBanner from '@/features/campaigns/pride-fundraiser-banner.vue'
@@ -80,6 +81,22 @@ const collapsed = computed(() => props.collapsed)
  */
 function unfold() {
 	emit('toggle-collapse')
+}
+
+const router = useRouter()
+
+/**
+ * The friends the rail shows, split into the two groups the line divides.
+ *
+ * They are read out of the friend list rather than fetched again, so the rail
+ * and the panel below it are always the same list: one is the other's summary.
+ */
+const railOnline = computed(() => friends.value?.railOnline ?? [])
+const railOffline = computed(() => friends.value?.railOffline ?? [])
+const railFriends = computed(() => [...railOnline.value, ...railOffline.value])
+
+function openProfile(username: string) {
+	void router.push(`/user/${encodeURIComponent(username)}`)
 }
 
 function showFindFriendsModal() {
@@ -174,7 +191,7 @@ const messages = defineMessages({
 			not merely shifted left.
 		-->
 	<div
-		class="app-sidebar mt-px relative flex h-[calc(100vh-var(--top-bar-height))] w-full shrink-0 flex-col overflow-visible border-0 border-l-[1px] border-solid border-[--brand-gradient-border] before:pointer-events-none before:absolute before:inset-y-0 before:-left-8 before:w-8 before:content-['']"
+		class="app-sidebar mt-px relative flex h-[calc(100vh-var(--top-bar-height))] w-full shrink-0 flex-col overflow-visible border-0 border-l-[1px] border-solid border-[--brand-gradient-border] before:pointer-events-none before:absolute before:inset-y-0 before:-left-8 before:w-8 before:content-[''] rounded-tl-[var(--radius-xl)]"
 		:class="{
 			'before:shadow-[-15px_0_15px_-15px_rgba(0,0,0,0.1)_inset]': appTheme.advancedRendering,
 		}"
@@ -279,6 +296,45 @@ const messages = defineMessages({
 			>
 				<UserPlusIcon />
 			</IconButton>
+
+			<!--
+				The friends, and the line that divides them. The line above the ones
+				who are there is green because they are there, and the line above
+				the ones who are not is red for the same reason in the other
+				direction. With nobody in, the one line is grey: it divides
+				nothing, and says so.
+			-->
+			<div v-if="railFriends.length > 0" class="mt-2 flex w-full flex-col items-center gap-1.5">
+				<div
+					class="h-0.5 w-6 rounded-full"
+					:class="railOnline.length > 0 ? 'bg-green-500' : 'bg-surface-5'"
+				/>
+				<template v-if="railOnline.length > 0">
+					<button
+						v-for="friend in railOnline"
+						:key="friend.id"
+						v-tooltip="friend.username"
+						type="button"
+						class="border-0 bg-transparent p-0 cursor-pointer"
+						:aria-label="friend.username"
+						@click="openProfile(friend.username)"
+					>
+						<UserAvatar :src="friend.avatar" size="24px" :badge="friend.online" />
+					</button>
+					<div class="h-0.5 w-6 rounded-full bg-red-500" />
+				</template>
+				<button
+					v-for="friend in railOffline"
+					:key="friend.id"
+					v-tooltip="friend.username"
+					type="button"
+					class="border-0 bg-transparent p-0 cursor-pointer"
+					:aria-label="friend.username"
+					@click="openProfile(friend.username)"
+				>
+					<UserAvatar :src="friend.avatar" size="24px" :grayscale="friend.accepted" />
+				</button>
+			</div>
 		</div>
 
 		<!--

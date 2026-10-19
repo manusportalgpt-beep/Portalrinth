@@ -168,6 +168,18 @@ const pendingFriends = computed(() =>
 		.slice()
 		.sort((a, b) => b.created.diff(a.created)),
 )
+/**
+ * Who is in the rail right now, and who is not.
+ *
+ * The ones who are in a game count as in: the list above shows them under
+ * their own heading, but a person in the rail is simply there.
+ */
+const railOnline = computed<FriendWithUserData[]>(() => [
+	...activeFriends.value,
+	...onlineFriends.value,
+])
+const railOffline = computed<FriendWithUserData[]>(() => offlineFriends.value)
+
 const incomingRequests = computed(() =>
 	userFriends.value
 		.filter((x) => !x.accepted && x.id === userCredentials.value?.user_id)
@@ -197,7 +209,15 @@ function removeFriend(friend: FriendWithUserData) {
 	removeFriendRecord(friend)
 }
 
-defineExpose({ showAddFriendModal, showFindFriendsModal })
+defineExpose({
+	showAddFriendModal,
+	showFindFriendsModal,
+	// The two groups the collapsed rail shows: who is there, and who is not.
+	// They are the same lists the list below draws, so the rail and the panel
+	// can never disagree about who is in.
+	railOnline,
+	railOffline,
+})
 
 const messages = defineMessages({
 	noRequests: {
