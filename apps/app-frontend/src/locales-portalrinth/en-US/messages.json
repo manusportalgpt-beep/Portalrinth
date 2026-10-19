@@ -1378,5 +1378,23 @@
 	},
 	"portalrinth.settings.background.dim.description": {
 		"message": "For a bright or busy picture, so what is over it stays easy to read."
+	},
+	"app.appearance-settings.accent.pick": {
+		"message": "Pick an accent colour"
+	},
+	"app.appearance-settings.accent.my-colours": {
+		"message": "My accent colours"
+	},
+	"app.appearance-settings.accent.keep-colour": {
+		"message": "Keep this colour"
+	},
+	"app.appearance-settings.accent.remove-colour": {
+		"message": "Remove this colour"
+	},
+	"app.appearance-settings.accent.too-many-colours": {
+		"message": "The row is full - remove one of your colours first"
+	},
+	"app.appearance-settings.accent.use-colour": {
+		"message": "Use {color}"
 	}
 }

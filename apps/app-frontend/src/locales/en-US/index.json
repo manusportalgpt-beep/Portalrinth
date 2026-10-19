@@ -185,8 +185,26 @@
   "app.appearance-settings.accent.description": {
     "message": "The colour the interface is picked out in. Each one is drawn deeper on light themes and brighter on dark ones."
   },
+  "app.appearance-settings.accent.keep-colour": {
+    "message": "Keep this colour"
+  },
+  "app.appearance-settings.accent.my-colours": {
+    "message": "My accent colours"
+  },
+  "app.appearance-settings.accent.pick": {
+    "message": "Pick an accent colour"
+  },
+  "app.appearance-settings.accent.remove-colour": {
+    "message": "Remove this colour"
+  },
   "app.appearance-settings.accent.title": {
     "message": "Accent colour"
+  },
+  "app.appearance-settings.accent.too-many-colours": {
+    "message": "The row is full - remove one of your colours first"
+  },
+  "app.appearance-settings.accent.use-colour": {
+    "message": "Use {color}"
   },
   "app.appearance-settings.compact-mode.description": {
     "message": "Display library instances in a compact row layout."

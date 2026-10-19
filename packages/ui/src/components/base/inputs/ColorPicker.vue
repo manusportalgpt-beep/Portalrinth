@@ -11,10 +11,18 @@
 		aria-haspopup="dialog"
 		@click="toggle"
 	>
-		<span
-			class="size-full rounded-xl border border-solid border-surface-5"
-			:style="{ backgroundColor: model }"
-		/>
+		<!--
+			What the button draws is the caller's to decide. The default is a
+			swatch of the colour, which is right for a field; a row of circles
+			wants an empty circle with a plus in it, and the same picker opens
+			underneath either way.
+		-->
+		<slot name="trigger" :model="model">
+			<span
+				class="size-full rounded-xl border border-solid border-surface-5"
+				:style="{ backgroundColor: model }"
+			/>
+		</slot>
 	</button>
 
 	<Teleport v-if="isClient" to="body">
@@ -72,6 +80,57 @@
 						@blur="commitHexInput"
 					/>
 				</InputFrame>
+
+				<!--
+					The colours the person has kept, under the picker that made
+					them. Kept rather than chosen from a list, so a colour that
+					took a moment to find is not lost the next time.
+				-->
+				<div v-if="customColors !== undefined" class="mt-3 flex flex-col gap-1.5">
+					<span class="text-xs text-secondary">{{ customColorsLabel }}</span>
+					<div class="flex flex-wrap items-center gap-1.5">
+						<span v-for="color in customColors" :key="color" class="group relative inline-flex">
+							<button
+								type="button"
+								class="size-6 cursor-pointer rounded-full border-0 p-0"
+								:style="{ backgroundColor: color }"
+								:aria-label="`${customColorsLabel}: ${color}`"
+								@click="model = color"
+							/>
+							<!--
+								Its own button rather than a mark inside the colour's:
+								nested buttons are not something a browser will let a key
+								press reach, and this one has to be reachable by keyboard
+								as well as by pointer.
+							-->
+							<button
+								type="button"
+								class="absolute -right-1 -top-1 hidden size-3.5 cursor-pointer place-items-center rounded-full border-0 bg-surface-5 p-0 text-[10px] leading-none text-contrast group-hover:grid"
+								:aria-label="`${customColorsRemoveLabel}: ${color}`"
+								@click="removeCustomColor(color)"
+							>
+								×
+							</button>
+						</span>
+						<button
+							type="button"
+							class="size-6 cursor-pointer rounded-full border-0 p-0 disabled:cursor-not-allowed disabled:opacity-40"
+							:disabled="customColors.length >= customColorsLimit"
+							:title="
+								customColors.length >= customColorsLimit
+									? customColorsFullLabel
+									: customColorsAddLabel
+							"
+							:aria-label="customColorsAddLabel"
+							@click="addCustomColor"
+						>
+							<span
+								class="grid size-full place-items-center rounded-full border-2 border-dashed border-surface-5 text-secondary"
+								>+</span
+							>
+						</button>
+					</div>
+				</div>
 			</div>
 		</Transition>
 	</Teleport>
@@ -96,11 +155,29 @@ const props = withDefaults(
 		/** Size of the swatch trigger button. */
 		size?: 'sm' | 'md'
 		placement?: AnchoredTeleportPlacement
+		/**
+		 * Colours the person has kept, shown under the picker.
+		 *
+		 * Left undefined the section is not drawn at all, so a caller that has
+		 * no list of its own is not shown an empty one.
+		 */
+		customColors?: string[]
+		customColorsLabel?: string
+		customColorsAddLabel?: string
+		customColorsRemoveLabel?: string
+		customColorsFullLabel?: string
+		/** How many of them the row has room for. */
+		customColorsLimit?: number
 	}>(),
 	{
 		disabled: false,
 		size: 'md',
 		placement: 'bottom-start',
+		customColorsLabel: 'My colours',
+		customColorsAddLabel: 'Keep this colour',
+		customColorsRemoveLabel: 'Remove this colour',
+		customColorsFullLabel: 'The row is full - remove one of your colours first',
+		customColorsLimit: 8,
 	},
 )
 
@@ -109,7 +186,28 @@ const emit = defineEmits<{
 	focus: []
 	/** Fired when the picker closes and the edit session is committed. */
 	change: [value: string]
+	/** Fired when a kept colour is added or removed. */
+	'update:customColors': [colors: string[]]
 }>()
+
+function addCustomColor() {
+	const colors = props.customColors
+	if (!colors) return
+	if (colors.length >= props.customColorsLimit) return
+	const color = model.value.toLowerCase()
+	if (!colors.includes(color)) {
+		emit('update:customColors', [...colors, color])
+	}
+}
+
+function removeCustomColor(color: string) {
+	const colors = props.customColors
+	if (!colors) return
+	emit(
+		'update:customColors',
+		colors.filter((kept) => kept !== color),
+	)
+}
 
 const panelId = `color-picker-${useId()}`
 const triggerRef = ref<HTMLButtonElement | null>(null)

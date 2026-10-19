@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { PlusIcon } from '@modrinth/assets'
 import {
 	AppearanceSettingsLayout,
+	ColorPicker,
 	defineMessages,
 	injectAuth,
 	injectUserPreferences,
-	Input,
 	provideAppearanceSettings,
 	Toggle,
 	useSavable,
@@ -16,8 +17,11 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
 	ACCENT_PRESETS,
 	accentColorFor,
+	addCustomAccentColor,
 	DEFAULT_ACCENT_PRESET,
 	findAccentPreset,
+	MAX_CUSTOM_ACCENT_COLORS,
+	removeCustomAccentColor,
 	setAccentPreset,
 	setCustomAccentColor,
 	useAccentPreset,
@@ -29,6 +33,36 @@ import PortalrinthBackgroundSettings from '@/features/settings/display/Portalrin
 import { type AppSettings, get, set } from '@/helpers/settings.ts'
 
 const theme = useTheme()
+
+/** The colour the wheel is on. It is not the accent until it is chosen. */
+const pickedColor = ref('#c1121f')
+
+/**
+ * A colour from the wheel: kept, and painted with.
+ *
+ * A colour kept past the limit is refused rather than put on a second line:
+ * the row is one line, and a colour that does not fit is a decision to make
+ * rather than a thing to work around.
+ */
+function onColourPicked(color: string): void {
+	pickedColor.value = color
+	if (!addCustomAccentColor(color)) {
+		// The row is full. The wheel says so; this says it where the colour
+		// was asked for.
+		console.warn('The row of accent colours is full.')
+	}
+	current.value.accentColor = color
+}
+
+function onCustomColoursChanged(colors: string[]): void {
+	for (const color of accent.customColors.value) {
+		if (!colors.includes(color)) removeCustomAccentColor(color)
+	}
+	for (const color of colors) {
+		addCustomAccentColor(color)
+	}
+}
+
 const appSettings = useAppSettings()
 const auth = injectAuth()
 const { updatePreferences } = injectUserPreferences()
@@ -48,6 +82,30 @@ const savedAccent = ref({
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
+	accentPickTitle: {
+		id: 'app.appearance-settings.accent.pick',
+		defaultMessage: 'Pick an accent colour',
+	},
+	accentMyColoursTitle: {
+		id: 'app.appearance-settings.accent.my-colours',
+		defaultMessage: 'My accent colours',
+	},
+	accentKeepColour: {
+		id: 'app.appearance-settings.accent.keep-colour',
+		defaultMessage: 'Keep this colour',
+	},
+	accentRemoveColour: {
+		id: 'app.appearance-settings.accent.remove-colour',
+		defaultMessage: 'Remove this colour',
+	},
+	accentTooManyColours: {
+		id: 'app.appearance-settings.accent.too-many-colours',
+		defaultMessage: 'The row is full - remove one of your colours first',
+	},
+	accentUseColour: {
+		id: 'app.appearance-settings.accent.use-colour',
+		defaultMessage: 'Use {color}',
+	},
 	accentTitle: {
 		id: 'app.appearance-settings.accent.title',
 		defaultMessage: 'Accent colour',
@@ -289,21 +347,43 @@ provideAppearanceSettings({
 		</div>
 
 		<!--
-			And a way to put a colour nothing else offers. Free-form, because the
-			one somebody wants is often not on any list.
+			And a way to put a colour nothing else offers. The empty circle is
+			what opens the wheel: the wheel is a picture of every colour at
+			once, and a row of letters asking for one is not the same thing.
+			Whatever is picked is kept underneath, so it is there next time
+			without being looked for again.
 		-->
-		<div class="mt-2 flex items-center gap-2">
-			<span
-				class="h-8 w-8 shrink-0 rounded-full border border-surface-5"
-				:style="{ background: current.accentColor }"
-				aria-hidden="true"
-			/>
-			<Input
-				id="accent-custom-color"
-				v-model="current.accentColor"
-				type="text"
-				placeholder="#c1121f"
-				wrapper-class="w-full max-w-[14rem]"
+		<div class="mt-3 flex flex-wrap items-center gap-2">
+			<ColorPicker
+				v-model="pickedColor"
+				:label="formatMessage(messages.accentPickTitle)"
+				:custom-colors="accent.customColors.value"
+				:custom-colors-label="formatMessage(messages.accentMyColoursTitle)"
+				:custom-colors-add-label="formatMessage(messages.accentKeepColour)"
+				:custom-colors-remove-label="formatMessage(messages.accentRemoveColour)"
+				:custom-colors-full-label="formatMessage(messages.accentTooManyColours)"
+				:custom-colors-limit="MAX_CUSTOM_ACCENT_COLORS"
+				class="!h-8 !w-8 !rounded-full"
+				@change="onColourPicked"
+				@update:custom-colors="onCustomColoursChanged"
+			>
+				<template #trigger>
+					<span
+						class="grid size-full place-items-center rounded-full border-2 border-dashed border-surface-5 text-secondary transition-colors hover:text-contrast"
+						aria-hidden="true"
+					>
+						<PlusIcon class="size-4" />
+					</span>
+				</template>
+			</ColorPicker>
+			<button
+				v-for="color in accent.customColors.value"
+				:key="color"
+				type="button"
+				class="h-8 w-8 cursor-pointer rounded-full border-0 p-0 transition-transform hover:scale-110"
+				:style="{ background: color }"
+				:aria-label="formatMessage(messages.accentUseColour, { color })"
+				@click="onColourPicked(color)"
 			/>
 		</div>
 

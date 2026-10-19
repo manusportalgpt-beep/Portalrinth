@@ -2146,5 +2146,23 @@
 	},
 	"app.settings.resource-management.curseforge.present": {
 		"message": "Для CurseForge используется ваш собственный ключ."
+	},
+	"app.appearance-settings.accent.pick": {
+		"message": "Выберите цвет акцента"
+	},
+	"app.appearance-settings.accent.my-colours": {
+		"message": "Мои цвета акцента"
+	},
+	"app.appearance-settings.accent.keep-colour": {
+		"message": "Сохранить этот цвет"
+	},
+	"app.appearance-settings.accent.remove-colour": {
+		"message": "Удалить этот цвет"
+	},
+	"app.appearance-settings.accent.too-many-colours": {
+		"message": "Ряд заполнен - сначала удалите один из своих цветов"
+	},
+	"app.appearance-settings.accent.use-colour": {
+		"message": "Использовать {color}"
 	}
 }
