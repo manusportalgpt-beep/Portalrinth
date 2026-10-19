@@ -21,11 +21,27 @@ watchEffect(() => {
 <template>
 	<Transition name="portalrinth-backdrop">
 		<div
-			v-if="backgroundUrl"
+			v-if="backgroundUrl && !backgroundIsVideo"
 			:key="backgroundUrl"
 			class="portalrinth-backdrop"
 			:class="{ 'portalrinth-backdrop--blur': backgroundBlur }"
 			:style="{ backgroundImage }"
+		/>
+		<!--
+			A video that moves is drawn by the video itself rather than painted
+			behind: a picture cannot hold motion, and the frame is the only thing
+			that can play it.
+		-->
+		<video
+			v-if="backgroundUrl && backgroundIsVideo"
+			:key="backgroundUrl"
+			class="portalrinth-backdrop"
+			:class="{ 'portalrinth-backdrop--blur': backgroundBlur }"
+			:src="backgroundUrl"
+			autoplay
+			loop
+			muted
+			playsinline
 		/>
 	</Transition>
 </template>
@@ -39,6 +55,7 @@ watchEffect(() => {
 	background-position: center;
 	background-size: cover;
 	background-repeat: no-repeat;
+	object-fit: cover;
 }
 
 .portalrinth-backdrop::after {

@@ -15,6 +15,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import {
 	backgroundBlur,
 	backgroundDim,
+	backgroundIsVideo,
 	backgroundUrl,
 	chooseBackground,
 	clearBackground,
@@ -130,8 +131,22 @@ onUnmounted(() => {
 					dragging ? 'border-brand' : 'border-surface-5',
 					{ 'grid place-items-center text-secondary': !backgroundUrl || dragging },
 				]"
-				:style="backgroundUrl ? { backgroundImage: `url(${backgroundUrl})` } : undefined"
+				:style="
+					backgroundUrl && !backgroundIsVideo
+						? { backgroundImage: `url(${backgroundUrl})` }
+						: undefined
+				"
 			>
+				<!-- A video is shown by playing it, not by a still of it. -->
+				<video
+					v-if="backgroundUrl && backgroundIsVideo"
+					class="absolute inset-0 size-full object-cover"
+					:src="backgroundUrl"
+					autoplay
+					loop
+					muted
+					playsinline
+				/>
 				<span
 					v-if="dragging"
 					class="absolute inset-0 grid place-items-center bg-black/60 text-sm font-semibold text-contrast"
