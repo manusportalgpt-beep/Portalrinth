@@ -918,7 +918,7 @@
 		"message": "Релиз перестал передавать игроков"
 	},
 	"app.lan.state.ready": {
-		"message": "Minecraft слушает порт {port}"
+		"message": "Мир открыт для сети, на порту {port}"
 	},
 	"app.lan.stopped": {
 		"message": "Больше не опубликовано"
@@ -2257,5 +2257,11 @@
 	},
 	"app.lan.details.world-closed": {
 		"message": "пока не открыт для сети"
+	},
+	"app.lan.state.live": {
+		"message": "В сети"
+	},
+	"app.lan.state.not-live": {
+		"message": "Не в сети"
 	}
 }

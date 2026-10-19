@@ -38,11 +38,19 @@ const messages = defineMessages({
 	},
 	stateReady: {
 		id: 'app.lan.state.ready',
-		defaultMessage: 'Minecraft is serving port {port}',
+		defaultMessage: 'The world is open to the network, on port {port}',
 	},
 	stateLost: {
 		id: 'app.lan.state.lost',
 		defaultMessage: 'The relay stopped carrying players',
+	},
+	stateLive: {
+		id: 'app.lan.state.live',
+		defaultMessage: 'In the network',
+	},
+	stateNotLive: {
+		id: 'app.lan.state.not-live',
+		defaultMessage: 'Not in the network',
 	},
 	publish: { id: 'app.lan.action.publish', defaultMessage: 'Open LAN' },
 	players: { id: 'app.lan.players', defaultMessage: 'In the world' },
@@ -72,6 +80,15 @@ const detail = computed(() => {
 	return null
 })
 const failed = computed(() => props.relay.state === 'lost')
+
+/**
+ * Whether the world is in the network, which is the one thing about it that
+ * decides whether anybody can get into it.
+ */
+const inNetwork = computed(() => props.relay.state === 'live')
+const stateLabel = computed(() =>
+	inNetwork.value ? formatMessage(messages.stateLive) : formatMessage(messages.stateNotLive),
+)
 
 /** The head of a player, drawn from their name. */
 function headOf(player: string) {
@@ -163,13 +180,22 @@ function openInGame() {
 			</div>
 		</div>
 
-		<div
-			v-if="detail"
-			class="flex items-center gap-1.5 text-sm"
-			:class="failed ? 'text-orange' : 'text-secondary'"
-		>
-			<TriangleAlertIcon v-if="failed" class="shrink-0" />
-			<span class="truncate">{{ detail }}</span>
+		<div class="flex items-center gap-2">
+			<span
+				class="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium"
+				:class="inNetwork ? 'bg-green-500/15 text-green-400' : 'bg-surface-5 text-secondary'"
+			>
+				<span class="size-1.5 rounded-full" :class="inNetwork ? 'bg-green-400' : 'bg-surface-5'" />
+				{{ stateLabel }}
+			</span>
+			<div
+				v-if="detail"
+				class="flex items-center gap-1.5 text-sm"
+				:class="failed ? 'text-orange' : 'text-secondary'"
+			>
+				<TriangleAlertIcon v-if="failed" class="shrink-0" />
+				<span class="truncate">{{ detail }}</span>
+			</div>
 		</div>
 
 		<!--

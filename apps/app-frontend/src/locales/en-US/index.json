@@ -1928,11 +1928,17 @@
   "app.lan.state.closed": {
     "message": "No world is open to the network"
   },
+  "app.lan.state.live": {
+    "message": "In the network"
+  },
   "app.lan.state.lost": {
     "message": "The relay stopped carrying players"
   },
+  "app.lan.state.not-live": {
+    "message": "Not in the network"
+  },
   "app.lan.state.ready": {
-    "message": "Minecraft is serving port {port}"
+    "message": "The world is open to the network, on port {port}"
   },
   "app.lan.stopped": {
     "message": "No longer published"
