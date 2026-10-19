@@ -103,7 +103,26 @@ The test of a change is not that it works. It is that it makes the next thing ea
 
 If a change cannot be said as what is easier because of it, it is not finished.
 
-### 6. Always do the Portalrinth Windows build
+### 6. Check the upstreams before calling anything done
+
+Two upstreams move, and both have to be looked at before a release is called
+current:
+
+- `https://github.com/modrinth/code/releases` - the launcher this is a fork of.
+- `https://github.com/Everelsu/Noctrinth` - the fork this one came from.
+
+`modrinth` is a git remote, `upstream` is another. Our version is the `VERSION`
+file; it is what every report is measured against. When it is behind, the
+upstream's changes are brought in, and the fork's own are kept: this launcher
+has no advertising, has its own free LAN in place of Modrinth Hosting, and has
+replaced some things with its own - the accent, the CurseForge support, the
+translations, the background. Upstream's version of anything the fork replaced
+is not the fork's version, and taking it would undo the fork.
+
+Before applying anything, say what is being removed and what is being added.
+Not after.
+
+### 7. Always do the Portalrinth Windows build
 
 Every finished change is built for Windows before it is called done, and the resulting installer is handed over. A change that only passes CI has not proved it runs: the CI job type-checks and lints, while the build is what catches the missing toolchain file, the mis-named icon, the bundle that will not package, and the panic that only happens once the window exists.
 
