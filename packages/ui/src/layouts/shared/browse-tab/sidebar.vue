@@ -140,13 +140,17 @@ function getFilterOpenByDefault(filterId: string): boolean {
 		@dismiss="onPhotosensitivityWarningDismiss"
 	/>
 
-	<div v-if="ctx.filtersMenuOpen?.value" class="fixed inset-0 z-40 bg-bg" />
+	<div
+		v-if="ctx.filtersMenuOpen?.value"
+		class="fixed inset-0 z-40 bg-black/40"
+		@click="closeFiltersMenu"
+	/>
 
 	<div
 		class="flex flex-col"
 		:class="{
 			'gap-3': !isApp,
-			'fixed inset-0 z-50 m-4 mb-0 overflow-auto rounded-t-3xl bg-bg-raised':
+			'fixed right-0 top-0 bottom-0 z-50 w-[22rem] max-w-[92vw] overflow-auto rounded-l-3xl bg-bg-raised shadow-2xl':
 				ctx.filtersMenuOpen?.value,
 		}"
 	>

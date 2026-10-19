@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
-import { RotateCounterClockwiseIcon, SearchIcon } from '@modrinth/assets'
+import { FilterIcon, RotateCounterClockwiseIcon, SearchIcon } from '@modrinth/assets'
 import { computed, ref, toValue, watchEffect } from 'vue'
 
 import Admonition from '#ui/components/base/Admonition.vue'
@@ -240,10 +240,19 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 			</template>
 		</Combobox>
 
-		<div v-if="ctx.filtersMenuOpen && !ctx.filtersMenuOpen.value" class="lg:hidden">
-			<Button @click="ctx.filtersMenuOpen.value = true">
-				{{ formatMessage(messages.filterResults) }}
-			</Button>
+		<!--
+			The filters are an icon in the bar rather than a word: the word took
+			more room than the thing it opened, and the thing it opens is a
+			panel, not a page.
+		-->
+		<div v-if="ctx.filtersMenuOpen && !ctx.filtersMenuOpen.value">
+			<IconButton
+				:label="formatMessage(messages.filterResults)"
+				:title="formatMessage(messages.filterResults)"
+				@click="ctx.filtersMenuOpen.value = true"
+			>
+				<FilterIcon />
+			</IconButton>
 		</div>
 
 		<IconButton
