@@ -91,7 +91,12 @@ onUnmounted(() => {
 				<div class="size-[6.25rem]">
 					<!-- The fork's own mark, drawn in the accent rather than shipped as a
 					     picture of somebody else's. -->
-					<PortalrinthMark class="pointer-events-none size-full text-brand" aria-hidden="true" />
+					<img
+						:src="PortalrinthMark"
+						class="pointer-events-none size-full object-contain"
+						alt=""
+						aria-hidden="true"
+					/>
 				</div>
 				<div class="flex flex-col items-center gap-2">
 					<h1 class="m-0 flex items-center gap-2 text-2xl font-semibold leading-8 text-contrast">

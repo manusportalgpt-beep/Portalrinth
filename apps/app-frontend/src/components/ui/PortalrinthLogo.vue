@@ -73,21 +73,39 @@ onBeforeUnmount(clearStopTimer)
 </script>
 
 <template>
-	<img
-		:src="PortalrinthMark"
-		alt="Portalrinth"
-		class="portalrinth-logo"
-		:class="{ 'is-active': active || working }"
-		aria-hidden="true"
-	/>
+	<span class="portalrinth-logo" :class="{ 'is-active': active || working }">
+		<img :src="PortalrinthMark" alt="" class="portalrinth-logo__mark" aria-hidden="true" />
+		<span class="portalrinth-logo__name">Portalrinth</span>
+	</span>
 </template>
 
 <style scoped>
 .portalrinth-logo {
-	height: 1.75rem;
-	width: auto;
-	object-fit: contain;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
 	user-select: none;
+}
+
+.portalrinth-logo__mark {
+	height: 1.75rem;
+	width: 1.75rem;
+	object-fit: contain;
+}
+
+/*
+ * The name beside the mark, in the app's own weight and size.
+ *
+ * It is set as text rather than drawn into the artwork so it is the name that
+ * is there - readable, selectable and the same name everywhere else - rather
+ * than a picture of a name that has to be redrawn to be changed.
+ */
+.portalrinth-logo__name {
+	font-size: 1.0625rem;
+	font-weight: 600;
+	line-height: 1;
+	letter-spacing: 0.01em;
+	color: var(--color-contrast);
 }
 
 /*

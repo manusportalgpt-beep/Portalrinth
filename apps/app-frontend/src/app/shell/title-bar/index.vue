@@ -35,7 +35,7 @@ const messages = defineMessages({
 		class="app-title-bar relative z-[2] flex bg-bg-raised pl-1 [grid-area:status] [.mac-traffic-lights_&]:pl-20"
 	>
 		<div data-tauri-drag-region class="flex min-w-0 flex-1 items-center overflow-hidden p-2">
-			<PortalrinthLogo class="h-7 shrink-0" />
+			<PortalrinthLogo class="shrink-0" />
 			<div data-tauri-drag-region class="ml-2 flex shrink-0 items-center gap-2">
 				<IconButton
 					type="outlined"

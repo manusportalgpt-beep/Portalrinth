@@ -384,7 +384,7 @@ const messages = defineMessages({
 						}"
 						@click="devModeCount"
 					>
-						<PortalrinthIcon aria-hidden="true" class="w-6 h-6" />
+						<img :src="PortalrinthIcon" alt="" aria-hidden="true" class="w-6 h-6" />
 					</button>
 					<div v-if="appInfo" class="max-w-[200px]">
 						<p class="m-0">
