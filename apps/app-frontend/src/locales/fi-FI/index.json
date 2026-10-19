@@ -419,57 +419,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Instanssit"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Pelaa -sivu"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Valitse, miten monta äskettäistä instanssia näytetään vasemmassa sivupaneelissa. Voit myös säätää tätä vetämällä paneelin jakajaa."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Pikainstanssit sivupaneelissa"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Lisää nappi vasemmassa sivupaneelissa näyttökuvavalikkoon, josta näet kaikkien instanssien näyttökuvat."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Näytä kaikki näyttökuvat sivupaneelissa"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Näytä tiedostot -välilehti instansseissa"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Näytä äskettäin pelatut maailmat ja instanssit Pelaa -sivun alussa."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Näytä Hyppää sisään -osio"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Näytä Näyttökuvat -välilehti instansseissa"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Lisää nappi vasempaan sivupaneeliin, joka avaa ulkoasumuokkaajan."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Näytä ulkoasumuokkaaja sivupaneelissa"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Näytä Maailmat -välilehti instansseissa"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Sivupaneeli"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Käytä näitä asetuksia kaikkialla, missä olet kirjautuneena. Laita tämä pois päältä pitääksesi erilliset asetukset tällä laitteella."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Kirjaudu sisään Modrinth -tilillä synkronoidaksesi asetukset."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Synkronoi asetukset laitteiden välillä"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Instanssin toiminnot"
   },

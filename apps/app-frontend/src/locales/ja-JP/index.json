@@ -425,57 +425,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "インスタンス"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "最近遊んだページ"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "左サイドバーに表示される最近のインスタンスの最大数を選択します。スライダーをドラッグすることで、調整することもできます。"
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "サイドバーのクイックインスタンス"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "すべてのインスタンスからスクリーンショットを表示するボタンを、左サイドバーに表示します。"
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "すべてのスクリーンショットをサイドバーに表示"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "インスタンスにファイルタブを表示する"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "ホーム画面の上部に最近プレイしたワールドとインスタンスを表示します。"
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "ジャンプをセクションで表示"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "インスタンスにスクリーンショットタブを表示する"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "左サイドバーにスキンセレクターを開くボタンを表示する。"
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "サイドバーにスキンセレクターを表示する"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "インスタンスにワールドタブを表示する"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "サイドバー"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "サインインされているすべてのデバイスでこれらの機能はすべて共有されます。デバイスごとに設定した場合はこの機能をオフにしてください。"
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "設定を同期するには、Modrinthアカウントにログインしてください。"
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "デバイス間での同期機能を同期する"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "インスタンスの操作"
   },

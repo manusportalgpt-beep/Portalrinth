@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Instanzen"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Spielen-Seite"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Wähle die maximale Anzahl der zuletzt angezeigten Instanzen in der linken Seitenleiste aus. Du kannst diese Anzahl auch anpassen, indem du den Trennbalken verschiebst."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Kürzliche Instanzen in Seitenleiste"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Zeige in der linken Seitenleiste eine Schaltfläche an, mit der du die Bildschirmfotos aller deiner Instanzen sehen kannst."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Alle Screenshots in der Seitenleiste anzeigen"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Dateien-Tab in Instanzen anzeigen"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Zeige kürzlich gespielte Welten und Instanzen oben auf der Spielseite."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Loslegen-Bereich anzeigen"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Screenshots-Tab in Instanzen anzeigen"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Zeige in der linken Seitenleiste einen Knopf an, über den sich die Skin-Auswahl öffnen lässt."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Skin-Auswahl in der Seitenleiste anzeigen"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Welten-Tab in Instanzen anzeigen"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Seitenleiste"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Verwende diese Funktionseinstellungen auf allen Geräten, auf denen du angemeldet bist. Deaktiviere diese Option, um die Einstellungen auf diesem Gerät getrennt zu halten."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Melde dich bei einem Modrinth-Konto an, um Einstellungen zu synchronisieren."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Synchronisiere Funktionen über mehrere Geräte"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Instanzaktionen"
   },

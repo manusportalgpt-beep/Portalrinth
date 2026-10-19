@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Istanze"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Pagina di avvio"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Scegli il numero massimo di istanze recenti mostrate nella barra laterale sinistra. Puoi anche regolare trascinando il divisore."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Istanze rapide nella barra laterale"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Mostra un pulsante nella barra laterale sinistra per mostrare le schermate da tutte le istanze."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Mostra le schermate nella barra laterale"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Mostra la scheda File nelle istanze"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Mostra i mondi e le istanze recenti nella parte superiore della pagina di Avvio."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Mostra la sezione Recenti"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Mostra la scheda Schermate nelle istanze"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Mostra un pulsante nella barra laterale sinistra per aprire il selettore delle skin."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Mostra selettore skin nella barra laterale"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Mostra la scheda Mondi nelle istanze"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Barra laterale"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Usa queste impostazioni su tutti i dispositivi. Se disattivata, le impostazioni su questo resteranno separate."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Accedi a Modrinth per sincronizzare le impostazioni."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Sincronizza tra i dispositivi"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Azioni sull'istanza"
   },

@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "实例"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "游玩界面"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "选择左侧边栏显示的最近实例的最大数量。您也可以通过拖动分隔符来调整它。"
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "侧边栏中的快速实例"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "在左侧边栏显示一个按钮来查看所有实例的截图。"
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "在侧边栏显示所有截图"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "在实例中显示文件栏"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "在游戏页面顶部显示最近播放的世界和实例。"
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "在节中显示跳转"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "在实例中显示截图栏"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "在左侧边栏显示一个按钮以打开皮肤选择器。"
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "在侧边栏显示皮肤选择器"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "在实例中显示世界栏"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "侧边栏"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "在你登录的所有设备上使用这些行为设置。关闭它后可以在设备上单独设置。"
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "登录到一个Modrinth账号以同步设置。"
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "跨设备同步功能"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "实例操作"
   },

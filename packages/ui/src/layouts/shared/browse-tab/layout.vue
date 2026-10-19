@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
 import { RotateCounterClockwiseIcon, SearchIcon } from '@modrinth/assets'
-import { computed, ref, toValue } from 'vue'
+import { computed, ref, toValue, watchEffect } from 'vue'
 
 import Admonition from '#ui/components/base/Admonition.vue'
 import { Button, IconButton } from '#ui/components/base/buttons'
@@ -25,6 +25,35 @@ import type { CardAction } from './types'
 
 const ctx = injectBrowseManager()
 const { formatMessage } = useVIntl()
+
+/**
+ * The end of the list, watched.
+ *
+ * When the results are one long scroll, the next page is fetched as this
+ * comes into view: the person is already at the bottom, which is where they
+ * said they wanted more.
+ */
+const scrollEndRef = ref<HTMLElement | null>(null)
+let scrollObserver: IntersectionObserver | undefined
+
+watchEffect((onCleanup) => {
+	if (!ctx.infiniteScroll?.value) return
+	const element = scrollEndRef.value
+	if (!element || typeof IntersectionObserver === 'undefined') return
+	scrollObserver = new IntersectionObserver(
+		(entries) => {
+			if (entries.some((entry) => entry.isIntersecting)) {
+				void ctx.loadMore?.()
+			}
+		},
+		{ rootMargin: '400px 0px' },
+	)
+	scrollObserver.observe(element)
+	onCleanup(() => {
+		scrollObserver?.disconnect()
+		scrollObserver = undefined
+	})
+})
 const lockedMessages = computed(() => toValue(ctx.lockedFilterMessages))
 const stickyInstallHeaderRef = ref<HTMLElement | null>(null)
 const { isStuck: isInstallHeaderStuck } = useStickyObserver(
@@ -226,6 +255,7 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 		</IconButton>
 
 		<Pagination
+			v-if="!ctx.infiniteScroll?.value"
 			:page="ctx.currentPage.value"
 			:count="ctx.pageCount.value"
 			:class="ctx.variant === 'web' ? 'mx-auto sm:ml-auto sm:mr-0' : 'ml-auto'"
@@ -413,13 +443,24 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 			</template>
 		</ProjectCardList>
 
-		<div :class="ctx.variant === 'web' ? 'pagination-after mt-3' : 'flex justify-end mt-3'">
+		<div
+			v-if="!ctx.infiniteScroll?.value"
+			:class="ctx.variant === 'web' ? 'pagination-after mt-3' : 'flex justify-end mt-3'"
+		>
 			<Pagination
 				:page="ctx.currentPage.value"
 				:count="ctx.pageCount.value"
 				:class="ctx.variant === 'web' ? 'justify-end' : 'pagination-after'"
 				@switch-page="ctx.setPage"
 			/>
+		</div>
+
+		<!--
+			One long scroll: the end of the list is where the next page is
+			asked for, and a spinner is there while it comes.
+		-->
+		<div v-else ref="scrollEndRef" class="flex justify-center py-6">
+			<LoadingIndicator v-if="ctx.loadingMore?.value" />
 		</div>
 	</div>
 

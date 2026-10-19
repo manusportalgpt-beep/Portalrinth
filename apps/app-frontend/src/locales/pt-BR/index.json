@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Instâncias"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Pagina de Jogo"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Escolha o número máximo de instâncias recentes que devem ser mostradas na barra lateral esquerda. Você pode ajustar isso arrastando o divisor."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Instâncias rápidas na lateral"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Mostra um botão na lateral esquerda para ver suas capturas de tela de todas suas instâncias."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Mostrar todas as capturas de tela juntas"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Mostrar aba de arquivos nas instâncias"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Mostra mundos e instâncias jogados recentemente na página de Jogo."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Mostrar acesso rápido"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Mostrar aba Capturas de Tela em instâncias"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Mostrar botão na barra lateral para abrir o selecionador de skin."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Mostrar seletor de aparência na barra lateral"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Mostrar aba de Mundos nas instâncias"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Barra Lateral"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Use essas configurações de recursos em todo lugar conectado. Desligue para manter as configurações separadas nesse dispositivo."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Conecte-se em uma conta do Modrinth para sincronizar configurações."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Sincronizar recursos entre dispositivos"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Ações de instância"
   },

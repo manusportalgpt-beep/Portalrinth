@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Instances"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Page de jeu"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Choisissez le nombre maximum d'instances récentes affichées dans la barre latérale gauche. Vous pouvez aussi ajuster ce paramètre en glissant le séparateur."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Instances rapides dans la barre latérale"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Afficher un bouton dans la barre latérale gauche pour afficher les captures d'écran de toutes vos instances."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Montrer toutes les captures d'écran dans la barre latérale gauche"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Afficher l'onglet Fichiers dans les instances"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Afficher les mondes et les instances récemment joués en haut de la page de jeu."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Afficher la section « Accès rapide »"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Afficher l'onglet Captures d'Écran dans les instances"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Afficher un bouton dans la barre latérale gauche pour ouvrir le sélecteur de skins."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Afficher le sélecteur de skins dans la barre latérale"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Afficher l'onglet Monde dans les instances"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Barre latérale"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Appliquer ces paramètres partout où vous êtes connecté. Désactivez cette option pour conserver des paramètres distincts sur cet appareil."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Connectez-vous à un compte Modrinth pour synchroniser les paramètres."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Synchroniser les fonctionnalités entre les appareils"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Actions de l'instance"
   },

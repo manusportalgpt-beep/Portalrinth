@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Instanser"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Spel sidan"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Välj det maximala antalet senaste instanser som visas i det vänstra sidofältet. Du kan även justera detta genom att dra i avdelaren."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Snabb instanser i sidofältet"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Visa en knapp i det vänstra sidofältet för att se skärmdumpar från alla dina instanser."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Vissa alla skärmdumpar i sidofältet"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Visa Fil fliken i instanser"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Visa senaste spelade världar och instanser i toppen av Spel sidan."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Visa Hopp i sektionen"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Visa Skärmdumpar fliken i instanser"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Visa en knapp i vänstra sidofältet för att öppna utseende väljaren."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Visa utseende väljaren i sidofältet"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Visa Världar fliken i instanser"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Sidofält"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Använd dessa funktions inställningar överallt du är inloggad. Stäng av detta för att hålla inställningar separerade för denna enhet."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Signera in till ett Modrinth konto för att synka inställningar."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Synka funktioner mellan enheter"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Instansåtgärder"
   },

@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Instancje"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Strona Graj"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Wybierz maksymalną liczbę ostatnich instancji wyświetlanych na lewym pasku bocznym. Możesz ją też zmienić, przeciągając separator."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Szybki dostęp do instancji na pasku bocznym"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Pokaż na lewym pasku bocznym przycisk otwierający zrzuty ekranu ze wszystkich instancji."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Pokaż wszystkie zrzuty ekranu na pasku bocznym"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Pokaż kartę Pliki w instancjach"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Pokaż ostatnio uruchamiane światy i instancje u góry strony Graj."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Pokaż sekcję Wskocz do gry"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Pokaż kartę Zrzuty ekranu w instancjach"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Pokaż na lewym pasku bocznym przycisk otwierający wybór skórki."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Pokaż wybór skórki na pasku bocznym"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Pokaż kartę Światy w instancjach"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Pasek boczny"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Używaj tych ustawień funkcji na wszystkich urządzeniach, na których się logujesz. Wyłącz tę opcję, aby zachować osobne ustawienia na tym urządzeniu."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Zaloguj się na konto Modrinth, aby synchronizować ustawienia."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Synchronizuj funkcje między urządzeniami"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Opcje instancji"
   },

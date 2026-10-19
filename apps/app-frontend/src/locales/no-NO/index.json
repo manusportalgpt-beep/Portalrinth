@@ -233,9 +233,6 @@
   "app.export-modal.modpack-name-label": {
     "message": "Navn på modpakke"
   },
-  "app.features-settings.quick-instances.description": {
-    "message": "Velg maksimal antall av installasjoner vist i venstre sidebar. Du kan også justere dette med å dra på divideren."
-  },
   "app.install.phase.preparing_java.validating": {
     "message": "Validerer Java {version}"
   },

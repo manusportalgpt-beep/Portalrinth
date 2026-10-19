@@ -416,57 +416,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Példányok"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Játék oldal"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Válaszd ki, hogy legfeljebb hány legutóbb használt példány jelenjen meg a bal oldali oldalsávban. Ezt az elválasztó húzásával is módosíthatod."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Gyors példányok az oldalsávban"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Jeleníts meg egy gombot a bal oldali oldalsávban, amellyel megtekintheted az összes példányod képernyőképeit."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Összes képernyőkép megjelenítése az oldalsávban"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Fájlok lap megjelenítése a példányokban"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Jelenítsd meg a legutóbb játszott világokat és példányokat a Játék oldal tetején."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "„Ugrás ide” szakasz megjelenítése"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Képernyőképek lap megjelenítése a példányokban"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Jeleníts meg egy gombot a bal oldali oldalsávban a kinézetválasztó megnyitásához."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Kinézetválasztó megjelenítése az oldalsávban"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Világok lap megjelenítése a példányokban"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Oldalsáv"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Használd ezeket a funkcióbeállításokat minden olyan helyen, ahol be vagy jelentkezve. Kapcsold ki ezt, ha külön beállításokat szeretnél használni ezen az eszközön."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Jelentkezz be egy Modrinth-fiókba a beállítások szinkronizálásához."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Funkciók szinkronizálása az eszközök között"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Példány-műveletek"
   },

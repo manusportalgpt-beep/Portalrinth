@@ -39,6 +39,13 @@ export interface UseBrowseSearchOptions {
 	persistentQueryParams: string[]
 	getExtraQueryParams?: () => Record<string, string | undefined>
 	maxResultsOptions?: ComputedRef<number[]>
+	/**
+	 * Whether the list is one long scroll rather than pages.
+	 *
+	 * Off by default, and the website leaves it off: a page of results with a
+	 * number under it is a place to come back to, and a scroll is not.
+	 */
+	infiniteScroll?: ComputedRef<boolean>
 	displayMode?: Ref<'list' | 'grid' | 'gallery'> | ComputedRef<'list' | 'grid' | 'gallery'>
 }
 
@@ -188,6 +195,12 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 
 	const loading = ref(true)
 	const refreshing = ref(false)
+	/** True while the next page is being fetched to add to what is on screen. */
+	const loadingMore = ref(false)
+	/** Whether the results are one long scroll rather than pages. */
+	const infiniteScroll = computed(() => options.infiniteScroll?.value ?? false)
+	/** Whether there is more to fetch below what is on screen. */
+	const canLoadMore = computed(() => !infiniteScroll.value || currentPage.value < pageCount.value)
 	const projectHits = shallowRef<BrowseSearchResponse['projectHits']>([])
 	const serverHits = shallowRef<BrowseSearchResponse['serverHits']>([])
 	const totalHits = ref(0)
@@ -196,6 +209,9 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 		if (totalHits.value === 0) return 1
 		return Math.ceil(totalHits.value / maxResults.value)
 	})
+
+	/** Whether the results being fetched are added to what is on screen. */
+	let appending = false
 
 	let searchVersion = 0
 	let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -320,6 +336,26 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 		}
 	})
 
+	/**
+	 * Fetches the next page and puts it under what is on screen.
+	 *
+	 * Only in the long-scroll mode; with pages the number under the list is
+	 * how the next page is reached.
+	 */
+	async function loadMore() {
+		if (!infiniteScroll.value) return
+		if (loadingMore.value || loading.value || !canLoadMore.value) return
+		loadingMore.value = true
+		appending = true
+		currentPage.value += 1
+		try {
+			await refreshSearch()
+		} finally {
+			appending = false
+			loadingMore.value = false
+		}
+	}
+
 	async function refreshSearch() {
 		if (!active.value) {
 			return
@@ -354,6 +390,10 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 
 			if (isServerType.value) {
 				serverHits.value = response.serverHits
+			} else if (appending) {
+				// One long scroll: what was on screen stays, and the next page
+				// is put under it.
+				projectHits.value = [...projectHits.value, ...response.projectHits]
 			} else {
 				projectHits.value = response.projectHits
 			}
@@ -365,7 +405,9 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 				serverHits: response.serverHits.length,
 			})
 
-			updateUrlParams()
+			if (!appending) {
+				updateUrlParams()
+			}
 			loading.value = false
 			refreshing.value = false
 		} catch (err) {
@@ -454,6 +496,10 @@ export function useBrowseSearch(options: UseBrowseSearchOptions): BrowseSearchSt
 		pageCount,
 		maxResults,
 		currentPage,
+		infiniteScroll,
+		canLoadMore,
+		loadingMore,
+		loadMore,
 		isServerType,
 		effectiveLayout,
 		deprioritizedTags,

@@ -416,57 +416,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Instanties"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Speel-pagina"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Kies het maximale aantal recente instanties die te zien zijn in de linker zijbalk. U kan dit ook aanpassen door de divider te slepen."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Snelle instanties in zijbalk"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Toon een knop in de linker zijbalk om all uw schermopnames van al uw instanties te zien."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Toon alle schermopnames in zijbalk"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Toon Bestanden tabblad in instanties"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Toon onlangs gespeelde werelden en instanties bovenaan de Speel-pagina."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Toon Onlangs Gespeeld"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Toon schermopname tabblad in instanties"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Toon een knop in de linker zijbalk om de Skin-selector te openen."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Toon Skin-selector in zijbalk"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Toon Werelden tabblad in instanties"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Zijbalk"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Gebruik deze instellingen overal waar u ingelogd bent. Zet dit uit om uw instellingen apart te houden op dit apparaat."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Log in up uw Modrinth-account om instellingen te synchroniseren."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Synchroniseer instellingen tussen apparaten"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Instellingen voor instantie"
   },

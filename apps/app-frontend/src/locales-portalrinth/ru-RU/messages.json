@@ -2164,5 +2164,26 @@
 	},
 	"app.appearance-settings.accent.use-colour": {
 		"message": "Использовать {color}"
+	},
+	"app.features.browse.scroll-pages.title": {
+		"message": "Продлённые страницы"
+	},
+	"app.features.browse.scroll-pages.description": {
+		"message": "Список результатов - это одна длинная прокрутка, которая подгружается по мере прокрутки, а не страницы с номерами внизу."
+	},
+	"app.features.browse.scroll-pages.scope.off": {
+		"message": "Выключено"
+	},
+	"app.features.browse.scroll-pages.scope.discover": {
+		"message": "Discover"
+	},
+	"app.features.browse.scroll-pages.scope.both": {
+		"message": "Discover и поиск проектов"
+	},
+	"app.features.browse.page-size.title": {
+		"message": "Результатов на странице"
+	},
+	"app.features.browse.page-size.description": {
+		"message": "Сколько результатов помещается на страницу. Чем больше, тем меньше страниц - тот же список делится иначе."
 	}
 }

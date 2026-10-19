@@ -10,7 +10,7 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import {
@@ -19,6 +19,12 @@ import {
 } from '@/composables/use-quick-instance-limit.ts'
 import { injectAppSettingsModal } from '@/features/settings/app-settings-modal/context'
 import { type GlobalSyncedOptions, set_global_synced_option } from '@/helpers/instance.ts'
+import {
+	BROWSE_PAGE_SIZES,
+	browsePageSize,
+	type BrowseScrollScope,
+	browseScrollScope,
+} from '@/helpers/portalrinth-browse.ts'
 import {
 	type AppSettings,
 	appSettingsKeys,
@@ -39,6 +45,36 @@ const quickInstances = useQuickInstanceLimit()
 const queryClient = useQueryClient()
 
 const messages = defineMessages({
+	scrollPagesTitle: {
+		id: 'app.features.browse.scroll-pages.title',
+		defaultMessage: 'Long pages',
+	},
+	scrollPagesDescription: {
+		id: 'app.features.browse.scroll-pages.description',
+		defaultMessage:
+			'The list of results is one long scroll that loads as you go down, instead of pages with a number under them.',
+	},
+	scrollScopeOff: {
+		id: 'app.features.browse.scroll-pages.scope.off',
+		defaultMessage: 'Off',
+	},
+	scrollScopeDiscover: {
+		id: 'app.features.browse.scroll-pages.scope.discover',
+		defaultMessage: 'Discover',
+	},
+	scrollScopeBoth: {
+		id: 'app.features.browse.scroll-pages.scope.both',
+		defaultMessage: 'Discover and Find projects',
+	},
+	pageSizeTitle: {
+		id: 'app.features.browse.page-size.title',
+		defaultMessage: 'Results on a page',
+	},
+	pageSizeDescription: {
+		id: 'app.features.browse.page-size.description',
+		defaultMessage:
+			'How many results are on a page. More of them means fewer pages, since the same list is divided up differently.',
+	},
 	syncAcrossDevicesTitle: {
 		id: 'app.features-settings.sync-across-devices.title',
 		defaultMessage: 'Sync features across devices',
@@ -111,6 +147,21 @@ const messages = defineMessages({
 		defaultMessage: 'Show recently played worlds and instances at the top of the Play page.',
 	},
 })
+
+/**
+ * Where the long scroll is used.
+ *
+ * A computed rather than a plain list, because it reads the messages, and
+ * the messages are declared further down: a plain list would reach for them
+ * before they exist.
+ */
+const scrollScopes = computed<
+	{ id: BrowseScrollScope; label: { id: string; defaultMessage: string } }[]
+>(() => [
+	{ id: 'off', label: messages.scrollScopeOff },
+	{ id: 'discover', label: messages.scrollScopeDiscover },
+	{ id: 'both', label: messages.scrollScopeBoth },
+])
 
 type FeaturesSettingsState = {
 	syncFeaturesAcrossDevices: boolean
@@ -392,6 +443,61 @@ onBeforeUnmount(() => {
 				v-model="current.showJumpIn"
 				:aria-label="formatMessage(messages.showJumpInTitle)"
 			/>
+		</div>
+	</section>
+	<!--
+		Portalrinth's own: how the list of results is paged. The shared layout
+		knows about both ways of doing it and is told which one is wanted.
+	-->
+	<section class="border-0 border-b border-solid border-surface-4 pb-6">
+		<div class="flex flex-col gap-2">
+			<h3 id="browse-scroll-pages-label" class="m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.scrollPagesTitle) }}
+			</h3>
+			<p class="m-0 text-secondary">
+				{{ formatMessage(messages.scrollPagesDescription) }}
+			</p>
+			<div class="mt-1 flex flex-wrap gap-2">
+				<button
+					v-for="scope in scrollScopes"
+					:key="scope.id"
+					type="button"
+					class="rounded-lg border-0 px-3 py-1.5 text-sm font-medium"
+					:class="
+						browseScrollScope === scope.id
+							? 'bg-brand text-brand-inverted'
+							: 'bg-button-bg text-contrast'
+					"
+					@click="browseScrollScope = scope.id"
+				>
+					{{ formatMessage(scope.label) }}
+				</button>
+			</div>
+		</div>
+	</section>
+
+	<section class="border-0 border-b border-solid border-surface-4 pb-6">
+		<div class="flex flex-col gap-2">
+			<h3 id="browse-page-size-label" class="m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.pageSizeTitle) }}
+			</h3>
+			<p class="m-0 text-secondary">
+				{{ formatMessage(messages.pageSizeDescription) }}
+			</p>
+			<div class="mt-1 flex flex-wrap gap-2">
+				<button
+					v-for="size in BROWSE_PAGE_SIZES"
+					:key="size"
+					type="button"
+					class="rounded-lg border-0 px-3 py-1.5 text-sm font-medium"
+					:class="
+						browsePageSize === size ? 'bg-brand text-brand-inverted' : 'bg-button-bg text-contrast'
+					"
+					@click="browsePageSize = size"
+				>
+					{{ size }}
+				</button>
+			</div>
 		</div>
 	</section>
 </template>

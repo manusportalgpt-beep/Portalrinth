@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Profiller"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Başlatma Sayfası"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Sol menüde kaç tane profilin gözükeceğini seçin. Bunu aynı zamanda ayarlayıcıyı sürükleyerek de yapabilirsiniz."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Yan menüde hızlı profiller"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Sol menüde tüm profillerinizdeki ekran görüntülerini gösterecek düğmeyi göster."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Yan menüde tüm ekran görüntülerini göster"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Profilde \"Dosyalar\" sekmesini göster"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Başlatma Sayfası'nnda en son oynaılan dünyaları ve profilleri göster."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Hızlı Oyna kısmını göster"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Profilde \"Ekran Görüntüleri\" sekmesini göster"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Yan menüde kıyafet seçici için düğme göster."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Yan menüde Kıyafet seçiciyi göster"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Profilde \"Dünyalar\" sekmesini göster"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Yan Menü"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Bu özellik ayarlarını oturumunuzun açık olduğu her yerde kullanın. Bu cihazda farklı ayarlar tutmak için bu özelliği kapatın."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Ayarları eşitlemek için bir Modrinth Hesabı'yla oturum açın."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Cihazlar arası özellikleri eşitle"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Kurulum eylemleri"
   },

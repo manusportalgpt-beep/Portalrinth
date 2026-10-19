@@ -416,57 +416,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Instancias"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Página de juego"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Elige el número máximo de instancias recientes mostradas en la barra lateral izquierda. También puedes ajustarlo arrastrando la barra deslizante."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Instancias recientes en la barra lateral"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Mostrar un botón en la barra lateral izquierda para ver capturas de pantallas de todas tus instancias."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Mostrar todas las capturas de pantalla en la barra lateral"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Mostrar pestaña de Archivos en las instancias"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Mostrar mundos e instancias recientemente jugados en la parte superior de la Página de juego."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Mostrar sección de Continuar"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Mostar pestaña de Captura de pantallas en las instancias"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Mostrar un botón en la barra lateral izquierda para abrir el selector de skin."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Mostrar selector de skin en la barra lateral"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Mostrar pestaña de Mundos en las instancias"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Barra lateral"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Usa estos ajustes en todos los inicios de sesión. Desactiva esto para mantener ajustes separados en este dispositivo."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Inicie sesión en una cuenta de Modrinth para sincronizar los ajustes."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Sincronice los ajustes entre dispositivos"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Acciones de la instancia"
   },

@@ -1265,6 +1265,27 @@
   "app.features-settings.sync-across-devices.title": {
     "message": "Sync features across devices"
   },
+  "app.features.browse.page-size.description": {
+    "message": "How many results are on a page. More of them means fewer pages, since the same list is divided up differently."
+  },
+  "app.features.browse.page-size.title": {
+    "message": "Results on a page"
+  },
+  "app.features.browse.scroll-pages.description": {
+    "message": "The list of results is one long scroll that loads as you go down, instead of pages with a number under them."
+  },
+  "app.features.browse.scroll-pages.scope.both": {
+    "message": "Discover and Find projects"
+  },
+  "app.features.browse.scroll-pages.scope.discover": {
+    "message": "Discover"
+  },
+  "app.features.browse.scroll-pages.scope.off": {
+    "message": "Off"
+  },
+  "app.features.browse.scroll-pages.title": {
+    "message": "Long pages"
+  },
   "app.file-download.canceling": {
     "message": "Canceling download…"
   },

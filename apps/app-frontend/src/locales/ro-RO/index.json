@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Instanțe"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Joacă pagină"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Alegeți numărul maxim de instanțe recente afișate în bara laterală din stânga. Puteți ajusta acest lucru și trăgând de separator."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Instanțe rapide în bara laterală"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Afișați un buton în bara laterală din stânga pentru a vizualiza capturile de ecran din toate instanțele dvs."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Afișați toate capturile de ecran în bara laterală"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Afișează fila „Fișiere” în instanțe"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Afișați lumile și instanțele jucate recent în partea de sus a paginii Joacă."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Afișează salt in secțiune"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Afișează fila Capturi de ecran în instanțe"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Afișează un buton în bara laterală din stânga pentru a deschide selectorul de teme."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Afișează selectorul de teme în bara laterală"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Arată tab-ul Worlds în instanțe"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Bară laterală"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Utilizează aceste setări ale funcțiilor oriunde ești conectat. Dezactivează această opțiune pentru a păstra setări separate pe acest dispozitiv."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Conectează-te la un cont Modrinth pentru a sincroniza setările."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Funcții de sincronizare între dispozitive"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Acțiuni în instanță"
   },

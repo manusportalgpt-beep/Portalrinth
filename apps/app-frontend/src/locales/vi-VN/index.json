@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Bản cài đặt"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Trang Chơi"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Chọn số lượng tối đa các bản cài đặt gần đây hiển thị trên thanh bên trái. Bạn cũng có thể điều chỉnh bằng cách kéo đường phân cách."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Bản cài đặt nhanh trên thanh bên"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Hiển thị nút ở thanh bên trái để xem ảnh chụp màn hình từ tất cả bản cài đặt."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Hiển thị tất cả ảnh chụp màn hình trên thanh bên"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Hiển thị thẻ Tệp trong các bản cài đặt"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Hiển thị các thế giới và bản cài đặt chơi gần đây ở đầu trang Chơi."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Hiển thị mục Chơi tiếp"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Hiển thị thẻ Ảnh chụp màn hình trong các bản cài đặt"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Hiển thị nút ở thanh bên trái để mở trình chọn skin."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Hiển thị trình chọn skin trên thanh bên"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Hiển thị thẻ Thế giới trong các bản cài đặt"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Thanh bên"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Dùng các cài đặt tính năng này ở mọi nơi bạn đăng nhập. Tắt tùy chọn này để giữ cài đặt riêng trên thiết bị này."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Đăng nhập tài khoản Modrinth để đồng bộ cài đặt."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Đồng bộ tính năng giữa các thiết bị"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Thao tác với bản cài đặt"
   },

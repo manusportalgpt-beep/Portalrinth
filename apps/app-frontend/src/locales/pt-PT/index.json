@@ -416,57 +416,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Instâncias"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Página de jogo"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Escolha o número máximo de instâncias recentes mostradas na barra lateral à esquerda. Também pode ajustá-la ao arrastar o divisor."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Instâncias rápidas na barra lateral"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Mostrar um botão na barra lateral à esquerda para visualizar as capturas de ecrã de todas as suas instâncias."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Mostrar todas as capturas de ecrã na barra lateral"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Mostrar aba de Arquivos nas instâncias"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Mostrar mundos e instâncias recentemente jogados no topo da Página de jogo."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Mostrar secção de jogo rápido"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Mostrar aba de capturas de ecrã nas instâncias"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Mostrar um botão na barra lateral esquerda para abrir o seletor de temas."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Mostrar o seletor de temas na barra lateral"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Mostrar o separador «Mundos» nas instâncias"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Barra lateral"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Utilize estas definições de funcionalidades em todos os locais onde estiver com a sua conta iniciada. Desative esta opção para manter definições distintas neste dispositivo."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Inicie sessão numa conta Modrinth para sincronizar as definições."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Funcionalidades de sincronização entre dispositivos"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Ações de instância"
   },

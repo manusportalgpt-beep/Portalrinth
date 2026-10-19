@@ -374,18 +374,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "نسخ"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "صفحة التشغيل"
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "اظهر كل لقتات الشاشة في الشريط الجانبي"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "الشريط الجانبي"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "إجراءات النسخة"
   },

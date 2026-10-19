@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Сборки"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Страница игры"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Выберите максимальное количество недавних экземпляров, отображаемых в левой части панели. Вы также можете изменить это, перетаскивая разделитель."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Количество сборок в боковой панели"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Покажите кнопку на левой части панели для просмотра скриншотов всех ваших экземпляров."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Показать все скриншоты в боковой панели"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Показывать вкладку Файлы в сборках"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Показывать недавно сыгранные миры и сборки на главной."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Показывать недавние сборки и миры"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Показывать вкладку Скриншоты в сборках"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Показать кнопку на левой Боковой панели, чтобы открыть настройки персонажа."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Выбор персонажа в боковой панели"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Показывать вкладку Миры в сборках"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Боковая панель"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Используйте эти настройки везде, где вы вошли в систему. Отключите эту опцию, чтобы сохранить отдельные настройки на этом устройстве."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Войдите в аккаунт Modrinth для синхронизации настроек."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Синхронизировать настройки между устройствами"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Действия со сборкой"
   },

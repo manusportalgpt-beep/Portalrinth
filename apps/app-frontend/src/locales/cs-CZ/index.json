@@ -410,15 +410,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Instance"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Vyberte maximální počet nedávných instancí v levém postranním panelu. Můžete také upravit přetažením oddělovače."
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Zobrazit kartu Screenshoty v instancích"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Akce instance"
   },

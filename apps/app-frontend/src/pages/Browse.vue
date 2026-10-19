@@ -48,6 +48,11 @@ import {
 	list as listInstances,
 } from '@/helpers/instance'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
+import {
+	BROWSE_PAGE_SIZES,
+	browsePageSize,
+	browseScrollScope,
+} from '@/helpers/portalrinth-browse.ts'
 import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import { get_instance_worlds } from '@/helpers/worlds'
@@ -1148,12 +1153,27 @@ const lockedFilterMessages = computed(() => ({
 	providedBy: formatMessage(messages.providedByInstance),
 }))
 
+/**
+ * Whether the results are one long scroll rather than pages, and how many
+ * are on a page. Both are the person's own choices, remembered between
+ * launches.
+ */
+const browseInfiniteScroll = computed(() => browseScrollScope.value !== 'off')
+const browsePageSizeOptions = computed(() => {
+	const sizes = new Set(BROWSE_PAGE_SIZES)
+	sizes.add(browsePageSize.value)
+	return [...sizes].sort((a, b) => a - b)
+})
+
 const searchState = useBrowseSearch({
 	projectType,
 	tags,
 	active: browseRouteActive,
 	providedFilters: combinedProvidedFilters,
 	search,
+	// Whether the list is one long scroll, and how many are on a page.
+	infiniteScroll: browseInfiniteScroll,
+	maxResultsOptions: browsePageSizeOptions,
 	persistentQueryParams: ['i', 'ai', 'shi', 'sid', 'wid', 'from'],
 	getExtraQueryParams: () => ({
 		sid: serverIdQuery.value || undefined,
@@ -1162,6 +1182,14 @@ const searchState = useBrowseSearch({
 		shi: serverHideInstalled.value ? 'true' : undefined,
 	}),
 })
+
+watch(
+	browsePageSize,
+	(size) => {
+		searchState.maxResults.value = size
+	},
+	{ immediate: true },
+)
 
 watch(
 	[

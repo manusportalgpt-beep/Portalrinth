@@ -428,57 +428,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "Примірники"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "Сторінка з грою"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "Виберіть максимальну кількість останніх примірників у лівій бічній панелі. Ви також можете регулювати це перетягуванням роздільника."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "Швидкі примірники в бічній панелі"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "Показує кнопку в лівій бічній панелі для перегляду знімків з усіх ваших примірників."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "Показувати знятки на бічній панелі"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "Показувати вкладку «Файли» в примірниках"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "Показувати нещодавно зіграні світи та примірники у верхній частині сторінки з грою."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "Показувати «Швидкий перехід»"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "Показувати вкладку «Знімки» в примірниках"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "Показувати кнопку вибору скінів у лівій бічній панелі."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "Показувати гардероб у бічній панелі"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "Показувати вкладку «Світи» в примірниках"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "Бічна панель"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "Використовуватиме ці особливості всюди, де ви ввійшли. Вимкніть це, щоб зберегти окремі налаштування на цьому пристрої."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Увійдіть в обліковий запис Modrint, щоб синхронізувати налаштування."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "Синхронізувати особливості між пристроями"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "Дії з примірником"
   },

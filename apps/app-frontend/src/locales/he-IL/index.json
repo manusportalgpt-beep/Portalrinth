@@ -332,57 +332,6 @@
   "app.export-modal.version-number-placeholder": {
     "message": "1.0.0"
   },
-  "app.features-settings.instance-pages.title": {
-    "message": "התקנים"
-  },
-  "app.features-settings.play-page.title": {
-    "message": "עמוד משחק"
-  },
-  "app.features-settings.quick-instances.description": {
-    "message": "בחר כמה התקנים ששיחקת לאחרונה להראות בסרגל צד. אפשר גם לשנות עם גרירת הסליידר."
-  },
-  "app.features-settings.quick-instances.title": {
-    "message": "התקנים מהירים בסרגל צד"
-  },
-  "app.features-settings.show-all-screenshots.description": {
-    "message": "הראה כפתור בסרגל צד השמאלי כדי לראות את כל הצילומי מסך מכל ההתקנים שלך."
-  },
-  "app.features-settings.show-all-screenshots.title": {
-    "message": "הראה כל הצילומי מסך בסרגל צד"
-  },
-  "app.features-settings.show-files-tab.title": {
-    "message": "הראה כפתור קבצים בהתקנים"
-  },
-  "app.features-settings.show-jump-in.description": {
-    "message": "הראה עולמות והתקנים ששיחקת לאחרונה למעלה בעמוד משחק."
-  },
-  "app.features-settings.show-jump-in.title": {
-    "message": "הראה סעיף של קפיצה למשחק"
-  },
-  "app.features-settings.show-screenshots-tab.title": {
-    "message": "הראה כפתור צילומי מסך בהתקנים"
-  },
-  "app.features-settings.show-skin-selector.description": {
-    "message": "הראה כפתור בחירת סקין בסרגל השמאלי."
-  },
-  "app.features-settings.show-skin-selector.title": {
-    "message": "הראה בחירת סקין בסרגל צד"
-  },
-  "app.features-settings.show-worlds-tab.title": {
-    "message": "הראה כפתור עולמות בהתקנים"
-  },
-  "app.features-settings.sidebar.title": {
-    "message": "סרגל צד"
-  },
-  "app.features-settings.sync-across-devices.description": {
-    "message": "שמור הגדרות הפיצ'רים האלה בכל מקום שאתה מחובר. כבה הגדרה זאת כדי להשאיר הגדרות שונות במכשיר זה."
-  },
-  "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "התחבר לחשבון Modrinth כדי לסנכרן הגדרות."
-  },
-  "app.features-settings.sync-across-devices.title": {
-    "message": "סנכרן פיצ'רים בין מכשירים"
-  },
   "app.home.jump-back-in.actions.label": {
     "message": "פעולות אקסמפלר"
   },
