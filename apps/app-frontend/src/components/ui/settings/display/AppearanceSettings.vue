@@ -47,16 +47,6 @@ const savedAccent = ref({
 
 const { formatMessage } = useVIntl()
 
-// The wheel repaints as it is dragged, which it can only do if the colour it
-// picked is given to the accent store rather than only being held in the form.
-// Without this the swatch moved and nothing else did.
-watch(
-	() => current.value.accentColor,
-	(hex) => {
-		if (hex) setCustomAccentColor(hex)
-	},
-)
-
 const messages = defineMessages({
 	accentTitle: {
 		id: 'app.appearance-settings.accent.title',
@@ -182,9 +172,21 @@ function setNativeDecorations(enabled: boolean): void {
 
 // The accent is previewed the same way the theme is: the whole app recolours
 // while the slider moves, and closing the tab without saving puts back what was
-// saved РІР‚вЂќ which `useSavable` has already restored into `saved` by then.
+// saved — which `useSavable` has already restored into `saved` by then.
 watch([() => current.value.accentPreset, () => current.value.accentTintBackground], ([id, tint]) =>
 	setAccentPreset(id, tint),
+)
+
+// A colour typed into the field has to reach the store as it is typed, or the
+// swatch beside it moves and nothing else does. It sits here rather than beside
+// the `current` it reads: `current` does not exist yet at the top of the file,
+// and reading it before it is declared throws while the page is being set up —
+// which is the whole settings page, not this one control.
+watch(
+	() => current.value.accentColor,
+	(hex) => {
+		if (hex) setCustomAccentColor(hex)
+	},
 )
 
 watch(
