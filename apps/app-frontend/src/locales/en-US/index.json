@@ -1835,6 +1835,9 @@
   "app.java-selector.test-installation": {
     "message": "Test Java installation"
   },
+  "app.lan.action.copy": {
+    "message": "Copy the address"
+  },
   "app.lan.action.publish": {
     "message": "Open LAN"
   },
@@ -1858,6 +1861,12 @@
   },
   "app.lan.heading": {
     "message": "LAN"
+  },
+  "app.lan.players": {
+    "message": "In the world"
+  },
+  "app.lan.players.none": {
+    "message": "Nobody is in the world yet"
   },
   "app.lan.published": {
     "message": "Published at {address}"

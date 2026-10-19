@@ -28,6 +28,8 @@ export interface LanRelayInfo {
 	public_host: string | null
 	public_port: number | null
 	error: string | null
+	/** Who is in the world right now, as the game has said. */
+	players: string[]
 }
 
 /** Every copy of an instance that is running, with the state of its world. */

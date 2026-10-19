@@ -1417,5 +1417,20 @@
 	},
 	"app.features.browse.page-size.description": {
 		"message": "How many results are on a page. More of them means fewer pages, since the same list is divided up differently."
+	},
+	"app.sidebar.find-friends": {
+		"message": "Find friends"
+	},
+	"app.sidebar.add-friend": {
+		"message": "Add a friend"
+	},
+	"app.lan.players": {
+		"message": "In the world"
+	},
+	"app.lan.players.none": {
+		"message": "Nobody is in the world yet"
+	},
+	"app.lan.action.copy": {
+		"message": "Copy the address"
 	}
 }

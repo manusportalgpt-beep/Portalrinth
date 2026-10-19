@@ -76,6 +76,8 @@ pub struct LanRelayInfo {
     pub public_port: Option<u16>,
     /// Why it is not published, in words meant to be shown to somebody.
     pub error: Option<String>,
+    /// Who is in the world right now, as the game has said.
+    pub players: Vec<String>,
 }
 
 struct ActiveRelay {
@@ -142,6 +144,7 @@ async fn describe(
         public_host: None,
         public_port: None,
         error: None,
+        players: Vec::new(),
     };
 
     if let Some(relay) = RELAYS.get(&process_uuid) {
@@ -163,6 +166,7 @@ async fn describe(
         detach_process(process_uuid);
     }
 
+    info.players = players_in_world(state, &process.instance_path).await;
     info.local_port = local_port(state, process).await;
     if info.local_port.is_some() && info.state == LanRelayState::Closed {
         info.state = LanRelayState::Ready;
@@ -203,6 +207,31 @@ async fn local_port(
 
     crate::state::lan::note_opened_port(&process_uuid, port);
     Some(port)
+}
+
+/// Who is in the world right now, read out of the game's own log.
+///
+/// The log is the only place the game says it. It is read a little at a time,
+/// from the end, and only the lines about people are looked at.
+async fn players_in_world(state: &crate::State, instance_path: &str) -> Vec<String> {
+    let Some(length) = log_length(state, instance_path).await else {
+        return Vec::new();
+    };
+    let Ok(mut file) = tokio::fs::File::open(game_log(state, instance_path)).await else {
+        return Vec::new();
+    };
+    if file
+        .seek(std::io::SeekFrom::Start(length.saturating_sub(MAX_LOG_TAIL)))
+        .await
+        .is_err()
+    {
+        return Vec::new();
+    }
+    let mut tail = String::new();
+    if file.read_to_string(&mut tail).await.is_err() {
+        return Vec::new();
+    }
+    crate::state::lan::players_in_lines(tail.lines())
 }
 
 async fn is_serving(port: u16) -> bool {

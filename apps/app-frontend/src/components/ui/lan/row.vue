@@ -35,6 +35,12 @@ const messages = defineMessages({
 		defaultMessage: 'The relay stopped carrying players',
 	},
 	publish: { id: 'app.lan.action.publish', defaultMessage: 'Open LAN' },
+	players: { id: 'app.lan.players', defaultMessage: 'In the world' },
+	playersNone: {
+		id: 'app.lan.players.none',
+		defaultMessage: 'Nobody is in the world yet',
+	},
+	copyAddress: { id: 'app.lan.action.copy', defaultMessage: 'Copy the address' },
 	unpublish: { id: 'app.lan.action.unpublish', defaultMessage: 'Stop' },
 })
 
@@ -98,6 +104,48 @@ function copyAddress() {
 		>
 			<TriangleAlertIcon v-if="failed" class="shrink-0" />
 			<span class="truncate">{{ detail }}</span>
+		</div>
+
+		<!--
+			The address, under the build it belongs to, so it can be taken and
+			given to somebody without hunting for the button.
+		-->
+		<div
+			v-if="address"
+			class="flex items-center gap-2 rounded-lg border border-solid border-surface-5 bg-surface-2 px-3 py-2"
+		>
+			<span class="truncate font-mono text-sm text-contrast">{{ address }}</span>
+			<Button
+				size="sm"
+				type="quiet"
+				class="ml-auto shrink-0"
+				:aria-label="formatMessage(messages.copyAddress)"
+				@click="copyAddress"
+			>
+				<CopyIcon />
+			</Button>
+		</div>
+
+		<!--
+			Who is in the world, and who has come and gone: the game says so,
+			and this is that said in a list.
+		-->
+		<div class="flex flex-col gap-1.5">
+			<span class="text-sm font-medium text-secondary">
+				{{ formatMessage(messages.players) }}
+			</span>
+			<div v-if="relay.players.length > 0" class="flex flex-wrap gap-1.5">
+				<span
+					v-for="player in relay.players"
+					:key="player"
+					class="rounded-full border border-solid border-surface-5 bg-surface-2 px-2.5 py-0.5 text-sm text-contrast"
+				>
+					{{ player }}
+				</span>
+			</div>
+			<span v-else class="text-sm text-secondary">
+				{{ formatMessage(messages.playersNone) }}
+			</span>
 		</div>
 	</div>
 </template>

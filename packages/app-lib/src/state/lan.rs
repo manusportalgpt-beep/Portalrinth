@@ -79,7 +79,85 @@ fn words_of(line: &str) -> Vec<String> {
 
 /// The port a line says a world is being served on, if it says one at all.
 pub fn port_in_line(line: &str) -> Option<u16> {
-    port_after_marker(&words_of(line), HOSTING_MARKERS)
+    let words = words_of(line);
+    port_after_marker(&words, HOSTING_MARKERS).or_else(|| port_after_port_word(&words))
+}
+
+/// The words that mean a port, in the languages the game is played in.
+const PORT_WORDS: &[&str] = &["port", "\u{43f}\u{440}\u{442}"];
+
+/// The number after a word that means a port, in whatever form that word takes.
+///
+/// The game's own phrasing changes with the language and the version - "port",
+/// "ports", "\u{43f}\u{43e}\u{440}\u{442}\u{443}", "\u{43f}\u{43e}\u{440}\u{442}\u{430}\u{445}" - so the word is
+/// matched by its beginning and the number has to be the one straight after it.
+fn port_after_port_word(words: &[String]) -> Option<u16> {
+    let at = words
+        .iter()
+        .position(|word| PORT_WORDS.iter().any(|starter| word.starts_with(starter)))?;
+    words
+        .get(at + 1)?
+        .parse::<u16>()
+        .ok()
+        .filter(|port| *port >= LOWEST_WORLD_PORT)
+}
+
+/// The lines the game writes when somebody comes into the world, and when they
+/// leave it.
+const JOIN_MARKERS: &[&str] = &[
+    "joined the game",
+    "joined the world",
+    "\u{43f}\u{440}\u{438}\u{441}\u{43e}\u{435}\u{434}\u{438}\u{43b}\u{441}\u{44f} \u{43a} \u{438}\u{433}\u{440}\u{435}",
+    "\u{432}\u{43e}\u{448}\u{435}\u{43b} \u{432} \u{438}\u{433}\u{440}\u{443}",
+];
+
+const LEAVE_MARKERS: &[&str] = &[
+    "left the game",
+    "left the world",
+    "\u{432}\u{44b}\u{448}\u{435}\u{43b} \u{438}\u{437} \u{438}\u{433}\u{440}\u{443}",
+];
+
+/// Who is in the world, according to what the game has said.
+///
+/// The game writes a line when somebody comes in and one when they go, so the
+/// list is what is left after reading the lines in order. A name that appears
+/// twice has come back, and is only in the list once.
+pub fn players_in_lines<'a>(lines: impl Iterator<Item = &'a str>) -> Vec<String> {
+    let mut players: Vec<String> = Vec::new();
+    for line in lines {
+        let words = words_of(line);
+        if let Some(name) = name_before_marker(&words, JOIN_MARKERS) {
+            if !players.contains(&name) {
+                players.push(name);
+            }
+            continue;
+        }
+        if let Some(name) = name_before_marker(&words, LEAVE_MARKERS)
+            && let Some(at) = players.iter().position(|player| *player == name)
+        {
+            players.remove(at);
+        }
+    }
+    players
+}
+
+/// The name in front of a phrase, which is how the game writes it: the name,
+/// then what it did.
+fn name_before_marker(words: &[String], markers: &[&str]) -> Option<String> {
+    for marker in markers {
+        let marker_words: Vec<&str> = marker.split(' ').collect();
+        let at = words.windows(marker_words.len()).position(|window| {
+            window
+                .iter()
+                .map(String::as_str)
+                .eq(marker_words.iter().copied())
+        })?;
+        if at == 0 {
+            return None;
+        }
+        return Some(words[at - 1].clone());
+    }
+    None
 }
 
 fn port_after_marker(words: &[String], markers: &[&str]) -> Option<u16> {

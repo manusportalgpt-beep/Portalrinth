@@ -2185,5 +2185,20 @@
 	},
 	"app.features.browse.page-size.description": {
 		"message": "Сколько результатов помещается на страницу. Чем больше, тем меньше страниц - тот же список делится иначе."
+	},
+	"app.sidebar.find-friends": {
+		"message": "Найти друзей"
+	},
+	"app.sidebar.add-friend": {
+		"message": "Добавить друга"
+	},
+	"app.lan.players": {
+		"message": "В мире"
+	},
+	"app.lan.players.none": {
+		"message": "В мире пока никого нет"
+	},
+	"app.lan.action.copy": {
+		"message": "Скопировать адрес"
 	}
 }
