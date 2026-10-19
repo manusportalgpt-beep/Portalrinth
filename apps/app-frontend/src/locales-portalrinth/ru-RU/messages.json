@@ -2200,5 +2200,47 @@
 	},
 	"app.lan.action.copy": {
 		"message": "Скопировать адрес"
+	},
+	"app.lan.action.more": {
+		"message": "Подробнее"
+	},
+	"app.lan.details.header": {
+		"message": "Что есть в этом мире"
+	},
+	"app.lan.details.loading": {
+		"message": "Читаем мир..."
+	},
+	"app.lan.details.empty": {
+		"message": "В нём ничего нет"
+	},
+	"app.lan.details.mods": {
+		"message": "Моды"
+	},
+	"app.lan.details.resource-packs": {
+		"message": "Наборы ресурсов"
+	},
+	"app.lan.details.data-packs": {
+		"message": "Наборы данных"
+	},
+	"app.lan.details.shaders": {
+		"message": "Шейдеры"
+	},
+	"app.lan.details.other": {
+		"message": "Прочее"
+	},
+	"app.lan.details.download": {
+		"message": "Скачать сборку"
+	},
+	"app.lan.details.download-done": {
+		"message": "Сборка сохранена"
+	},
+	"app.lan.details.join": {
+		"message": "Зайти в мир"
+	},
+	"app.lan.details.version": {
+		"message": "Minecraft {version}"
+	},
+	"app.lan.details.loader": {
+		"message": "{loader} {loaderVersion}"
 	}
 }

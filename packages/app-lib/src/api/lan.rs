@@ -539,14 +539,19 @@ async fn identities(
     for (username, refresh_token, uuid) in microsoft_accounts(state).await? {
         // What is stored against a Microsoft account is the token Minecraft
         // accepts, and the relay is not Minecraft.
-        let Ok(refreshed) = crate::state::oauth_refresh(&refresh_token).await
-        else {
-            continue;
+        // An account whose token could not be refreshed is still that
+        // account. Dropping it here would leave the person with an error
+        // about not being signed in when they are - the one thing they are
+        // not. It is kept, and the messenger is asked about it, and the
+        // messenger is the one that says it is no good.
+        let access_token = match crate::state::oauth_refresh(&refresh_token).await {
+            Ok(refreshed) => refreshed.value.access_token,
+            Err(_) => String::new(),
         };
         found.push(RelayIdentity::Online {
             provider: "msa",
             username,
-            access_token: refreshed.value.access_token,
+            access_token,
             uuid,
         });
     }
@@ -579,28 +584,25 @@ async fn relay_bearer(
     state: &crate::State,
     identity: &RelayIdentity,
 ) -> crate::Result<String> {
-    let RelayIdentity::Online { provider, access_token, uuid, .. } = identity
-    else {
-        return Ok(offline_identity(identity));
+    let RelayIdentity::Online { provider, access_token, .. } = identity else {
+        // The relay does not take a name on its own. It was asked to, and it
+        // answered with a refusal, so a world opened by somebody playing
+        // without an account cannot be published - and saying so is better
+        // than a token it will not take.
+        return Err(crate::ErrorKind::InputError(
+            "a Microsoft or Ely.by account is needed to open a world to the \
+             network: the relay only takes an account it knows"
+                .to_string(),
+        )
+        .as_error());
     };
 
-    Ok(match messenger_token(state, provider, access_token).await {
-        Ok(token) => token,
-        // The relay refused the account's token, or could not be reached to ask
-        // about it. A world opened to LAN does not need a real account to be
-        // playable, and the relay accepts an identity that is only a name for
-        // exactly that.
-        Err(_) => format!("portal-offline:{uuid}"),
+    messenger_token(state, provider, access_token).await.map_err(|error| {
+        crate::ErrorKind::OtherError(format!(
+            "the account could not be used to open the world to the network: {error}"
+        ))
+        .as_error()
     })
-}
-
-/// The identity an account that is only a name is published under.
-fn offline_identity(identity: &RelayIdentity) -> String {
-    let uuid = match identity {
-        RelayIdentity::Online { uuid, .. }
-        | RelayIdentity::Nickname { uuid, .. } => *uuid,
-    };
-    format!("portal-offline:{uuid}")
 }
 
 /// Trades an account's own token for the relay's bearer token.

@@ -1838,6 +1838,9 @@
   "app.lan.action.copy": {
     "message": "Copy the address"
   },
+  "app.lan.action.more": {
+    "message": "More"
+  },
   "app.lan.action.publish": {
     "message": "Open LAN"
   },
@@ -1849,6 +1852,45 @@
   },
   "app.lan.description": {
     "message": "Open a world to LAN in Minecraft, then publish it from here."
+  },
+  "app.lan.details.data-packs": {
+    "message": "Data packs"
+  },
+  "app.lan.details.download": {
+    "message": "Download the modpack"
+  },
+  "app.lan.details.download-done": {
+    "message": "The modpack was saved"
+  },
+  "app.lan.details.empty": {
+    "message": "Nothing is in it"
+  },
+  "app.lan.details.header": {
+    "message": "What is in this world"
+  },
+  "app.lan.details.join": {
+    "message": "Join the world"
+  },
+  "app.lan.details.loader": {
+    "message": "{loader} {loaderVersion}"
+  },
+  "app.lan.details.loading": {
+    "message": "Reading the world..."
+  },
+  "app.lan.details.mods": {
+    "message": "Mods"
+  },
+  "app.lan.details.other": {
+    "message": "Other"
+  },
+  "app.lan.details.resource-packs": {
+    "message": "Resource packs"
+  },
+  "app.lan.details.shaders": {
+    "message": "Shaders"
+  },
+  "app.lan.details.version": {
+    "message": "Minecraft {version}"
   },
   "app.lan.empty-description": {
     "message": "Start an instance and it will show up here."

@@ -1432,5 +1432,47 @@
 	},
 	"app.lan.action.copy": {
 		"message": "Copy the address"
+	},
+	"app.lan.action.more": {
+		"message": "More"
+	},
+	"app.lan.details.header": {
+		"message": "What is in this world"
+	},
+	"app.lan.details.loading": {
+		"message": "Reading the world..."
+	},
+	"app.lan.details.empty": {
+		"message": "Nothing is in it"
+	},
+	"app.lan.details.mods": {
+		"message": "Mods"
+	},
+	"app.lan.details.resource-packs": {
+		"message": "Resource packs"
+	},
+	"app.lan.details.data-packs": {
+		"message": "Data packs"
+	},
+	"app.lan.details.shaders": {
+		"message": "Shaders"
+	},
+	"app.lan.details.other": {
+		"message": "Other"
+	},
+	"app.lan.details.download": {
+		"message": "Download the modpack"
+	},
+	"app.lan.details.download-done": {
+		"message": "The modpack was saved"
+	},
+	"app.lan.details.join": {
+		"message": "Join the world"
+	},
+	"app.lan.details.version": {
+		"message": "Minecraft {version}"
+	},
+	"app.lan.details.loader": {
+		"message": "{loader} {loaderVersion}"
 	}
 }

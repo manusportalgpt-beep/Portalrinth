@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { CopyIcon, PowerIcon, RadioTowerIcon, TriangleAlertIcon } from '@modrinth/assets'
+import {
+	CopyIcon,
+	MoreVerticalIcon,
+	PowerIcon,
+	RadioTowerIcon,
+	TriangleAlertIcon,
+} from '@modrinth/assets'
 import { Avatar, Button, defineMessages, useVIntl } from '@modrinth/ui'
-import { computed } from 'vue'
+import { computed, useTemplateRef } from 'vue'
 
 import type { LanRelayInfo } from '@/helpers/lan'
 
+import LanDetailsModal from './details-modal.vue'
 import { lanAddress } from './use-lan-relay'
 
 const props = defineProps<{
@@ -41,10 +48,12 @@ const messages = defineMessages({
 		defaultMessage: 'Nobody is in the world yet',
 	},
 	copyAddress: { id: 'app.lan.action.copy', defaultMessage: 'Copy the address' },
+	more: { id: 'app.lan.action.more', defaultMessage: 'More' },
 	unpublish: { id: 'app.lan.action.unpublish', defaultMessage: 'Stop' },
 })
 
 const address = computed(() => lanAddress(props.relay))
+const detailsModal = useTemplateRef<InstanceType<typeof LanDetailsModal>>('detailsModal')
 const detail = computed(() => {
 	if (props.relay.state === 'ready' && props.relay.local_port) {
 		return formatMessage(messages.stateReady, { port: props.relay.local_port })
@@ -54,6 +63,11 @@ const detail = computed(() => {
 	return null
 })
 const failed = computed(() => props.relay.state === 'lost')
+
+/** The head of a player, drawn from their name. */
+function headOf(player: string) {
+	return `https://mc-heads.net/avatar/${encodeURIComponent(player)}/64`
+}
 const canPublish = computed(() => props.relay.state === 'ready')
 
 function copyAddress() {
@@ -70,6 +84,14 @@ function copyAddress() {
 				<span class="truncate text-sm text-secondary">{{ relay.account_name }}</span>
 			</div>
 			<div class="ml-auto flex shrink-0 items-center gap-2">
+				<Button
+					size="sm"
+					type="quiet"
+					:aria-label="formatMessage(messages.more)"
+					@click="detailsModal?.show()"
+				>
+					<MoreVerticalIcon />
+				</Button>
 				<Button v-if="address" size="sm" type="outlined" color="brand" @click="copyAddress">
 					<CopyIcon />
 					{{ address }}
@@ -134,12 +156,14 @@ function copyAddress() {
 			<span class="text-sm font-medium text-secondary">
 				{{ formatMessage(messages.players) }}
 			</span>
-			<div v-if="relay.players.length > 0" class="flex flex-wrap gap-1.5">
+			<div v-if="relay.players.length > 0" class="flex flex-wrap gap-2">
 				<span
 					v-for="player in relay.players"
 					:key="player"
-					class="rounded-full border border-solid border-surface-5 bg-surface-2 px-2.5 py-0.5 text-sm text-contrast"
+					class="flex items-center gap-2 rounded-full border border-solid border-surface-5 bg-surface-2 py-0.5 pl-0.5 pr-2.5 text-sm text-contrast"
 				>
+					<!-- The face is the name's: the head service draws it. -->
+					<Avatar :src="headOf(player)" alt="" size="1.5rem" circle />
 					{{ player }}
 				</span>
 			</div>
@@ -147,5 +171,7 @@ function copyAddress() {
 				{{ formatMessage(messages.playersNone) }}
 			</span>
 		</div>
+
+		<LanDetailsModal ref="detailsModal" :relay="relay" :address="address" />
 	</div>
 </template>
