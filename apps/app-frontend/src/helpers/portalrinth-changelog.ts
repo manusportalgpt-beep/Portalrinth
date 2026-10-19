@@ -35,6 +35,19 @@ export interface PortalrinthVersionEntry {
 
 export const PORTALRINTH_CHANGELOG: PortalrinthVersionEntry[] = [
 	{
+		version: '0.21.10',
+		date: '2026-10-19T12:00:00+00:00',
+		body: `### Changed
+- Synced with upstream Modrinth 0.21.10: the settings are reorganised into Display, Account, Instance defaults and System, with Java and memory, window and launch hooks each in a tab of their own, "Synced settings" renamed to "Syncing", and the resource management split into Resources and Troubleshooting. The instance settings are split into Instance and Game the same way, and each Game tab has a button that opens the matching default in Settings.
+- The sidebar, backgrounds and scrollbars of the settings, instance settings and server settings windows are refreshed, and a settings window that opens on a particular tab scrolls its sidebar to show that tab.
+- Beta and alpha version badges are one colour instead of two.
+
+### Fixed
+- Coming back to a search no longer loses the place in the results, and the content tab keeps its scroll position and its search when you come back from a project.
+- The update window no longer closes while another project is still updating.
+- The "instance is running" error is now said by the app rather than by the backend.`,
+	},
+	{
 		version: '0.21.9+2',
 		date: '2026-10-16T12:00:00+00:00',
 		body: `### Added

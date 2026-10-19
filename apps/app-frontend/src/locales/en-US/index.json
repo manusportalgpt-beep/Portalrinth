@@ -177,7 +177,7 @@
     "message": "Your privacy and how ads support Modrinth"
   },
   "app.appearance-settings.accent-tint.description": {
-    "message": "Gives the app's greys РІР‚вЂќ its backgrounds and its panels РІР‚вЂќ a faint cast of the same colour. The accent, the sidebar and the loading bar follow the preset either way."
+    "message": "Gives the app's greys ╨а╨Ж╨атАЪ╨▓╨В╤Ь its backgrounds and its panels ╨а╨Ж╨атАЪ╨▓╨В╤Ь a faint cast of the same colour. The accent, the sidebar and the loading bar follow the preset either way."
   },
   "app.appearance-settings.accent-tint.title": {
     "message": "Tint the background too"
@@ -2735,12 +2735,6 @@
   "app.recover-instances.worlds": {
     "message": "{count, plural, one {# world} other {# worlds}}"
   },
-  "app.resource-settings.proxy.description": {
-    "message": "Routes all launcher network traffic (Modrinth API and CDN downloads) through a proxy. Supports http://, https://, socks5:// and socks5h:// URLs. Useful when Modrinth is not reachable in your region. Leave empty to connect directly. (app restart required to take effect)"
-  },
-  "app.resource-settings.proxy.title": {
-    "message": "Proxy"
-  },
   "app.restarting": {
     "message": "Restarting..."
   },
@@ -2898,7 +2892,7 @@
     "message": "Oldest"
   },
   "app.settings.app-version": {
-    "message": "Portalrinth {version}"
+    "message": "Modrinth App {version}"
   },
   "app.settings.default-instance-options.environment-variables.description": {
     "message": "Environment variables set when launching an instance."
@@ -2924,9 +2918,6 @@
   "app.settings.default-instance-options.height.title": {
     "message": "Height"
   },
-  "app.settings.default-instance-options.java-and-memory.title": {
-    "message": "Java and memory"
-  },
   "app.settings.default-instance-options.java-arguments.description": {
     "message": "Arguments passed to Java when launching an instance."
   },
@@ -2935,9 +2926,6 @@
   },
   "app.settings.default-instance-options.java-arguments.title": {
     "message": "Java arguments"
-  },
-  "app.settings.default-instance-options.launch-hooks.title": {
-    "message": "Launch hooks"
   },
   "app.settings.default-instance-options.memory-allocation.description": {
     "message": "Maximum memory available to each instance."
@@ -2977,9 +2965,6 @@
   },
   "app.settings.default-instance-options.width.title": {
     "message": "Width"
-  },
-  "app.settings.default-instance-options.window.title": {
-    "message": "Window"
   },
   "app.settings.default-instance-options.wrapper-hook.description": {
     "message": "Command used to wrap the Minecraft launch process."
@@ -4091,14 +4076,8 @@
   "app.settings.resource-management.app-cache.confirm.description": {
     "message": "The app may load more slowly until the cache is rebuilt."
   },
-  "app.settings.resource-management.app-cache.confirm.title": {
-    "message": "Purge the app cache?"
-  },
   "app.settings.resource-management.app-cache.description": {
     "message": "Clear cached data and download it again from Modrinth. The app may load more slowly until the cache is rebuilt."
-  },
-  "app.settings.resource-management.app-cache.purge": {
-    "message": "Purge cache"
   },
   "app.settings.resource-management.app-cache.title": {
     "message": "App cache"
@@ -4116,7 +4095,7 @@
     "message": "Browse for an app directory"
   },
   "app.settings.resource-management.app-directory.description": {
-    "message": "Where Portalrinth stores instances and other files. Changes take effect after restarting the app."
+    "message": "Where Modrinth App stores instances and other files. Changes take effect after restarting the app."
   },
   "app.settings.resource-management.app-directory.select": {
     "message": "Select a new app directory"
@@ -4147,12 +4126,6 @@
   },
   "app.settings.resource-management.debug-info.title": {
     "message": "Debug info"
-  },
-  "app.settings.resource-management.infinite-scroll.description": {
-    "message": "Load the next results as you scroll instead of showing page numbers. Turn this off to page through results instead."
-  },
-  "app.settings.resource-management.infinite-scroll.title": {
-    "message": "Keep loading search results"
   },
   "app.settings.resource-management.maximum-concurrent-downloads.description": {
     "message": "Number of files the app can download at once. Lower this if downloads are unreliable on your connection. Requires an app restart."
@@ -4196,9 +4169,6 @@
   "app.settings.resource-management.store.description": {
     "message": "Save space by reusing game installs, mods and packs across your instances."
   },
-  "app.settings.resource-management.store.empty": {
-    "message": "Install mods or packs to see your storage usage here."
-  },
   "app.settings.resource-management.store.issues": {
     "message": "View {count, plural, one {# issue} other {# issues}}"
   },
@@ -4238,8 +4208,11 @@
   "app.settings.resource-management.store.verified": {
     "message": "Verification complete"
   },
-  "app.settings.sidebar.label.instances": {
-    "message": "Instances"
+  "app.settings.sidebar.label.instance-defaults": {
+    "message": "Instance defaults"
+  },
+  "app.settings.sidebar.label.system": {
+    "message": "System"
   },
   "app.settings.synced-options.choose-sync-source.command-history-description": {
     "message": "Choose which instance to copy your command history from. This history is only used for the initial sync, and you can edit it from any instance afterward."
@@ -4469,11 +4442,11 @@
   "app.settings.tabs.behavior": {
     "message": "Behavior"
   },
-  "app.settings.tabs.changelog": {
-    "message": "Changelog"
-  },
   "app.settings.tabs.features": {
     "message": "Features"
+  },
+  "app.settings.tabs.java-and-memory": {
+    "message": "Java and memory"
   },
   "app.settings.tabs.java-installations": {
     "message": "Java installations"
@@ -4481,14 +4454,29 @@
   "app.settings.tabs.language": {
     "message": "Language"
   },
+  "app.settings.tabs.launch-hooks": {
+    "message": "Launch hooks"
+  },
   "app.settings.tabs.privacy": {
     "message": "Privacy"
   },
-  "app.settings.tabs.resource-management": {
-    "message": "Resource management"
+  "app.settings.tabs.resources": {
+    "message": "Resources"
   },
-  "app.settings.tabs.synced-options": {
-    "message": "Synced settings"
+  "app.settings.tabs.syncing": {
+    "message": "Syncing"
+  },
+  "app.settings.tabs.troubleshooting": {
+    "message": "Troubleshooting"
+  },
+  "app.settings.tabs.window": {
+    "message": "Window"
+  },
+  "app.settings.troubleshooting.clear-cache": {
+    "message": "Clear cache"
+  },
+  "app.settings.troubleshooting.clear-cache.confirm.title": {
+    "message": "Clear the app cache?"
   },
   "app.sidebar.add-friend": {
     "message": "Add a friend"
@@ -5723,6 +5711,9 @@
   "instance.server-modal.resource-pack": {
     "message": "Resource pack"
   },
+  "instance.settings.defaults.open-app-settings": {
+    "message": "Manage default settings"
+  },
   "instance.settings.sharing.active-invites.actions": {
     "message": "Actions"
   },
@@ -5761,6 +5752,12 @@
   },
   "instance.settings.sharing.revoke-invite.header": {
     "message": "Revoke invite"
+  },
+  "instance.settings.sidebar.label.game": {
+    "message": "Game"
+  },
+  "instance.settings.sidebar.label.instance": {
+    "message": "Instance"
   },
   "instance.settings.synced-options.data-override": {
     "message": "Turn off this override to edit synced data."
@@ -5879,8 +5876,11 @@
   "instance.settings.tabs.general.update-channel.select": {
     "message": "Select update channel"
   },
-  "instance.settings.tabs.hooks.description": {
-    "message": "Run instance-specific system commands before and after launching the game."
+  "instance.settings.tabs.hooks.default-settings-description": {
+    "message": "Your instance uses the default launch hooks unless you override them here."
+  },
+  "instance.settings.tabs.hooks.label": {
+    "message": "Launch hooks"
   },
   "instance.settings.tabs.hooks.post-exit": {
     "message": "Post-exit"
@@ -5942,17 +5942,8 @@
   "instance.settings.tabs.installation.locked": {
     "message": "Installation settings are unavailable while this instance is locked."
   },
-  "instance.settings.tabs.java.custom-environment-variables": {
-    "message": "Set environment variables separately for this instance."
-  },
-  "instance.settings.tabs.java.custom-java-arguments": {
-    "message": "Set Java arguments separately for this instance."
-  },
-  "instance.settings.tabs.java.custom-java-installation": {
-    "message": "Choose a different Java installation for this instance."
-  },
-  "instance.settings.tabs.java.custom-memory-allocation": {
-    "message": "Set the memory allocation separately for this instance."
+  "instance.settings.tabs.java.default-settings-description": {
+    "message": "Your instance uses the default Java and memory settings unless you override them here."
   },
   "instance.settings.tabs.java.enter-environment-variables": {
     "message": "Enter environmental variables..."
@@ -5978,41 +5969,8 @@
   "instance.settings.tabs.java.java-path-placeholder": {
     "message": "/path/to/java"
   },
-  "instance.settings.tabs.java.modern-java": {
-    "message": "Modern Java"
-  },
-  "instance.settings.tabs.java.modern-java-beta": {
-    "message": "Beta"
-  },
-  "instance.settings.tabs.java.modern-java-beta-note": {
-    "message": "This is new and not widely tested yet. Back up the instance before enabling it, and expect mods that assume Java 8 to misbehave."
-  },
-  "instance.settings.tabs.java.modern-java-description": {
-    "message": "Minecraft {gameVersion} normally only runs on Java 8. {provider} replaces LWJGL 2 and reworks Forge so the instance can run on a current Java release instead."
-  },
-  "instance.settings.tabs.java.modern-java-install": {
-    "message": "Enable"
-  },
-  "instance.settings.tabs.java.modern-java-installed": {
-    "message": "Installed — {provider} {version}, running on Java {javaMajor}"
-  },
-  "instance.settings.tabs.java.modern-java-installing": {
-    "message": "Enabling..."
-  },
-  "instance.settings.tabs.java.modern-java-mods-note": {
-    "message": "Disabling removes the launcher patches. Any mods it installed stay in the instance — remove them from the Mods tab if you no longer want them."
-  },
-  "instance.settings.tabs.java.modern-java-remove": {
-    "message": "Disable"
-  },
-  "instance.settings.tabs.java.modern-java-version": {
-    "message": "Java version"
-  },
-  "instance.settings.tabs.java.modern-java-version-hint": {
-    "message": "Picking a version downloads it and pins it as this instance’s Java installation. The lowest one is the best tested; newer ones are supported but less proven with mods for this Minecraft version."
-  },
-  "instance.settings.tabs.settings-overrides": {
-    "message": "Sync overrides"
+  "instance.settings.tabs.java.label": {
+    "message": "Java and memory"
   },
   "instance.settings.tabs.sharing": {
     "message": "Sharing"
@@ -6074,11 +6032,14 @@
   "instance.settings.tabs.synced-options.shared-settings.description": {
     "message": "Enable an override to keep a synced setting separate for this instance."
   },
+  "instance.settings.tabs.syncing": {
+    "message": "Syncing"
+  },
   "instance.settings.tabs.window": {
     "message": "Custom window settings"
   },
-  "instance.settings.tabs.window.custom-window-settings": {
-    "message": "Configure fullscreen and launch resolution separately for this instance."
+  "instance.settings.tabs.window.default-settings-description": {
+    "message": "Your instance uses the default window settings unless you override them here."
   },
   "instance.settings.tabs.window.fullscreen": {
     "message": "Fullscreen"
@@ -6094,6 +6055,9 @@
   },
   "instance.settings.tabs.window.height.enter": {
     "message": "Enter height..."
+  },
+  "instance.settings.tabs.window.label": {
+    "message": "Window"
   },
   "instance.settings.tabs.window.width": {
     "message": "Width"
