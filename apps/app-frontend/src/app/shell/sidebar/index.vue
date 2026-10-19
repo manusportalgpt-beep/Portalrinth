@@ -284,10 +284,12 @@ const messages = defineMessages({
 		<!--
 			The way out of the panel is its own bottom corner, where the eye
 			already is after reading down a list, rather than a chevron at the top
-			that has to be found before anything can be done.
+			that has to be found before anything can be done. It sits on the one
+			side the panel is on - the window's own edge - so it is in the same
+			place whether the panel is open or folded to its rail.
 		-->
 		<div
-			class="flex shrink-0 justify-center border-0 border-t-[1px] border-solid p-2 border-[--brand-gradient-border]"
+			class="flex shrink-0 justify-end border-0 border-t-[1px] border-solid p-2 border-[--brand-gradient-border]"
 		>
 			<IconButton
 				v-tooltip="formatMessage(collapsed ? messages.expand : messages.collapse)"

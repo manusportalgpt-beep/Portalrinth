@@ -376,9 +376,14 @@ defineExpose({
 	selectedAccount,
 	// The head the collapsed rail shows, so the rail can carry the same face
 	// the account card does rather than a second picture of its own.
-	avatarUrl,
+	//
+	// A getter and not the ref itself: the ref is declared further down,
+	// and naming it here would reach for it before it exists. A card that
+	// throws while it is being set up draws nothing at all.
+	get avatarUrl() {
+		return avatarUrl.value
+	},
 })
-
 await refreshValues()
 
 const STEVE_HEAD_URL = 'https://launcher-files.modrinth.com/assets/steve_head.png'

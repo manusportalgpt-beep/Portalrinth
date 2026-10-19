@@ -2131,5 +2131,20 @@
 	},
 	"portalrinth.settings.background.dim.description": {
 		"message": "Для яркой или пёстрой картинки, чтобы то, что поверх, легко читалось."
+	},
+	"app.settings.resource-management.curseforge.title": {
+		"message": "Ключ API CurseForge"
+	},
+	"app.settings.resource-management.curseforge.description": {
+		"message": "CurseForge требует ключ для поиска, списка файлов и загрузки. Оставьте поле пустым, чтобы использовать ключ, с которым собрана эта сборка, если он есть."
+	},
+	"app.settings.resource-management.curseforge.hint": {
+		"message": "Создайте API-токен на"
+	},
+	"app.settings.resource-management.curseforge.missing": {
+		"message": "Ключ не настроен, поэтому CurseForge недоступен нигде в этом лаунчере."
+	},
+	"app.settings.resource-management.curseforge.present": {
+		"message": "Для CurseForge используется ваш собственный ключ."
 	}
 }

@@ -4501,5 +4501,65 @@
   },
   "settings.sidebar.label.display": {
     "message": "Отображение"
+  },
+  "app.settings.sidebar.label.instance-defaults": {
+    "message": "Настройки инстансов по умолчанию"
+  },
+  "app.settings.sidebar.label.system": {
+    "message": "Система"
+  },
+  "app.settings.tabs.java-and-memory": {
+    "message": "Java и память"
+  },
+  "app.settings.tabs.launch-hooks": {
+    "message": "Хуки запуска"
+  },
+  "app.settings.tabs.resources": {
+    "message": "Ресурсы"
+  },
+  "app.settings.tabs.syncing": {
+    "message": "Синхронизация"
+  },
+  "app.settings.tabs.troubleshooting": {
+    "message": "Диагностика"
+  },
+  "app.settings.tabs.window": {
+    "message": "Окно"
+  },
+  "app.settings.troubleshooting.clear-cache": {
+    "message": "Очистить кэш"
+  },
+  "app.settings.troubleshooting.clear-cache.confirm.title": {
+    "message": "Очистить кэш приложения?"
+  },
+  "instance.settings.defaults.open-app-settings": {
+    "message": "Настройки по умолчанию"
+  },
+  "instance.settings.sidebar.label.game": {
+    "message": "Игра"
+  },
+  "instance.settings.sidebar.label.instance": {
+    "message": "Инстанс"
+  },
+  "instance.settings.tabs.hooks.default-settings-description": {
+    "message": "Ваш инстанс использует хуки запуска по умолчанию, пока вы не зададите свои здесь."
+  },
+  "instance.settings.tabs.hooks.label": {
+    "message": "Хуки запуска"
+  },
+  "instance.settings.tabs.java.default-settings-description": {
+    "message": "Ваш инстанс использует настройки Java и памяти по умолчанию, пока вы не зададите свои здесь."
+  },
+  "instance.settings.tabs.java.label": {
+    "message": "Java и память"
+  },
+  "instance.settings.tabs.syncing": {
+    "message": "Синхронизация"
+  },
+  "instance.settings.tabs.window.default-settings-description": {
+    "message": "Ваш инстанс использует настройки окна по умолчанию, пока вы не зададите свои здесь."
+  },
+  "instance.settings.tabs.window.label": {
+    "message": "Окно"
   }
 }
