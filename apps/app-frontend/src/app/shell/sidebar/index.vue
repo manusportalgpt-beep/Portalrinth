@@ -363,7 +363,13 @@ const messages = defineMessages({
 	/* Glass: nothing painted behind the list, so what shows through is the
 	   window's own background blurred once rather than a second, darker copy of
 	   it. The faint tint is kept so the panel still reads as a panel. */
-	background: linear-gradient(0deg, rgba(77, 146, 39, 0.06) 0%, rgba(77, 146, 39, 0.02) 100%);
+	/* The accent's own wash. It was the green of the theme this came from,
+	   which is why the panel was green while everything else was red. */
+	background: linear-gradient(
+		0deg,
+		color-mix(in srgb, var(--color-brand) 6%, transparent) 0%,
+		color-mix(in srgb, var(--color-brand) 2%, transparent) 100%
+	);
 	backdrop-filter: blur(24px);
 	-webkit-backdrop-filter: blur(24px);
 	--color-button-bg: var(--brand-gradient-button);

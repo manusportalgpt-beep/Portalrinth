@@ -20,6 +20,7 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
@@ -32,6 +33,7 @@ import { useFriends } from '../use-friends'
 import FriendsSection from './section.vue'
 
 const { formatMessage } = useVIntl()
+const router = useRouter()
 
 const { handleError } = injectNotificationManager()
 const formatRelativeTime = useRelativeTime()
@@ -125,6 +127,16 @@ function showFindFriendsModal() {
 	findQuery.value = ''
 	findResults.value = []
 	findModal.value?.show()
+}
+
+/**
+ * The profile of a person found by searching.
+ *
+ * Finding somebody and wanting to know who they are are two different
+ * things, and the name and the face are the way to the second one.
+ */
+function openProfile(username: string) {
+	void router.push(`/user/${encodeURIComponent(username)}`)
 }
 
 function requestFoundFriend(user: { id: string; username: string }) {
@@ -363,6 +375,15 @@ const messages = defineMessages({
 				>
 					<Avatar :src="user.avatar_url ?? undefined" size="2rem" />
 					<span class="flex-1 truncate text-contrast">{{ user.username }}</span>
+					<button
+						type="button"
+						class="flex min-w-0 cursor-pointer items-center gap-2 border-0 bg-transparent p-0 text-left"
+						:aria-label="user.username"
+						@click="openProfile(user.username)"
+					>
+						<Avatar :src="user.avatar_url ?? undefined" size="1.75rem" />
+						<span class="truncate font-medium text-contrast">{{ user.username }}</span>
+					</button>
 					<Button type="colored" color="brand" @click="requestFoundFriend(user)">
 						<UserPlusIcon />
 						{{ formatMessage(messages.addFriend) }}

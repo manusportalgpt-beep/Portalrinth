@@ -8,6 +8,7 @@ import {
 } from '@modrinth/assets'
 import { Avatar, Button, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, useTemplateRef } from 'vue'
+import { useRouter } from 'vue-router'
 
 import type { LanRelayInfo } from '@/helpers/lan'
 
@@ -25,9 +26,11 @@ const emit = defineEmits<{
 	publish: [processUuid: string]
 	unpublish: [processUuid: string]
 	copy: [address: string]
+	hint: [text: string]
 }>()
 
 const { formatMessage } = useVIntl()
+const router = useRouter()
 const messages = defineMessages({
 	stateClosed: {
 		id: 'app.lan.state.closed',
@@ -49,6 +52,12 @@ const messages = defineMessages({
 	},
 	copyAddress: { id: 'app.lan.action.copy', defaultMessage: 'Copy the address' },
 	more: { id: 'app.lan.action.more', defaultMessage: 'More' },
+	openInGame: { id: 'app.lan.action.open-in-game', defaultMessage: 'Open LAN' },
+	openInGameHint: {
+		id: 'app.lan.action.open-in-game.hint',
+		defaultMessage:
+			'In Minecraft, open the world to the network: E, then "Open to LAN". This page finds it by itself.',
+	},
 	unpublish: { id: 'app.lan.action.unpublish', defaultMessage: 'Stop' },
 })
 
@@ -68,10 +77,24 @@ const failed = computed(() => props.relay.state === 'lost')
 function headOf(player: string) {
 	return `https://mc-heads.net/avatar/${encodeURIComponent(player)}/64`
 }
+
+/** The profile a name belongs to. */
+function openProfile(username: string) {
+	void router.push(`/user/${encodeURIComponent(username)}`)
+}
 const canPublish = computed(() => props.relay.state === 'ready')
 
 function copyAddress() {
 	if (address.value) emit('copy', address.value)
+}
+
+/**
+ * The world is opened to the network from inside the game, and nothing here
+ * can do that for it. So the button says where to press, and the page goes
+ * on watching the log for the port the game will say.
+ */
+function openInGame() {
+	emit('hint', formatMessage(messages.openInGameHint))
 }
 </script>
 
@@ -81,7 +104,19 @@ function copyAddress() {
 			<Avatar :src="iconUrl" :tint-by="relay.instance_id" alt="" size="2rem" class="shrink-0" />
 			<div class="flex min-w-0 flex-col">
 				<span class="truncate font-bold text-contrast">{{ relay.instance_name }}</span>
-				<span class="truncate text-sm text-secondary">{{ relay.account_name }}</span>
+				<!--
+					Whoever is playing it: the face and the name, and the name
+					opens the profile it belongs to.
+				-->
+				<button
+					type="button"
+					class="flex min-w-0 cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 text-left"
+					:aria-label="relay.account_name"
+					@click="openProfile(relay.account_name)"
+				>
+					<Avatar :src="headOf(relay.account_name)" alt="" size="1.25rem" circle />
+					<span class="truncate text-sm text-secondary">{{ relay.account_name }}</span>
+				</button>
 			</div>
 			<div class="ml-auto flex shrink-0 items-center gap-2">
 				<Button
@@ -95,6 +130,15 @@ function copyAddress() {
 				<Button v-if="address" size="sm" type="outlined" color="brand" @click="copyAddress">
 					<CopyIcon />
 					{{ address }}
+				</Button>
+				<!--
+					Open the world in Minecraft first: the game is the only one
+					that can open a world to the network, and the button says so
+					rather than pretending otherwise.
+				-->
+				<Button v-if="!canPublish" size="sm" type="outlined" @click="openInGame">
+					<RadioTowerIcon />
+					{{ formatMessage(messages.openInGame) }}
 				</Button>
 				<Button
 					v-if="canPublish"

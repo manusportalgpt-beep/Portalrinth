@@ -1841,6 +1841,12 @@
   "app.lan.action.more": {
     "message": "More"
   },
+  "app.lan.action.open-in-game": {
+    "message": "Open LAN"
+  },
+  "app.lan.action.open-in-game.hint": {
+    "message": "In Minecraft, open the world to the network: E, then \"Open to LAN\". This page finds it by itself."
+  },
   "app.lan.action.publish": {
     "message": "Open LAN"
   },
@@ -1855,9 +1861,6 @@
   },
   "app.lan.details.data-packs": {
     "message": "Data packs"
-  },
-  "app.lan.details.download": {
-    "message": "Download the modpack"
   },
   "app.lan.details.download-done": {
     "message": "The modpack was saved"
@@ -1892,6 +1895,12 @@
   "app.lan.details.version": {
     "message": "Minecraft {version}"
   },
+  "app.lan.details.world": {
+    "message": "The world is at"
+  },
+  "app.lan.details.world-closed": {
+    "message": "not open to the network yet"
+  },
   "app.lan.empty-description": {
     "message": "Start an instance and it will show up here."
   },
@@ -1903,6 +1912,9 @@
   },
   "app.lan.heading": {
     "message": "LAN"
+  },
+  "app.lan.hint": {
+    "message": "Open LAN"
   },
   "app.lan.players": {
     "message": "In the world"

@@ -19,14 +19,17 @@ function read(): { scope: BrowseScrollScope; pageSize: number } {
 	try {
 		const raw = localStorage.getItem(CACHE_KEY)
 		const cached = raw ? (JSON.parse(raw) as { scope?: unknown; pageSize?: unknown }) : null
-		const scope = cached?.scope === 'discover' || cached?.scope === 'both' ? cached.scope : 'off'
+		const scope =
+			cached?.scope === 'off' || cached?.scope === 'discover' || cached?.scope === 'both'
+				? cached.scope
+				: 'discover'
 		const pageSize =
 			typeof cached?.pageSize === 'number' && BROWSE_PAGE_SIZES.includes(cached.pageSize)
 				? cached.pageSize
 				: 20
 		return { scope, pageSize }
 	} catch {
-		return { scope: 'off', pageSize: 20 }
+		return { scope: 'discover', pageSize: 20 }
 	}
 }
 

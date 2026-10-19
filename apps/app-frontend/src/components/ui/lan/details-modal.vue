@@ -6,14 +6,13 @@
  * they join: which mods, which packs, which game version and loader. This is
  * that, in the middle of the window where a person can read it.
  */
-import { DownloadIcon, SpinnerIcon, UsersIcon } from '@modrinth/assets'
-import { Button, defineMessages, injectNotificationManager, NewModal, useVIntl } from '@modrinth/ui'
-import { open } from '@tauri-apps/plugin-dialog'
+import { SpinnerIcon } from '@modrinth/assets'
+import type { ContentItem } from '@modrinth/ui'
+import { defineMessages, injectNotificationManager, NewModal, useVIntl } from '@modrinth/ui'
 import { computed, ref, useTemplateRef } from 'vue'
 
-import { export_instance_mrpack, get_content_items } from '@/helpers/instance'
+import { get_content_items } from '@/helpers/instance'
 import type { LanRelayInfo } from '@/helpers/lan'
-import type { ContentItem } from '@/helpers/types'
 
 const props = defineProps<{
 	relay: LanRelayInfo
@@ -27,7 +26,6 @@ const { handleError } = injectNotificationManager()
 const modal = useTemplateRef<InstanceType<typeof NewModal>>('modal')
 const content = ref<ContentItem[]>([])
 const loading = ref(false)
-const downloading = ref(false)
 
 const messages = defineMessages({
 	header: { id: 'app.lan.details.header', defaultMessage: 'What is in this world' },
@@ -38,7 +36,11 @@ const messages = defineMessages({
 	dataPacks: { id: 'app.lan.details.data-packs', defaultMessage: 'Data packs' },
 	shaders: { id: 'app.lan.details.shaders', defaultMessage: 'Shaders' },
 	other: { id: 'app.lan.details.other', defaultMessage: 'Other' },
-	download: { id: 'app.lan.details.download', defaultMessage: 'Download the modpack' },
+	world: { id: 'app.lan.details.world', defaultMessage: 'The world is at' },
+	worldClosed: {
+		id: 'app.lan.details.world-closed',
+		defaultMessage: 'not open to the network yet',
+	},
 	downloadDone: { id: 'app.lan.details.download-done', defaultMessage: 'The modpack was saved' },
 	join: { id: 'app.lan.details.join', defaultMessage: 'Join the world' },
 	version: { id: 'app.lan.details.version', defaultMessage: 'Minecraft {version}' },
@@ -53,8 +55,8 @@ const sections = computed(() => {
 		items: ContentItem[]
 	}[] = [
 		{ key: 'mod', label: messages.mods, items: [] },
-		{ key: 'resource_pack', label: messages.resourcePacks, items: [] },
-		{ key: 'data_pack', label: messages.dataPacks, items: [] },
+		{ key: 'resourcepack', label: messages.resourcePacks, items: [] },
+		{ key: 'datapack', label: messages.dataPacks, items: [] },
 		{ key: 'shader', label: messages.shaders, items: [] },
 		{ key: 'other', label: messages.other, items: [] },
 	]
@@ -76,23 +78,6 @@ async function load() {
 		handleError(error)
 	} finally {
 		loading.value = false
-	}
-}
-
-async function download() {
-	const where = await open({
-		multiple: false,
-		directory: true,
-		title: formatMessage(messages.download),
-	})
-	if (typeof where !== 'string') return
-	downloading.value = true
-	try {
-		await export_instance_mrpack(props.relay.instance_id, where, [], [])
-	} catch (error) {
-		handleError(error)
-	} finally {
-		downloading.value = false
 	}
 }
 
@@ -141,15 +126,22 @@ defineExpose({ show })
 				</div>
 			</div>
 
-			<div class="flex justify-end gap-2">
-				<Button type="outlined" :loading="downloading" @click="download">
-					<DownloadIcon />
-					{{ formatMessage(messages.download) }}
-				</Button>
-				<Button v-if="address" type="colored" color="brand" @click="modal?.hide()">
-					<UsersIcon />
-					{{ formatMessage(messages.join) }}
-				</Button>
+			<!--
+				Where the world is, so it can be joined. There is nothing to
+				download: the pack is given out, not fetched.
+			-->
+			<div
+				class="flex items-center gap-2 rounded-lg border border-solid border-surface-5 bg-surface-2 px-3 py-2"
+			>
+				<span class="text-sm text-secondary">
+					{{ formatMessage(messages.world) }}
+				</span>
+				<span v-if="address" class="truncate font-mono text-sm text-contrast">
+					{{ address }}
+				</span>
+				<span v-else class="truncate text-sm text-secondary">
+					{{ formatMessage(messages.worldClosed) }}
+				</span>
 			</div>
 		</div>
 	</NewModal>

@@ -2242,5 +2242,20 @@
 	},
 	"app.lan.details.loader": {
 		"message": "{loader} {loaderVersion}"
+	},
+	"app.lan.action.open-in-game": {
+		"message": "Открыть LAN"
+	},
+	"app.lan.action.open-in-game.hint": {
+		"message": "В Minecraft откройте мир для сети: E, затем «Открыть для сети». Страница найдёт его сама."
+	},
+	"app.lan.hint": {
+		"message": "Открыть LAN"
+	},
+	"app.lan.details.world": {
+		"message": "Мир по адресу"
+	},
+	"app.lan.details.world-closed": {
+		"message": "пока не открыт для сети"
 	}
 }

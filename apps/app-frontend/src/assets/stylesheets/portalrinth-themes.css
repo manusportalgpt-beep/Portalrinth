@@ -10,7 +10,7 @@
  * that writes to the element itself.
  */
 html.retro-mode {
-	--color-brand-shadow: rgba(77, 146, 39, 0.7);
+	--color-brand-shadow: color-mix(in srgb, var(--color-brand) 70%, transparent);
 
 	/*
 	 * The sidebar is glass, not a painted panel: it lets the window behind it

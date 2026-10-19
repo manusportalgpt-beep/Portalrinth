@@ -82,6 +82,22 @@
 				</InputFrame>
 
 				<!--
+					The tick, which is what applies the colour. Everything above
+					this is looking at one.
+				-->
+				<div class="mt-3 flex justify-end">
+					<button
+						type="button"
+						class="grid size-8 cursor-pointer place-items-center rounded-full border-0 bg-brand text-brand-inverted transition-transform hover:scale-110 motion-reduce:transition-none"
+						:aria-label="applyLabel"
+						:title="applyLabel"
+						@click="applyPicked"
+					>
+						<CheckIcon class="size-4" />
+					</button>
+				</div>
+
+				<!--
 					The colours the person has kept, under the picker that made
 					them. Kept rather than chosen from a list, so a colour that
 					took a moment to find is not lost the next time.
@@ -137,8 +153,9 @@
 </template>
 
 <script setup lang="ts">
+import { CheckIcon } from '@modrinth/assets'
 import { colord } from 'colord'
-import { computed, nextTick, onMounted, ref, useId, watch } from 'vue'
+import { computed, onMounted, ref, useId, watch } from 'vue'
 
 import {
 	type AnchoredTeleportPlacement,
@@ -168,6 +185,8 @@ const props = withDefaults(
 		customColorsFullLabel?: string
 		/** How many of them the row has room for. */
 		customColorsLimit?: number
+		/** What the tick says it does. */
+		applyLabel?: string
 	}>(),
 	{
 		disabled: false,
@@ -178,6 +197,7 @@ const props = withDefaults(
 		customColorsRemoveLabel: 'Remove this colour',
 		customColorsFullLabel: 'The row is full - remove one of your colours first',
 		customColorsLimit: 8,
+		applyLabel: 'Use this colour',
 	},
 )
 
@@ -225,8 +245,17 @@ const hue = ref(0)
 const saturation = ref(0)
 const brightness = ref(100)
 const hexInput = ref('')
+/**
+ * The colour being looked at, which is not yet the colour in force.
+ *
+ * Choosing a colour in the wheel is looking, not deciding: the wheel is
+ * dragged through every colour on the way to one, and the interface would
+ * be repainting itself for each of them. The one that is chosen is applied
+ * with the tick at the bottom, and everything else is left as it was.
+ */
+const picked = ref(model.value)
 
-let suppressModelSync = false
+const suppressModelSync = false
 
 function clamp(value: number, min: number, max: number) {
 	return Math.min(max, Math.max(min, value))
@@ -255,19 +284,38 @@ watch(
 	model,
 	(value) => {
 		if (suppressModelSync) return
+		picked.value = value
 		syncFromModel(value)
 	},
 	{ immediate: true },
 )
 
+// Opening the picker starts from the colour in force, whatever was looked at
+// last time.
+watch(isOpen, (open) => {
+	if (open) {
+		picked.value = model.value
+		syncFromModel(model.value)
+	}
+})
+
 function applyHsv() {
 	const hex = hsvToHex(hue.value, saturation.value, brightness.value)
 	hexInput.value = hex.replace('#', '').toUpperCase()
-	suppressModelSync = true
-	model.value = hex
-	nextTick(() => {
-		suppressModelSync = false
-	})
+	picked.value = hex
+}
+
+/**
+ * Applies the colour that was looked at.
+ *
+ * The one moment the interface changes: everything above it is looking.
+ */
+function applyPicked() {
+	if (picked.value.toLowerCase() !== model.value.toLowerCase()) {
+		model.value = picked.value
+		emit('change', picked.value)
+	}
+	close()
 }
 
 function updateSvFromPointer(event: PointerEvent) {
@@ -320,8 +368,8 @@ function onHueInput(event: Event) {
 function commitHexInput() {
 	const normalized = hexInput.value.trim().replace('#', '')
 	if (/^[0-9a-f]{6}$/i.test(normalized)) {
-		syncFromModel(`#${normalized.toLowerCase()}`)
-		model.value = `#${normalized.toLowerCase()}`
+		picked.value = `#${normalized.toLowerCase()}`
+		syncFromModel(picked.value)
 	} else {
 		hexInput.value = model.value.replace('#', '').toUpperCase()
 	}

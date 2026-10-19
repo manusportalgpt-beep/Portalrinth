@@ -1474,5 +1474,20 @@
 	},
 	"app.lan.details.loader": {
 		"message": "{loader} {loaderVersion}"
+	},
+	"app.lan.action.open-in-game": {
+		"message": "Open LAN"
+	},
+	"app.lan.action.open-in-game.hint": {
+		"message": "In Minecraft, open the world to the network: E, then \"Open to LAN\". This page finds it by itself."
+	},
+	"app.lan.hint": {
+		"message": "Open LAN"
+	},
+	"app.lan.details.world": {
+		"message": "The world is at"
+	},
+	"app.lan.details.world-closed": {
+		"message": "not open to the network yet"
 	}
 }

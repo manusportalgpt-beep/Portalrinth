@@ -13,6 +13,7 @@ const messages = defineMessages({
 	},
 	stopped: { id: 'app.lan.stopped', defaultMessage: 'No longer published' },
 	copied: { id: 'app.lan.copied', defaultMessage: 'Address copied' },
+	hint: { id: 'app.lan.hint', defaultMessage: 'Open LAN' },
 })
 
 /** The address a published world is reachable at, or nothing when it is not. */
@@ -67,6 +68,11 @@ export function useLanRelays() {
 		return stopMutation.isPending.value && stopMutation.variables.value === processUuid
 	}
 
+	/** Says something that is not an error but is worth saying. */
+	function hint(text: string) {
+		addNotification({ type: 'info', title: formatMessage(messages.hint), text })
+	}
+
 	async function copyAddress(address: string) {
 		try {
 			await navigator.clipboard.writeText(address)
@@ -84,5 +90,6 @@ export function useLanRelays() {
 		isPublishing,
 		isStopping,
 		copyAddress,
+		hint,
 	}
 }

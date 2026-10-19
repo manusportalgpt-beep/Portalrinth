@@ -55,7 +55,7 @@ defineExpose({ getRootElement })
 	<div
 		ref="root"
 		v-tooltip="tooltip ?? undefined"
-		class="group relative flex flex-col items-center justify-center overflow-hidden rounded-[20px] border border-dashed transition-[background,border-color,box-shadow,transform] duration-200 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand active:scale-[0.97] motion-reduce:transition-none"
+		class="group relative flex flex-col items-center justify-center overflow-hidden rounded-[20px] border border-dashed transition-[background,border-color,box-shadow,transform] duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand active:scale-[0.97] motion-reduce:transition-none"
 		:class="[
 			isHighlighted
 				? 'border-brand bg-brand-highlight'
