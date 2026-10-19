@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronRightIcon, UserIcon, UserPlusIcon } from '@modrinth/assets'
+import { ChevronRightIcon, SearchIcon, UserIcon, UserPlusIcon } from '@modrinth/assets'
 import { defineMessages, IconButton, useScrollIndicator, useVIntl } from '@modrinth/ui'
 import { OverlayScrollbars } from 'overlayscrollbars'
 import { computed, onMounted, onScopeDispose, ref, watch } from 'vue'
@@ -23,6 +23,8 @@ const props = defineProps<{
 	showAd: boolean
 	visible: boolean
 	requestSignIn: () => void
+	/** Whether the panel is folded to its rail. Decided by the window. */
+	collapsed: boolean
 }>()
 
 /**
@@ -47,6 +49,8 @@ const emit = defineEmits<{
 	'login-modrinth': []
 	/** Portalrinth: adding a Minecraft account asks which kind first. */
 	'add-minecraft-account': []
+	/** Asked for when the rail wants to be unfolded. */
+	'toggle-collapse': []
 }>()
 
 const { formatMessage } = useVIntl()
@@ -55,60 +59,38 @@ const { hasLoggedIntoMinecraft, hasLoggedIntoModrinth, showChecklist } = injectO
 const showFriendsList = computed(() => !showChecklist.value || hasLoggedIntoModrinth.value)
 const accounts = ref<InstanceType<typeof AccountsCard> | null>(null)
 
+/** The face the rail shows for whoever is playing, taken from the account card. */
+const headUrl = computed(() => accounts.value?.avatarUrl ?? null)
+
 /**
  * Whether the panel is folded to its rail.
  *
- * Kept here rather than in the window state because it is about this panel only,
- * and it survives navigation: the point of folding it is to make room for what
- * was opened, so reopening it every time the route changes defeats it.
+ * Owned by the window rather than here, because the width of the column the
+ * panel sits in is decided there too: the rail is narrow and the panel is wide,
+ * and the space between those two widths belongs to the page. One owner for
+ * both halves of that decision, so the rail and the column cannot disagree
+ * about how wide they are.
  */
-const collapsed = ref(false)
+const collapsed = computed(() => props.collapsed)
 
 /**
- * Hovering over the rail opens it, and leaving closes it again.
- *
- * Only while it is folded, and only once the pointer has been still for a
- * moment - a rail that snapped open under the cursor as it travelled past would
- * be in the way of everything it was folded to make room for. A person who has
- * moved the pointer off it deliberately keeps it folded.
+ * The rail, and the buttons on it, are how a folded panel is used at all. It
+ * carries the account at the top and the friend list's two actions under it, so
+ * the things a person reaches for most are reachable without unfolding.
  */
-const hovering = ref(false)
-let hoverTimer: number | undefined
-
-function toggleCollapsed() {
-	cancelHover()
-	collapsed.value = !collapsed.value
+function unfold() {
+	emit('toggle-collapse')
 }
 
-function cancelHover() {
-	if (hoverTimer !== undefined) {
-		window.clearTimeout(hoverTimer)
-		hoverTimer = undefined
-	}
-	hovering.value = false
-}
-
-function onRailEnter() {
-	if (!collapsed.value) return
-	cancelHover()
-	// Long enough that passing over the rail on the way somewhere does not
-	// open it, short enough that it feels like it responded.
-	hoverTimer = window.setTimeout(() => {
-		hovering.value = true
-		hoverTimer = undefined
-	}, 350)
-}
-
-function onRailLeave() {
-	cancelHover()
+function showFindFriendsModal() {
+	friends.value?.showFindFriendsModal()
 }
 
 /**
- * Open means the list is shown, whether by pressing the button or by hovering
- * the rail. Everything else reads this rather than `collapsed` so the two ways
- * of opening behave identically.
+ * The list is shown exactly when the panel is unfolded. The rail replaces it,
+ * not overlaps it.
  */
-const open = computed(() => !collapsed.value || hovering.value)
+const open = computed(() => !collapsed.value)
 const friends = ref<InstanceType<typeof FriendsList> | null>(null)
 const scrollContainer = ref<HTMLElement | null>(null)
 const scrollViewport = ref<HTMLElement | null>(null)
@@ -164,6 +146,14 @@ const messages = defineMessages({
 		id: 'app.sidebar.friends',
 		defaultMessage: 'Friends',
 	},
+	findFriends: {
+		id: 'app.sidebar.find-friends',
+		defaultMessage: 'Find friends',
+	},
+	addFriend: {
+		id: 'app.sidebar.add-friend',
+		defaultMessage: 'Add a friend',
+	},
 	expand: {
 		id: 'app.sidebar.expand',
 		defaultMessage: 'Expand the sidebar',
@@ -177,23 +167,17 @@ const messages = defineMessages({
 
 <template>
 	<!--
-		The rail and the panel are the same element at two widths, so folding is
-		one animation of one thing rather than a panel being taken off screen and
-		a different one put in its place. The pointer events are suspended while
-		folded: the list is not there, and a control that cannot be seen should
-		not be reachable either.
-	-->
+			The rail and the panel are one element, and its width is not its own:
+			it fills the column the window gives it. That is what makes the fold
+			work - the column narrows from 300px to the rail's width and the page
+			takes the difference, so the page is wider when the panel is folded,
+			not merely shifted left.
+		-->
 	<div
-		class="app-sidebar mt-px relative flex h-[calc(100vh-var(--top-bar-height))] shrink-0 flex-col overflow-visible border-0 border-l-[1px] border-solid border-[--brand-gradient-border] before:pointer-events-none before:absolute before:inset-y-0 before:-left-8 before:w-8 before:content-[''] transition-[width] duration-300 ease-out motion-reduce:transition-none"
-		:class="[
-			open ? 'w-[300px]' : 'w-[4rem]',
-			{ 'pointer-events-none': !open },
-			{
-				'before:shadow-[-15px_0_15px_-15px_rgba(0,0,0,0.1)_inset]': appTheme.advancedRendering,
-			},
-		]"
-		@mouseenter="onRailEnter"
-		@mouseleave="onRailLeave"
+		class="app-sidebar mt-px relative flex h-[calc(100vh-var(--top-bar-height))] w-full shrink-0 flex-col overflow-visible border-0 border-l-[1px] border-solid border-[--brand-gradient-border] before:pointer-events-none before:absolute before:inset-y-0 before:-left-8 before:w-8 before:content-['']"
+		:class="{
+			'before:shadow-[-15px_0_15px_-15px_rgba(0,0,0,0.1)_inset]': appTheme.advancedRendering,
+		}"
 	>
 		<div v-show="open" class="relative flex min-h-0 grow shrink flex-col">
 			<div
@@ -254,23 +238,43 @@ const messages = defineMessages({
 		<Promotion v-if="showAd && open" @upgrade-height="upgradeHeight = $event" />
 
 		<!--
-			Folded, the panel is a column of what it holds rather than nothing: the
-			account, the friend list and the search all still have one thing to say
-			and that thing is an icon. Each names itself on hover, because a column
-			of unlabelled symbols is a puzzle rather than a summary.
+			Folded, the panel is the four things it holds that are wanted without
+			opening it: the account, and the friend list's two actions. They run
+			down the rail in the order they are used - who I am, then who I am
+			looking for, then who I am adding - each naming itself on hover, because
+			a column of unlabelled symbols is a puzzle rather than a summary.
 		-->
-		<div v-if="!open" class="flex grow flex-col items-center gap-2 overflow-y-auto py-3">
+		<div v-if="!open" class="flex grow flex-col items-center gap-1 py-2">
+			<!--
+				The account is the head itself, square as a Minecraft head is, and
+				it is the way back: pressing it unfolds the panel. It is the first
+				thing on the rail because it is the first thing the panel shows
+				when it opens.
+			-->
 			<IconButton
-				v-if="hasLoggedIntoMinecraft"
 				v-tooltip="formatMessage(messages.playingAs)"
 				:label="formatMessage(messages.playingAs)"
-				@click="emit('add-minecraft-account')"
+				@click="unfold"
 			>
-				<UserIcon />
+				<img
+					v-if="headUrl"
+					:src="headUrl"
+					alt=""
+					class="size-6 rounded-[3px] object-cover"
+					draggable="false"
+				/>
+				<UserIcon v-else />
 			</IconButton>
 			<IconButton
-				v-tooltip="formatMessage(messages.friends)"
-				:label="formatMessage(messages.friends)"
+				v-tooltip="formatMessage(messages.findFriends)"
+				:label="formatMessage(messages.findFriends)"
+				@click="showFindFriendsModal()"
+			>
+				<SearchIcon />
+			</IconButton>
+			<IconButton
+				v-tooltip="formatMessage(messages.addFriend)"
+				:label="formatMessage(messages.addFriend)"
 				@click="showAddFriendModal()"
 			>
 				<UserPlusIcon />
@@ -283,12 +287,12 @@ const messages = defineMessages({
 			that has to be found before anything can be done.
 		-->
 		<div
-			class="flex shrink-0 justify-end border-0 border-t-[1px] border-solid p-2 border-[--brand-gradient-border]"
+			class="flex shrink-0 justify-center border-0 border-t-[1px] border-solid p-2 border-[--brand-gradient-border]"
 		>
 			<IconButton
-				v-tooltip="formatMessage(collapsed ? messages.collapse : messages.expand)"
-				:label="collapsed ? formatMessage(messages.expand) : formatMessage(messages.collapse)"
-				@click="toggleCollapsed"
+				v-tooltip="formatMessage(collapsed ? messages.expand : messages.collapse)"
+				:label="formatMessage(collapsed ? messages.expand : messages.collapse)"
+				@click="emit('toggle-collapse')"
 			>
 				<ChevronRightIcon :class="collapsed ? 'rotate-180' : ''" />
 			</IconButton>

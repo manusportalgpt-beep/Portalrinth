@@ -374,6 +374,9 @@ defineExpose({
 	showOfflineLogin: () => offlineModal.value?.show(),
 	loginDisabled,
 	selectedAccount,
+	// The head the collapsed rail shows, so the rail can carry the same face
+	// the account card does rather than a second picture of its own.
+	avatarUrl,
 })
 
 await refreshValues()

@@ -4490,11 +4490,17 @@
   "app.settings.tabs.synced-options": {
     "message": "Synced settings"
   },
+  "app.sidebar.add-friend": {
+    "message": "Add a friend"
+  },
   "app.sidebar.collapse": {
     "message": "Collapse the sidebar"
   },
   "app.sidebar.expand": {
     "message": "Expand the sidebar"
+  },
+  "app.sidebar.find-friends": {
+    "message": "Find friends"
   },
   "app.sidebar.friends": {
     "message": "Friends"
@@ -5266,6 +5272,12 @@
   },
   "friends.add-friends-to-share": {
     "message": "<link>Add friends</link> to see what they're playing!"
+  },
+  "friends.find.description": {
+    "message": "Search Modrinth by username and send them a request."
+  },
+  "friends.find.title": {
+    "message": "Find friends"
   },
   "friends.friend.actions.label": {
     "message": "Friend actions"

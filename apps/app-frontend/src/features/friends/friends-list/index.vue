@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { MailIcon, SearchIcon, SendIcon, UserIcon, UserPlusIcon, XIcon } from '@modrinth/assets'
+import {
+	MailIcon,
+	SearchIcon,
+	SendIcon,
+	SpinnerIcon,
+	UserIcon,
+	UserPlusIcon,
+	XIcon,
+} from '@modrinth/assets'
 import {
 	Avatar,
 	Button,
@@ -11,13 +19,14 @@ import {
 	useRelativeTime,
 	useVIntl,
 } from '@modrinth/ui'
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import type { FriendWithUserData } from '@/helpers/friends.ts'
 import type { ModrinthCredentials } from '@/helpers/mr_auth'
 import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
+import { search_user } from '@/helpers/users.ts'
 
 import { useFriends } from '../use-friends'
 import FriendsSection from './section.vue'
@@ -77,6 +86,51 @@ const search = ref('')
 const friendInvitesModal = ref()
 const username = ref('')
 const addFriendModal = ref()
+
+/**
+ * The search the rail's magnifier opens: a person's own friends, found by name.
+ *
+ * It lives in a dialog of its own rather than in the list because the rail has
+ * no room for a search field, and the question "which of my friends is this"
+ * is worth asking without scrolling the whole list to ask it.
+ */
+const findQuery = ref('')
+const findModal = ref()
+const findResults = ref<{ id: string; username: string; avatar_url: string | null }[]>([])
+const findLoading = ref(false)
+let findTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(findQuery, (query) => {
+	clearTimeout(findTimer)
+	findResults.value = []
+	const term = query.trim()
+	if (term.length < 2) return
+	findTimer = setTimeout(async () => {
+		findLoading.value = true
+		try {
+			findResults.value = await search_user(term)
+		} catch {
+			// A failed search is not a failure worth interrupting the typing
+			// for; the field is still there to try again in.
+			findResults.value = []
+		} finally {
+			findLoading.value = false
+		}
+	}, 250)
+})
+
+onUnmounted(() => clearTimeout(findTimer))
+
+function showFindFriendsModal() {
+	findQuery.value = ''
+	findResults.value = []
+	findModal.value?.show()
+}
+
+function requestFoundFriend(user: { id: string; username: string }) {
+	requestFriend({ id: user.id, username: user.username })
+	findResults.value = findResults.value.filter((found) => found.id !== user.id)
+}
 
 const sortedFriends = computed<FriendWithUserData[]>(() =>
 	userFriends.value.slice().sort((a, b) => {
@@ -143,7 +197,7 @@ function removeFriend(friend: FriendWithUserData) {
 	removeFriendRecord(friend)
 }
 
-defineExpose({ showAddFriendModal })
+defineExpose({ showAddFriendModal, showFindFriendsModal })
 
 const messages = defineMessages({
 	noRequests: {
@@ -157,6 +211,14 @@ const messages = defineMessages({
 	addingAFriend: {
 		id: 'friends.add-friend.title',
 		defaultMessage: 'Adding a friend',
+	},
+	findFriendsTitle: {
+		id: 'friends.find.title',
+		defaultMessage: 'Find friends',
+	},
+	findFriendsDescription: {
+		id: 'friends.find.description',
+		defaultMessage: 'Search Modrinth by username and send them a request.',
 	},
 	usernameTitle: {
 		id: 'friends.add-friend.username.title',
@@ -258,6 +320,38 @@ const messages = defineMessages({
 					</div>
 				</div>
 			</div>
+		</div>
+	</ModalWrapper>
+	<ModalWrapper ref="findModal" :header="formatMessage(messages.findFriendsTitle)">
+		<div class="flex flex-col gap-3 min-w-[30rem]">
+			<p class="m-0 text-sm text-secondary leading-tight">
+				{{ formatMessage(messages.findFriendsDescription) }}
+			</p>
+			<Input
+				v-model="findQuery"
+				:icon="SearchIcon"
+				type="text"
+				:placeholder="formatMessage(messages.searchFriends)"
+				wrapper-class="w-full"
+			/>
+			<SpinnerIcon v-if="findLoading" class="size-5 animate-spin text-secondary" />
+			<div v-else-if="findResults.length > 0" class="flex flex-col gap-1">
+				<div
+					v-for="user in findResults"
+					:key="user.id"
+					class="flex items-center gap-3 rounded-lg border-0 border-b-[1px] border-solid border-button-border py-2 last:border-b-0"
+				>
+					<Avatar :src="user.avatar_url ?? undefined" size="2rem" />
+					<span class="flex-1 truncate text-contrast">{{ user.username }}</span>
+					<Button type="colored" color="brand" @click="requestFoundFriend(user)">
+						<UserPlusIcon />
+						{{ formatMessage(messages.addFriend) }}
+					</Button>
+				</div>
+			</div>
+			<p v-else-if="findQuery.trim().length >= 2" class="m-0 text-sm text-secondary">
+				{{ formatMessage(messages.noFriendsMatch, { query: findQuery }) }}
+			</p>
 		</div>
 	</ModalWrapper>
 	<ModalWrapper ref="addFriendModal" :header="formatMessage(messages.addingAFriend)">

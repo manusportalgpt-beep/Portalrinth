@@ -256,6 +256,15 @@ const forceSidebar = computed(
 )
 const sidebarVisible = computed(() => sidebarToggled.value || forceSidebar.value)
 watch(sidebarVisible, (visible) => markSidebarMoving(visible))
+
+/**
+ * Whether the panel is folded to its rail rather than opened.
+ *
+ * It lives here because the width of the column the panel occupies is decided
+ * here too: folded, the column is the rail's width and the page is that much
+ * wider; open, the column is the panel's width and the page gives it up.
+ */
+const sidebarCollapsed = ref(false)
 const hostingRouteActive = computed(() => route.path.startsWith('/hosting'))
 const hostingUpdateRequired = computed(
 	() =>
@@ -2468,6 +2477,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		class="app-contents"
 		:class="{
 			'sidebar-enabled': sidebarVisible,
+			'sidebar-collapsed': sidebarVisible && sidebarCollapsed,
 			'disable-advanced-rendering': !appTheme.advancedRendering,
 		}"
 	>
@@ -2542,10 +2552,12 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			:has-plus="hasPlus"
 			:show-ad="showAd"
 			:visible="sidebarVisible"
+			:collapsed="sidebarCollapsed"
 			:request-sign-in="() => requestSignIn()"
 			@create-instance="installationModal?.show()"
 			@login-modrinth="signIn"
 			@add-minecraft-account="accountProviderModal?.show()"
+			@toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
 		/>
 	</div>
 	<I18nDebugPanel />
@@ -2664,6 +2676,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		.app-sidebar {
 			opacity: 1;
 		}
+	}
+
+	/*
+	 * Folded, the column is the rail's width instead of the panel's. The page
+	 * takes the difference rather than the rail being a narrow panel inside a
+	 * wide column, so folding the panel gives room to the page instead of
+	 * wasting it - and the rail sits at the window's own right edge, because
+	 * the column it occupies is the last one.
+	 */
+	&.sidebar-collapsed {
+		grid-template-columns: 1fr var(--left-bar-width);
 	}
 
 	@media (prefers-reduced-motion) {
