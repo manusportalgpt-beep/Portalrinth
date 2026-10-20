@@ -699,7 +699,7 @@ const selectedEnvironments: Ref<string[]> = computed(
 )
 
 const filteredVersions = computed(() => {
-	return normalizedVersions.value.filter(
+	const matching = normalizedVersions.value.filter(
 		(version) =>
 			hasAnySelected(version.game_versions, selectedGameVersions.value) &&
 			hasAnySelected(version.loaders, selectedPlatforms.value) &&
@@ -709,6 +709,16 @@ const filteredVersions = computed(() => {
 				selectedEnvironments.value,
 			),
 	)
+	// Filters that hide everything are worse than no filters at all: the page
+	// says the project has a version, and the download works, and the table
+	// below says there is nothing. The filters came from somewhere else - a
+	// server this is being added to, a search that was looked at - and they
+	// say nothing about this project. So when they leave nothing, they are
+	// stepped over.
+	if (matching.length === 0 && normalizedVersions.value.length > 0) {
+		return normalizedVersions.value
+	}
+	return matching
 })
 
 function hasAnySelected(values: string[], selected: string[]) {

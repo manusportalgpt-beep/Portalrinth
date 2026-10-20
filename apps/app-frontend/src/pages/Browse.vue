@@ -405,10 +405,16 @@ const hideInstalledModpacks = computed({
 const instanceFilters = computed(() => {
 	const filters = []
 
+	// A server is not made for one version of the game: it says which ones it
+	// supports, and a filter for one of them hides the rest. So the version is
+	// not filtered on when looking for servers, which is also why searching for
+	// them by version found nothing at all.
+	const isServerSearch = projectType.value === 'server'
+
 	if (instance.value && projectType.value !== 'resourcepack') {
 		const isVanillaShader = projectType.value === 'shader' && instance.value.loader === 'vanilla'
 		const gameVersion = instance.value.game_version
-		if (gameVersion && !isVanillaShader) {
+		if (gameVersion && !isVanillaShader && !isServerSearch) {
 			filters.push({ type: 'game_version', option: gameVersion })
 		}
 

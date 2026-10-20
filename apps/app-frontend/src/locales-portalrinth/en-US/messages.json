@@ -1495,5 +1495,11 @@
 	},
 	"app.lan.state.not-live": {
 		"message": "Not in the network"
+	},
+	"friends.find.title": {
+		"message": "Find friends"
+	},
+	"friends.find.description": {
+		"message": "Search Modrinth by username and send them a request."
 	}
 }

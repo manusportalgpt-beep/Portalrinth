@@ -144,10 +144,10 @@ function openInGame() {
 				>
 					<MoreVerticalIcon />
 				</Button>
-				<Button v-if="address" size="sm" type="outlined" color="brand" @click="copyAddress">
-					<CopyIcon />
-					{{ address }}
-				</Button>
+				<!--
+					The address is not here: it is under the build it belongs to,
+					where it can be taken and given to somebody.
+				-->
 				<!--
 					Open the world in Minecraft first: the game is the only one
 					that can open a world to the network, and the button says so

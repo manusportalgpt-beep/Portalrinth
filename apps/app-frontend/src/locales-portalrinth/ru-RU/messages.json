@@ -2263,5 +2263,11 @@
 	},
 	"app.lan.state.not-live": {
 		"message": "Не в сети"
+	},
+	"friends.find.title": {
+		"message": "Найти друзей"
+	},
+	"friends.find.description": {
+		"message": "Ищите по нику на Modrinth и отправляйте заявку."
 	}
 }
