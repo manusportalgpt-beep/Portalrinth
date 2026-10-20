@@ -3,7 +3,7 @@ use sqlx::migrate::Migrator;
 use sqlx::sqlite::{
     SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions,
 };
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Row, Sqlite};
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::Duration;
@@ -77,6 +77,12 @@ async fn run_migrations(pool: &Pool<Sqlite>) -> crate::Result<()> {
         .into());
     }
 
+    // Before anything is checked: the checksums of the migrations the fork
+    // once renamed and put back.
+    if let Err(err) = heal_restored_migration_checksums(pool).await {
+        tracing::warn!("Could not repair the migration checksums: {err}");
+    }
+
     MIGRATOR.run(pool).await.inspect_err(|err| {
         tracing::error!(
             "Failed to apply migrations to the state database: {err}. A copy of \
@@ -84,6 +90,66 @@ async fn run_migrations(pool: &Pool<Sqlite>) -> crate::Result<()> {
         );
     })?;
 
+    Ok(())
+}
+
+/// The migrations the fork once renamed and put back.
+///
+/// Their contents are byte for byte what shipped, and the versions are the
+/// same. But a launcher that ran while they were renamed wrote down the
+/// checksum of the renamed version, and that checksum does not match the file
+/// that is there now - so the launcher refuses to open its own database, and
+/// because the window is only shown once the interface is up, it refuses in
+/// the way that looks like nothing happening at all.
+///
+/// Only these are put right, and only where the recorded checksum is not the
+/// one the file has. A migration that has really been changed is still
+/// refused, because that is what the check is for.
+const RESTORED_MIGRATIONS: &[i64] = &[
+    20260820214600,
+    20260911121500,
+    20260911130000,
+    20260911140000,
+];
+
+/// Puts the recorded checksum of the migrations above right.
+async fn heal_restored_migration_checksums(pool: &Pool<Sqlite>) -> crate::Result<()> {
+    for version in RESTORED_MIGRATIONS {
+        let Some(migration) = MIGRATOR.iter().find(|m| m.version == *version) else {
+            continue;
+        };
+        // The table is not there yet on a first run, which is not a problem:
+        // there is nothing to be wrong about.
+        let Ok(rows) = sqlx::query(
+            "SELECT checksum FROM _sqlx_migrations WHERE version = ? AND success = 1",
+        )
+        .bind(version)
+        .fetch_all(pool)
+        .await
+        else {
+            continue;
+        };
+        let checksum: &[u8] = &migration.checksum[..];
+        for row in rows {
+            let recorded: Vec<u8> = match row.try_get(0) {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            if recorded.as_slice() == checksum {
+                continue;
+            }
+            sqlx::query("UPDATE _sqlx_migrations SET checksum = ? WHERE version = ?")
+                .bind(checksum)
+                .bind(version)
+                .execute(pool)
+                .await?;
+            tracing::warn!(
+                "Put the recorded checksum of migration {version} right: the \
+                 file was renamed and put back, and the launcher had written \
+                 down the checksum of the renamed one."
+            );
+        }
+    }
     Ok(())
 }
 
