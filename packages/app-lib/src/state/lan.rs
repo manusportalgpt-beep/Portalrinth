@@ -223,7 +223,9 @@ pub fn note_log_line(process_uuid: &str, line: &str) {
     let words = words_of(line);
     if after_any_marker(&words, SERVING_STOPPED_MARKERS).is_some() {
         forget_process(process_uuid);
-    } else if let Some(port) = port_after_marker(&words, HOSTING_MARKERS) {
+    } else if let Some(port) = port_after_marker(&words, HOSTING_MARKERS)
+        .or_else(|| port_after_port_word(&words))
+    {
         note_opened_port(process_uuid, port);
     }
 }

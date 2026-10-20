@@ -748,6 +748,14 @@ impl Process {
                                             tracing::error!("Failed to handle server join logging: {e}");
                                         }
                                     }
+                                    // The same line the plain output gives:
+                                    // this is where a world opened to the
+                                    // network is noticed, in either shape the
+									// game's output arrives in.
+                                    crate::state::lan::note_log_line(
+                                        process_uuid,
+                                        current_event.message.as_deref().unwrap_or("").trim(),
+                                    );
 
                                     Self::emit_log4j_event(
                                         instance_id,
@@ -821,6 +829,12 @@ impl Process {
                             "Failed to handle old server join logging: {e}"
                         );
                     }
+                    // Every line the game writes goes past here, so this is
+                    // where the world being opened to the network is noticed.
+                    // Without it, the port was only ever found by reading the
+                    // log file afterwards, and a world that was opened while
+                    // the launcher was not looking was never seen at all.
+                    crate::state::lan::note_log_line(process_uuid, line.trim_ascii_end());
                 }
 
                 line.clear();

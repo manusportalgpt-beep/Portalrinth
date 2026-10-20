@@ -97,14 +97,6 @@ struct ActiveRelay {
 static RELAYS: LazyLock<DashMap<Uuid, ActiveRelay>> =
     LazyLock::new(DashMap::new);
 
-/// How far each running copy's log has been read, so that a launcher which
-/// missed the beginning of a session still notices what the game says next.
-///
-/// The length, not a flag: a world is opened to the network at some unknowable
-/// moment, and a file read only once would have happened long before it. The
-/// log is re-read only when the game has added to it, which for the line that
-/// matters is once.
-static LOGS_READ: LazyLock<DashMap<Uuid, u64>> = LazyLock::new(DashMap::new);
 
 /// Every copy of an instance that is running right now, and where its world can
 /// be reached.
@@ -191,18 +183,15 @@ async fn local_port(
         return Some(port);
     }
 
-    let length = log_length(state, &process.instance_path).await?;
-    if LOGS_READ
-        .get(&process.uuid)
-        .is_some_and(|read| *read >= length)
-    {
-        return None;
-    }
-    LOGS_READ.insert(process.uuid, length);
-
-    let port = port_from_log_tail(state, &process.instance_path, length).await?;
-    if !is_serving(port).await {
-        return None;
+    // Both logs are read, and neither is skipped because the other was read
+    // before: the line may be in either, and which one it is in is not a
+    // thing to guess at. The game's own log is only read again when it has
+    // grown, because that is the one that is being written to.
+    if let Some(port) = port_from_log_tail(state, &process.instance_path).await {
+        if is_serving(port).await {
+            crate::state::lan::note_opened_port(&process_uuid, port);
+            return Some(port);
+        }
     }
 
     crate::state::lan::note_opened_port(&process_uuid, port);
@@ -236,18 +225,11 @@ async fn players_in_world(state: &crate::State, instance_path: &str) -> Vec<Stri
 
 async fn is_serving(port: u16) -> bool {
     tokio::time::timeout(
-        std::time::Duration::from_millis(500),
+        std::time::Duration::from_millis(1500),
         TcpStream::connect(("127.0.0.1", port)),
     )
     .await
     .is_ok_and(|connected| connected.is_ok())
-}
-
-fn game_log(state: &crate::State, instance_path: &str) -> std::path::PathBuf {
-    state
-        .directories
-        .instance_logs_dir(instance_path)
-        .join("latest.log")
 }
 
 /// How much of the game's own log there is, which is nothing at all until the
@@ -259,6 +241,26 @@ async fn log_length(state: &crate::State, instance_path: &str) -> Option<u64> {
         .map(|metadata| metadata.len())
 }
 
+fn game_log(state: &crate::State, instance_path: &str) -> std::path::PathBuf {
+    state
+        .directories
+        .instance_logs_dir(instance_path)
+        .join("latest.log")
+}
+
+/// The log the launcher keeps of the game's own output.
+///
+/// The game writes its own log, and the launcher keeps a second copy of
+/// everything the game printed. Which of them has the line saying the world
+/// was opened depends on the game and the version, so both are read rather
+/// than one of them being guessed at.
+fn launcher_log(state: &crate::State, instance_path: &str) -> std::path::PathBuf {
+    state
+        .directories
+        .instance_logs_dir(instance_path)
+        .join("launcher_log.txt")
+}
+
 /// The last world a running game opened to the network, read back out of its own
 /// log.
 ///
@@ -268,11 +270,42 @@ async fn log_length(state: &crate::State, instance_path: &str) -> Option<u64> {
 async fn port_from_log_tail(
     state: &crate::State,
     instance_path: &str,
-    length: u64,
 ) -> Option<u16> {
-    let mut file = tokio::fs::File::open(game_log(state, instance_path))
-        .await
-        .ok()?;
+    // The game's own log first, then the launcher's copy of what the game
+    // printed. One of them has the line, and which one is not a thing to
+    // guess at.
+    for path in [
+        game_log(state, instance_path),
+        launcher_log(state, instance_path),
+    ] {
+        if let Some(port) = port_in_file(&path).await {
+            return Some(port);
+        }
+    }
+    None
+}
+
+/// The port said in the last of a file's lines.
+async fn port_in_file(path: &std::path::Path) -> Option<u16> {
+    let mut file = tokio::fs::File::open(path).await.ok()?;
+    let length = tokio::fs::metadata(path).await.ok()?.len();
+    file.seek(std::io::SeekFrom::Start(
+        length.saturating_sub(MAX_LOG_TAIL),
+    ))
+    .await
+    .ok()?;
+
+    let mut tail = String::new();
+    file.read_to_string(&mut tail).await.ok()?;
+    tail.lines()
+        .rev()
+        .find_map(crate::state::lan::port_in_line)
+}
+
+/// The port said in the last of a file's lines.
+async fn port_in_file(path: &std::path::Path, length: u64) -> Option<u16> {
+    let mut file = tokio::fs::File::open(path).await.ok()?;
+    let length = tokio::fs::metadata(path).await.ok()?.len().min(length.max(1));
     file.seek(std::io::SeekFrom::Start(
         length.saturating_sub(MAX_LOG_TAIL),
     ))
@@ -418,7 +451,6 @@ pub async fn stop(process_uuid: Uuid) -> crate::Result<()> {
 /// Called from the process manager, which cannot wait and which has already torn
 /// the world down — there is nothing left to publish either way.
 pub fn detach_process(process_uuid: Uuid) {
-    LOGS_READ.remove(&process_uuid);
 
     let Some((_, tunnel)) = RELAYS.remove(&process_uuid) else {
         return;
