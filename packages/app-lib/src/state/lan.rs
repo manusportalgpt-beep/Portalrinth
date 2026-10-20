@@ -155,7 +155,10 @@ fn name_before_marker_in_line(line: &str, markers: &[&str]) -> Option<String> {
         let Some(at) = lower.find(marker) else {
             continue;
         };
-        let before = &line[..at];
+        // The name is the last word before the phrase, so the spaces between
+        // them are stepped over first: without that, the run stops at the
+        // space and the name is empty.
+        let before = line[..at].trim_end();
         let name: String = before
             .chars()
             .rev()
