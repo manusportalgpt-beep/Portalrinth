@@ -4,7 +4,7 @@ name = "theseus_gui"
 version = "0.21.10"
 edition.workspace = true
 description = "Portalrinth is a desktop application for managing your Minecraft mods"
-repository = "https://github.com/Everelsu/Portalrinth"
+repository = "https://github.com/manusportalgpt-beep/Portalrinth"
 license = "GPL-3.0-only"
 
 [dependencies]

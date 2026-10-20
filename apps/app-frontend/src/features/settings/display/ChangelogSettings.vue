@@ -242,7 +242,7 @@ const entries = computed<ChangelogEntry[]>(() =>
 			<p class="m-0 text-sm text-secondary">
 				{{ formatMessage(messages.portalrinthNote) }}
 			</p>
-			<Button @click="openUrl('https://everelsu.github.io/Portalrinth/changelog/')">
+			<Button @click="openUrl('https://manusportalgpt-beep.github.io/Portalrinth/changelog/')">
 				<ExternalIcon />
 				{{ formatMessage(messages.openPortalrinthChangelog) }}
 			</Button>

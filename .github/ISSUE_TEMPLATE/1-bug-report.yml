@@ -7,7 +7,7 @@ body:
     attributes:
       label: Please confirm the following.
       options:
-        - label: I checked the [existing issues](https://github.com/Everelsu/Portalrinth/issues?q=is%3Aissue) for duplicate reports
+        - label: I checked the [existing issues](https://github.com/manusportalgpt-beep/Portalrinth/issues?q=is%3Aissue) for duplicate reports
           required: true
         - label: I have ensured my Portalrinth installation is up to date
           required: true

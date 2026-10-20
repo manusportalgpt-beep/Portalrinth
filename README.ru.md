@@ -2,10 +2,10 @@
 
 <div align="center">
 
-[![Release](https://img.shields.io/github/v/release/Everelsu/Portalrinth?include_prereleases&style=for-the-badge&logo=github&logoColor=white&label=Release&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/releases)
-[![Downloads](https://img.shields.io/github/downloads/Everelsu/Portalrinth/total?style=for-the-badge&logo=github&logoColor=white&label=Downloads&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/releases)
+[![Release](https://img.shields.io/github/v/release/manusportalgpt-beep/Portalrinth?include_prereleases&style=for-the-badge&logo=github&logoColor=white&label=Release&labelColor=16181c&color=ac51fb)](https://github.com/manusportalgpt-beep/Portalrinth/releases)
+[![Downloads](https://img.shields.io/github/downloads/manusportalgpt-beep/Portalrinth/total?style=for-the-badge&logo=github&logoColor=white&label=Downloads&labelColor=16181c&color=ac51fb)](https://github.com/manusportalgpt-beep/Portalrinth/releases)
 [![License](https://img.shields.io/badge/License-GPL--3.0-ac51fb?style=for-the-badge&logo=gnu&logoColor=white&labelColor=16181c)](apps/app/LICENSE)
-[![Stars](https://img.shields.io/github/stars/Everelsu/Portalrinth?style=for-the-badge&logo=github&logoColor=white&label=Stars&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/stargazers)
+[![Stars](https://img.shields.io/github/stars/manusportalgpt-beep/Portalrinth?style=for-the-badge&logo=github&logoColor=white&label=Stars&labelColor=16181c&color=ac51fb)](https://github.com/manusportalgpt-beep/Portalrinth/stargazers)
 
 [English](README.md) · **Русский**
 
@@ -13,11 +13,11 @@
 
 🌙 Форк Modrinth App, который понимает Ely.by, ставит паки с CurseForge и возвращает скины всем игрокам на офлайн-серверах 🚀
 
-<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-windows.ru.svg" alt="Скачать для Windows" height="56"/></a>
-<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-macos.ru.svg" alt="Скачать для macOS" height="56"/></a>
-<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-linux.ru.svg" alt="Скачать для Linux" height="56"/></a>
+<a href="https://github.com/manusportalgpt-beep/Portalrinth/releases/latest"><img src=".github/assets/readme/download-windows.ru.svg" alt="Скачать для Windows" height="56"/></a>
+<a href="https://github.com/manusportalgpt-beep/Portalrinth/releases/latest"><img src=".github/assets/readme/download-macos.ru.svg" alt="Скачать для macOS" height="56"/></a>
+<a href="https://github.com/manusportalgpt-beep/Portalrinth/releases/latest"><img src=".github/assets/readme/download-linux.ru.svg" alt="Скачать для Linux" height="56"/></a>
 
-[Список изменений](https://everelsu.github.io/Portalrinth/) · [Релизы](https://github.com/Everelsu/Portalrinth/releases) · [Issues](https://github.com/Everelsu/Portalrinth/issues) · [Обсуждения](https://github.com/Everelsu/Portalrinth/discussions) · [Оригинал](https://github.com/modrinth/code)
+[Список изменений](https://everelsu.github.io/Portalrinth/) · [Релизы](https://github.com/manusportalgpt-beep/Portalrinth/releases) · [Issues](https://github.com/manusportalgpt-beep/Portalrinth/issues) · [Обсуждения](https://github.com/manusportalgpt-beep/Portalrinth/discussions) · [Оригинал](https://github.com/modrinth/code)
 
 </div>
 
@@ -83,7 +83,7 @@ Modrinth App — действительно хороший лаунчер, но 
 
 ### Установка
 
-Возьми установщик для своей платформы из [последнего релиза](https://github.com/Everelsu/Portalrinth/releases/latest):
+Возьми установщик для своей платформы из [последнего релиза](https://github.com/manusportalgpt-beep/Portalrinth/releases/latest):
 
 | Платформа | Примечание                            |
 | --------- | ------------------------------------- |
@@ -142,11 +142,11 @@ Portalrinth синхронизируется с [modrinth/code](https://github.c
 
 ## Участие в разработке
 
-Баг-репорты и pull request'ы приветствуются — начни с [открытия issue](https://github.com/Everelsu/Portalrinth/issues).
+Баг-репорты и pull request'ы приветствуются — начни с [открытия issue](https://github.com/manusportalgpt-beep/Portalrinth/issues).
 
 Нашёл баг, который не специфичен для Portalrinth? Ему место [в оригинале](https://github.com/modrinth/code/issues) — исправление там получат все, и оно придёт в этот форк при следующей синхронизации.
 
-Если Portalrinth оказался полезен, [поставь звезду](https://github.com/Everelsu/Portalrinth/stargazers).
+Если Portalrinth оказался полезен, [поставь звезду](https://github.com/manusportalgpt-beep/Portalrinth/stargazers).
 
 ## Лицензия
 

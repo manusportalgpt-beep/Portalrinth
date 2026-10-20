@@ -51,8 +51,8 @@ const body =
 		? builds[0].body.trim()
 		: builds.map((entry) => `## ${entry.version}\n\n${entry.body.trim()}`).join('\n\n')
 
-const REPO = 'Everelsu/Portalrinth'
-const SITE = 'https://everelsu.github.io/Portalrinth'
+const REPO = 'manusportalgpt-beep/Portalrinth'
+const SITE = 'https://manusportalgpt-beep.github.io/Portalrinth'
 const tag = process.env.TAG || `v${version}`
 // Pictures from main rather than the tag: the buttons are newer than some of
 // the releases they go on, and a tag from before them has none to show.

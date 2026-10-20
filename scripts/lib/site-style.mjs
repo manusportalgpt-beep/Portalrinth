@@ -3,9 +3,9 @@
 // and the page frame every page shares: the bar along the top, the footer, and
 // the English/Russian switch.
 
-export const REPO = 'https://github.com/Everelsu/Portalrinth'
+export const REPO = 'https://github.com/manusportalgpt-beep/Portalrinth'
 /** Where the site is published, for the links that have to be absolute (the news feed). */
-export const SITE_URL = 'https://everelsu.github.io/Portalrinth'
+export const SITE_URL = 'https://manusportalgpt-beep.github.io/Portalrinth'
 
 /** One string in both languages; the stylesheet shows the one the page is in. */
 export function t(en, ru) {

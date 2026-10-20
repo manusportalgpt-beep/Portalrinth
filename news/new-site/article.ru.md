@@ -18,4 +18,4 @@ date: 2026-10-15T12:00:00+09:00
 
 Все заметки о релизах Portalrinth и Modrinth App, как и раньше, а теперь со ссылкой на каждую версию и фильтром, чтобы смотреть только одно или другое.
 
-Если на сайте что-то не так или чего-то не хватает, [открой issue](https://github.com/Everelsu/Portalrinth/issues).
+Если на сайте что-то не так или чего-то не хватает, [открой issue](https://github.com/manusportalgpt-beep/Portalrinth/issues).

@@ -2176,7 +2176,7 @@ async function installUpdate() {
 setAppUpdateActions({
 	download: downloadAvailableUpdate,
 	install: installUpdate,
-	changelog: () => openUrl('https://everelsu.github.io/Portalrinth/changelog/'),
+	changelog: () => openUrl('https://manusportalgpt-beep.github.io/Portalrinth/changelog/'),
 })
 
 async function openModrinthProjectLinkInApp(parsed) {

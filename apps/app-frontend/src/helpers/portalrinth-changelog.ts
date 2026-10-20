@@ -174,7 +174,7 @@ export const PORTALRINTH_CHANGELOG: PortalrinthVersionEntry[] = [
 - A crash that ran out of memory offers a button that gives the instance more.
 
 ### Fixed
-- Launching no longer hangs on "Launching..." while Discord is running but not answering, and turning Discord RPC off no longer connects to Discord at all. Thanks to [@loyslow-dev](https://github.com/loyslow-dev) for tracking it down ([#7](https://github.com/Everelsu/Portalrinth/issues/7)).
+- Launching no longer hangs on "Launching..." while Discord is running but not answering, and turning Discord RPC off no longer connects to Discord at all. Thanks to [@loyslow-dev](https://github.com/loyslow-dev) for tracking it down ([#7](https://github.com/manusportalgpt-beep/Portalrinth/issues/7)).
 - A Java that never exits no longer holds a launch forever; the check before launch gives up after 30 seconds.
 - A stalled friends connection no longer holds a launch or the end of a game.
 - A mod built for another version of Minecraft is recognised again in crashes on modern Java, which words the missing method differently.

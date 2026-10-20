@@ -271,7 +271,7 @@ function downloadScript(version) {
 		}
 		apply(${JSON.stringify(version)});
 
-		fetch('https://api.github.com/repos/Everelsu/Portalrinth/releases/latest')
+		fetch('https://api.github.com/repos/manusportalgpt-beep/Portalrinth/releases/latest')
 			.then(function (r) { return r.ok ? r.json() : null; })
 			.then(function (release) {
 				if (!release || !release.assets) return;

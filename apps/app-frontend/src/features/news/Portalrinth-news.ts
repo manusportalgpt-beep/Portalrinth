@@ -9,7 +9,7 @@ import { computed } from 'vue'
 import type { PortalrinthVersionEntry } from '@/helpers/portalrinth-changelog'
 import { proxiedFetch } from '@/helpers/proxy-fetch'
 
-const CHANGELOG_SITE = 'https://everelsu.github.io/Portalrinth/'
+const CHANGELOG_SITE = 'https://manusportalgpt-beep.github.io/Portalrinth/'
 const CHANGELOG_FEED = `${CHANGELOG_SITE}changelog.json`
 const NEWS_FEED = `${CHANGELOG_SITE}news/feed/articles.json`
 

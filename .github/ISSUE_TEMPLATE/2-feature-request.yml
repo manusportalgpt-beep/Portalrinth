@@ -7,7 +7,7 @@ body:
     attributes:
       label: Please confirm the following.
       options:
-        - label: I checked the [existing issues](https://github.com/Everelsu/Portalrinth/issues?q=is%3Aissue) for duplicate feature requests
+        - label: I checked the [existing issues](https://github.com/manusportalgpt-beep/Portalrinth/issues?q=is%3Aissue) for duplicate feature requests
           required: true
         - label: This is about Portalrinth itself (Ely.by, imports, CurseForge import, etc.), not a general Modrinth App feature that belongs [upstream](https://github.com/modrinth/code/issues)
           required: true

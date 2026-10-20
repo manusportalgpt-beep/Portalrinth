@@ -18,4 +18,4 @@ Articles like this one: what is coming, what changed and why. They are in Russia
 
 Every Portalrinth and Modrinth App release note, as before, now with a link to each version and a filter for one or the other.
 
-If something on the site is wrong or missing, [open an issue](https://github.com/Everelsu/Portalrinth/issues).
+If something on the site is wrong or missing, [open an issue](https://github.com/manusportalgpt-beep/Portalrinth/issues).

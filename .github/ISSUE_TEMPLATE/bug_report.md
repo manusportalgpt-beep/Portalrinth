@@ -3,7 +3,7 @@ name: Bug report
 about: Create a report to help <(＿　＿)>
 title: ''
 labels: bug
-assignees: Everelsu
+assignees: manusportalgpt-beep
 
 ---
 

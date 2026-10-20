@@ -63,7 +63,15 @@ const ACCOUNT_INFO_URL: &str = "https://account.ely.by/api/account/v1/info";
 /// compares it character for character and refuses to begin otherwise. A page
 /// is published there anyway, so that a player who somehow arrives at it is met
 /// by something that explains itself.
-pub const REDIRECT_URI: &str = "https://everelsu.github.io/Portalrinth/oauth/ely";
+/// Where Ely.by sends the person back to.
+///
+/// This is the address registered for this client with Ely.by, and the only
+/// one it will send anyone back to. It is not this repository's address: the
+/// site is published from the fork's original home, and the page that reads
+/// the code out of the address is served from there. Changing it to anything
+/// else breaks signing in with Ely.by, which is why it is written out here
+/// rather than derived from where the code happens to live.
+pub const REDIRECT_URI: &str = "https://everelsu.github.io/Noctrinth/oauth/ely";
 
 /// What the launcher asks to be allowed to do.
 ///

@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: 💬 Ask a question
     about: Not sure it's a bug? Ask in Discussions first. (●'◡'●)
-    url: https://github.com/Everelsu/Portalrinth/discussions
+    url: https://github.com/manusportalgpt-beep/Portalrinth/discussions
   - name: 🌙 Bug in the upstream Modrinth App
     about: For bugs that also affect the original Modrinth App, not specific to Portalrinth. (・_・;)
     url: https://github.com/modrinth/code/issues
