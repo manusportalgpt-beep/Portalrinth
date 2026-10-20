@@ -8,7 +8,7 @@
  */
 import { SpinnerIcon } from '@modrinth/assets'
 import type { ContentItem } from '@modrinth/ui'
-import { defineMessages, injectNotificationManager, NewModal, useVIntl } from '@modrinth/ui'
+import { Avatar, defineMessages, injectNotificationManager, NewModal, useVIntl } from '@modrinth/ui'
 import { computed, ref, useTemplateRef } from 'vue'
 
 import { get_content_items } from '@/helpers/instance'
@@ -36,6 +36,11 @@ const messages = defineMessages({
 	dataPacks: { id: 'app.lan.details.data-packs', defaultMessage: 'Data packs' },
 	shaders: { id: 'app.lan.details.shaders', defaultMessage: 'Shaders' },
 	other: { id: 'app.lan.details.other', defaultMessage: 'Other' },
+	players: { id: 'app.lan.players', defaultMessage: 'In the world' },
+	playersNone: {
+		id: 'app.lan.players.none',
+		defaultMessage: 'Nobody is in the world yet',
+	},
 	world: { id: 'app.lan.details.world', defaultMessage: 'The world is at' },
 	worldClosed: {
 		id: 'app.lan.details.world-closed',
@@ -81,6 +86,11 @@ async function load() {
 	}
 }
 
+/** The head of a player, drawn from their name. */
+function headOf(player: string) {
+	return `https://mc-heads.net/avatar/${encodeURIComponent(player)}/64`
+}
+
 function show() {
 	void load()
 	modal.value?.show()
@@ -124,6 +134,28 @@ defineExpose({ show })
 						</li>
 					</ul>
 				</div>
+			</div>
+
+			<!--
+				Who is in the world, with the faces the game gives them.
+			-->
+			<div class="flex flex-col gap-1.5">
+				<span class="text-sm font-medium text-secondary">
+					{{ formatMessage(messages.players) }}
+				</span>
+				<div v-if="relay.players.length > 0" class="flex flex-wrap gap-2">
+					<span
+						v-for="player in relay.players"
+						:key="player"
+						class="flex items-center gap-2 rounded-full border border-solid border-surface-5 bg-surface-2 py-0.5 pl-0.5 pr-2.5 text-sm text-contrast"
+					>
+						<Avatar :src="headOf(player)" alt="" size="1.5rem" circle />
+						{{ player }}
+					</span>
+				</div>
+				<span v-else class="text-sm text-secondary">
+					{{ formatMessage(messages.playersNone) }}
+				</span>
 			</div>
 
 			<!--

@@ -1844,9 +1844,6 @@
   "app.lan.action.more": {
     "message": "More"
   },
-  "app.lan.action.open-in-game": {
-    "message": "Open LAN"
-  },
   "app.lan.action.open-in-game.hint": {
     "message": "In Minecraft, open the world to the network: E, then \"Open to LAN\". This page finds it by itself."
   },
@@ -1916,9 +1913,6 @@
   "app.lan.heading": {
     "message": "LAN"
   },
-  "app.lan.hint": {
-    "message": "Open LAN"
-  },
   "app.lan.players": {
     "message": "In the world"
   },
@@ -1927,21 +1921,6 @@
   },
   "app.lan.published": {
     "message": "Published at {address}"
-  },
-  "app.lan.state.closed": {
-    "message": "No world is open to the network"
-  },
-  "app.lan.state.live": {
-    "message": "In the network"
-  },
-  "app.lan.state.lost": {
-    "message": "The relay stopped carrying players"
-  },
-  "app.lan.state.not-live": {
-    "message": "Not in the network"
-  },
-  "app.lan.state.ready": {
-    "message": "The world is open to the network, on port {port}"
   },
   "app.lan.stopped": {
     "message": "No longer published"

@@ -8,7 +8,7 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { useQuery } from '@tanstack/vue-query'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import { getInstanceIconUrl } from '@/helpers/instance'
 import { instanceListQueryOptions } from '@/pages/instance/query-options'
@@ -31,8 +31,21 @@ const messages = defineMessages({
 	errorHeading: { id: 'app.lan.error-heading', defaultMessage: 'Failed to read running instances' },
 })
 
-const { relays, relaysQuery, start, stop, isPublishing, isStopping, copyAddress, hint } =
-	useLanRelays()
+const { relays, relaysQuery, start, stop, isPublishing, isStopping, copyAddress } = useLanRelays()
+
+/**
+ * What each world is being told, said under the world itself.
+ *
+ * A panel over the page would be read as something went wrong, and nothing
+ * did: the world simply is not open to the network yet, and that is a line of
+ * text under it rather than an error over everything.
+ */
+const hints = ref<Record<string, string>>({})
+
+function hintFor(processUuid: string, text?: string) {
+	if (!text) return
+	hints.value = { ...hints.value, [processUuid]: text }
+}
 
 const instancesQuery = useQuery(instanceListQueryOptions())
 const iconsByInstance = computed(
@@ -77,18 +90,21 @@ const iconsByInstance = computed(
 			/>
 
 			<div v-else class="flex flex-col gap-2">
-				<LanRelayRow
-					v-for="relay in relays"
-					:key="relay.process_uuid"
-					:relay="relay"
-					:icon-url="iconsByInstance.get(relay.instance_id) ?? null"
-					:publishing="isPublishing(relay.process_uuid)"
-					:stopping="isStopping(relay.process_uuid)"
-					@publish="start"
-					@unpublish="stop"
-					@copy="copyAddress"
-					@hint="hint"
-				/>
+				<template v-for="relay in relays" :key="relay.process_uuid">
+					<LanRelayRow
+						:relay="relay"
+						:icon-url="iconsByInstance.get(relay.instance_id) ?? null"
+						:publishing="isPublishing(relay.process_uuid)"
+						:stopping="isStopping(relay.process_uuid)"
+						@publish="start"
+						@unpublish="stop"
+						@copy="copyAddress"
+						@hint="hintFor(relay.process_uuid)"
+					/>
+					<p v-if="hints[relay.process_uuid]" class="m-0 pl-4 text-sm text-secondary">
+						{{ hints[relay.process_uuid] }}
+					</p>
+				</template>
 			</div>
 		</ReadyTransition>
 	</div>
