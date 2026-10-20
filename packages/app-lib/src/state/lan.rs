@@ -292,6 +292,45 @@ mod tests {
     }
 
     #[test]
+    fn reads_a_port_from_the_word_whatever_its_form() {
+        // The game says it in more than one way, and in more than one
+        // language, and the word is enough: what follows it is the port.
+        assert_eq!(
+            port_in_line("[12:34:56 Server thread/INFO]: Started Minecraft server on port 39876"),
+            Some(39876)
+        );
+        assert_eq!(
+            port_in_line("[12:34:56 Server thread/INFO]: Serving on port:39876"),
+            Some(39876)
+        );
+    }
+
+    #[test]
+    fn reads_who_is_in_the_world() {
+        let players = players_in_lines(
+            [
+                "[12:34:56 Server thread/INFO]: MEM4UK joined the game",
+                "[12:34:57 Server thread/INFO]: MEM4UK joined the game",
+                "[12:34:58 Server thread/INFO]: Someone left the game",
+            ]
+            .into_iter(),
+        );
+        assert_eq!(players, vec!["MEM4UK".to_string()]);
+    }
+
+    #[test]
+    fn a_player_who_goes_out_is_not_in_the_world() {
+        let players = players_in_lines(
+            [
+                "[12:34:56 Server thread/INFO]: MEM4UK joined the game",
+                "[12:35:00 Server thread/INFO]: MEM4UK left the game",
+            ]
+            .into_iter(),
+        );
+        assert!(players.is_empty());
+    }
+
+    #[test]
     fn ignores_lines_that_only_mention_a_port() {
         assert_eq!(port_in_line("Connecting to 127.0.0.1:25565"), None);
         assert_eq!(
