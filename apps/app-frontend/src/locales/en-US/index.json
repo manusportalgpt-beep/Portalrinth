@@ -311,6 +311,9 @@
   "app.browse.discover-servers": {
     "message": "Discover servers"
   },
+  "app.browse.filters": {
+    "message": "Filters"
+  },
   "app.browse.hide-added-servers": {
     "message": "Hide servers already added"
   },

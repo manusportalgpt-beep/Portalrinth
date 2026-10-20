@@ -4,6 +4,7 @@ import {
 	CheckIcon,
 	CompassIcon,
 	ExternalIcon,
+	FilterIcon,
 	GlobeIcon,
 	PlusIcon,
 	ServerStackIcon,
@@ -13,6 +14,7 @@ import type { BrowseInstallContentType, CardAction, ProjectType, Tags } from '@m
 import {
 	BrowsePageLayout,
 	BrowseSidebar,
+	Button,
 	commonMessages,
 	ContextMenu,
 	CreationFlowModal,
@@ -53,6 +55,7 @@ import {
 	browsePageSize,
 	browseScrollScope,
 } from '@/helpers/portalrinth-browse.ts'
+import { sidebarCollapsed } from '@/helpers/portalrinth-sidebar.ts'
 import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import { get_instance_worlds } from '@/helpers/worlds'
@@ -620,6 +623,7 @@ const messages = defineMessages({
 		id: 'search.filter.locked.instance',
 		defaultMessage: 'Provided by the instance',
 	},
+	filters: { id: 'app.browse.filters', defaultMessage: 'Filters' },
 	syncFilterButton: {
 		id: 'search.filter.locked.instance.sync',
 		defaultMessage: 'Sync with instance',
@@ -1365,6 +1369,17 @@ provideBrowseManager({
 
 <template>
 	<div class="flex flex-col gap-2 p-6">
+		<!--
+			The filters live in the panel, and the panel is folded. So they are
+			offered here, by name, rather than being somewhere the person has
+			to know to look.
+		-->
+		<div v-if="sidebarCollapsed" class="flex items-center gap-2">
+			<Button type="outlined" size="sm" @click="sidebarCollapsed = false">
+				<FilterIcon />
+				{{ formatMessage(messages.filters) }}
+			</Button>
+		</div>
 		<BrowsePageLayout>
 			<template #after>
 				<ContextMenu ref="contextMenuRef" :label="formatMessage(messages.projectActionsLabel)">

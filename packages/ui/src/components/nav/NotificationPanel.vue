@@ -228,8 +228,13 @@ withDefaults(
 		right: 1.5rem;
 		transition: right 0.25s ease-in-out;
 
+		/*
+		 * Beside the panel. The panel is narrow when it is folded, so the
+		 * notices move in with it rather than standing where it used to be,
+		 * which is one number rather than a rule for each shape of it.
+		 */
 		&.has-sidebar {
-			right: 325px;
+			right: calc(var(--right-bar-width, 0px) + 1.5rem);
 		}
 	}
 

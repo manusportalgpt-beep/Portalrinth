@@ -2269,5 +2269,8 @@
 	},
 	"friends.find.description": {
 		"message": "Ищите по нику на Modrinth и отправляйте заявку."
+	},
+	"app.browse.filters": {
+		"message": "Фильтры"
 	}
 }

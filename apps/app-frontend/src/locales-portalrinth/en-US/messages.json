@@ -1501,5 +1501,8 @@
 	},
 	"friends.find.description": {
 		"message": "Search Modrinth by username and send them a request."
+	},
+	"app.browse.filters": {
+		"message": "Filters"
 	}
 }

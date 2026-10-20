@@ -261,7 +261,7 @@ watch(sidebarVisible, (visible) => markSidebarMoving(visible))
  * here too: folded, the column is the rail's width and the page is that much
  * wider; open, the column is the panel's width and the page gives it up.
  */
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = portalRinthSidebarCollapsed
 const hostingRouteActive = computed(() => route.path.startsWith('/hosting'))
 const hostingUpdateRequired = computed(
 	() =>
@@ -2282,7 +2282,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<div
 		v-if="stateInitialized"
 		class="app-grid-layout relative"
-		:class="{ 'disable-advanced-rendering': !appTheme.advancedRendering }"
+		:class="{
+			'disable-advanced-rendering': !appTheme.advancedRendering,
+			'sidebar-collapsed': sidebarVisible && sidebarCollapsed,
+		}"
 	>
 		<Transition name="fade">
 			<div
@@ -2626,6 +2629,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	--top-bar-height: 3rem;
 	--left-bar-width: 4rem;
 	--right-bar-width: 300px;
+}
+
+/*
+ * The panel folded to its rail. One number for everything that stands beside
+ * it - the notices, the panels of errors, the filters - so that none of them
+ * is left standing where the wide panel used to be.
+ */
+.app-grid-layout.sidebar-collapsed {
+	--right-bar-width: 4rem;
 }
 
 .app-grid-layout {
