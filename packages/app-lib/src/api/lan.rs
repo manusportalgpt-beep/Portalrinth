@@ -194,8 +194,7 @@ async fn local_port(
         }
     }
 
-    crate::state::lan::note_opened_port(&process_uuid, port);
-    Some(port)
+    None
 }
 
 /// Who is in the world right now, read out of the game's own log.
@@ -289,23 +288,6 @@ async fn port_from_log_tail(
 async fn port_in_file(path: &std::path::Path) -> Option<u16> {
     let mut file = tokio::fs::File::open(path).await.ok()?;
     let length = tokio::fs::metadata(path).await.ok()?.len();
-    file.seek(std::io::SeekFrom::Start(
-        length.saturating_sub(MAX_LOG_TAIL),
-    ))
-    .await
-    .ok()?;
-
-    let mut tail = String::new();
-    file.read_to_string(&mut tail).await.ok()?;
-    tail.lines()
-        .rev()
-        .find_map(crate::state::lan::port_in_line)
-}
-
-/// The port said in the last of a file's lines.
-async fn port_in_file(path: &std::path::Path, length: u64) -> Option<u16> {
-    let mut file = tokio::fs::File::open(path).await.ok()?;
-    let length = tokio::fs::metadata(path).await.ok()?.len().min(length.max(1));
     file.seek(std::io::SeekFrom::Start(
         length.saturating_sub(MAX_LOG_TAIL),
     ))
