@@ -464,11 +464,10 @@ enum RelayIdentity {
         provider: &'static str,
         username: String,
         access_token: String,
-        uuid: Uuid,
     },
     /// An account that is only a name. The relay takes such an identity at its
     /// word, which is the whole of what a world opened to LAN ever needed.
-    Nickname { username: String, uuid: Uuid },
+    Nickname { username: String },
 }
 
 impl RelayIdentity {
@@ -522,10 +521,9 @@ async fn identities(
     for credentials in
         crate::state::OfflineCredentials::get_all(&state.pool).await?
     {
-        found.push(RelayIdentity::Nickname {
-            username: credentials.username,
-            uuid: credentials.uuid,
-        });
+		found.push(RelayIdentity::Nickname {
+			username: credentials.username,
+		});
     }
 
     for credentials in
@@ -545,12 +543,11 @@ async fn identities(
             }
             None => credentials.access_token.clone(),
         };
-        found.push(RelayIdentity::Online {
-            provider: "ely",
-            username: credentials.username,
-            access_token,
-            uuid: credentials.uuid,
-        });
+		found.push(RelayIdentity::Online {
+			provider: "ely",
+			username: credentials.username,
+			access_token,
+		});
     }
 
     for (username, refresh_token, uuid) in microsoft_accounts(state).await? {
@@ -565,12 +562,11 @@ async fn identities(
             Ok(refreshed) => refreshed.value.access_token,
             Err(_) => String::new(),
         };
-        found.push(RelayIdentity::Online {
-            provider: "msa",
-            username,
-            access_token,
-            uuid,
-        });
+		found.push(RelayIdentity::Online {
+			provider: "msa",
+			username,
+			access_token,
+		});
     }
 
     Ok(found)

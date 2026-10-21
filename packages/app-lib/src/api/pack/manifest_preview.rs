@@ -99,8 +99,8 @@ struct CurseforgeManifest {
 struct CurseforgeMinecraft {
     #[serde(default)]
     version: String,
-    #[serde(default)]
-    modLoaders: Vec<CurseforgeModLoader>,
+    #[serde(default, rename = "modLoaders")]
+    mod_loaders: Vec<CurseforgeModLoader>,
 }
 
 #[derive(Deserialize)]
@@ -124,8 +124,8 @@ struct CurseforgeManifestFile {
 struct ModrinthIndex {
     #[serde(default)]
     name: String,
-    #[serde(default)]
-    versionId: Option<String>,
+    #[serde(default, rename = "versionId")]
+    version_id: Option<String>,
     #[serde(default)]
     summary: Option<String>,
     #[serde(default)]
@@ -222,10 +222,10 @@ fn curseforge_manifest(bytes: &[u8]) -> crate::Result<PackManifest> {
     let manifest: CurseforgeManifest = serde_json::from_slice(bytes)?;
     let loader = manifest
         .minecraft
-        .modLoaders
+        .mod_loaders
         .iter()
         .find(|loader| loader.primary)
-        .or_else(|| manifest.minecraft.modLoaders.first())
+        .or_else(|| manifest.minecraft.mod_loaders.first())
         .map(|loader| loader.id.clone());
 
     let entries = manifest
@@ -312,7 +312,7 @@ fn modrinth_manifest(bytes: &[u8]) -> crate::Result<PackManifest> {
     Ok(PackManifest {
         format: "modrinth".to_string(),
         name: Some(index.name),
-        version: index.versionId,
+        version: index.version_id,
         summary: index.summary,
         game_version,
         loader: loader.map(|loader| {

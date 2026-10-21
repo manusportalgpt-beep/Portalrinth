@@ -60,7 +60,6 @@ pub async fn store_verify(
 #[tauri::command]
 pub async fn settings_get() -> Result<Settings> {
     let res = settings::get().await?;
-    curseforge_metadata::adopt_user_key(res.curseforge_api_key.as_deref());
     Ok(res)
 }
 
@@ -68,7 +67,6 @@ pub async fn settings_get() -> Result<Settings> {
 // invoke('plugin:settings|settings_set', settings)
 #[tauri::command]
 pub async fn settings_set(settings: Settings) -> Result<()> {
-    curseforge_metadata::adopt_user_key(settings.curseforge_api_key.as_deref());
     settings::set(settings).await?;
     Ok(())
 }
