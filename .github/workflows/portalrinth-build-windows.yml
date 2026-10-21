@@ -67,6 +67,40 @@ jobs:
         with:
           workspaces: '. -> target'
 
+      # The Gradle distribution and the jars it pulls are a hundred and thirty
+      # megabytes and more, and they do not change between runs. Without this
+      # every build downloads them again, and a download that is interrupted
+      # once fails the build for a reason that has nothing to do with the code.
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/wrapper/dists
+            ~/.gradle/caches
+          key: gradle-9.1.0-${{ runner.os }}-${{ hashFiles('packages/app-lib/java/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-9.1.0-${{ runner.os }}-
+
+      # Fetch the distribution before the build asks for it, and try again if
+      # the download does not finish. The wrapper's own timeout has been
+      # raised for the same reason, but a second attempt costs nothing and
+      # the failure it saves is a failure of the whole build.
+      - name: Fetch the Gradle distribution
+        shell: bash
+        working-directory: packages/app-lib/java
+        run: |
+          set +e
+          for attempt in 1 2 3; do
+            echo "::group::Gradle distribution, attempt ${attempt}"
+            ./gradlew --version --no-daemon && break
+            echo "::endgroup::"
+            if [ "$attempt" = "3" ]; then
+              echo "::error::Could not download the Gradle distribution after three attempts"
+              exit 1
+            fi
+            sleep 10
+          done
+
       - name: Prepare app-lib environment
         shell: bash
         run: cp packages/app-lib/.env.prod packages/app-lib/.env

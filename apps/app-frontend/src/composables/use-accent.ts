@@ -436,17 +436,25 @@ watch(
 		// the window, and nothing waits on it.
 		const preset = findAccentPreset(id)
 		if (preset) {
-			void import('@/helpers/portalrinth-window-icon').then(({ paintWindowIcon }) =>
-				paintWindowIcon(
-					accentColorFor(preset),
-					// The shortcuts go back to the executable's icon only when that
-					// icon is the right colour. It never is once an accent other than
-					// the theme's own has been chosen, and the default - crimson -
-					// is such a choice, so this asks about the theme rather than
-					// about whether the preset happens to be the default.
-					preset.id === THEME_ACCENT_ID,
-				),
-			)
+			// The import is dynamic, so a file that does not resolve is a
+			// rejected promise rather than a failed build. Nothing waits on
+			// this, and an icon is not worth a failed start, so the rejection
+			// is caught here.
+			void import('@/helpers/portalrinth-window-icon')
+				.then(({ paintWindowIcon }) =>
+					paintWindowIcon(
+						accentColorFor(preset),
+						// The shortcuts go back to the executable's icon only when that
+						// icon is the right colour. It never is once an accent other than
+						// the theme's own has been chosen, and the default - crimson -
+						// is such a choice, so this asks about the theme rather than
+						// about whether the preset happens to be the default.
+						preset.id === THEME_ACCENT_ID,
+					),
+				)
+				.catch((error) => {
+					console.warn('Could not put the app icon on the window:', error)
+				})
 		}
 	},
 	{ immediate: true },

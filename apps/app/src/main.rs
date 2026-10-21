@@ -468,6 +468,41 @@ fn main() {
                 tracing::warn!("Failed to set window shadow: {e}");
             }
 
+// The window is hidden until the frontend says it is ready to be
+// seen, so the first frame is the splash in the right colours
+// rather than a black rectangle. The frontend is what opens it,
+// through `show_window`.
+//
+// If the frontend never gets that far - a module that does not
+// resolve, a script that throws before it mounts - nothing would
+// open the window at all, and the launcher would sit there with
+// no window and nothing to read. So the window is opened anyway
+// after a while: a late splash is better than no window, and the
+// webview's own error page is better than a black one.
+{
+let handle = app.handle().clone();
+tauri::async_runtime::spawn(async move {
+tokio::time::sleep(std::time::Duration::from_secs(8)).await;
+let Some(window) = handle.get_window("main") else {
+return;
+};
+match window.is_visible() {
+Ok(true) => {}
+Ok(false) => {
+tracing::warn!(
+"The frontend did not open the window in time; opening it anyway"
+);
+if let Err(e) = window.show() {
+tracing::error!("Cannot display application window: {e}");
+}
+}
+Err(e) => {
+tracing::error!("Cannot read the window's visibility: {e}");
+}
+}
+});
+}
+
             Ok(())
         });
 
