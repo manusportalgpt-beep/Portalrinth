@@ -113,16 +113,21 @@ fn put_user_key(key: Option<String>) {
 }
 
 /// Reads the user's key from the database; called once while the state is
-/// being set up. A runtime-checked query, so the sqlx offline cache does not
-/// need regenerating for a fork-only column.
-pub(crate) async fn load_user_key(
-    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
-) -> crate::Result<()> {
-    let key: Option<String> =
-        sqlx::query_scalar("SELECT curseforge_api_key FROM settings")
-            .fetch_one(exec)
-            .await?;
-    put_user_key(clean_key(key));
+/// being set up.
+///
+/// The key lives in a table of its own, so an install that never ran the
+/// migration that made it simply has no key rather than a broken database.
+pub async fn load_user_key(pool: &sqlx::Pool<sqlx::Sqlite>) -> crate::Result<()> {
+    // A database that has not run the migration that made the table has no
+    // key, and that is not a failure: the launcher starts, and the person
+    // adds their key in the settings.
+    let key = sqlx::query_scalar::<_, Option<String>>("SELECT key FROM curseforge_user_key WHERE id = 1")
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten()
+        .flatten();
+    put_user_key(key);
     Ok(())
 }
 
@@ -130,10 +135,13 @@ pub(crate) async fn load_user_key(
 pub async fn set_user_key(key: Option<String>) -> crate::Result<()> {
     let key = clean_key(key);
     let state = State::get().await?;
-    sqlx::query("UPDATE settings SET curseforge_api_key = $1")
-        .bind(&key)
-        .execute(&state.pool)
-        .await?;
+    sqlx::query(
+        "INSERT INTO curseforge_user_key (id, key) VALUES (1, $1) \
+         ON CONFLICT(id) DO UPDATE SET key = $1",
+    )
+    .bind(&key)
+    .execute(&state.pool)
+    .await?;
     put_user_key(key);
     Ok(())
 }

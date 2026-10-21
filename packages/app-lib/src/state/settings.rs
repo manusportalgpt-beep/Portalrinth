@@ -175,10 +175,14 @@ impl Settings {
                 .fetch_one(exec)
                 .await?;
 
+        // A column a later migration added. An install that has not run it
+        // yet has no column, and must still start: the setting simply has
+        // its default.
         let java_provider: String =
             sqlx::query_scalar("SELECT java_provider FROM settings")
                 .fetch_one(exec)
-                .await?;
+                .await
+                .unwrap_or_else(|_| "auto".to_string());
 
         let background_blur: i64 =
             sqlx::query_scalar("SELECT background_blur FROM settings")

@@ -136,10 +136,14 @@ import {
 	setActive,
 } from '@/helpers/mr_auth.ts'
 import { loadBackground } from '@/helpers/portalrinth-background'
-import { prefetchRouteChunks, startProjectHoverPrefetch } from '@/helpers/Portalrinth-prefetch'
+import { prefetchRouteChunks, startProjectHoverPrefetch } from '@/helpers/portalrinth-prefetch'
 import { markSidebarMoving } from '@/helpers/portalrinth-sidebar-motion'
 import { cacheSplashCubeChoice } from '@/helpers/portalrinth-splash-cube'
-import { markThemeSettled, revealMainWindow } from '@/helpers/Portalrinth-window-reveal'
+import {
+	markThemeSettled,
+	revealMainWindow,
+	startupError,
+} from '@/helpers/portalrinth-window-reveal'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
 import { proxiedFetch as tauriFetch } from '@/helpers/proxy-fetch'
 import {
@@ -765,6 +769,23 @@ function handleAdsConsentRequired(required) {
 }
 
 async function setupApp() {
+	// Whatever goes wrong below, the window opens and says what. A launcher
+	// that starts and shows nothing is a launcher that looks broken in the
+	// one way nobody can report.
+	try {
+		await startUp()
+	} catch (error) {
+		console.error('The launcher failed to start:', error)
+		markThemeSettled()
+		handleStartupFailure(error)
+	}
+}
+
+function handleStartupFailure(error) {
+	startupError.value = error instanceof Error ? error.message : String(error)
+}
+
+async function startUp() {
 	tags.initialize()
 	await traceStartupStep('Initialize onboarding checklist', () => onboardingChecklist.initialize())
 

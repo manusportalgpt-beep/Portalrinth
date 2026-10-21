@@ -1,0 +1,6 @@
+-- The column this migration used to add is added by
+-- 20261021140001_curseforge-user-key-table.sql instead, in a table of its own.
+--
+-- It is left here, and left empty, for the same reason: an install that ran
+-- this fork's own build recorded this file, and a migration that is no longer
+-- in the tree is a launcher that will not open its own database.

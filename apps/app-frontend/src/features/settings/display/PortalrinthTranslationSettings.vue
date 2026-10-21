@@ -22,7 +22,7 @@ import {
 	testTranslation,
 	type TranslationProviderId,
 	translationSettings,
-} from '@/helpers/Portalrinth-translate'
+} from '@/helpers/portalrinth-translate'
 import i18n from '@/i18n.config'
 
 const { formatMessage } = useVIntl()

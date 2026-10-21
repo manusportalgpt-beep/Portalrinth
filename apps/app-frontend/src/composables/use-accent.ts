@@ -436,7 +436,7 @@ watch(
 		// the window, and nothing waits on it.
 		const preset = findAccentPreset(id)
 		if (preset) {
-			void import('@/helpers/Portalrinth-window-icon').then(({ paintWindowIcon }) =>
+			void import('@/helpers/portalrinth-window-icon').then(({ paintWindowIcon }) =>
 				paintWindowIcon(
 					accentColorFor(preset),
 					// The shortcuts go back to the executable's icon only when that

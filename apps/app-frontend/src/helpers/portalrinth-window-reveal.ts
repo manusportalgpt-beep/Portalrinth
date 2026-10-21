@@ -15,6 +15,14 @@ const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() 
  */
 export const themeReady = ref(false)
 
+/**
+ * Why the launcher could not start, if it could not.
+ *
+ * The splash shows it. Without it the splash draws nothing and the window is
+ * black, and nothing can be reported about a black window.
+ */
+export const startupError = ref<string | null>(null)
+
 let settleTheme: () => void = () => {}
 const themeSettled = new Promise<void>((resolve) => {
 	settleTheme = resolve

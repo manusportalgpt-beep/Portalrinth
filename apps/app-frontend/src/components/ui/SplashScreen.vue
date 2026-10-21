@@ -34,6 +34,17 @@
 				></div>
 			</div>
 			<span v-if="message" class="splash-message">{{ message }}</span>
+			<!--
+				Why the launcher could not start. Without it the splash draws
+				nothing and the window is black, and nothing can be reported
+				about a black window.
+			-->
+			<p
+				v-if="startupError"
+				class="splash-startup-error max-w-[36rem] text-center text-sm text-orange"
+			>
+				{{ startupError }}
+			</p>
 		</div>
 	</div>
 </template>
@@ -59,7 +70,7 @@ import { useRouter } from 'vue-router'
 
 import { useAppEvent } from '@/composables/use-app-event'
 import { rollSplashCubeInverted } from '@/helpers/portalrinth-splash-cube'
-import { themeReady } from '@/helpers/Portalrinth-window-reveal'
+import { startupError, themeReady } from '@/helpers/portalrinth-window-reveal'
 import { debugStartup } from '@/helpers/startup-debug'
 
 const splash = useTemplateRef('splash')
@@ -76,6 +87,7 @@ const EASING = 'cubic-bezier(0.4, 0, 0.2, 1)'
 const mountedAt = Date.now()
 
 const loading = injectLoadingState()
+
 const router = useRouter()
 onMounted(() => debugStartup('Splash mounted'))
 

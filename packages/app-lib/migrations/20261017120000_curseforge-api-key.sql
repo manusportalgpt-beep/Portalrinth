@@ -1,2 +1,6 @@
-ALTER TABLE settings
-ADD COLUMN curseforge_api_key TEXT NULL;
+-- The column this migration used to add is added by
+-- 20261021140001_curseforge-user-key-table.sql instead, in a table of its own.
+--
+-- It is left here, and left empty, because an install that has already run it
+-- has recorded this file, and a migration that is no longer in the tree is a
+-- launcher that will not open its own database.

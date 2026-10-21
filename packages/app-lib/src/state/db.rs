@@ -107,6 +107,8 @@ async fn run_migrations(pool: &Pool<Sqlite>) -> crate::Result<()> {
 /// refused, because that is what the check is for.
 const RESTORED_MIGRATIONS: &[i64] = &[
     20260820214600,
+    20261017120000,
+    20261021121500,
     20260911121500,
     20260911130000,
     20260911140000,
