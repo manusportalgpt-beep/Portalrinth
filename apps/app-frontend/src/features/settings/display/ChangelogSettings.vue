@@ -8,7 +8,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import dayjs from 'dayjs'
 import { computed, onMounted, ref } from 'vue'
 
-import { portalrinthChangelogFeedQueryOptions } from '@/features/news/portalrinth-news'
+import { portalrinthChangelogFeedQueryOptions } from '@/features/news/Portalrinth-news'
 import { PORTALRINTH_CHANGELOG } from '@/helpers/portalrinth-changelog'
 import { renderChangelog } from '@/helpers/render-changelog'
 

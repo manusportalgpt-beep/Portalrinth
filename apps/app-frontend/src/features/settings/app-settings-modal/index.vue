@@ -33,7 +33,7 @@ import { getVersion } from '@tauri-apps/api/app'
 import { platform as getOsPlatform, version as getOsVersion } from '@tauri-apps/plugin-os'
 import { computed, ref } from 'vue'
 
-import PortalrinthIcon from '@/assets/portalrinth-icon.svg?component'
+import PortalrinthIcon from '@/assets/Portalrinth-icon.svg?component'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import PrivacySettings from '@/features/settings/account/privacy-settings.vue'
 import ProfileSettings from '@/features/settings/account/profile-settings.vue'
