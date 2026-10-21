@@ -550,7 +550,7 @@ async fn identities(
 		});
     }
 
-    for (username, refresh_token, uuid) in microsoft_accounts(state).await? {
+    for (username, refresh_token, _uuid) in microsoft_accounts(state).await? {
         // What is stored against a Microsoft account is the token Minecraft
         // accepts, and the relay is not Minecraft.
         // An account whose token could not be refreshed is still that
