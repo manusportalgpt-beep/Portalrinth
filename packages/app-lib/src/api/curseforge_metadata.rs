@@ -1179,6 +1179,10 @@ mod tests {
 
     /// Expected values come from running CurseForge's own `Curse.Hashing`
     /// (`MurmurHash2.ComputeNormalizedHash`) on the same bytes.
+    ///
+    /// The last vector keeps the name it had when the values were taken: the
+    /// point of the test is that our hashing agrees with theirs, and it can
+    /// only agree on the bytes they agreed on.
     #[test]
     fn fingerprints_match_curseforges_own_implementation() {
         let cases: &[(&[u8], u32)] = &[
@@ -1189,7 +1193,7 @@ mod tests {
             (b"abcd", 3376380438),
             (b"abcde", 3469237630),
             (b"hello world", 2824650221),
-            (b"Portalrinth fingerprint test vector", 2776368908),
+            (b"Noctrinth fingerprint test vector", 2776368908),
         ];
         for (input, expected) in cases {
             assert_eq!(fingerprint(input), *expected, "{input:?}");
