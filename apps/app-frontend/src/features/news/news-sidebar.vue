@@ -4,7 +4,7 @@ import { ButtonLink, defineMessages, NewsArticleCard, useVIntl } from '@modrinth
 import { useQuery } from '@tanstack/vue-query'
 import { computed, watch } from 'vue'
 
-import { usePortalrinthNews } from './portalrinth-news'
+import { usePortalrinthNews } from './Portalrinth-news'
 import { newsArticlesQueryOptions } from './queries'
 
 const { formatMessage } = useVIntl()

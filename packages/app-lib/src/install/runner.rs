@@ -1615,6 +1615,7 @@ async fn install_pack_inner(
         CreatePackLocation::FromFile {
             path,
             curseforge_api_key,
+            ..
         } => {
             // The user's own key, when there is one, before the build's.
             let curseforge_api_key =
@@ -1661,6 +1662,7 @@ async fn install_pack_inner(
         false,
         reason,
         reporter,
+        None,
     )
     .await?;
 

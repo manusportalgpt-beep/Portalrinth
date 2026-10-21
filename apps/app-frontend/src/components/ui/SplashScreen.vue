@@ -59,7 +59,7 @@ import { useRouter } from 'vue-router'
 
 import { useAppEvent } from '@/composables/use-app-event'
 import { rollSplashCubeInverted } from '@/helpers/portalrinth-splash-cube'
-import { themeReady } from '@/helpers/portalrinth-window-reveal'
+import { themeReady } from '@/helpers/Portalrinth-window-reveal'
 import { debugStartup } from '@/helpers/startup-debug'
 
 const splash = useTemplateRef('splash')

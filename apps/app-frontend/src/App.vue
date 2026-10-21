@@ -136,10 +136,10 @@ import {
 	setActive,
 } from '@/helpers/mr_auth.ts'
 import { loadBackground } from '@/helpers/portalrinth-background'
-import { prefetchRouteChunks, startProjectHoverPrefetch } from '@/helpers/portalrinth-prefetch'
+import { prefetchRouteChunks, startProjectHoverPrefetch } from '@/helpers/Portalrinth-prefetch'
 import { markSidebarMoving } from '@/helpers/portalrinth-sidebar-motion'
 import { cacheSplashCubeChoice } from '@/helpers/portalrinth-splash-cube'
-import { markThemeSettled, revealMainWindow } from '@/helpers/portalrinth-window-reveal'
+import { markThemeSettled, revealMainWindow } from '@/helpers/Portalrinth-window-reveal'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
 import { proxiedFetch as tauriFetch } from '@/helpers/proxy-fetch'
 import {
