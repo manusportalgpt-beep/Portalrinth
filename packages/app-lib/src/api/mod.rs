@@ -2,6 +2,8 @@
 pub mod cache;
 pub mod crash_analysis;
 pub mod crash_culprits;
+pub mod curseforge_blocked;
+pub mod curseforge_browse;
 pub mod curseforge_metadata;
 pub mod curseforge_search;
 pub mod debug_info;
@@ -11,6 +13,7 @@ pub mod gpu;
 pub mod handler;
 pub mod instance;
 pub mod instance_recovery;
+pub mod java_providers;
 pub mod jre;
 pub mod lan;
 pub mod launcher_search;

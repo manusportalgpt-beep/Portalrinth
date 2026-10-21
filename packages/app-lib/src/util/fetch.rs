@@ -227,33 +227,10 @@ const API_RETRY_AFTER_FALLBACK: Duration = Duration::from_secs(60);
 // replenish one unit time in seconds = (60 / (units recovered per minute))
 // smooth recovery time = replenish one unit time in seconds * API_RATE_LIMIT_RECOVERY_SIZE.
 //
-// At 20 it means (60 / 120) * 20 = 10 seconds, which is how emptying a bucket
-// that refills in half a second used to turn into "retry in 10 seconds" in the
-// middle of installing a pack. At 3 the same recovery is under a second, which
-// is long enough not to flap and short enough not to be noticed.
-const API_RATE_LIMIT_RECOVERY_SIZE: u32 = 3;
+// At 20 it means (60 / 120) * 20 = 10 seconds.
+const API_RATE_LIMIT_RECOVERY_SIZE: u32 = 20;
 
-/// How long a request will queue for the limiter before it gives up and reports
-/// the block instead.
-///
-/// Waiting is what makes installing a pack work: the requests behind it are
-/// wanted, and the only wrong answer is to fail. But a block long enough to be
-/// worth telling somebody about — the server's own `Retry-After`, usually — must
-/// not be silently sat through, so past this the caller is told.
-const API_RATE_LIMIT_MAX_WAIT: Duration = Duration::from_secs(8);
-
-/// How many API requests a minute the launcher makes for itself, and how many of
-/// them may be made at once.
-///
-/// This is the launcher's own ceiling on its own traffic, not the API's: it
-/// exists to stop a pack with sixty dependencies from opening sixty sockets at
-/// once. Modrinth's documented limit is far higher, and nothing here has ever
-/// been the reason the API refused a request — that arrives as a 429 and is
-/// handled separately.
-const API_REQUESTS_PER_MINUTE: u32 = 300;
-const API_REQUESTS_BURST: u32 = 120;
-
-/// Implements request-rate-limit handling as well as a local rate limiter.
+/// Implements request-rate-limit handling as well as a local rate limiter of 120 RPM + 50 burst.
 struct ApiRateLimit {
     block_until: Mutex<Option<Instant>>,
     check_lock: Mutex<()>,
@@ -263,9 +240,8 @@ struct ApiRateLimit {
 
 impl ApiRateLimit {
     fn new() -> Self {
-        let quota =
-            Quota::per_minute(NonZeroU32::new(API_REQUESTS_PER_MINUTE).unwrap())
-                .allow_burst(NonZeroU32::new(API_REQUESTS_BURST).unwrap());
+        let quota = Quota::per_minute(NonZeroU32::new(120).unwrap())
+            .allow_burst(NonZeroU32::new(50).unwrap());
         let recovery_size =
             API_RATE_LIMIT_RECOVERY_SIZE.min(quota.burst_size().get());
 
@@ -279,44 +255,32 @@ impl ApiRateLimit {
         }
     }
 
-    /// Waits for the limiter's permission to make this request.
-    ///
-    /// Every request that arrives a moment early is a request the launcher was
-    /// always going to make, so it queues rather than fails. What used to
-    /// happen instead is that emptying the bucket produced an error at an
-    /// arbitrary point in an install, which cancelled the whole thing over a
-    /// delay too short to notice.
-    async fn wait_turn(&self) -> crate::Result<()> {
-        loop {
-            // A block is a decision somebody else made, and is not waited out.
-            self.ensure_not_blocked()?;
+    fn check(&self) -> crate::Result<()> {
+        let _check_guard = self.check_lock.lock();
+        self.ensure_not_blocked()?;
 
-            let wait = {
-                let _check_guard = self.check_lock.lock();
-                match self.local.check() {
-                    Ok(()) => return Ok(()),
-                    Err(not_until) => {
-                        not_until
-                            .wait_time_from(DefaultClock::default().now())
-                            .saturating_add(self.recovery_padding)
-                    }
-                }
-            };
+        if let Err(not_until) = self.local.check() {
+            // Adds hysteresis to the rate limiting system, ensuring recovery happens
+            // for longer but for more units, avoiding the "flapping" effect when running
+            // out of units.
 
-            if wait > API_RATE_LIMIT_MAX_WAIT {
-                info!(?wait, "API rate limiter wait is too long; reporting it");
-                self.block_for(wait);
-                return Err(ErrorKind::Ratelimited {
-                    retry_in_seconds: self
-                        .retry_in_seconds()
-                        .unwrap_or_else(|| duration_seconds_ceil(wait)),
-                }
-                .into());
-            }
+            let retry_after = not_until
+                .wait_time_from(DefaultClock::default().now())
+                .saturating_add(self.recovery_padding);
+            info!(
+                ?retry_after,
+                "Hit builtin rate limiter; waiting for recovery"
+            );
+            self.block_for(retry_after);
 
-            debug!(?wait, "Waiting for the API rate limiter");
-            tokio::time::sleep(wait).await;
+            let retry_in_seconds = self
+                .retry_in_seconds()
+                .unwrap_or_else(|| duration_seconds_ceil(retry_after));
+
+            return Err(ErrorKind::Ratelimited { retry_in_seconds }.into());
         }
+
+        self.ensure_not_blocked()
     }
 
     fn handle_response(
@@ -381,6 +345,60 @@ impl ApiRateLimit {
 static GLOBAL_API_RATE_LIMIT: LazyLock<ApiRateLimit> =
     LazyLock::new(ApiRateLimit::new);
 
+/// How long, in all, one request from patient work may sit out rate limits
+/// before it gives up with [`ErrorKind::Ratelimited`].
+const RATE_LIMIT_PATIENCE: Duration = Duration::from_secs(5 * 60);
+
+tokio::task_local! {
+    static PATIENT: ();
+}
+
+/// Runs background work whose Modrinth API requests should wait out rate
+/// limits (honouring `Retry-After`) instead of failing fast. Install jobs are
+/// always patient; anything else fails fast, so the UI can say so at once.
+pub async fn patiently<F: Future>(future: F) -> F::Output {
+    PATIENT.scope((), future).await
+}
+
+fn rate_limit_patience() -> Duration {
+    if PATIENT.try_with(|_| ()).is_ok()
+        || crate::install::control::CURRENT_INSTALL
+            .try_with(|_| ())
+            .is_ok()
+    {
+        RATE_LIMIT_PATIENCE
+    } else {
+        Duration::ZERO
+    }
+}
+
+/// Sleeps out a [`ErrorKind::Ratelimited`] error if what is left of
+/// `patience` covers it, or hands the error back.
+async fn wait_out_rate_limit(
+    error: crate::Error,
+    patience: &mut Duration,
+) -> crate::Result<()> {
+    let wait = match error.raw.as_ref() {
+        ErrorKind::Ratelimited { retry_in_seconds } => {
+            Duration::from_secs((*retry_in_seconds).max(1))
+        }
+        _ => return Err(error),
+    };
+    if wait > *patience {
+        return Err(error);
+    }
+    *patience -= wait;
+
+    info!(?wait, "Rate limited; waiting before retrying");
+    match crate::install::control::CURRENT_INSTALL.try_with(Clone::clone) {
+        Ok(control) => control.wait_out_rate_limit(wait).await,
+        Err(_) => {
+            tokio::time::sleep(wait).await;
+            Ok(())
+        }
+    }
+}
+
 fn parse_retry_after(value: &str, now: SystemTime) -> Option<Duration> {
     if let Ok(seconds) = value.parse::<u64>() {
         return Some(Duration::from_secs(seconds));
@@ -400,17 +418,6 @@ fn reqwest_client_builder_with_timeout() -> reqwest::ClientBuilder {
     reqwest_client_builder().read_timeout(Duration::from_secs(30))
 }
 
-/// A client builder for an API that needs headers of its own.
-///
-/// Built from the same settings as the launcher's own clients — the proxy
-/// included — so a launcher configured to go through a proxy goes through it
-/// everywhere and not only where it happens to be remembered. A separate
-/// builder is needed only for the extra headers; anything else built from
-/// scratch would quietly ignore a setting the person deliberately made.
-pub fn api_client_builder() -> reqwest::ClientBuilder {
-    reqwest_client_builder().read_timeout(Duration::from_secs(30))
-}
-
 fn reqwest_client_builder() -> reqwest::ClientBuilder {
     let mut builder = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(15))
@@ -424,9 +431,195 @@ fn reqwest_client_builder() -> reqwest::ClientBuilder {
                 tracing::warn!("Ignoring invalid proxy URL {url}: {e}")
             }
         }
+    } else if !env_names_a_proxy() {
+        // Portalrinth's own: reqwest reads the system proxy once, when a
+        // client is built, and these clients live as long as the launcher.
+        // A VPN turned off after the launcher started left every request
+        // going to its dead local proxy; one turned on afterwards was never
+        // used. The system proxy is asked per request instead.
+        #[cfg(windows)]
+        {
+            builder = builder
+                .no_proxy()
+                .proxy(reqwest::Proxy::custom(windows_proxy::proxy_for));
+        }
     }
 
     builder
+}
+
+/// Whether the environment names a proxy, which reqwest then uses as it
+/// always has.
+fn env_names_a_proxy() -> bool {
+    [
+        "HTTPS_PROXY",
+        "https_proxy",
+        "ALL_PROXY",
+        "all_proxy",
+        "HTTP_PROXY",
+        "http_proxy",
+    ]
+    .into_iter()
+    .any(|name| std::env::var(name).is_ok_and(|url| !url.trim().is_empty()))
+}
+
+/// Portalrinth's own: the Windows system proxy (the one VPN clients such as
+/// v2rayN switch on and off), read from the registry every few seconds.
+#[cfg(windows)]
+mod windows_proxy {
+    use std::sync::LazyLock;
+    use std::time::{Duration, Instant};
+
+    use parking_lot::Mutex;
+
+    const REFRESH: Duration = Duration::from_secs(3);
+
+    #[derive(Clone, Debug, Default, PartialEq, Eq)]
+    pub struct SystemProxy {
+        pub http: Option<String>,
+        pub https: Option<String>,
+        pub bypass: Vec<String>,
+    }
+
+    static CURRENT: LazyLock<Mutex<(Option<Instant>, Option<SystemProxy>)>> =
+        LazyLock::new(|| Mutex::new((None, None)));
+
+    fn read() -> Option<SystemProxy> {
+        let key = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER)
+            .open_subkey(
+                r"Software\Microsoft\Windows\CurrentVersion\Internet Settings",
+            )
+            .ok()?;
+        let enabled: u32 = key.get_value("ProxyEnable").ok()?;
+        if enabled == 0 {
+            return None;
+        }
+        let server: String = key.get_value("ProxyServer").ok()?;
+        let bypass: String = key.get_value("ProxyOverride").unwrap_or_default();
+        parse(&server, &bypass)
+    }
+
+    /// `host:port` for every scheme, or `http=host:port;https=host:port;
+    /// socks=host:port` per scheme, as Windows stores it.
+    pub fn parse(server: &str, bypass: &str) -> Option<SystemProxy> {
+        let with_scheme = |address: &str, scheme: &str| {
+            let address = address.trim();
+            (!address.is_empty()).then(|| {
+                if address.contains("://") {
+                    address.to_string()
+                } else {
+                    format!("{scheme}://{address}")
+                }
+            })
+        };
+        let mut proxy = SystemProxy {
+            bypass: bypass
+                .split(';')
+                .map(|entry| entry.trim().to_ascii_lowercase())
+                .filter(|entry| !entry.is_empty())
+                .collect(),
+            ..SystemProxy::default()
+        };
+        if server.contains('=') {
+            let mut socks = None;
+            for part in server.split(';') {
+                let Some((scheme, address)) = part.split_once('=') else {
+                    continue;
+                };
+                match scheme.trim().to_ascii_lowercase().as_str() {
+                    "http" => proxy.http = with_scheme(address, "http"),
+                    "https" => proxy.https = with_scheme(address, "http"),
+                    "socks" => socks = with_scheme(address, "socks5"),
+                    _ => {}
+                }
+            }
+            proxy.http = proxy.http.or_else(|| socks.clone());
+            proxy.https = proxy.https.or(socks);
+        } else {
+            proxy.http = with_scheme(server, "http");
+            proxy.https = proxy.http.clone();
+        }
+        (proxy.http.is_some() || proxy.https.is_some()).then_some(proxy)
+    }
+
+    /// Whether a host is on the bypass list: Windows' own `<local>` (names
+    /// without a dot), plain names, and `*` patterns. Loopback never goes
+    /// through a proxy.
+    pub fn bypassed(host: &str, bypass: &[String]) -> bool {
+        let host = host.to_ascii_lowercase();
+        if host == "localhost" || host.starts_with("127.") || host == "[::1]" {
+            return true;
+        }
+        bypass.iter().any(|entry| {
+            if entry == "<local>" {
+                return !host.contains('.');
+            }
+            match entry.split_once('*') {
+                Some((prefix, suffix)) => {
+                    host.len() >= prefix.len() + suffix.len()
+                        && host.starts_with(prefix)
+                        && host.ends_with(suffix)
+                }
+                None => host == *entry,
+            }
+        })
+    }
+
+    fn current() -> Option<SystemProxy> {
+        let mut current = CURRENT.lock();
+        if current.0.is_none_or(|at| at.elapsed() >= REFRESH) {
+            *current = (Some(Instant::now()), read());
+        }
+        current.1.clone()
+    }
+
+    pub fn proxy_for(url: &reqwest::Url) -> Option<String> {
+        let proxy = current()?;
+        if bypassed(url.host_str()?, &proxy.bypass) {
+            return None;
+        }
+        match url.scheme() {
+            "https" => proxy.https.or(proxy.http),
+            _ => proxy.http,
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn reads_one_address_for_every_scheme() {
+            let proxy =
+                parse("127.0.0.1:10809", "localhost;127.*;<local>").unwrap();
+            assert_eq!(proxy.http.as_deref(), Some("http://127.0.0.1:10809"));
+            assert_eq!(proxy.https.as_deref(), Some("http://127.0.0.1:10809"));
+        }
+
+        #[test]
+        fn reads_addresses_per_scheme() {
+            let proxy =
+                parse("http=10.0.0.1:8080;https=10.0.0.1:8443", "").unwrap();
+            assert_eq!(proxy.http.as_deref(), Some("http://10.0.0.1:8080"));
+            assert_eq!(proxy.https.as_deref(), Some("http://10.0.0.1:8443"));
+            let socks = parse("socks=127.0.0.1:1080", "").unwrap();
+            assert_eq!(socks.https.as_deref(), Some("socks5://127.0.0.1:1080"));
+            assert_eq!(parse("", ""), None);
+        }
+
+        #[test]
+        fn honours_the_bypass_list() {
+            let bypass = parse("1.2.3.4:1", "*.local;10.*;<local>;example.org")
+                .unwrap()
+                .bypass;
+            assert!(bypassed("printer.local", &bypass));
+            assert!(bypassed("10.1.2.3", &bypass));
+            assert!(bypassed("intranet", &bypass));
+            assert!(bypassed("example.org", &bypass));
+            assert!(bypassed("localhost", &bypass));
+            assert!(!bypassed("api.modrinth.com", &bypass));
+        }
+    }
 }
 
 pub static INSECURE_REQWEST_CLIENT: LazyLock<reqwest::Client> =
@@ -457,25 +650,6 @@ pub static NO_TIMEOUT_REQWEST_CLIENT: LazyLock<reqwest::Client> =
             .build()
             .expect("client configuration should be valid")
     });
-
-/// How long a file download may produce nothing before it is treated as dead.
-///
-/// The launcher's other clients give up after thirty seconds, which is right for
-/// an API call and wrong for a forty-megabyte Java runtime on a slow line:
-/// there, half a minute of silence happens routinely, and three attempts in a row
-/// all running into it fails an install that was never really broken. Long
-/// enough that a slow line survives it, finite enough that a host which has
-/// actually gone away is not waited on forever.
-const DOWNLOAD_READ_TIMEOUT: Duration = Duration::from_secs(180);
-
-/// The client every file download goes through.
-pub static DOWNLOAD_REQWEST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest_client_builder()
-        .https_only(true)
-        .read_timeout(DOWNLOAD_READ_TIMEOUT)
-        .build()
-        .expect("client configuration should be valid")
-});
 
 const FETCH_ATTEMPTS: usize = 2;
 
@@ -680,7 +854,7 @@ pub(crate) async fn fetch_file_mirrors_in(
             uri_path,
             semaphore,
             exec,
-            &DOWNLOAD_REQWEST_CLIENT,
+            &REQWEST_CLIENT,
             progress.as_deref_mut(),
             true,
             staging,
@@ -879,7 +1053,7 @@ where
 
 /// Downloads a file with retry and checksum functionality, and a specific
 /// [`reqwest::Client`].
-#[tracing::instrument(skip(json_body, semaphore))]
+#[tracing::instrument(skip(json_body, header, semaphore))]
 #[allow(clippy::too_many_arguments)]
 pub async fn fetch_advanced(
     method: Method,
@@ -909,7 +1083,7 @@ pub async fn fetch_advanced(
     .await
 }
 
-#[tracing::instrument(skip(body, semaphore))]
+#[tracing::instrument(skip(body, header, semaphore))]
 #[allow(clippy::too_many_arguments)]
 pub async fn fetch_advanced_bytes(
     method: Method,
@@ -938,7 +1112,7 @@ pub async fn fetch_advanced_bytes(
     .await
 }
 
-#[tracing::instrument(skip(json_body, semaphore, progress))]
+#[tracing::instrument(skip(json_body, header, semaphore, progress))]
 #[allow(clippy::too_many_arguments)]
 pub async fn fetch_advanced_with_progress(
     method: Method,
@@ -972,7 +1146,7 @@ pub async fn fetch_advanced_with_progress(
 }
 
 /// Downloads a file with retry and checksum functionality
-#[tracing::instrument(skip(json_body, semaphore))]
+#[tracing::instrument(skip(json_body, header, semaphore))]
 #[allow(clippy::too_many_arguments)]
 pub async fn fetch_advanced_with_client(
     method: Method,
@@ -1006,7 +1180,7 @@ pub async fn fetch_advanced_with_client(
 }
 
 #[tracing::instrument(skip(
-    json_body, bytes_body, semaphore, client, progress
+    json_body, bytes_body, header, semaphore, client, progress
 ))]
 #[allow(clippy::too_many_arguments)]
 async fn fetch_advanced_with_client_and_progress(
@@ -1085,51 +1259,60 @@ async fn fetch_advanced_with_target(
     let download_meta_header = download_meta
         .map(|m| (DOWNLOAD_META_HEADER.to_string(), m.to_header_value()));
 
+    let mut patience = rate_limit_patience();
+
     for attempt in 1..=(FETCH_ATTEMPTS + 1) {
-        if is_api_url {
-            GLOBAL_API_RATE_LIMIT.wait_turn().await?;
-        }
+        // Rate limits are waited out in here without spending an attempt.
+        let result = loop {
+            if is_api_url {
+                while let Err(error) = GLOBAL_API_RATE_LIMIT.check() {
+                    wait_out_rate_limit(error, &mut patience).await?;
+                }
+            }
 
-        if let Some(fence_key) = fence_key
-            && GLOBAL_FETCH_FENCE.is_blocked(fence_key)
-        {
-            return Err(ErrorKind::ApiIsDownError(
-                GLOBAL_FETCH_FENCE.latest_block_minutes(),
-            )
-            .into());
-        }
+            if let Some(fence_key) = fence_key
+                && GLOBAL_FETCH_FENCE.is_blocked(fence_key)
+            {
+                return Err(ErrorKind::ApiIsDownError(
+                    GLOBAL_FETCH_FENCE.latest_block_minutes(),
+                )
+                .into());
+            }
 
-        let mut req = client.request(method.clone(), url);
+            let mut req = client.request(method.clone(), url);
 
-        if let Some(body) = &json_body {
-            req = req.json(body);
-        } else if let Some(body) = bytes_body.clone() {
-            req = req.body(body);
-        }
+            if let Some(body) = &json_body {
+                req = req.json(body);
+            } else if let Some(body) = bytes_body.clone() {
+                req = req.body(body);
+            }
 
-        if let Some(header) = header {
-            req = req.header(header.0, header.1);
-        }
+            if let Some(header) = header {
+                req = req.header(header.0, header.1);
+            }
 
-        if let Some(ref creds) = creds {
-            req = req.header("Authorization", &creds.session);
-        }
+            if let Some(ref creds) = creds {
+                req = req.header("Authorization", &creds.session);
+            }
 
-        if let Some((name, value)) = &download_meta_header {
-            tracing::debug!("Sending download analytics: {value}");
-            req = req.header(name.as_str(), value.as_str());
-        }
+            if let Some((name, value)) = &download_meta_header {
+                tracing::debug!("Sending download analytics: {value}");
+                req = req.header(name.as_str(), value.as_str());
+            }
 
-        let result = crate::install::control::download_step(req.send()).await?;
+            let result =
+                crate::install::control::download_step(req.send()).await?;
+            if is_api_url
+                && let Ok(resp) = &result
+                && let Some(error) = GLOBAL_API_RATE_LIMIT.handle_response(resp)
+            {
+                wait_out_rate_limit(error.into(), &mut patience).await?;
+                continue;
+            }
+            break result;
+        };
         match result {
             Ok(resp) => {
-                if is_api_url
-                    && let Some(error) =
-                        GLOBAL_API_RATE_LIMIT.handle_response(&resp)
-                {
-                    return Err(error.into());
-                }
-
                 if resp.status().is_server_error() {
                     if let Some(fence_key) = fence_key {
                         GLOBAL_FETCH_FENCE.record_fail(fence_key);
@@ -1244,7 +1427,7 @@ pub async fn fetch_mirrors(
             uri_path,
             semaphore,
             exec,
-            &DOWNLOAD_REQWEST_CLIENT,
+            &REQWEST_CLIENT,
         )
         .await;
 
@@ -1392,6 +1575,48 @@ pub async fn sha1_file_async_with_progress(
 mod tests {
     use super::*;
     use chrono::{TimeDelta, Utc};
+
+    #[tokio::test]
+    async fn test_patient_requests_wait_out_rate_limit() {
+        let limit = ApiRateLimit::new();
+        limit.block_for(Duration::from_millis(1500));
+
+        // Fail fast without patience, as interactive requests do.
+        let error = limit.check().unwrap_err();
+        assert!(matches!(
+            error.raw.as_ref(),
+            ErrorKind::Ratelimited {
+                retry_in_seconds: 2
+            }
+        ));
+        let mut patience = rate_limit_patience();
+        assert_eq!(patience, Duration::ZERO);
+        assert!(
+            wait_out_rate_limit(error, &mut patience).await.is_err(),
+            "a request without patience must not wait"
+        );
+
+        // Patient work waits until the block is over, then gets through.
+        let started = Instant::now();
+        patiently(async {
+            let mut patience = rate_limit_patience();
+            while let Err(error) = limit.check() {
+                wait_out_rate_limit(error, &mut patience).await.unwrap();
+            }
+            assert_eq!(patience, RATE_LIMIT_PATIENCE - Duration::from_secs(2));
+        })
+        .await;
+        assert!(started.elapsed() >= Duration::from_millis(1500));
+
+        // A wait longer than what is left of the patience gives up.
+        limit.block_for(Duration::from_secs(10));
+        let mut patience = Duration::from_secs(5);
+        assert!(
+            wait_out_rate_limit(limit.check().unwrap_err(), &mut patience)
+                .await
+                .is_err()
+        );
+    }
 
     #[test]
     fn test_fence_block_after_4_fails() {

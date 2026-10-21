@@ -11,6 +11,8 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, nextTick, onScopeDispose, ref } from 'vue'
 
+import PortalrinthRecoverInstances from '@/features/settings/syncing/PortalrinthRecoverInstances.vue'
+import PortalrinthSkinLookupSetting from '@/features/settings/syncing/PortalrinthSkinLookupSetting.vue'
 import { gameSettingsKeys } from '@/helpers/game-options'
 import {
 	type GlobalSyncedOptions,
@@ -631,5 +633,9 @@ onScopeDispose(clearBaseSource)
 				</div>
 			</div>
 		</section>
+
+		<PortalrinthSkinLookupSetting />
+
+		<PortalrinthRecoverInstances />
 	</div>
 </template>

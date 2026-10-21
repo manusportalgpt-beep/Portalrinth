@@ -101,10 +101,6 @@ pub struct Settings {
     /// list, and falls back to the theme's own for an id it does not know.
     pub accent_preset: String,
 
-    /// The colour a person's own wheel picked, used when the accent is set to
-    /// custom rather than to one of the presets.
-    pub accent_custom_color: Option<String>,
-
     /// Whether that preset also tints the backgrounds it is drawn on, or only
     /// the accent itself.
     pub accent_tint_background: bool,
@@ -120,21 +116,9 @@ pub struct Settings {
     /// How far the background picture is darkened, from 0 to 100.
     pub background_dim: u32,
 
-    /// The CurseForge key this launcher asks with.
-    ///
-    /// CurseForge requires one for everything it does — searching, listing
-    /// files, even downloading a file whose address is already known. A build
-    /// can arrive with one compiled in, but a key baked into a distributed
-    /// binary belongs to whoever distributed it rather than to whoever is
-    /// using it, so the person using it can set their own. This is that key,
-    /// and it takes precedence over the compiled-in one.
-    pub curseforge_api_key: Option<String>,
-
-    /// Whether results arrive by scrolling instead of by turning pages.
-    ///
-    /// Default on, and a column with a default rather than a nullable one so
-    /// that an older settings row reads as on without a migration step.
-    pub browse_infinite_scroll: bool,
+    /// Where Java is downloaded from: `auto` tries every provider in turn,
+    /// or one of [`crate::api::java_providers::JavaProvider`]'s keys pins it.
+    pub java_provider: String,
 
     pub version: usize,
 }
@@ -176,13 +160,8 @@ impl Settings {
                 .fetch_one(exec)
                 .await?;
 
-let accent_preset: Option<String> =
+        let accent_preset: Option<String> =
             sqlx::query_scalar("SELECT accent_preset FROM settings")
-                .fetch_one(exec)
-                .await?;
-
-        let accent_custom_color: Option<String> =
-            sqlx::query_scalar("SELECT accent_custom_color FROM settings")
                 .fetch_one(exec)
                 .await?;
 
@@ -196,6 +175,11 @@ let accent_preset: Option<String> =
                 .fetch_one(exec)
                 .await?;
 
+        let java_provider: String =
+            sqlx::query_scalar("SELECT java_provider FROM settings")
+                .fetch_one(exec)
+                .await?;
+
         let background_blur: i64 =
             sqlx::query_scalar("SELECT background_blur FROM settings")
                 .fetch_one(exec)
@@ -203,18 +187,6 @@ let accent_preset: Option<String> =
 
         let background_dim: i64 =
             sqlx::query_scalar("SELECT background_dim FROM settings")
-                .fetch_one(exec)
-                .await?;
-
-        // Fork-only column, so it is read at runtime rather than through the
-        // sqlx offline cache, for the same reason as proxy_url above.
-        let curseforge_api_key: Option<String> =
-            sqlx::query_scalar("SELECT curseforge_api_key FROM settings")
-                .fetch_one(exec)
-                .await?;
-
-        let browse_infinite_scroll: i64 =
-            sqlx::query_scalar("SELECT browse_infinite_scroll FROM settings")
                 .fetch_one(exec)
                 .await?;
 
@@ -320,13 +292,11 @@ let accent_preset: Option<String> =
             universal_skins: universal_skins == 1,
             accent_preset: accent_preset
                 .unwrap_or_else(|| DEFAULT_ACCENT_PRESET.to_string()),
-            accent_custom_color,
             accent_tint_background: accent_tint_background == 1,
             splash_cube,
+            java_provider,
             background_blur: background_blur == 1,
             background_dim: background_dim.clamp(0, 100) as u32,
-            curseforge_api_key,
-            browse_infinite_scroll: browse_infinite_scroll == 1,
             sync_theme_across_devices: res.sync_theme_across_devices == 1,
             sync_behavior_across_devices: res.sync_behavior_across_devices == 1,
             sync_features_across_devices: res.sync_features_across_devices == 1,
@@ -494,11 +464,6 @@ let accent_preset: Option<String> =
             .execute(exec)
             .await?;
 
-        sqlx::query("UPDATE settings SET accent_custom_color = $1")
-            .bind(&self.accent_custom_color)
-            .execute(exec)
-            .await?;
-
         sqlx::query("UPDATE settings SET accent_tint_background = $1")
             .bind(i64::from(self.accent_tint_background))
             .execute(exec)
@@ -509,6 +474,11 @@ let accent_preset: Option<String> =
             .execute(exec)
             .await?;
 
+        sqlx::query("UPDATE settings SET java_provider = $1")
+            .bind(&self.java_provider)
+            .execute(exec)
+            .await?;
+
         sqlx::query("UPDATE settings SET background_blur = $1")
             .bind(i64::from(self.background_blur))
             .execute(exec)
@@ -516,16 +486,6 @@ let accent_preset: Option<String> =
 
         sqlx::query("UPDATE settings SET background_dim = $1")
             .bind(i64::from(self.background_dim.min(100)))
-            .execute(exec)
-            .await?;
-
-        sqlx::query("UPDATE settings SET curseforge_api_key = $1")
-            .bind(&self.curseforge_api_key)
-            .execute(exec)
-            .await?;
-
-        sqlx::query("UPDATE settings SET browse_infinite_scroll = $1")
-            .bind(i64::from(self.browse_infinite_scroll))
             .execute(exec)
             .await?;
 

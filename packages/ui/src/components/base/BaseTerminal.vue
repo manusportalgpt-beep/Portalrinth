@@ -72,15 +72,18 @@ const props = withDefaults(
 	},
 )
 
-const FROG = [
-	'\x1B[32m     _    _ \x1B[37m',
-	'\x1B[32m    (o)--(o)      \x1B[37m',
-	'\x1B[32m   /.______.\\\x1B[37m',
-	'\x1B[32m   \\________/     \x1B[37m',
-	'\x1B[32m  ./        \\.    \x1B[37m',
-	'\x1B[32m ( .        , )\x1B[37m',
-	'\x1B[32m  \\ \\_\\\\ //_/ /\x1B[37m',
-	'\x1B[32m   ~~  ~~  ~~\x1B[37m',
+// Portalrinth's own, in place of Modrinth's frog: a night owl on a branch under
+// the moon, in the launcher's purple with amber eyes.
+const PURPLE = '\x1B[35m'
+const AMBER = '\x1B[93m'
+const GREY = '\x1B[90m'
+const WHITE = '\x1B[37m'
+const OWL = [
+	`${PURPLE}      \\${WHITE}`,
+	`${PURPLE}       \\   ,___,${AMBER}        .-.${WHITE}`,
+	`${PURPLE}           {${AMBER}O${PURPLE},${AMBER}O${PURPLE}}${AMBER}       (  (${WHITE}`,
+	`${PURPLE}           |)__)${AMBER}        \`-'${WHITE}`,
+	`${GREY}        ----${PURPLE}"${GREY}-${PURPLE}"${GREY}-----${WHITE}`,
 ]
 
 const BUBBLE_WIDTH = 56
@@ -104,7 +107,7 @@ function wrapWords(text: string, width: number): string[] {
 	return lines.length > 0 ? lines : ['']
 }
 
-/** The speech bubble the frog is saying, drawn to fit whatever it says. */
+/** The speech bubble the owl is saying, drawn to fit whatever it says. */
 function speechBubble(text: string): string[] {
 	const lines = wrapWords(text, BUBBLE_WIDTH)
 	const inner = Math.max(...lines.map((line) => line.length))
@@ -181,7 +184,7 @@ function writeEmptyState() {
 				? messages.instanceEmptyState
 				: undefined
 	if (emptyState) {
-		for (const line of [...speechBubble(formatMessage(emptyState)), ...FROG]) {
+		for (const line of [...speechBubble(formatMessage(emptyState)), ...OWL]) {
 			terminal.value.writeln(line)
 		}
 	}

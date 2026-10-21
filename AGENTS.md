@@ -109,7 +109,7 @@ Two upstreams move, and both have to be looked at before a release is called
 current:
 
 - `https://github.com/modrinth/code/releases` - the launcher this is a fork of.
-- `https://github.com/Everelsu/Noctrinth` - the fork this one came from.
+- `https://github.com/Everelsu/Portalrinth` - the fork this one came from.
 
 `modrinth` is a git remote, `upstream` is another. Our version is the `VERSION`
 file; it is what every report is measured against. When it is behind, the

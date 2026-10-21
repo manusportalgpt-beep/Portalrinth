@@ -4376,6 +4376,15 @@
   "project.versions.channel.release.symbol": {
     "defaultMessage": "R"
   },
+  "project.versions.column.downloads": {
+    "defaultMessage": "Downloads"
+  },
+  "project.versions.column.environment": {
+    "defaultMessage": "Environment"
+  },
+  "project.versions.column.published": {
+    "defaultMessage": "Published"
+  },
   "project.versions.filter.channel": {
     "defaultMessage": "Channel"
   },
@@ -7357,5 +7366,8 @@
   },
   "version.supplementary-resources.type": {
     "defaultMessage": "Type"
+  },
+  "version.uploaded-by": {
+    "defaultMessage": "Uploaded by"
   }
 }

@@ -1553,10 +1553,6 @@ async fn install_pack_inner(
         )
         .await?;
 
-    // Which entries the person kept after being shown the manifest, if they were
-    // shown one. Bound outside the match because both branches need it and the
-    // CurseForge one leaves the function before the second can be reached.
-    let mut keep_entries: Option<Vec<String>> = None;
     let create_pack = match location {
         CreatePackLocation::FromVersionId {
             project_id,
@@ -1583,11 +1579,47 @@ async fn install_pack_inner(
             )
             .await?
         }
-CreatePackLocation::FromFile {
+        CreatePackLocation::FromCurseforge {
+            project_id,
+            file_id,
+            ..
+        } => {
+            reporter
+                .set_context(
+                    InstallErrorContext::new("download CurseForge modpack")
+                        .project_id(project_id.clone())
+                        .build(),
+                )
+                .await?;
+            let api_key = crate::api::curseforge_metadata::api_key()
+                .ok_or_else(|| {
+                    crate::ErrorKind::InputError(
+                        "This build has no CurseForge API key.".to_string(),
+                    )
+                })?;
+            let bytes = crate::api::curseforge_browse::download_modpack_bytes(
+                &project_id,
+                file_id,
+            )
+            .await?;
+            install_curseforge_pack_files_with_reporter(
+                bytes,
+                &api_key,
+                &instance_id,
+                reason,
+                reporter,
+            )
+            .await?;
+            return Ok(());
+        }
+        CreatePackLocation::FromFile {
             path,
             curseforge_api_key,
-            keep,
         } => {
+            // The user's own key, when there is one, before the build's.
+            let curseforge_api_key =
+                crate::api::curseforge_metadata::user_key()
+                    .or(curseforge_api_key);
             reporter
                 .set_context(
                     InstallErrorContext::new("read local modpack file")
@@ -1599,17 +1631,12 @@ CreatePackLocation::FromFile {
             // else continues through the mrpack path (file-backed, so large
             // .mrpack files are not loaded into memory just for this check).
             if is_curseforge_zip(&path).await? {
-                // The key the person set is the one that must be used here.
-                // Reading it out of settings rather than off the argument is
-                // what makes a self-supplied key work at all: the argument only
-                // ever held the build's own key, and builds rarely carry one.
                 let api_key = curseforge_api_key
                     .filter(|k| !k.trim().is_empty())
-                    .or_else(crate::api::curseforge_metadata::api_key)
                     .ok_or_else(|| {
                         crate::ErrorKind::InputError(
                             "This is a CurseForge modpack, but no CurseForge \
-                             API key is available. Add one in settings first."
+                             API key is available."
                                 .to_string(),
                         )
                     })?;
@@ -1621,12 +1648,10 @@ CreatePackLocation::FromFile {
                     &instance_id,
                     reason,
                     reporter,
-                    keep_entries.as_deref(),
                 )
                 .await?;
                 return Ok(());
             }
-            keep_entries = keep;
             generate_pack_from_file(path, instance_id.clone()).await?
         }
     };
@@ -1636,7 +1661,6 @@ CreatePackLocation::FromFile {
         false,
         reason,
         reporter,
-        keep_entries,
     )
     .await?;
 
@@ -1783,14 +1807,15 @@ async fn update_backup_scope(
                 ))
                 .await?
             }
-CreatePackLocation::FromFile { path, .. } => {
-				// A CurseForge zip is not an mrpack and lists its overrides
-				// differently; backing up the whole instance is the safe answer.
-				if is_curseforge_zip(&path).await? {
-					return Ok(None);
-				}
-				generate_pack_from_file(path, instance_id.clone()).await?
-			}
+            CreatePackLocation::FromCurseforge { .. } => return Ok(None),
+            CreatePackLocation::FromFile { path, .. } => {
+                // A CurseForge zip is not an mrpack and lists its overrides
+                // differently; backing up the whole instance is the safe answer.
+                if is_curseforge_zip(&path).await? {
+                    return Ok(None);
+                }
+                generate_pack_from_file(path, instance_id.clone()).await?
+            }
         };
         paths.extend(mrpack_instance_paths(&pack.file).await?);
     }
@@ -1957,6 +1982,9 @@ fn set_initial_display(job_state: &mut InstallJobState) {
             match location {
                 CreatePackLocation::FromVersionId {
                     title, icon_url, ..
+                }
+                | CreatePackLocation::FromCurseforge {
+                    title, icon_url, ..
                 } => Some((title.clone(), icon_url.clone())),
                 CreatePackLocation::FromFile { path, .. } => {
                     Some((get_local_pack_instance(path).name, None))
@@ -2087,6 +2115,13 @@ pub(super) fn modpack_details(
             version_id: Some(version_id.clone()),
             title: Some(title.clone()),
         },
+        CreatePackLocation::FromCurseforge { title, .. } => {
+            InstallPhaseDetails::Modpack {
+                project_id: None,
+                version_id: None,
+                title: Some(title.clone()),
+            }
+        }
         CreatePackLocation::FromFile { .. } => InstallPhaseDetails::Modpack {
             project_id: None,
             version_id: None,

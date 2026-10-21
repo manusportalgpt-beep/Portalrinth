@@ -1,9 +1,8 @@
 <script setup>
-import { BoxIcon, FolderSearchIcon, KeyIcon } from '@modrinth/assets'
+import { BoxIcon, FolderSearchIcon, GlobeIcon } from '@modrinth/assets'
 import { defineMessages, IconButton, Input, Slider, useVIntl } from '@modrinth/ui'
-import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 
 import { get, set } from '@/helpers/settings.ts'
 
@@ -20,7 +19,7 @@ const messages = defineMessages({
 	appDirectoryDescription: {
 		id: 'app.settings.resource-management.app-directory.description',
 		defaultMessage:
-			'Where Modrinth App stores instances and other files. Changes take effect after restarting the app.',
+			'Where Portalrinth stores instances and other files. Changes take effect after restarting the app.',
 	},
 	selectAppDirectory: {
 		id: 'app.settings.resource-management.app-directory.select',
@@ -30,27 +29,14 @@ const messages = defineMessages({
 		id: 'app.settings.resource-management.app-directory.browse',
 		defaultMessage: 'Browse for an app directory',
 	},
-	curseforgeTitle: {
-		id: 'app.settings.resource-management.curseforge.title',
-		defaultMessage: 'CurseForge API key',
+	proxyTitle: {
+		id: 'app.resource-settings.proxy.title',
+		defaultMessage: 'Proxy',
 	},
-	curseforgeDescription: {
-		id: 'app.settings.resource-management.curseforge.description',
+	proxyDescription: {
+		id: 'app.resource-settings.proxy.description',
 		defaultMessage:
-			'CurseForge requires a key for searching, listing files and downloading. Leave this empty to use the key this build was made with, if it has one.',
-	},
-	curseforgeHint: {
-		id: 'app.settings.resource-management.curseforge.hint',
-		defaultMessage: 'Create an API token at',
-	},
-	curseforgeMissing: {
-		id: 'app.settings.resource-management.curseforge.missing',
-		defaultMessage:
-			'No key is configured, so CurseForge is not available anywhere in this launcher.',
-	},
-	curseforgePresent: {
-		id: 'app.settings.resource-management.curseforge.present',
-		defaultMessage: 'A key of your own is in use for CurseForge.',
+			'Routes all launcher network traffic (Modrinth API and CDN downloads) through a proxy. Supports http://, https://, socks5:// and socks5h:// URLs. Useful when Modrinth is not reachable in your region. Leave empty to connect directly. (app restart required to take effect)',
 	},
 	maximumConcurrentDownloadsTitle: {
 		id: 'app.settings.resource-management.maximum-concurrent-downloads.title',
@@ -81,34 +67,14 @@ watch(
 			setSettings.custom_dir = null
 		}
 
-		if (!setSettings.curseforge_api_key) {
-			setSettings.curseforge_api_key = null
+		if (!setSettings.proxy_url) {
+			setSettings.proxy_url = null
 		}
 
 		await set(setSettings)
 	},
 	{ deep: true },
 )
-
-/*
- * Whether a key of the person's own is in force, asked again whenever the
- * settings change: a key can be pasted, changed or cleared while the tab is
- * open, and this is what decides whether CurseForge is reachable at all.
- */
-const curseforgeAvailable = ref(false)
-
-async function refreshCurseforgeAvailability() {
-	try {
-		curseforgeAvailable.value = await invoke(
-			'plugin:portalrinth-curseforge|curseforge_is_available',
-		)
-	} catch {
-		// An empty key is the ordinary case, not a failure to report.
-		curseforgeAvailable.value = false
-	}
-}
-
-onMounted(refreshCurseforgeAvailability)
 
 async function findLauncherDir() {
 	const newDir = await open({
@@ -154,6 +120,23 @@ async function findLauncherDir() {
 		</div>
 
 		<div class="flex flex-col gap-2.5">
+			<h2 class="m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.proxyTitle) }}
+			</h2>
+			<Input
+				id="proxy-url"
+				v-model="settings.proxy_url"
+				:icon="GlobeIcon"
+				type="text"
+				placeholder="socks5://127.0.0.1:1080"
+				wrapper-class="w-full"
+			/>
+			<p class="m-0 leading-tight text-secondary">
+				{{ formatMessage(messages.proxyDescription) }}
+			</p>
+		</div>
+
+		<div class="flex flex-col gap-2.5">
 			<h2 class="m-0 text-lg font-semibold text-contrast mt-4">
 				{{ formatMessage(messages.maximumConcurrentDownloadsTitle) }}
 			</h2>
@@ -182,40 +165,6 @@ async function findLauncherDir() {
 			/>
 			<p class="m-0 leading-tight text-secondary">
 				{{ formatMessage(messages.maximumConcurrentWritesDescription) }}
-			</p>
-		</div>
-
-		<div class="flex flex-col gap-2.5">
-			<h2 class="mt-0 m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.curseforgeTitle) }}
-			</h2>
-			<Input
-				id="curseforge-api-key"
-				v-model="settings.curseforge_api_key"
-				:icon="KeyIcon"
-				type="password"
-				placeholder="••••••••••••••••"
-				wrapper-class="w-full"
-			/>
-			<p class="m-0 leading-tight text-secondary">
-				{{ formatMessage(messages.curseforgeDescription) }}
-			</p>
-			<span class="text-sm text-secondary">
-				{{ formatMessage(messages.curseforgeHint) }}
-				<a
-					href="https://www.curseforge.com/account/api-tokens"
-					target="_blank"
-					rel="noopener noreferrer"
-					class="font-semibold text-brand hover:underline"
-					>curseforge.com</a
-				>
-			</span>
-			<p class="m-0 leading-tight text-secondary">
-				{{
-					curseforgeAvailable
-						? formatMessage(messages.curseforgePresent)
-						: formatMessage(messages.curseforgeMissing)
-				}}
 			</p>
 		</div>
 	</div>

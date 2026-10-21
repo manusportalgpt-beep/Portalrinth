@@ -10,10 +10,12 @@
 //!      creation-modal preview) knows the pack name, Minecraft version and
 //!      loader up-front,
 //!   2. `install_curseforge_pack_files_with_reporter` resolves every mod file
-//!      through the CurseForge API, downloads them concurrently (with a CDN
-//!      fallback for author-restricted files), records each as
-//!      `CurseForge`-sourced content, extracts `overrides/`, and installs
-//!      Minecraft вЂ” reporting phase/progress through the job reporter.
+//!      through the CurseForge API, downloads them concurrently, records each
+//!      as `CurseForge`-sourced content, extracts `overrides/`, and installs
+//!      Minecraft — reporting phase/progress through the job reporter. Files
+//!      whose author does not allow launcher downloads are left to
+//!      `curseforge_blocked`, which looks for them on disk and otherwise
+//!      leaves them for the user to download by hand.
 //!
 //! The pure zip-inspection helpers are also used by `install_from.rs` and the
 //! job runner to route a dropped `.zip` to the right format.
@@ -29,8 +31,6 @@ use path_util::SafeRelativeUtf8UnixPathBuf;
 use reqwest::Method;
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt;
-
-use crate::api::curseforge_search::DependencyKind;
 
 use crate::install::{
     InstallErrorContext, InstallPhaseDetails, InstallPhaseId, InstallProgress,
@@ -89,7 +89,7 @@ struct CfManifest {
     overrides: Option<String>,
     /// Portalrinth's own: where the pack's picture lives, when the manifest says
     /// so at all. CurseForge's own format has no such field, but the exporters
-    /// people actually use write one вЂ” as a URL on CurseForge's avatar CDN,
+    /// people actually use write one — as a URL on CurseForge's avatar CDN,
     /// which is the only copy of the picture a pack that ships no image file
     /// has anywhere.
     #[serde(
@@ -138,13 +138,9 @@ struct CfFileData {
     /// `None` when the author disabled third-party downloads.
     download_url: Option<String>,
     #[serde(default)]
+    file_length: Option<u64>,
+    #[serde(default)]
     hashes: Vec<CfFileHash>,
-    /// CurseForge's own game version names, which are the same strings ours are
-    /// for Minecraft but not for anything else on their site.
-    #[serde(default)]
-    game_versions: Vec<String>,
-    #[serde(default)]
-    loaders: Vec<i64>,
 }
 
 #[derive(Deserialize)]
@@ -162,32 +158,18 @@ impl CfFileData {
             .map(|h| h.value.as_str())
     }
 
-    /// Reconstruct the public CDN URL from the numeric file id вЂ” works even
-    /// when the author disabled API distribution (which only nulls
-    /// `download_url`). Same workaround MultiMC / Prism use.
-    fn cdn_fallback_url(&self) -> Option<String> {
-        if self.id < 1000 || self.file_name.is_empty() {
-            return None;
+    /// The file as one its author does not let launchers download, to be
+    /// looked for on disk instead.
+    fn as_blocked(&self) -> crate::api::curseforge_blocked::BlockedFile {
+        crate::api::curseforge_blocked::BlockedFile {
+            project_id: self.mod_id,
+            file_id: self.id,
+            file_name: self.file_name.clone(),
+            size: self.file_length.filter(|length| *length > 0),
+            sha1: self.sha1().map(str::to_string),
+            source_kind: ContentSourceKind::CurseForgeModpack,
+            disabled: false,
         }
-        let safe_name = self.file_name.replace(' ', "%20");
-        Some(format!(
-            "https://edge.forgecdn.net/files/{}/{}/{safe_name}",
-            self.id / 1000,
-            self.id % 1000
-        ))
-    }
-
-    fn download_candidates(&self) -> Vec<String> {
-        let mut urls = Vec::with_capacity(2);
-        if let Some(url) = &self.download_url {
-            urls.push(url.clone());
-        }
-        if let Some(url) = self.cdn_fallback_url()
-            && !urls.contains(&url)
-        {
-            urls.push(url);
-        }
-        urls
     }
 }
 
@@ -230,7 +212,7 @@ async fn read_manifest(pack_file: &bytes::Bytes) -> crate::Result<CfManifest> {
         .position(|f| matches!(f.filename().as_str(), Ok("manifest.json")))
     else {
         return Err(crate::ErrorKind::InputError(
-            "No manifest.json found вЂ” not a CurseForge modpack".to_string(),
+            "No manifest.json found — not a CurseForge modpack".to_string(),
         )
         .into());
     };
@@ -243,7 +225,7 @@ async fn read_manifest(pack_file: &bytes::Bytes) -> crate::Result<CfManifest> {
     Ok(serde_json::from_str(&manifest_str)?)
 }
 
-/// Pack metadata extracted from a CurseForge modpack zip вЂ” used by the
+/// Pack metadata extracted from a CurseForge modpack zip — used by the
 /// creation-modal preview and the job runner so the instance is created with
 /// the pack's real name, Minecraft version and loader instead of placeholders.
 pub struct CurseforgePackMeta {
@@ -282,7 +264,6 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
     instance_id: &str,
     reason: DownloadReason,
     reporter: InstallProgressReporter,
-    keep: Option<&[String]>,
 ) -> crate::Result<String> {
     let state = State::get().await?;
 
@@ -321,14 +302,11 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
                 .build(),
         )
         .await?;
-    // Only what a person kept after being shown the list. None means they
-    // were never shown one, which is every caller outside the preview.
-    let keep_ids: Option<std::collections::HashSet<i64>> = keep.map(|keep| {
-        keep.iter().filter_map(|id| id.parse().ok()).collect()
-    });
-    let resolved =
-        resolve_manifest_files(&state, &manifest, curseforge_api_key, keep_ids.as_ref())
-            .await?;
+    let (resolved, blocked): (Vec<_>, Vec<_>) =
+        resolve_manifest_files(&state, &manifest, curseforge_api_key)
+            .await?
+            .into_iter()
+            .partition(|file| file.download_url.is_some());
 
     // Download every resolved mod file concurrently and record each as
     // CurseForge-sourced content. Failures are collected and reported
@@ -409,7 +387,7 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
             .collect::<Vec<_>>()
             .join("\n");
         let suffix = if failures.len() > CF_MAX_LISTED_FAILURES {
-            format!("\nвЂ¦ and {} more", failures.len() - CF_MAX_LISTED_FAILURES)
+            format!("\n… and {} more", failures.len() - CF_MAX_LISTED_FAILURES)
         } else {
             String::new()
         };
@@ -419,6 +397,25 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
             total,
         ))
         .into());
+    }
+
+    // Portalrinth's own: the files CurseForge will not hand a launcher are
+    // looked for on disk, and whatever is not there waits for the user. The
+    // pack still installs; it is the content page that says what is missing.
+    if !blocked.is_empty() {
+        let pending = crate::api::curseforge_blocked::settle(
+            instance_id,
+            blocked.iter().map(CfFileData::as_blocked).collect(),
+            &state,
+        )
+        .await;
+        if !pending.is_empty() {
+            tracing::info!(
+                "{} file(s) of {} have to be downloaded by hand",
+                pending.len(),
+                manifest.name
+            );
+        }
     }
 
     extract_overrides(&pack_file, &manifest, instance_id, &reporter, &details)
@@ -445,7 +442,7 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
 }
 
 /// Apply the pack's name, version tag, Minecraft version, and loader to the
-/// instance вЂ” the CurseForge analogue of `set_instance_information`.
+/// instance — the CurseForge analogue of `set_instance_information`.
 async fn apply_manifest_to_instance(
     instance_id: &str,
     manifest: &CfManifest,
@@ -492,14 +489,8 @@ async fn resolve_manifest_files(
     state: &State,
     manifest: &CfManifest,
     curseforge_api_key: &str,
-    keep: Option<&std::collections::HashSet<i64>>,
 ) -> crate::Result<Vec<CfFileData>> {
-    let file_ids: Vec<i64> = manifest
-        .files
-        .iter()
-        .map(|f| f.file_id)
-        .filter(|id| keep.is_none_or(|keep| keep.contains(id)))
-        .collect();
+    let file_ids: Vec<i64> = manifest.files.iter().map(|f| f.file_id).collect();
     if file_ids.is_empty() {
         return Ok(Vec::new());
     }
@@ -521,7 +512,7 @@ async fn resolve_manifest_files(
         serde_json::from_slice(&body)?
     };
 
-    // The bulk endpoint silently drops some ids (and de-dups) вЂ” re-fetch the
+    // The bulk endpoint silently drops some ids (and de-dups) — re-fetch the
     // missing ones individually, the same strategy XMCL uses.
     let returned: HashSet<i64> = resolved.data.iter().map(|f| f.id).collect();
     let missing: Vec<&CfManifestFile> = manifest
@@ -563,17 +554,15 @@ async fn download_cf_file(
     download_meta: &DownloadMeta,
     instance_id: &str,
 ) -> crate::Result<()> {
-    let candidates = cf_file.download_candidates();
-    if candidates.is_empty() {
+    let Some(url) = cf_file.download_url.as_deref() else {
         return Err(crate::ErrorKind::InputError(format!(
-            "no download URL could be determined (file id {})",
+            "CurseForge gives no download URL for file {}",
             cf_file.id
         ))
         .into());
-    }
-    let mirrors: Vec<&str> = candidates.iter().map(String::as_str).collect();
+    };
     let bytes = fetch_mirrors(
-        &mirrors,
+        &[url],
         cf_file.sha1(),
         Some(download_meta),
         None,
@@ -586,7 +575,7 @@ async fn download_cf_file(
     let cf_project_id = cf_file.mod_id.to_string();
     let cf_file_id = cf_file.id.to_string();
     // Serialize the DB-and-filesystem bookkeeping while the downloads above
-    // still run in parallel вЂ” mirrors the mrpack installer's use of the
+    // still run in parallel — mirrors the mrpack installer's use of the
     // install DB semaphore.
     let _permit = state.install_db_semaphore.acquire().await?;
     crate::state::instances::commands::add_project_bytes(
@@ -595,7 +584,7 @@ async fn download_cf_file(
         bytes,
         cf_file.sha1(),
         None,
-        // The pack's own, as against a CurseForge mod the user adds later вЂ”
+        // The pack's own, as against a CurseForge mod the user adds later —
         // which is what tells the pack's content list from everything beside
         // it. Both carry CurseForge ids; only this one is part of the pack.
         ContentSourceKind::CurseForgeModpack,
@@ -607,253 +596,7 @@ async fn download_cf_file(
     Ok(())
 }
 
-/// Portalrinth's own: one CurseForge mod, picked out of a search and put in an
-/// instance, rather than a whole modpack's worth of them.
-///
-/// The pack installer stamps what it fetches as the pack's own content, so that
-/// a pack's list and everything a person adds to it afterwards can be told
-/// apart. A mod added on its own is the other kind, and is stamped as such.
-#[tracing::instrument(skip_all)]
-pub async fn install_curseforge_mod(
-    instance_id: &str,
-    mod_id: u64,
-    file_id: u64,
-    state: &State,
-) -> crate::Result<String> {
-    let Some(key) = crate::api::curseforge_metadata::api_key() else {
-        return Err(crate::ErrorKind::InputError(
-            "No CurseForge API key is configured, so CurseForge content cannot be \
-             fetched. One can be added in Settings, Resources."
-                .to_string(),
-        )
-        .as_error());
-    };
-
-    let url =
-        format!("https://api.curseforge.com/v1/mods/{mod_id}/files/{file_id}");
-    let body = fetch_advanced(
-        Method::GET,
-        &url,
-        None,
-        None,
-        Some(("x-api-key", &key)),
-        None,
-        None,
-        None,
-        &state.fetch_semaphore,
-        &state.pool,
-    )
-    .await?;
-    let file = serde_json::from_slice::<CfFileData>(&body)?;
-
-    // Where to fetch it from is asked of CurseForge rather than worked out
-    // here: it knows about projects whose distribution the author limited, and
-    // it has moved its files between hosts more than once.
-    let mirrors = crate::api::curseforge_search::download_urls(mod_id, file_id)
-        .await?;
-    let mirrors: Vec<&str> = mirrors.iter().map(String::as_str).collect();
-    if mirrors.is_empty() {
-        return Err(crate::ErrorKind::InputError(format!(
-            "no download URL could be determined (file id {})",
-            file.id
-        ))
-        .as_error());
-    }
-    let download_meta = DownloadMeta {
-        reason: DownloadReason::Standalone,
-        game_version: file
-            .game_versions
-            .first()
-            .cloned()
-            .unwrap_or_default(),
-        loader: file
-            .loaders
-            .first()
-            .and_then(|loader| u64::try_from(*loader).ok())
-            .and_then(crate::api::curseforge_search::curseforge_loader_name)
-            .unwrap_or_default()
-            .to_string(),
-        dependent_on: None,
-    };
-    let bytes = fetch_mirrors(
-        &mirrors,
-        file.sha1(),
-        Some(&download_meta),
-        None,
-        &state.fetch_semaphore,
-        &state.pool,
-    )
-    .await?;
-
-    let safe_file_name = sanitize_filename(&file.file_name);
-    let project_id = file.mod_id.to_string();
-    let curseforge_file_id = file.id.to_string();
-    let _permit = state.install_db_semaphore.acquire().await?;
-    crate::state::instances::commands::add_project_bytes(
-        instance_id,
-        &safe_file_name,
-        bytes,
-        file.sha1(),
-        None,
-        ContentSourceKind::CurseForge,
-        Some(&project_id),
-        Some(&curseforge_file_id),
-        state,
-    )
-    .await?;
-
-    Ok(safe_file_name)
-}
-
-/// How deep the dependencies of a dependency are followed.
-/// Three is not arbitrary and not endless: it covers the shape almost every
-/// real case has — a mod needs a library, which needs its own library — and
-/// stops before a chain long enough to be a loop wearing a disguise. Anything
-/// deeper is reported rather than installed, so it is a decision somebody can
-/// make rather than a limit they never learn about.
-const MAX_DEPENDENCY_DEPTH: usize = 3;
-
-/// What one CurseForge file needs installed alongside it, found by following
-/// the graph the API describes.
-///
-/// Dependencies are fetched before the file that needed them, not after: a mod
-/// that is installed on its own and then has its library added is a mod that
-/// will have crashed once in between, and the crash is what somebody files the
-/// report about.
-pub(crate) async fn install_dependencies_of(
-    instance_id: &str,
-    mod_id: u64,
-    file_id: u64,
-    game_version: Option<&str>,
-    loader: Option<&str>,
-    state: &State,
-) -> crate::Result<Vec<String>> {
-    let Some(key) = crate::api::curseforge_metadata::api_key() else {
-        return Ok(Vec::new());
-    };
-    let http = crate::api::curseforge_search::build_client(&key)?;
-
-    let mut installed = Vec::new();
-    let mut seen = std::collections::HashSet::new();
-    let mut queue = std::collections::VecDeque::new();
-    queue.push_back((mod_id, file_id, 0usize));
-
-    while let Some((parent_mod, parent_file, depth)) = queue.pop_front() {
-        if depth >= MAX_DEPENDENCY_DEPTH {
-            continue;
-        }
-
-        let wanted =
-            match crate::api::curseforge_search::dependencies(&http, &key, parent_mod, parent_file)
-                .await
-            {
-                Ok(dependencies) => dependencies,
-                // A dependency list that cannot be read is not a reason to fail
-                // the install the person actually asked for.
-                Err(error) => {
-                    tracing::warn!("Could not read CurseForge dependencies: {error}");
-                    Vec::new()
-                }
-            };
-
-        for dependency in wanted {
-            // Embedded is already inside the file, and a tool is a different
-            // application entirely: neither is something to drop into mods.
-            if !matches!(dependency.kind, DependencyKind::Required) {
-                continue;
-            }
-            if !seen.insert(dependency.mod_id) {
-                continue;
-            }
-
-            // A dependency names the file when the author pinned one, and the
-            // project alone when they left it to the person installing it.
-            let file = match dependency.file_id {
-                Some(file_id) => crate::api::curseforge_search::file(
-                    &http,
-                    &key,
-                    dependency.mod_id,
-                    file_id,
-                )
-                .await
-                .ok(),
-                None => crate::api::curseforge_search::best_file_for(
-                    dependency.mod_id,
-                    game_version,
-                    loader,
-                )
-                .await
-                .ok(),
-            };
-            let Some(file) = file else {
-                tracing::warn!(
-                    "CurseForge dependency {dependency_mod_id} has nothing for this game version",
-                    dependency_mod_id = dependency.mod_id
-                );
-                continue;
-            };
-
-            let child_file_id: u64 = file.id.parse().unwrap_or_default();
-            let name =
-                install_standalone_curseforge_file(instance_id, dependency.mod_id, &file, state)
-                    .await?;
-            installed.push(name);
-            queue.push_back((dependency.mod_id, child_file_id, depth + 1));
-        }
-    }
-
-    Ok(installed)
-}
-
-/// Puts one already-resolved CurseForge file into an instance.
-async fn install_standalone_curseforge_file(
-    instance_id: &str,
-    mod_id: u64,
-    file: &crate::api::curseforge_search::CurseforgeFile,
-    state: &State,
-) -> crate::Result<String> {
-    let file_id: u64 = file.id.parse().unwrap_or_default();
-    let mirrors = crate::api::curseforge_search::download_urls(mod_id, file_id).await?;
-    let mirrors: Vec<&str> = mirrors.iter().map(String::as_str).collect();
-    if mirrors.is_empty() {
-        return Err(crate::ErrorKind::InputError(format!(
-            "no download URL could be determined for CurseForge file {file_id}"
-        ))
-        .as_error());
-    }
-
-    let bytes = fetch_mirrors(
-        &mirrors,
-        file.sha1.as_deref(),
-        Some(&DownloadMeta {
-            reason: DownloadReason::Standalone,
-            game_version: file.game_version.clone().unwrap_or_default(),
-            loader: file.loader.clone().unwrap_or_default(),
-            dependent_on: None,
-        }),
-        None,
-        &state.fetch_semaphore,
-        &state.pool,
-    )
-    .await?;
-
-    let safe_file_name = sanitize_filename(&file.file_name);
-    let _permit = state.install_db_semaphore.acquire().await?;
-    crate::state::instances::commands::add_project_bytes(
-        instance_id,
-        &safe_file_name,
-        bytes,
-        file.sha1.as_deref(),
-        None,
-        ContentSourceKind::CurseForge,
-        Some(&mod_id.to_string()),
-        Some(&file.id),
-        state,
-    )
-    .await?;
-
-    Ok(safe_file_name)
-}
+/// Portalrinth's own: names a CurseForge pack ships its own picture under, in
 /// the order they are preferred.
 const PACK_ICON_STEMS: [&str; 5] =
     ["icon", "pack", "modpack-icon", "logo", "thumbnail"];
@@ -863,7 +606,7 @@ const PACK_ICON_STEMS: [&str; 5] =
 const PACK_ICON_EXTENSIONS: [&str; 6] =
     ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
 
-/// How well a zip entry does as the pack's picture вЂ” lower is better, `None`
+/// How well a zip entry does as the pack's picture — lower is better, `None`
 /// means it is not one.
 ///
 /// Only the zip's root and the root of a folder inside it are considered: a
@@ -924,14 +667,14 @@ async fn pack_icon_from_zip(
 }
 
 /// Gives the instance the pack's picture, if the pack has one and the instance
-/// has not been given one already вЂ” a reinstall over an instance the user has
+/// has not been given one already — a reinstall over an instance the user has
 /// since chosen an icon for leaves that choice alone.
 ///
 /// A pack carries its picture one of two ways, and most carry it only the
 /// second: as an image file in the zip, or as a URL in the manifest pointing
 /// at CurseForge's avatar CDN. A zip holding several hundred mods and no
 /// picture at all is the common case, so the URL is not a fallback worth
-/// skipping вЂ” without it such a pack installs blank.
+/// skipping — without it such a pack installs blank.
 async fn apply_pack_icon(
     pack_file: &bytes::Bytes,
     manifest: &CfManifest,
@@ -948,7 +691,7 @@ async fn apply_pack_icon(
     let icon_bytes = match pack_icon_from_zip(pack_file).await? {
         Some(bytes) => bytes::Bytes::from(bytes),
         None => {
-            // Fetched only over TLS, and only from the manifest's own field вЂ”
+            // Fetched only over TLS, and only from the manifest's own field —
             // the same footing as the mod download URLs beside it.
             let Some(url) = manifest
                 .image
@@ -981,7 +724,7 @@ async fn apply_pack_icon(
             icon_path: Some(Some(icon_path.to_string_lossy().to_string())),
             ..EditInstance::default()
         },
-)
+    )
     .await?;
 
     Ok(())
@@ -1171,7 +914,7 @@ mod tests {
         entries.sort_by_key(|name| pack_icon_rank(name).unwrap());
 
         // Root before overrides, then `icon` before `pack`, then png before
-        // jpg вЂ” so a pack that ships several is read the way a person would.
+        // jpg — so a pack that ships several is read the way a person would.
         assert_eq!(entries[0], "icon.jpg");
         assert_eq!(entries[1], "pack.png");
         assert_eq!(entries[2], "overrides/icon.png");

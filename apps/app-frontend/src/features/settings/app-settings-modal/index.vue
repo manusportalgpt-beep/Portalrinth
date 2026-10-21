@@ -2,12 +2,13 @@
 import {
 	CodeIcon,
 	CoffeeIcon,
+	CurseForgeIcon,
 	EyeOffIcon,
 	GaugeIcon,
 	HeartHandshakeIcon,
 	LanguagesIcon,
 	LightBulbIcon,
-	ModrinthIcon,
+	NewspaperIcon,
 	PaintbrushIcon,
 	RefreshCwIcon,
 	Settings2Icon,
@@ -32,12 +33,14 @@ import { getVersion } from '@tauri-apps/api/app'
 import { platform as getOsPlatform, version as getOsVersion } from '@tauri-apps/plugin-os'
 import { computed, ref } from 'vue'
 
+import PortalrinthIcon from '@/assets/portalrinth-icon.svg?component'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import PrivacySettings from '@/features/settings/account/privacy-settings.vue'
 import ProfileSettings from '@/features/settings/account/profile-settings.vue'
 import SocialSettings from '@/features/settings/account/social-settings.vue'
 import AppearanceSettings from '@/features/settings/display/appearance-settings.vue'
 import BehaviorSettings from '@/features/settings/display/behavior-settings.vue'
+import ChangelogSettings from '@/features/settings/display/ChangelogSettings.vue'
 import FeatureFlagSettings from '@/features/settings/display/feature-flag-settings.vue'
 import FeaturesSettings from '@/features/settings/display/features-settings.vue'
 import LanguageSettings from '@/features/settings/display/language-settings.vue'
@@ -46,6 +49,7 @@ import LaunchHooksSettings from '@/features/settings/instance-defaults/launch-ho
 import WindowSettings from '@/features/settings/instance-defaults/window-settings.vue'
 import type { InstanceDefaultsTab } from '@/features/settings/settings-actions'
 import SyncingSettings from '@/features/settings/syncing/syncing-settings.vue'
+import CurseforgeSettings from '@/features/settings/system/CurseforgeSettings.vue'
 import ResourceManagementSettings from '@/features/settings/system/resource-management-settings/index.vue'
 import TroubleshootingSettings from '@/features/settings/system/troubleshooting-settings.vue'
 import { appSettingsKeys, appSettingsQueryOptions, set } from '@/helpers/settings.ts'
@@ -123,6 +127,15 @@ const tabs = [
 		icon: LanguagesIcon,
 		content: LanguageSettings,
 		badge: commonMessages.beta,
+	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.changelog',
+			defaultMessage: 'Changelog',
+		}),
+		category: tabCategories.display,
+		icon: NewspaperIcon,
+		content: ChangelogSettings,
 	},
 	{
 		name: commonSettingsMessages.featureFlags,
@@ -205,6 +218,15 @@ const tabs = [
 		category: tabCategories.system,
 		icon: WrenchIcon,
 		content: TroubleshootingSettings,
+	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.curseforge',
+			defaultMessage: 'CurseForge',
+		}),
+		category: tabCategories.system,
+		icon: CurseForgeIcon,
+		content: CurseforgeSettings,
 	},
 ]
 
@@ -361,7 +383,7 @@ const messages = defineMessages({
 	},
 	appVersion: {
 		id: 'app.settings.app-version',
-		defaultMessage: 'Modrinth App {version}',
+		defaultMessage: 'Portalrinth {version}',
 	},
 	macos: {
 		id: 'app.settings.operating-system.macos',
@@ -423,7 +445,7 @@ const messages = defineMessages({
 						}"
 						@click="devModeCount"
 					>
-						<ModrinthIcon aria-hidden="true" class="w-6 h-6" />
+						<PortalrinthIcon aria-hidden="true" class="w-6 h-6" />
 					</button>
 					<div v-if="appInfo" class="max-w-[200px]">
 						<p class="m-0">

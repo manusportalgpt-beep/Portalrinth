@@ -48,6 +48,35 @@ export const PORTALRINTH_CHANGELOG: PortalrinthVersionEntry[] = [
 - The "instance is running" error is now said by the app rather than by the backend.`,
 	},
 	{
+		version: '0.21.10',
+		date: '2026-10-20T12:00:00+00:00',
+		body: `### Added
+- CurseForge in Discover, next to Modrinth: a switch above the results, CurseForge's own categories and filters, and project pages with the description, versions, a page for each version with its changelog, the gallery, and a star to keep a project among favourites.
+- Mods, resource packs, shaders and modpacks install from CurseForge with the same checks as Modrinth's: which instances they fit, a warning for an incompatible version, and their required dependencies.
+- A file whose author keeps it off launchers is looked for on disk first, in Downloads and in this and other launchers' instances; otherwise one window links to its pages and picks it up from Downloads as soon as it lands there.
+- CurseForge mods in an instance are recognised by their fingerprint, even ones added by hand or brought from another launcher, and show their name, icon, author and a link to their page.
+- CurseForge mods get updates like Modrinth ones: the update badge, Update all, and switching versions with their changelogs.
+- A CurseForge tab in Settings: turn it off, choose where Discover opens, and set whether files are recognised, how far updates go (releases, betas or anything) and whether other launchers are searched for files kept off launchers.
+- In the Files tab, mods, resource packs and shaders show their project's icon, name, version and author, and screenshots a preview.
+
+### Changed
+- Synced with upstream Modrinth 0.21.10: mods can be installed, enabled, disabled and removed while the instance is running, and translations are updated.
+- Settings are sorted into Display, Account, Instance defaults and System. Default Java and memory, window and launch hooks each have a tab of their own, Synced settings is called Syncing now, and Resource management is split into Resources and Troubleshooting.
+- Java installations, the Java runtimes Portalrinth downloads and the graphics card each one uses are all in the Java and memory tab; the proxy is in Resources, next to the app directory.
+- Instance settings are split into Instance and Game sections, and every Game tab has a button that opens the default settings it overrides.
+- The empty Logs tab is kept by a night owl under the moon instead of Modrinth's frog.
+- The settings windows' sidebar, backgrounds and scrollbars are refreshed, and one opened on a given tab scrolls its sidebar to it.
+
+### Fixed
+- The update window on the Content tab no longer closes when another project finishes updating.
+- The Content tab and Discover keep their scroll position when coming back from a project page.
+- Joining a server whose modpack is unavailable or under review no longer opens a blank window.
+- On Linux the launcher no longer keeps a CPU core busy because of the database.
+- Beta and alpha versions are coloured the same everywhere.
+- Discover no longer throws an error when leaving an instance it was adding to.
+- The header over Discover while adding to an instance lets the background picture through as frosted glass.`,
+	},
+	{
 		version: '0.21.9+2',
 		date: '2026-10-16T12:00:00+00:00',
 		body: `### Added

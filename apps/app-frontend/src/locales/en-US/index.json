@@ -311,9 +311,6 @@
   "app.browse.discover-servers": {
     "message": "Discover servers"
   },
-  "app.browse.filters": {
-    "message": "Filters"
-  },
   "app.browse.hide-added-servers": {
     "message": "Hide servers already added"
   },
@@ -346,6 +343,9 @@
   },
   "app.browse.server.installing": {
     "message": "Installing"
+  },
+  "app.browse.source.label": {
+    "message": "Where to browse"
   },
   "app.changelog.author": {
     "message": "Author"
@@ -466,6 +466,12 @@
   },
   "app.collection.visibility.unlisted": {
     "message": "Unlisted"
+  },
+  "app.content-install.curseforge.missing-dependencies.text": {
+    "message": "These have no version for this instance and need to be added another way: {names}"
+  },
+  "app.content-install.curseforge.missing-dependencies.title": {
+    "message": "Installed without some of its dependencies"
   },
   "app.content-install.no-compatible-versions": {
     "message": "No available versions match {compatibilityLabel}. Select a version to install anyway. Dependencies will not be installed automatically."
@@ -980,6 +986,48 @@
   "app.crash.show-more": {
     "message": "Show {count} more"
   },
+  "app.curseforge.pending.all-done": {
+    "message": "Everything is installed"
+  },
+  "app.curseforge.pending.description": {
+    "message": "{count, plural, one {This file's author doesn't} other {These files' authors don't}} let launchers download {count, plural, one {it} other {them}}. Download {count, plural, one {it} other {each one}} from CurseForge and it will be picked up from your Downloads folder automatically."
+  },
+  "app.curseforge.pending.done": {
+    "message": "Done"
+  },
+  "app.curseforge.pending.found": {
+    "message": "Installed"
+  },
+  "app.curseforge.pending.header": {
+    "message": "Download by hand"
+  },
+  "app.curseforge.pending.open-all": {
+    "message": "Open download pages"
+  },
+  "app.curseforge.pending.open-downloads": {
+    "message": "Open Downloads folder"
+  },
+  "app.curseforge.pending.open-page": {
+    "message": "Download"
+  },
+  "app.curseforge.pending.skip": {
+    "message": "Do without it"
+  },
+  "app.curseforge.pending.waiting": {
+    "message": "Watching your Downloads folder…"
+  },
+  "app.curseforge.project.add-favorite": {
+    "message": "Add to favorites"
+  },
+  "app.curseforge.project.load-error": {
+    "message": "This CurseForge project could not be loaded."
+  },
+  "app.curseforge.project.open-on-curseforge": {
+    "message": "Open on CurseForge"
+  },
+  "app.curseforge.project.remove-favorite": {
+    "message": "Remove from favorites"
+  },
   "app.debug-export.canceling": {
     "message": "Canceling export…"
   },
@@ -1051,6 +1099,9 @@
   },
   "app.download-manager.paused": {
     "message": "Paused"
+  },
+  "app.download-manager.rate-limited": {
+    "message": "Modrinth asked to slow down, resuming in {seconds, plural, one {# second} other {# seconds}}"
   },
   "app.download-manager.remove": {
     "message": "Remove from history"
@@ -1519,6 +1570,15 @@
   },
   "app.instance.confirm-delete.instances-label": {
     "message": "{count, plural, one {Instance} other {Instances ({count})}}"
+  },
+  "app.instance.content.curseforge-pending.action": {
+    "message": "Download"
+  },
+  "app.instance.content.curseforge-pending.body": {
+    "message": "Their authors don't let launchers download them, and they weren't found anywhere on this computer."
+  },
+  "app.instance.content.curseforge-pending.header": {
+    "message": "{count, plural, one {# file needs} other {# files need}} to be downloaded by hand"
   },
   "app.instance.content.managed-content.modpack-header": {
     "message": "Modpack content"
@@ -2825,6 +2885,12 @@
   "app.recover-instances.worlds": {
     "message": "{count, plural, one {# world} other {# worlds}}"
   },
+  "app.resource-settings.proxy.description": {
+    "message": "Routes all launcher network traffic (Modrinth API and CDN downloads) through a proxy. Supports http://, https://, socks5:// and socks5h:// URLs. Useful when Modrinth is not reachable in your region. Leave empty to connect directly. (app restart required to take effect)"
+  },
+  "app.resource-settings.proxy.title": {
+    "message": "Proxy"
+  },
   "app.restarting": {
     "message": "Restarting..."
   },
@@ -2982,7 +3048,7 @@
     "message": "Oldest"
   },
   "app.settings.app-version": {
-    "message": "Modrinth App {version}"
+    "message": "Portalrinth {version}"
   },
   "app.settings.default-instance-options.environment-variables.description": {
     "message": "Environment variables set when launching an instance."
@@ -4185,28 +4251,13 @@
     "message": "Browse for an app directory"
   },
   "app.settings.resource-management.app-directory.description": {
-    "message": "Where Modrinth App stores instances and other files. Changes take effect after restarting the app."
+    "message": "Where Portalrinth stores instances and other files. Changes take effect after restarting the app."
   },
   "app.settings.resource-management.app-directory.select": {
     "message": "Select a new app directory"
   },
   "app.settings.resource-management.app-directory.title": {
     "message": "App directory"
-  },
-  "app.settings.resource-management.curseforge.description": {
-    "message": "CurseForge requires a key for searching, listing files and downloading. Leave this empty to use the key this build was made with, if it has one."
-  },
-  "app.settings.resource-management.curseforge.hint": {
-    "message": "Create an API token at"
-  },
-  "app.settings.resource-management.curseforge.missing": {
-    "message": "No key is configured, so CurseForge is not available anywhere in this launcher."
-  },
-  "app.settings.resource-management.curseforge.present": {
-    "message": "A key of your own is in use for CurseForge."
-  },
-  "app.settings.resource-management.curseforge.title": {
-    "message": "CurseForge API key"
   },
   "app.settings.resource-management.debug-info.description": {
     "message": "Export app logs and diagnostic data to a ZIP file to share with Modrinth support."
@@ -4531,6 +4582,12 @@
   },
   "app.settings.tabs.behavior": {
     "message": "Behavior"
+  },
+  "app.settings.tabs.changelog": {
+    "message": "Changelog"
+  },
+  "app.settings.tabs.curseforge": {
+    "message": "CurseForge"
   },
   "app.settings.tabs.features": {
     "message": "Features"
@@ -6062,6 +6119,39 @@
   "instance.settings.tabs.java.label": {
     "message": "Java and memory"
   },
+  "instance.settings.tabs.java.modern-java": {
+    "message": "Modern Java"
+  },
+  "instance.settings.tabs.java.modern-java-beta": {
+    "message": "Beta"
+  },
+  "instance.settings.tabs.java.modern-java-beta-note": {
+    "message": "This is new and not widely tested yet. Back up the instance before enabling it, and expect mods that assume Java 8 to misbehave."
+  },
+  "instance.settings.tabs.java.modern-java-description": {
+    "message": "Minecraft {gameVersion} normally only runs on Java 8. {provider} replaces LWJGL 2 and reworks Forge so the instance can run on a current Java release instead."
+  },
+  "instance.settings.tabs.java.modern-java-install": {
+    "message": "Enable"
+  },
+  "instance.settings.tabs.java.modern-java-installed": {
+    "message": "Installed — {provider} {version}, running on Java {javaMajor}"
+  },
+  "instance.settings.tabs.java.modern-java-installing": {
+    "message": "Enabling..."
+  },
+  "instance.settings.tabs.java.modern-java-mods-note": {
+    "message": "Disabling removes the launcher patches. Any mods it installed stay in the instance — remove them from the Mods tab if you no longer want them."
+  },
+  "instance.settings.tabs.java.modern-java-remove": {
+    "message": "Disable"
+  },
+  "instance.settings.tabs.java.modern-java-version": {
+    "message": "Java version"
+  },
+  "instance.settings.tabs.java.modern-java-version-hint": {
+    "message": "Picking a version downloads it and pins it as this instance’s Java installation. The lowest one is the best tested; newer ones are supported but less proven with mods for this Minecraft version."
+  },
   "instance.settings.tabs.sharing": {
     "message": "Sharing"
   },
@@ -6577,6 +6667,138 @@
   },
   "portalrinth.settings.background.title": {
     "message": "Background picture"
+  },
+  "portalrinth.settings.curseforge.cache.title": {
+    "message": "Cache"
+  },
+  "portalrinth.settings.curseforge.check-updates": {
+    "message": "Check CurseForge for updates of its mods and packs"
+  },
+  "portalrinth.settings.curseforge.check-updates.title": {
+    "message": "Check for updates"
+  },
+  "portalrinth.settings.curseforge.clear-cache": {
+    "message": "Forget CurseForge's answers"
+  },
+  "portalrinth.settings.curseforge.clear-cache-hint": {
+    "message": "They are kept for five minutes; this asks again right away."
+  },
+  "portalrinth.settings.curseforge.cleared": {
+    "message": "Forgotten"
+  },
+  "portalrinth.settings.curseforge.default-source": {
+    "message": "Browse opens on"
+  },
+  "portalrinth.settings.curseforge.default-source.description": {
+    "message": "Which catalogue Discover shows first. The switch above the results changes it any time."
+  },
+  "portalrinth.settings.curseforge.description": {
+    "message": "Browse and install from CurseForge, recognise its files in your instances and keep them up to date. Off, and the launcher asks CurseForge nothing."
+  },
+  "portalrinth.settings.curseforge.no-key": {
+    "message": "This build has no CurseForge API key. Add your own below to use CurseForge."
+  },
+  "portalrinth.settings.curseforge.own-key": {
+    "message": "Your own API key"
+  },
+  "portalrinth.settings.curseforge.own-key.check": {
+    "message": "Check"
+  },
+  "portalrinth.settings.curseforge.own-key.check-and-save": {
+    "message": "Check and save"
+  },
+  "portalrinth.settings.curseforge.own-key.check-failed": {
+    "message": "Could not reach CurseForge to check the key"
+  },
+  "portalrinth.settings.curseforge.own-key.forget": {
+    "message": "Forget my key"
+  },
+  "portalrinth.settings.curseforge.own-key.hint": {
+    "message": "Used instead of the built-in one and kept on this computer. Sign in to the CurseForge console and copy a key from its API keys page:"
+  },
+  "portalrinth.settings.curseforge.own-key.invalid": {
+    "message": "CurseForge does not accept this key"
+  },
+  "portalrinth.settings.curseforge.own-key.ok": {
+    "message": "CurseForge accepts the key"
+  },
+  "portalrinth.settings.curseforge.own-key.placeholder": {
+    "message": "Your key is saved"
+  },
+  "portalrinth.settings.curseforge.own-key.saved": {
+    "message": "CurseForge accepts the key; it is saved"
+  },
+  "portalrinth.settings.curseforge.recognize-files": {
+    "message": "Recognise mods added by hand or from other launchers by their fingerprint"
+  },
+  "portalrinth.settings.curseforge.recognize-files.title": {
+    "message": "Recognise files"
+  },
+  "portalrinth.settings.curseforge.release-type": {
+    "message": "Update to"
+  },
+  "portalrinth.settings.curseforge.release-type.alpha": {
+    "message": "Any file, alphas too"
+  },
+  "portalrinth.settings.curseforge.release-type.beta": {
+    "message": "Releases and betas"
+  },
+  "portalrinth.settings.curseforge.release-type.description": {
+    "message": "Which files count as an update."
+  },
+  "portalrinth.settings.curseforge.release-type.release": {
+    "message": "Releases only"
+  },
+  "portalrinth.settings.curseforge.search-other-launchers": {
+    "message": "Look for files kept off launchers in other launchers' instances, not only in Downloads"
+  },
+  "portalrinth.settings.curseforge.search-other-launchers.title": {
+    "message": "Search other launchers"
+  },
+  "portalrinth.settings.curseforge.section.discover": {
+    "message": "Discover"
+  },
+  "portalrinth.settings.curseforge.section.files": {
+    "message": "Files and updates"
+  },
+  "portalrinth.settings.curseforge.section.restricted": {
+    "message": "Files kept off launchers"
+  },
+  "portalrinth.settings.curseforge.source.curseforge": {
+    "message": "CurseForge"
+  },
+  "portalrinth.settings.curseforge.source.modrinth": {
+    "message": "Modrinth"
+  },
+  "portalrinth.settings.curseforge.title": {
+    "message": "CurseForge"
+  },
+  "portalrinth.settings.java-provider.auto": {
+    "message": "Automatically"
+  },
+  "portalrinth.settings.java-provider.auto-hint": {
+    "message": "Tries Azul, then Temurin, then Temurin from GitHub, then Mojang, then Mojang through the BMCLAPI mirror, and stops at the first that answers. GitHub usually stays reachable where the others are blocked."
+  },
+  "portalrinth.settings.java-provider.azul": {
+    "message": "Azul Zulu"
+  },
+  "portalrinth.settings.java-provider.description": {
+    "message": "Where the launcher gets Java when an instance needs one it does not have. Every download is checked against the checksum its source publishes."
+  },
+  "portalrinth.settings.java-provider.mojang": {
+    "message": "Mojang"
+  },
+  "portalrinth.settings.java-provider.mojang-mirror": {
+    "message": "Mojang through BMCLAPI (third-party mirror)"
+  },
+  "portalrinth.settings.java-provider.temurin": {
+    "message": "Eclipse Temurin"
+  },
+  "portalrinth.settings.java-provider.temurin-github": {
+    "message": "Eclipse Temurin from GitHub"
+  },
+  "portalrinth.settings.java-provider.title": {
+    "message": "Download Java from"
   },
   "portalrinth.settings.splash-cube.description": {
     "message": "Which cube the splash screen shows. Takes effect on the next launch."

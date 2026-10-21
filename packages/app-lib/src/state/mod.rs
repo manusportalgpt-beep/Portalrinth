@@ -236,8 +236,10 @@ impl State {
 				).await {
 					Ok(instances) => {
 						for instance in instances {
-							if let Err(error) = instances::commands::migrate_legacy_content(
-								&instance.id, state, true,
+							if let Err(error) = crate::util::fetch::patiently(
+								instances::commands::migrate_legacy_content(
+									&instance.id, state, true,
+								),
 							).await {
 								tracing::warn!(
 									instance_id = %instance.id,
@@ -378,6 +380,8 @@ impl State {
         // Must happen before any HTTP client is first used — the reqwest
         // clients are built lazily once and bake the proxy in at that point.
         crate::util::fetch::set_proxy_url(settings.proxy_url.clone());
+
+        crate::api::curseforge_metadata::load_user_key(&pool).await?;
 
         let fetch_semaphore =
             FetchSemaphore(Semaphore::new(settings.max_concurrent_downloads));

@@ -7,6 +7,7 @@ import { parseEnvVars, serializeEnvVars } from '@/helpers/settings'
 
 import { useDefaultInstanceSettings } from '../use-default-instance-settings'
 import JavaInstallations from './java-installations.vue'
+import JavaProviderSetting from './JavaProviderSetting.vue'
 
 const { formatMessage } = useVIntl()
 const { settings, settingsQuery } = useDefaultInstanceSettings(
@@ -65,6 +66,9 @@ const messages = defineMessages({
 
 <template>
 	<div class="flex flex-col gap-6">
+		<section class="border-0 border-b border-solid border-divider pb-6">
+			<JavaProviderSetting />
+		</section>
 		<section class="flex flex-col gap-4">
 			<h2 class="m-0 text-xl font-semibold text-contrast">
 				{{ formatMessage(messages.javaInstallationsTitle) }}

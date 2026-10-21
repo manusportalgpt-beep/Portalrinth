@@ -10,6 +10,7 @@ import type { InstallProgressSecondary } from '@/generated/app-events/InstallPro
 import type { SharedInstanceUnavailableReason } from '@/generated/app-events/SharedInstanceUnavailableReason'
 import type { AppEvents } from '@/providers/app-events'
 
+import { CURSEFORGE_API_KEY } from './curseforge-key'
 import type { InstanceIconConfig, InstanceLink, InstanceLoader } from './types'
 
 export type {
@@ -34,30 +35,32 @@ export interface PackLocationVersionId {
 export interface PackLocationFile {
 	type: 'fromFile'
 	path: string
-	/**
-	 * The entries a person kept after being shown what the pack contains.
-	 *
-	 * Absent installs all of them. Present — even empty — installs only these,
-	 * so "they switched everything off" is not read as "they never looked".
-	 */
-	keep?: string[] | null
+	/** Lets the backend resolve CurseForge modpack zips imported from disk. */
+	curseforge_api_key?: string | null
 }
 
-export type CreatePackLocation = PackLocationVersionId | PackLocationFile
+/** Portalrinth's own: a CurseForge modpack, downloaded inside the install job. */
+export interface PackLocationCurseforge {
+	type: 'fromCurseforge'
+	project_id: string
+	file_id?: string | null
+	title: string
+	icon_url?: string | null
+}
+
+export type CreatePackLocation = PackLocationVersionId | PackLocationFile | PackLocationCurseforge
 
 /**
- * Build a `fromFile` pack location.
- *
- * The key is not sent. The backend reads the one in settings itself, which is
- * the one a person can actually set - stamping the build's key here meant that
- * anyone without a built-in key was told they had none, while the key in their
- * own settings went unread.
+ * Build a `fromFile` pack location. Always stamps the CurseForge API key so a
+ * CurseForge modpack zip picked from disk can be resolved by the backend —
+ * without it the preview/install fails even when the key is configured. The
+ * backend prefers the user's own key, when there is one, to this one.
  */
-export function packLocationFromFile(path: string, keep?: string[]): PackLocationFile {
+export function packLocationFromFile(path: string): PackLocationFile {
 	return {
 		type: 'fromFile',
 		path,
-		...(keep ? { keep } : {}),
+		curseforge_api_key: CURSEFORGE_API_KEY || null,
 	}
 }
 

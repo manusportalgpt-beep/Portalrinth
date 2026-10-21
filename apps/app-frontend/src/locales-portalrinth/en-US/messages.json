@@ -65,6 +65,9 @@
 	"app.appearance-settings.minimize-launcher.description": {
 		"message": "Minimize Portalrinth when Minecraft starts."
 	},
+	"app.browse.source.label": {
+		"message": "Where to browse"
+	},
 	"app.changelog.author": {
 		"message": "Author"
 	},
@@ -179,6 +182,57 @@
 	"app.collection.visibility.unlisted": {
 		"message": "Unlisted"
 	},
+	"app.content-install.curseforge.missing-dependencies.text": {
+		"message": "These have no version for this instance and need to be added another way: {names}"
+	},
+	"app.content-install.curseforge.missing-dependencies.title": {
+		"message": "Installed without some of its dependencies"
+	},
+	"app.curseforge.pending.all-done": {
+		"message": "Everything is installed"
+	},
+	"app.curseforge.pending.description": {
+		"message": "{count, plural, one {This file's author doesn't} other {These files' authors don't}} let launchers download {count, plural, one {it} other {them}}. Download {count, plural, one {it} other {each one}} from CurseForge and it will be picked up from your Downloads folder automatically."
+	},
+	"app.curseforge.pending.done": {
+		"message": "Done"
+	},
+	"app.curseforge.pending.found": {
+		"message": "Installed"
+	},
+	"app.curseforge.pending.header": {
+		"message": "Download by hand"
+	},
+	"app.curseforge.pending.open-all": {
+		"message": "Open download pages"
+	},
+	"app.curseforge.pending.open-downloads": {
+		"message": "Open Downloads folder"
+	},
+	"app.curseforge.pending.open-page": {
+		"message": "Download"
+	},
+	"app.curseforge.pending.skip": {
+		"message": "Do without it"
+	},
+	"app.curseforge.pending.waiting": {
+		"message": "Watching your Downloads folder…"
+	},
+	"app.curseforge.project.add-favorite": {
+		"message": "Add to favorites"
+	},
+	"app.curseforge.project.load-error": {
+		"message": "This CurseForge project could not be loaded."
+	},
+	"app.curseforge.project.open-on-curseforge": {
+		"message": "Open on CurseForge"
+	},
+	"app.curseforge.project.remove-favorite": {
+		"message": "Remove from favorites"
+	},
+	"app.download-manager.rate-limited": {
+		"message": "Modrinth asked to slow down, resuming in {seconds, plural, one {# second} other {# seconds}}"
+	},
 	"app.error-modal.copy-debug-info": {
 		"message": "Copy debug info"
 	},
@@ -292,6 +346,15 @@
 	},
 	"app.instance.add-content.install": {
 		"message": "Install content"
+	},
+	"app.instance.content.curseforge-pending.action": {
+		"message": "Download"
+	},
+	"app.instance.content.curseforge-pending.body": {
+		"message": "Their authors don't let launchers download them, and they weren't found anywhere on this computer."
+	},
+	"app.instance.content.curseforge-pending.header": {
+		"message": "{count, plural, one {# file needs} other {# files need}} to be downloaded by hand"
 	},
 	"app.instance.logs.live": {
 		"message": "Live Log"
@@ -803,6 +866,9 @@
 	"app.settings.tabs.changelog": {
 		"message": "Changelog"
 	},
+	"app.settings.tabs.curseforge": {
+		"message": "CurseForge"
+	},
 	"app.skins.ely.edit.texture-locked": {
 		"message": "Ely.by keeps a texture and its skin together, so this one cannot be swapped out. Upload the new texture as another skin instead."
 	},
@@ -1243,6 +1309,138 @@
 	},
 	"minecraft-account.label-microsoft": {
 		"message": "Microsoft account"
+	},
+	"portalrinth.settings.curseforge.cache.title": {
+		"message": "Cache"
+	},
+	"portalrinth.settings.curseforge.check-updates": {
+		"message": "Check CurseForge for updates of its mods and packs"
+	},
+	"portalrinth.settings.curseforge.check-updates.title": {
+		"message": "Check for updates"
+	},
+	"portalrinth.settings.curseforge.clear-cache": {
+		"message": "Forget CurseForge's answers"
+	},
+	"portalrinth.settings.curseforge.clear-cache-hint": {
+		"message": "They are kept for five minutes; this asks again right away."
+	},
+	"portalrinth.settings.curseforge.cleared": {
+		"message": "Forgotten"
+	},
+	"portalrinth.settings.curseforge.default-source": {
+		"message": "Browse opens on"
+	},
+	"portalrinth.settings.curseforge.default-source.description": {
+		"message": "Which catalogue Discover shows first. The switch above the results changes it any time."
+	},
+	"portalrinth.settings.curseforge.description": {
+		"message": "Browse and install from CurseForge, recognise its files in your instances and keep them up to date. Off, and the launcher asks CurseForge nothing."
+	},
+	"portalrinth.settings.curseforge.no-key": {
+		"message": "This build has no CurseForge API key. Add your own below to use CurseForge."
+	},
+	"portalrinth.settings.curseforge.own-key": {
+		"message": "Your own API key"
+	},
+	"portalrinth.settings.curseforge.own-key.check": {
+		"message": "Check"
+	},
+	"portalrinth.settings.curseforge.own-key.check-and-save": {
+		"message": "Check and save"
+	},
+	"portalrinth.settings.curseforge.own-key.check-failed": {
+		"message": "Could not reach CurseForge to check the key"
+	},
+	"portalrinth.settings.curseforge.own-key.forget": {
+		"message": "Forget my key"
+	},
+	"portalrinth.settings.curseforge.own-key.hint": {
+		"message": "Used instead of the built-in one and kept on this computer. Sign in to the CurseForge console and copy a key from its API keys page:"
+	},
+	"portalrinth.settings.curseforge.own-key.invalid": {
+		"message": "CurseForge does not accept this key"
+	},
+	"portalrinth.settings.curseforge.own-key.ok": {
+		"message": "CurseForge accepts the key"
+	},
+	"portalrinth.settings.curseforge.own-key.placeholder": {
+		"message": "Your key is saved"
+	},
+	"portalrinth.settings.curseforge.own-key.saved": {
+		"message": "CurseForge accepts the key; it is saved"
+	},
+	"portalrinth.settings.curseforge.recognize-files": {
+		"message": "Recognise mods added by hand or from other launchers by their fingerprint"
+	},
+	"portalrinth.settings.curseforge.recognize-files.title": {
+		"message": "Recognise files"
+	},
+	"portalrinth.settings.curseforge.release-type": {
+		"message": "Update to"
+	},
+	"portalrinth.settings.curseforge.release-type.alpha": {
+		"message": "Any file, alphas too"
+	},
+	"portalrinth.settings.curseforge.release-type.beta": {
+		"message": "Releases and betas"
+	},
+	"portalrinth.settings.curseforge.release-type.description": {
+		"message": "Which files count as an update."
+	},
+	"portalrinth.settings.curseforge.release-type.release": {
+		"message": "Releases only"
+	},
+	"portalrinth.settings.curseforge.search-other-launchers": {
+		"message": "Look for files kept off launchers in other launchers' instances, not only in Downloads"
+	},
+	"portalrinth.settings.curseforge.search-other-launchers.title": {
+		"message": "Search other launchers"
+	},
+	"portalrinth.settings.curseforge.section.discover": {
+		"message": "Discover"
+	},
+	"portalrinth.settings.curseforge.section.files": {
+		"message": "Files and updates"
+	},
+	"portalrinth.settings.curseforge.section.restricted": {
+		"message": "Files kept off launchers"
+	},
+	"portalrinth.settings.curseforge.source.curseforge": {
+		"message": "CurseForge"
+	},
+	"portalrinth.settings.curseforge.source.modrinth": {
+		"message": "Modrinth"
+	},
+	"portalrinth.settings.curseforge.title": {
+		"message": "CurseForge"
+	},
+	"portalrinth.settings.java-provider.auto": {
+		"message": "Automatically"
+	},
+	"portalrinth.settings.java-provider.auto-hint": {
+		"message": "Tries Azul, then Temurin, then Temurin from GitHub, then Mojang, then Mojang through the BMCLAPI mirror, and stops at the first that answers. GitHub usually stays reachable where the others are blocked."
+	},
+	"portalrinth.settings.java-provider.azul": {
+		"message": "Azul Zulu"
+	},
+	"portalrinth.settings.java-provider.description": {
+		"message": "Where the launcher gets Java when an instance needs one it does not have. Every download is checked against the checksum its source publishes."
+	},
+	"portalrinth.settings.java-provider.mojang": {
+		"message": "Mojang"
+	},
+	"portalrinth.settings.java-provider.mojang-mirror": {
+		"message": "Mojang through BMCLAPI (third-party mirror)"
+	},
+	"portalrinth.settings.java-provider.temurin": {
+		"message": "Eclipse Temurin"
+	},
+	"portalrinth.settings.java-provider.temurin-github": {
+		"message": "Eclipse Temurin from GitHub"
+	},
+	"portalrinth.settings.java-provider.title": {
+		"message": "Download Java from"
 	},
 	"notifications.back": {
 		"message": "Back"

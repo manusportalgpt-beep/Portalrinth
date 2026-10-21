@@ -71,7 +71,7 @@ const ACCOUNT_INFO_URL: &str = "https://account.ely.by/api/account/v1/info";
 /// the code out of the address is served from there. Changing it to anything
 /// else breaks signing in with Ely.by, which is why it is written out here
 /// rather than derived from where the code happens to live.
-pub const REDIRECT_URI: &str = "https://everelsu.github.io/Noctrinth/oauth/ely";
+pub const REDIRECT_URI: &str = "https://everelsu.github.io/Portalrinth/oauth/ely";
 
 /// What the launcher asks to be allowed to do.
 ///

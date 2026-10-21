@@ -2,10 +2,14 @@
 import {
 	CheckCircleIcon,
 	CoffeeIcon,
+	DownloadIcon,
 	FolderSearchIcon,
+	IssuesIcon,
 	RefreshCwIcon,
+	RocketIcon,
 	SearchIcon,
 	SpinnerIcon,
+	TrashIcon,
 	XCircleIcon,
 } from '@modrinth/assets'
 import {
@@ -19,12 +23,20 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { open } from '@tauri-apps/plugin-dialog'
-import { computed, readonly, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import JavaDetectionModal from '@/components/ui/JavaDetectionModal.vue'
 import useJavaTest from '@/composables/useJavaTest'
 import useMemorySlider from '@/composables/useMemorySlider'
-import { edit, get_optimal_jre_key } from '@/helpers/instance'
+import type { JavaVersion, ModernJavaStatus } from '@/helpers/instance'
+import {
+	edit,
+	get_modern_java_status,
+	get_optimal_jre_key,
+	install_modern_java,
+	remove_modern_java,
+} from '@/helpers/instance'
+import { auto_install_java, get_jre } from '@/helpers/jre.js'
 import { get, parseEnvVars, serializeEnvVars } from '@/helpers/settings.ts'
 import type { AppSettings } from '@/helpers/types'
 
@@ -38,21 +50,70 @@ const { instance } = injectInstanceSettings()
 
 const globalSettings = (await get().catch(handleError)) as unknown as AppSettings
 
-const optimalJava = readonly(await get_optimal_jre_key(instance.value.id).catch(handleError))
+const optimalJava = ref<JavaVersion | null>(
+	(await get_optimal_jre_key(instance.value.id).catch(handleError)) ?? null,
+)
 
 const overrideJavaInstall = ref(!!instance.value.java_path)
-const javaPath = ref(instance.value.java_path ?? optimalJava?.path ?? '')
+const javaPath = ref(instance.value.java_path ?? optimalJava.value?.path ?? '')
 
 const activePath = computed(() => javaPath.value)
 const javaTestPath = computed(() => (overrideJavaInstall.value ? javaPath.value : ''))
 
 watch(overrideJavaInstall, (enabled) => {
 	if (enabled && !javaPath.value) {
-		javaPath.value = optimalJava?.path ?? ''
+		javaPath.value = optimalJava.value?.path ?? ''
 	} else if (!enabled) {
-		javaPath.value = optimalJava?.path ?? ''
+		javaPath.value = optimalJava.value?.path ?? ''
 	}
 })
+
+const modernJava = ref<ModernJavaStatus | null>(
+	(await get_modern_java_status(instance.value.id).catch(handleError)) ?? null,
+)
+const modernJavaBusy = ref(false)
+
+// Installing or removing the patches changes which Java the instance asks for,
+// so the recommended installation shown above has to be re-resolved.
+async function applyModernJava(action: typeof install_modern_java) {
+	modernJavaBusy.value = true
+	try {
+		const status = await action(instance.value.id)
+		modernJava.value = status
+		optimalJava.value = (await get_optimal_jre_key(instance.value.id)) ?? null
+		if (!overrideJavaInstall.value) {
+			javaPath.value = optimalJava.value?.path ?? ''
+		}
+	} catch (error) {
+		handleError(error)
+	} finally {
+		modernJavaBusy.value = false
+	}
+}
+
+// The Java the instance will really launch with: the override when there is
+// one, otherwise whatever the patches resolved to.
+const activeJavaMajor = computed(() => optimalJava.value?.parsed_version ?? null)
+
+// Picking a runtime pins it as the instance's Java installation, which is also
+// what the section below then shows.
+async function selectJavaMajor(major: number) {
+	if (major === activeJavaMajor.value || modernJavaBusy.value) {
+		return
+	}
+
+	modernJavaBusy.value = true
+	try {
+		const path = await auto_install_java(major)
+		overrideJavaInstall.value = true
+		javaPath.value = path
+		optimalJava.value = (await get_jre(path)) ?? optimalJava.value
+	} catch (error) {
+		handleError(error)
+	} finally {
+		modernJavaBusy.value = false
+	}
+}
 
 const { testingJava, javaTestResult, testJavaInstallationDebounced, testJavaInstallation } =
 	useJavaTest()
@@ -159,6 +220,54 @@ const messages = defineMessages({
 		defaultMessage:
 			'Your instance uses the default Java and memory settings unless you override them here.',
 	},
+	modernJava: {
+		id: 'instance.settings.tabs.java.modern-java',
+		defaultMessage: 'Modern Java',
+	},
+	modernJavaBeta: {
+		id: 'instance.settings.tabs.java.modern-java-beta',
+		defaultMessage: 'Beta',
+	},
+	modernJavaBetaNote: {
+		id: 'instance.settings.tabs.java.modern-java-beta-note',
+		defaultMessage:
+			'This is new and not widely tested yet. Back up the instance before enabling it, and expect mods that assume Java 8 to misbehave.',
+	},
+	modernJavaDescription: {
+		id: 'instance.settings.tabs.java.modern-java-description',
+		defaultMessage:
+			'Minecraft {gameVersion} normally only runs on Java 8. {provider} replaces LWJGL 2 and reworks Forge so the instance can run on a current Java release instead.',
+	},
+	modernJavaInstalled: {
+		id: 'instance.settings.tabs.java.modern-java-installed',
+		defaultMessage: 'Installed — {provider} {version}, running on Java {javaMajor}',
+	},
+	modernJavaInstall: {
+		id: 'instance.settings.tabs.java.modern-java-install',
+		defaultMessage: 'Enable',
+	},
+	modernJavaInstalling: {
+		id: 'instance.settings.tabs.java.modern-java-installing',
+		defaultMessage: 'Enabling...',
+	},
+	modernJavaRemove: {
+		id: 'instance.settings.tabs.java.modern-java-remove',
+		defaultMessage: 'Disable',
+	},
+	modernJavaVersion: {
+		id: 'instance.settings.tabs.java.modern-java-version',
+		defaultMessage: 'Java version',
+	},
+	modernJavaVersionHint: {
+		id: 'instance.settings.tabs.java.modern-java-version-hint',
+		defaultMessage:
+			'Picking a version downloads it and pins it as this instance’s Java installation. The lowest one is the best tested; newer ones are supported but less proven with mods for this Minecraft version.',
+	},
+	modernJavaModsNote: {
+		id: 'instance.settings.tabs.java.modern-java-mods-note',
+		defaultMessage:
+			'Disabling removes the launcher patches. Any mods it installed stay in the instance — remove them from the Mods tab if you no longer want them.',
+	},
 	javaInstallation: {
 		id: 'instance.settings.tabs.java.java-installation',
 		defaultMessage: 'Custom Java installation',
@@ -201,6 +310,99 @@ const messages = defineMessages({
 			tab="java"
 			:description="formatMessage(messages.defaultSettingsDescription)"
 		/>
+		<section v-if="modernJava?.supported" class="flex flex-col">
+			<h2 class="m-0 mb-2 text-lg font-semibold text-contrast flex items-center gap-2">
+				{{ formatMessage(messages.modernJava) }}
+				<span
+					class="inline-flex items-center rounded-full border border-solid border-surface-5 bg-surface-4 px-2 py-0.5 text-xs font-semibold text-orange"
+				>
+					{{ formatMessage(messages.modernJavaBeta) }}
+				</span>
+			</h2>
+			<div class="flex gap-3 items-start p-4 bg-bg rounded-2xl">
+				<div
+					class="w-10 h-10 flex items-center justify-center rounded-full bg-button-bg border-solid border-[1px] border-button-border p-2 mt-1 shrink-0 [&_svg]:h-full [&_svg]:w-full"
+				>
+					<RocketIcon />
+				</div>
+				<div class="flex flex-col gap-2 flex-1 min-w-0">
+					<p class="m-0 text-secondary">
+						{{
+							formatMessage(messages.modernJavaDescription, {
+								gameVersion: instance.game_version,
+								provider: modernJava.provider_name,
+							})
+						}}
+					</p>
+					<p
+						v-if="modernJava.installed"
+						class="m-0 font-semibold text-contrast flex items-center gap-2"
+					>
+						<CheckCircleIcon class="h-4 w-4 text-green" />
+						{{
+							formatMessage(messages.modernJavaInstalled, {
+								provider: modernJava.provider_name,
+								version: modernJava.installed_version ?? '?',
+								javaMajor: activeJavaMajor ?? modernJava.java_major ?? '?',
+							})
+						}}
+					</p>
+					<p class="m-0 text-sm text-secondary">
+						{{ formatMessage(messages.modernJavaBetaNote) }}
+					</p>
+					<p
+						v-if="modernJava.loader_warning"
+						class="m-0 text-sm text-orange flex items-start gap-2"
+					>
+						<IssuesIcon class="h-4 w-4 shrink-0 mt-[0.15rem]" />
+						{{ modernJava.loader_warning }}
+					</p>
+					<template v-if="modernJava.installed && modernJava.java_majors.length > 1">
+						<span class="font-semibold mt-1">
+							{{ formatMessage(messages.modernJavaVersion) }}
+						</span>
+						<div class="flex gap-2 flex-wrap">
+							<Button
+								v-for="major in modernJava.java_majors"
+								:key="major"
+								:color="major === activeJavaMajor ? 'primary' : undefined"
+								:disabled="modernJavaBusy"
+								@click="selectJavaMajor(major)"
+							>
+								Java {{ major }}
+							</Button>
+						</div>
+						<p class="m-0 text-sm text-secondary">
+							{{ formatMessage(messages.modernJavaVersionHint) }}
+						</p>
+					</template>
+					<p v-if="modernJava.installed" class="m-0 text-sm text-secondary">
+						{{ formatMessage(messages.modernJavaModsNote) }}
+					</p>
+					<div class="flex gap-2 mt-1">
+						<Button
+							v-if="!modernJava.installed"
+							color="primary"
+							:disabled="modernJavaBusy"
+							@click="applyModernJava(install_modern_java)"
+						>
+							<SpinnerIcon v-if="modernJavaBusy" class="animate-spin" />
+							<DownloadIcon v-else />
+							{{
+								formatMessage(
+									modernJavaBusy ? messages.modernJavaInstalling : messages.modernJavaInstall,
+								)
+							}}
+						</Button>
+						<Button v-else :disabled="modernJavaBusy" @click="applyModernJava(remove_modern_java)">
+							<SpinnerIcon v-if="modernJavaBusy" class="animate-spin" />
+							<TrashIcon v-else />
+							{{ formatMessage(messages.modernJavaRemove) }}
+						</Button>
+					</div>
+				</div>
+			</div>
+		</section>
 
 		<section class="flex flex-col">
 			<div class="flex items-center justify-between gap-4">
