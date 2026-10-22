@@ -50,7 +50,7 @@ export async function revealMainWindow() {
 			nextFrame(),
 			nextFrame(),
 		]),
-		wait(400),
+		wait(150),
 	])
 	await invoke('show_window', { background })
 }
