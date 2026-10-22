@@ -139,11 +139,7 @@ import { loadBackground } from '@/helpers/portalrinth-background'
 import { prefetchRouteChunks, startProjectHoverPrefetch } from '@/helpers/portalrinth-prefetch'
 import { markSidebarMoving } from '@/helpers/portalrinth-sidebar-motion'
 import { cacheSplashCubeChoice } from '@/helpers/portalrinth-splash-cube'
-import {
-	markThemeSettled,
-	revealMainWindow,
-	startupError,
-} from '@/helpers/portalrinth-window-reveal'
+import { revealMainWindow, startupError } from '@/helpers/portalrinth-window-reveal'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
 import { proxiedFetch as tauriFetch } from '@/helpers/proxy-fetch'
 import {
@@ -832,7 +828,6 @@ async function startUp() {
 	// these colours, rather than in whatever the last session left cached.
 	appTheme.preferred = theme
 	setAccentPreset(accent_preset, accent_tint_background)
-	markThemeSettled()
 	cacheSplashCubeChoice(splash_cube)
 	loadBackground(background_blur, background_dim).catch((error) =>
 		console.warn('Failed to load the background picture:', error),
