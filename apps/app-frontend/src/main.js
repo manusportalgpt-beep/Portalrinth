@@ -49,6 +49,7 @@ async function mount() {
 	}
 	debugStartup('Vue mount started')
 	app.mount('#app')
+	document.getElementById('startup-fallback')?.remove()
 	debugStartup('Vue mount completed')
 }
 
