@@ -915,12 +915,14 @@ async function startUp() {
 		})
 		.catch(() => {
 			console.log(
+				handleStartupFailure(err)
 				`No critical announcement found at https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`,
 			)
 		})
 
 	traceStartupStep('Read opening command', get_opening_command).then(handleCommand)
 	traceStartupStep('Refresh startup credentials', fetchCredentials)
+			handleStartupFailure(err)
 
 	if (pending_update_toast_for_version !== null) {
 		const settings = await traceStartupStep(
@@ -2301,7 +2303,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 <template>
 	<TooltipDirective />
-	<SplashScreen v-if="!stateFailed" ref="splashScreen" data-tauri-drag-region />
+	<SplashScreen ref="splashScreen" data-tauri-drag-region />
 	<div id="teleports"></div>
 	<AccountSwitchOverlay :show="isSwitchingAccount" />
 	<PortalrinthBackdrop />
