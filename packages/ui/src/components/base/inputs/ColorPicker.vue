@@ -6,6 +6,7 @@
 		class="relative flex shrink-0 cursor-pointer items-center justify-center rounded-xl transition-[filter,box-shadow] hover:brightness-125 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-shadow disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
 		:class="triggerSizeClass"
 		:disabled="disabled"
+		:aria-label="label"
 		:aria-expanded="isOpen"
 		:aria-controls="panelId"
 		aria-haspopup="dialog"
@@ -25,13 +26,14 @@
 		</slot>
 	</button>
 
-	<Teleport v-if="isClient" to="body">
+	<Teleport v-if="isClient" :to="teleportTarget">
 		<Transition name="floating-expand">
 			<div
 				v-if="isOpen"
 				:id="panelId"
 				ref="panelRef"
-				class="fixed isolate z-[9999] rounded-[14px] bg-surface-3 p-3 shadow-lg ring-1 ring-surface-5"
+				popover="manual"
+				class="fixed isolate z-[9999] m-0 rounded-[14px] border-0 bg-surface-3 p-3 text-primary shadow-lg ring-1 ring-surface-5"
 				:class="allowGradient ? 'w-64' : 'w-56'"
 				:style="panelStyle"
 				role="dialog"
@@ -153,7 +155,7 @@
 					ref="svRef"
 					class="relative h-36 w-full touch-none select-none rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-brand-shadow"
 					role="group"
-					:aria-label="`${label} saturation and brightness`"
+					:aria-label="formatMessage(messages.saturationAndBrightness, { label })"
 					tabindex="0"
 					:style="svBackgroundStyle"
 					@pointerdown="onSvPointerDown"
@@ -172,7 +174,7 @@
 					max="360"
 					step="1"
 					class="color-picker-hue-slider relative z-10 h-5 w-full"
-					:aria-label="`${label} hue`"
+					:aria-label="formatMessage(messages.hue, { label })"
 					:value="hue"
 					@input="onHueInput"
 				/>
@@ -184,7 +186,7 @@
 					<input
 						v-model="hexInput"
 						class="w-full min-w-0 appearance-none border-0 bg-transparent p-0 text-base font-medium uppercase shadow-none outline-none focus:ring-0"
-						:aria-label="`${label} hex value`"
+						:aria-label="formatMessage(messages.hexValue, { label })"
 						maxlength="6"
 						spellcheck="false"
 						@keydown.enter="commitHexInput"
@@ -266,8 +268,9 @@
 <script setup lang="ts">
 import { ArrowUpIcon, CheckIcon } from '@modrinth/assets'
 import { colord } from 'colord'
-import { computed, onMounted, ref, useId, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, shallowRef, useId, watch } from 'vue'
 
+import { defineMessages, useVIntl } from '../../../composables/i18n'
 import {
 	type AnchoredTeleportPlacement,
 	useAnchoredTeleport,
@@ -275,6 +278,15 @@ import {
 import InputFrame from './InputFrame.vue'
 
 const model = defineModel<string>({ required: true })
+const { formatMessage } = useVIntl()
+const messages = defineMessages({
+	saturationAndBrightness: {
+		id: 'color-picker.saturation-and-brightness',
+		defaultMessage: '{label} saturation and brightness',
+	},
+	hue: { id: 'color-picker.hue', defaultMessage: '{label} hue' },
+	hexValue: { id: 'color-picker.hex-value', defaultMessage: '{label} hex value' },
+})
 
 const props = withDefaults(
 	defineProps<{
@@ -383,8 +395,9 @@ const triggerRef = ref<HTMLButtonElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 const svRef = ref<HTMLElement | null>(null)
 const resolvedPlacement = computed(() => props.placement)
+const teleportTarget = shallowRef<Element | string>('body')
 
-const { isOpen, panelStyle, open, close } = useAnchoredTeleport(
+const { isOpen, panelStyle, open, close, updatePosition } = useAnchoredTeleport(
 	triggerRef,
 	panelRef,
 	resolvedPlacement,
@@ -646,7 +659,11 @@ function handlePanelKeydown(event: KeyboardEvent) {
 
 async function openPicker() {
 	if (props.disabled || isOpen.value) return
+	teleportTarget.value =
+		triggerRef.value?.closest('[role="dialog"]') ?? triggerRef.value?.ownerDocument.body ?? 'body'
 	await open()
+	panelRef.value?.showPopover()
+	updatePosition()
 	emit('focus')
 }
 
