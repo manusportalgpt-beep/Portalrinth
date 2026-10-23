@@ -5,7 +5,12 @@
  */
 import { computed, watchEffect } from 'vue'
 
-import { backgroundBlur, backgroundDim, backgroundUrl } from '@/helpers/portalrinth-background'
+import {
+	backgroundBlur,
+	backgroundDim,
+	backgroundIsVideo,
+	backgroundUrl,
+} from '@/helpers/portalrinth-background'
 
 /** The darkening is a veil painted over the picture, in the same layer. */
 const backgroundImage = computed(() => {

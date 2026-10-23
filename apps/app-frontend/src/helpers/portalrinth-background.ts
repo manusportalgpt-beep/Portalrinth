@@ -29,6 +29,22 @@ export const backgroundKind = ref<string>('')
 export const backgroundIsVideo = computed(() =>
 	BACKGROUND_VIDEO_EXTENSIONS.includes(backgroundKind.value),
 )
+
+function backgroundMime(extension: string): string {
+	const types: Record<string, string> = {
+		avif: 'image/avif',
+		gif: 'image/gif',
+		jpg: 'image/jpeg',
+		jpeg: 'image/jpeg',
+		m4v: 'video/mp4',
+		mov: 'video/quicktime',
+		mp4: 'video/mp4',
+		png: 'image/png',
+		webm: 'video/webm',
+		webp: 'image/webp',
+	}
+	return types[extension] ?? 'application/octet-stream'
+}
 export const backgroundBlur = ref(true)
 /** From 0, the picture as it is, to 100. */
 export const backgroundDim = ref(0)
@@ -39,7 +55,9 @@ export async function loadBackground(blur: boolean, dim = backgroundDim.value): 
 	const bytes = await invoke<ArrayBuffer>('plugin:portalrinth-background|background_get')
 	backgroundKind.value = await invoke<string>('plugin:portalrinth-background|background_kind')
 	if (backgroundUrl.value) URL.revokeObjectURL(backgroundUrl.value)
-	backgroundUrl.value = bytes.byteLength ? URL.createObjectURL(new Blob([bytes])) : null
+	backgroundUrl.value = bytes.byteLength
+		? URL.createObjectURL(new Blob([bytes], { type: backgroundMime(backgroundKind.value) }))
+		: null
 }
 
 export function isBackgroundFile(path: string): boolean {

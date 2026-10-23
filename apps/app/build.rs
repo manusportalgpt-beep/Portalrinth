@@ -572,6 +572,7 @@ fn main() {
                     .commands(&[
                         "background_set",
                         "background_get",
+                        "background_kind",
                         "background_clear",
                     ])
                     .default_permission(
