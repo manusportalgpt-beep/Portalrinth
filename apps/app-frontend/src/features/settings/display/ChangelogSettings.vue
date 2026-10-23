@@ -12,7 +12,7 @@ import { portalrinthChangelogFeedQueryOptions } from '@/features/news/portalrint
 import { PORTALRINTH_CHANGELOG } from '@/helpers/portalrinth-changelog'
 import { renderChangelog } from '@/helpers/render-changelog'
 
-const { formatMessage } = useVIntl()
+const { formatMessage, locale } = useVIntl()
 
 /** Landing page of the fork's author, linked from the changelog header. */
 const AUTHOR_URL = 'https://everelsu.github.io/RelsevLink/'
@@ -125,7 +125,7 @@ const portalrinthChangelog = computed<ChangelogEntry[]>(() =>
 	(feed.data.value ?? PORTALRINTH_CHANGELOG).map((entry) => ({
 		version: entry.version,
 		date: dayjs(entry.date).format('MMM D, YYYY'),
-		sections: parseBody(entry.body),
+		sections: parseBody((locale.value.startsWith('ru') && entry.body_ru) || entry.body),
 	})),
 )
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useEventListener } from '@vueuse/core'
+import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 
 import { injectImageViewerEditor } from '#ui/providers/image-viewer-editor'
 
@@ -17,10 +18,12 @@ const props = withDefaults(
 	defineProps<{
 		items: ImageViewerEditorItem[]
 		editor?: 'enabled' | 'disabled'
+		pixelated?: boolean
 		saving?: boolean
 	}>(),
 	{
 		editor: 'disabled',
+		pixelated: false,
 		saving: false,
 	},
 )
@@ -33,6 +36,14 @@ const emit = defineEmits<{
 	copy: [item: ImageViewerEditorItem]
 }>()
 
+const viewerAnchor = ref<HTMLElement | null>(null)
+const viewerDocument = shallowRef<Document>()
+const teleportTarget = computed(
+	() =>
+		viewerDocument.value?.body ??
+		viewerAnchor.value?.ownerDocument.body ??
+		(typeof document !== 'undefined' ? document.body : 'body'),
+)
 const activeId = ref<string | null>(null)
 const mode = ref<ImageViewerEditorMode>('view')
 const closeAfterEditing = ref(false)
@@ -69,6 +80,7 @@ function loadItemData(item: ImageViewerEditorItem): Promise<ImageViewerEditorDat
 
 	const promise = (async () => {
 		if (item.editorSource && context) return await context.loadEditorData(item.editorSource)
+		if (context?.fetchImage) return { source: await context.fetchImage(item.src) }
 		const response = await fetch(item.src)
 		if (!response.ok) throw new Error(`Could not load image: ${response.statusText}`)
 		return { source: await response.blob() }
@@ -123,6 +135,7 @@ function preloadItemsAround(index: number) {
 }
 
 function show(index: number) {
+	viewerDocument.value = viewerAnchor.value?.ownerDocument ?? document
 	const item = props.items[index]
 	if (!item) return
 	preloadItemsAround(index)
@@ -159,6 +172,7 @@ function finishEditing() {
 function hide() {
 	if (activeId.value === null || props.saving) return
 	activeId.value = null
+	viewerDocument.value = undefined
 	mode.value = 'view'
 	closeAfterEditing.value = false
 	itemDataCache.clear()
@@ -198,7 +212,12 @@ function hasTextSelection() {
 }
 
 function handleKeydown(event: KeyboardEvent) {
-	if (!activeItem.value || mode.value === 'edit' || document.querySelector('.modal-root')) return
+	if (
+		!activeItem.value ||
+		mode.value === 'edit' ||
+		viewerDocument.value?.querySelector('.modal-root')
+	)
+		return
 	if (event.key === 'Escape') {
 		event.preventDefault()
 		hide()
@@ -217,9 +236,13 @@ function handleKeydown(event: KeyboardEvent) {
 	}
 }
 
-onMounted(() => document.addEventListener('keydown', handleKeydown))
+useEventListener(viewerDocument, 'keydown', handleKeydown)
+useEventListener(
+	() => viewerDocument.value?.defaultView,
+	'beforeunload',
+	() => hide(),
+)
 onBeforeUnmount(() => {
-	document.removeEventListener('keydown', handleKeydown)
 	itemDataCache.clear()
 	itemImageCache.clear()
 	if (activeId.value !== null) context?.onHide?.()
@@ -229,7 +252,8 @@ defineExpose({ show, edit, hide, next, previous, markSavedAndView })
 </script>
 
 <template>
-	<Teleport to="body">
+	<span ref="viewerAnchor" hidden />
+	<Teleport :to="teleportTarget">
 		<div
 			v-if="activeItem"
 			class="fixed inset-0 z-[110] overflow-hidden bg-black/95 text-white"
@@ -266,6 +290,7 @@ defineExpose({ show, edit, hide, next, previous, markSavedAndView })
 				:index="activeIndex"
 				:count="items.length"
 				:can-edit="canEdit"
+				:pixelated="pixelated"
 				:saving="saving"
 				:load-data="loadItemData"
 				@close="hide"
@@ -275,8 +300,14 @@ defineExpose({ show, edit, hide, next, previous, markSavedAndView })
 				@cancel="finishEditing"
 				@save="emit('save', $event)"
 			>
-				<template #actions>
-					<slot name="actions" :item="activeItem" :index="activeIndex" :hide="hide" />
+				<template #actions="{ metadata }">
+					<slot
+						name="actions"
+						:item="activeItem"
+						:index="activeIndex"
+						:hide="hide"
+						:metadata="metadata"
+					/>
 				</template>
 			</Editor>
 		</div>

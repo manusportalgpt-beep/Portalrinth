@@ -101,6 +101,84 @@ const SCENES = {
 		})
 		return parts.join('')
 	},
+
+	/**
+	 * CurseForge back in the launcher: Discover with the source switch on
+	 * CurseForge, its cards in CurseForge's orange, and a returning arrow.
+	 */
+	'curseforge-is-back': () => {
+		const orange = '#f16436'
+		const parts = [
+			`<rect x="190" y="110" width="1540" height="1100" rx="48" fill="#17111f" fill-opacity="0.62" stroke="#fff" stroke-opacity="0.14" stroke-width="3"/>`,
+			// The launcher's sidebar.
+			`<rect x="190" y="110" width="120" height="1100" rx="48" fill="#fff" fill-opacity="0.04"/>`,
+			`<rect x="222" y="150" width="56" height="56" rx="16" fill="url(#brand)"/>`,
+			...[0, 1, 2, 3].map(
+				(k) =>
+					`<rect x="230" y="${260 + k * 90}" width="40" height="40" rx="12" fill="#fff" fill-opacity="${k === 0 ? 0.3 : 0.12}"/>`,
+			),
+			// Search and the source switch, set to CurseForge.
+			`<rect x="360" y="150" width="760" height="64" rx="32" fill="#fff" fill-opacity="0.07" stroke="#fff" stroke-opacity="0.12" stroke-width="3"/>`,
+			`<circle cx="398" cy="180" r="12" fill="none" stroke="#fff" stroke-opacity="0.35" stroke-width="5"/>`,
+			`<line x1="407" y1="189" x2="416" y2="198" stroke="#fff" stroke-opacity="0.35" stroke-width="5" stroke-linecap="round"/>`,
+			bar(432, 170, 300, 24, '#fff', 0.16),
+			`<rect x="1160" y="150" width="520" height="64" rx="32" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12" stroke-width="3"/>`,
+			`<circle cx="1206" cy="182" r="13" fill="#3bd16f" fill-opacity="0.75"/>`,
+			bar(1232, 170, 150, 24, '#fff', 0.28),
+			`<rect x="1424" y="156" width="250" height="52" rx="26" fill="${orange}"/>`,
+			`<circle cx="1462" cy="182" r="13" fill="#2a0e05" fill-opacity="0.55"/>`,
+			bar(1488, 170, 160, 24, '#2a0e05', 0.55),
+		]
+		// Project cards, two rows of three, with CurseForge's orange icons; the
+		// last place in the grid goes to the returning arrow.
+		const tints = ['#f16436', '#ff8a4c', '#e2502a', '#ff9f66', '#f47a3c']
+		tints.forEach((tint, k) => {
+			const x = 360 + (k % 3) * 445
+			const y = 270 + Math.floor(k / 3) * 300
+			parts.push(
+				panel(x, y, 420, 270, 28),
+				`<rect x="${x + 28}" y="${y + 28}" width="96" height="96" rx="22" fill="${tint}" fill-opacity="0.85"/>`,
+				bar(x + 148, y + 40, [190, 220, 160, 200, 230, 180][k], 28, '#fff', 0.42),
+				bar(x + 148, y + 86, [130, 110, 150, 120, 100, 140][k], 20, '#fff', 0.2),
+				bar(x + 28, y + 156, 360, 20, '#fff', 0.16),
+				bar(x + 28, y + 190, [280, 300, 250, 320, 260, 290][k], 20, '#fff', 0.12),
+				`<rect x="${x + 276}" y="${y + 210}" width="116" height="40" rx="20" fill="#c78aff" fill-opacity="${k === 1 ? 0.95 : 0.5}"/>`,
+			)
+		})
+		// The returning arrow, in the grid's sixth place: an orange ring that
+		// runs clockwise most of the way round and ends in its own head, the
+		// head set on the ring's end and pointing along it.
+		const tile = { x: 1250, y: 570, w: 420, h: 270 }
+		const cx = tile.x + tile.w / 2
+		const cy = tile.y + tile.h / 2
+		const r = 82
+		const stroke = 28
+		const degrees = (d) => (d * Math.PI) / 180
+		const at = (angle, radius = r) => [
+			cx + radius * Math.cos(angle),
+			cy + radius * Math.sin(angle),
+		]
+		const from = degrees(-35)
+		const to = degrees(235)
+		const [sx, sy] = at(from)
+		const [ex, ey] = at(to)
+		// Travelling clockwise, the way on is the tangent (-sin, cos); the head
+		// spans the ring's width either side of it.
+		const forward = [-Math.sin(to), Math.cos(to)]
+		const length = 46
+		const half = 34
+		const tip = [ex + forward[0] * length, ey + forward[1] * length]
+		const outer = at(to, r + half)
+		const inner = at(to, r - half)
+		const point = ([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`
+		parts.push(
+			`<rect x="${tile.x}" y="${tile.y}" width="${tile.w}" height="${tile.h}" rx="28" fill="${orange}" fill-opacity="0.12" stroke="${orange}" stroke-opacity="0.45" stroke-width="3"/>`,
+			`<circle cx="${cx}" cy="${cy}" r="${r + 44}" fill="${orange}" fill-opacity="0.1"/>`,
+			`<path d="M ${point([sx, sy]).replace(',', ' ')} A ${r} ${r} 0 1 1 ${point([ex, ey]).replace(',', ' ')}" fill="none" stroke="url(#ember)" stroke-width="${stroke}" stroke-linecap="round"/>`,
+			`<polygon points="${point(outer)} ${point(tip)} ${point(inner)}" fill="#ff8a4c" stroke="#ff8a4c" stroke-width="6" stroke-linejoin="round"/>`,
+		)
+		return parts.join('')
+	},
 }
 
 function thumbnail(scene, seed) {
@@ -109,6 +187,7 @@ function thumbnail(scene, seed) {
 <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#140c22" stop-opacity="0"/><stop offset="1" stop-color="#0d0817" stop-opacity="0.75"/></linearGradient>
 <radialGradient id="glow" cx="0.3" cy="0.15" r="0.9"><stop offset="0" stop-color="#7d45d9" stop-opacity="0.22"/><stop offset="1" stop-color="#7d45d9" stop-opacity="0"/></radialGradient>
 <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e0b3ff"/><stop offset="1" stop-color="#9a5cf0"/></linearGradient>
+<linearGradient id="ember" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9f66"/><stop offset="1" stop-color="#e2502a"/></linearGradient>
 <linearGradient id="hero" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a3fd1" stop-opacity="0.55"/><stop offset="1" stop-color="#3b1f6b" stop-opacity="0.35"/></linearGradient>
 </defs>
 <rect width="${W}" height="${H}" fill="#161022"/>
