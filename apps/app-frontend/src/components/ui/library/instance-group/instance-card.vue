@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PointerActivationConstraints } from '@dnd-kit/dom'
 import { KeyboardSensor, PointerSensor, useDraggable } from '@dnd-kit/vue'
 import {
 	CheckIcon,
@@ -30,7 +31,7 @@ const LOADING_INDICATOR_DELAY_MS = 100
 
 const instanceCardSensors = [
 	PointerSensor.configure({
-		preventActivation: () => false,
+		activationConstraints: [new PointerActivationConstraints.Distance({ value: 5 })],
 	}),
 	KeyboardSensor,
 ]
