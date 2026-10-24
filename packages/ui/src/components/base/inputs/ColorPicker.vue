@@ -111,7 +111,9 @@
 								class="size-6 cursor-pointer rounded-full border-0 p-0"
 								:style="{ backgroundColor: color }"
 								:aria-label="`${customColorsLabel}: ${color}`"
-								@click="model = color"
+								@mouseenter="emit('preview', color)"
+								@mouseleave="emit('preview', picked)"
+								@click="pickColor(color)"
 							/>
 							<!--
 								Its own button rather than a mark inside the colour's:
@@ -208,7 +210,18 @@ const emit = defineEmits<{
 	change: [value: string]
 	/** Fired when a kept colour is added or removed. */
 	'update:customColors': [colors: string[]]
+	/**
+	 * The colour being looked at while the picker is open — under the pointer
+	 * or in the wheel — and `null` once it closes. For showing it, not keeping it.
+	 */
+	preview: [value: string | null]
 }>()
+
+/** Puts a colour in the wheel without applying it; the tick does that. */
+function pickColor(color: string) {
+	picked.value = color
+	syncFromModel(color)
+}
 
 function addCustomColor() {
 	const colors = props.customColors
@@ -411,7 +424,14 @@ function toggle() {
 }
 
 watch(isOpen, (openState, previousOpenState) => {
-	if (!openState && previousOpenState) emit('change', model.value)
+	if (!openState && previousOpenState) {
+		emit('preview', null)
+		emit('change', model.value)
+	}
+})
+
+watch(picked, (value) => {
+	if (isOpen.value) emit('preview', value)
 })
 
 const isClient = ref(false)

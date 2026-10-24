@@ -76,7 +76,7 @@ const detail = computed(() => {
 		return formatMessage(messages.stateReady, { port: props.relay.local_port })
 	}
 	if (props.relay.state === 'closed') return formatMessage(messages.stateClosed)
-	if (props.relay.state === 'lost') return formatMessage(messages.stateLost)
+	if (props.relay.state === 'lost') return props.relay.error || formatMessage(messages.stateLost)
 	return null
 })
 const failed = computed(() => props.relay.state === 'lost')

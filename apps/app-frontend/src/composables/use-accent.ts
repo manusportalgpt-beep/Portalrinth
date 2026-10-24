@@ -304,18 +304,33 @@ export function findAccentPreset(id: string): AccentPreset | undefined {
  */
 const CACHE_KEY = 'portalrinth-accent'
 
-function readCache(): { preset: string; tint: boolean; customColors: string[] } {
+function readCache(): {
+	preset: string
+	tint: boolean
+	color: string | null
+	customColors: string[]
+} {
 	try {
 		const raw = localStorage.getItem(CACHE_KEY)
 		const cached = raw
-			? (JSON.parse(raw) as { preset?: unknown; tint?: unknown; customColors?: unknown })
+			? (JSON.parse(raw) as {
+					preset?: unknown
+					tint?: unknown
+					color?: unknown
+					customColors?: unknown
+				})
 			: null
 		return {
 			preset:
-				typeof cached?.preset === 'string' && findAccentPreset(cached.preset)
+				typeof cached?.preset === 'string' &&
+				(cached.preset === CUSTOM_ACCENT_ID || findAccentPreset(cached.preset))
 					? cached.preset
 					: DEFAULT_ACCENT_PRESET,
 			tint: cached?.tint !== false,
+			color:
+				typeof cached?.color === 'string' && /^#[\da-f]{6}$/i.test(cached.color)
+					? cached.color
+					: null,
 			customColors: Array.isArray(cached?.customColors)
 				? cached.customColors.filter(
 						(color): color is string => typeof color === 'string' && /^#[\da-f]{6}$/i.test(color),
@@ -323,13 +338,21 @@ function readCache(): { preset: string; tint: boolean; customColors: string[] } 
 				: [],
 		}
 	} catch {
-		return { preset: DEFAULT_ACCENT_PRESET, tint: true, customColors: [] }
+		return { preset: DEFAULT_ACCENT_PRESET, tint: true, color: null, customColors: [] }
 	}
 }
 
-function writeCache(preset: string, tint: boolean, customColors: string[]): void {
+function writeCache(): void {
 	try {
-		localStorage.setItem(CACHE_KEY, JSON.stringify({ preset, tint, customColors }))
+		localStorage.setItem(
+			CACHE_KEY,
+			JSON.stringify({
+				preset: presetId.value,
+				tint: tintBackground.value,
+				color: customColor.value,
+				customColors: customColors.value,
+			}),
+		)
 	} catch (error) {
 		console.warn('Failed to remember the accent for the next launch:', error)
 	}
@@ -338,7 +361,7 @@ function writeCache(preset: string, tint: boolean, customColors: string[]): void
 const cached = readCache()
 const presetId = ref(cached.preset)
 const tintBackground = ref(cached.tint)
-const customColor = ref(DEFAULT_CUSTOM_ACCENT)
+const customColor = ref(cached.color ?? DEFAULT_CUSTOM_ACCENT)
 /**
  * The colours the person has kept of their own.
  *
@@ -426,15 +449,18 @@ function apply(id: string, tint: boolean): void {
 // Each theme carries its own alphas, and a preset is drawn differently on light
 // than on dark, so the override is recomputed rather than kept.
 watch(
-	[presetId, tintBackground, () => theme.active],
+	[presetId, tintBackground, customColor, () => theme.active],
 	([id, tint]) => {
 		apply(id, tint)
-		writeCache(id, tint, customColors.value)
+		writeCache()
 
 		// The window's own icon is the last purple thing left when the app is not
 		// purple any more. Loaded lazily: it is the one part of this that talks to
 		// the window, and nothing waits on it.
-		const preset = findAccentPreset(id)
+		const preset =
+			id === CUSTOM_ACCENT_ID
+				? ({ id: CUSTOM_ACCENT_ID } as AccentPreset)
+				: findAccentPreset(id)
 		if (preset) {
 			void import('@/helpers/portalrinth-window-icon').then(({ paintWindowIcon }) =>
 				paintWindowIcon(
@@ -473,13 +499,34 @@ export function setCustomAccentColor(hex: string | null | undefined): void {
 	const next = typeof hex === 'string' ? hex.trim() : ''
 	customColor.value = /^#[\da-f]{6}$/i.test(next) ? next.toLowerCase() : DEFAULT_CUSTOM_ACCENT
 	presetId.value = CUSTOM_ACCENT_ID
-	writeCache(presetId.value, tintBackground.value)
-	apply(presetId.value, tintBackground.value)
+}
+
+/**
+ * Paints the interface in an accent without deciding on it.
+ *
+ * Used for previews — a colour under the pointer, a colour chosen but not yet
+ * saved — and to put back the saved one afterwards. Nothing is written to the
+ * settings here; that is the settings page's Save.
+ */
+export function showAccent(
+	id: string | null | undefined,
+	tint: boolean,
+	hex?: string | null,
+): void {
+	if (id === CUSTOM_ACCENT_ID) {
+		setCustomAccentColor(hex ?? customColor.value)
+		tintBackground.value = tint
+		return
+	}
+	setAccentPreset(id, tint)
 }
 
 /** Sets the accent without going through the settings tab — used at startup. */
 /**
- * Keeps a colour of the person's own, and paints the interface in it.
+ * Keeps a colour of the person's own in the row under the picker.
+ *
+ * Keeping a colour is not choosing it: the accent changes only once the
+ * settings are saved.
  *
  * The row of kept colours has room for a fixed number, and the number is
  * however many the row can show at once: a colour kept past that would push
@@ -493,13 +540,14 @@ export function addCustomAccentColor(hex: string | null | undefined): boolean {
 	if (customColors.value.length >= MAX_CUSTOM_ACCENT_COLORS) return false
 	if (!customColors.value.includes(color)) {
 		customColors.value = [...customColors.value, color]
+		writeCache()
 	}
-	setCustomAccentColor(color)
 	return true
 }
 
 export function removeCustomAccentColor(hex: string): void {
 	customColors.value = customColors.value.filter((kept) => kept !== hex)
+	writeCache()
 }
 
 export function setAccentPreset(id: string | null | undefined, tint = true): void {

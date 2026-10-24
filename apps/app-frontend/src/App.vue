@@ -89,7 +89,7 @@ import SharedInstanceInviteHandler from '@/components/ui/shared-instances/shared
 import SplashScreen from '@/components/ui/SplashScreen.vue'
 import SurveyPopup from '@/components/ui/SurveyPopup.vue'
 import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
-import { setAccentPreset } from '@/composables/use-accent.ts'
+import { showAccent } from '@/composables/use-accent.ts'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { useError } from '@/composables/use-error.js'
@@ -802,6 +802,7 @@ async function setupApp() {
 		pending_update_toast_for_version,
 		accent_preset,
 		accent_tint_background,
+		accent_custom_color,
 		splash_cube,
 		background_blur,
 		background_dim,
@@ -810,7 +811,7 @@ async function setupApp() {
 	// Before anything else that waits: the window opens once the splash is in
 	// these colours, rather than in whatever the last session left cached.
 	appTheme.preferred = theme
-	setAccentPreset(accent_preset, accent_tint_background)
+	showAccent(accent_preset, accent_tint_background, accent_custom_color)
 	markThemeSettled()
 	cacheSplashCubeChoice(splash_cube)
 	loadBackground(background_blur, background_dim).catch((error) =>

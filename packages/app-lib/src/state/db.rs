@@ -212,4 +212,20 @@ mod tests {
         sorted.sort_unstable();
         assert_eq!(versions, sorted);
     }
+
+    /// Every migration has to apply on top of the ones before it. Two files
+    /// adding the same column pass both checks above and still stop every
+    /// launcher at startup, so the whole chain is run on an empty database.
+    #[tokio::test]
+    async fn every_migration_applies_to_a_fresh_database() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("in-memory database should open");
+        MIGRATOR
+            .run(&pool)
+            .await
+            .expect("every migration should apply to a fresh database");
+    }
 }

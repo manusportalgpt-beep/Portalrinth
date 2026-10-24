@@ -92,6 +92,8 @@ struct ActiveRelay {
     /// Cleared by the tunnel itself the moment it stops carrying players, which
     /// is the only way anybody finds out that an address has stopped working.
     tunnel_up: Arc<AtomicBool>,
+    /// Why the tunnel stopped, set by the tunnel as it gives up.
+    reason: Arc<std::sync::Mutex<Option<String>>>,
 }
 
 static RELAYS: LazyLock<DashMap<Uuid, ActiveRelay>> =
@@ -139,17 +141,37 @@ async fn describe(
         players: Vec::new(),
     };
 
-    if let Some(relay) = RELAYS.get(&process_uuid) {
-        if relay.tunnel_up.load(Ordering::Relaxed) {
+    let published = RELAYS.get(&process_uuid).map(|relay| {
+        (
+            relay.tunnel_up.load(Ordering::Relaxed),
+            relay.local_port,
+            relay.public_host.clone(),
+            relay.public_port,
+            relay.reason.lock().ok().and_then(|reason| reason.clone()),
+        )
+    });
+    if let Some((up, local_port, public_host, public_port, reason)) = published
+    {
+        if up && is_serving(local_port).await {
             info.state = LanRelayState::Live;
-            info.local_port = Some(relay.local_port);
-            info.public_host = Some(relay.public_host.clone());
-            info.public_port = Some(relay.public_port);
+            info.local_port = Some(local_port);
+            info.public_host = Some(public_host);
+            info.public_port = Some(public_port);
+            info.players =
+                players_in_world(state, &process.instance_path).await;
             return info;
         }
         info.state = LanRelayState::Lost;
-        info.error =
-            Some("The relay stopped carrying players".to_string());
+        info.error = Some(if up {
+            // The tunnel is fine and the world behind it is gone: it was
+            // closed to the network in the game.
+            crate::state::lan::forget_process(&process_uuid.to_string());
+            "The world was closed to the network in the game".to_string()
+        } else {
+            reason.unwrap_or_else(|| {
+                "The relay stopped carrying players".to_string()
+            })
+        });
     }
 
     // The tunnel is down and the entry has served its purpose; drop it so the
@@ -369,14 +391,39 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
         .to_string();
     let tunnel_port = session["tunnelPort"].as_u64().unwrap_or(25570) as u16;
 
-    let tunnel_up = Arc::new(AtomicBool::new(true));
-    let task = tokio::spawn(run_tunnel(
-        session_id.clone(),
-        tunnel_token,
-        tunnel_host,
+    // The control connection is opened here rather than in the background, so
+    // that a relay which will not take the session is said to be one instead
+    // of the world being reported as published when nobody can reach it.
+    let control = match open_control(
+        &session_id,
+        &tunnel_token,
+        &tunnel_host,
         tunnel_port,
-        local_port,
+    )
+    .await
+    {
+        Ok(control) => control,
+        Err(error) => {
+            close_session(&state, &session_id, &bearer).await;
+            return Err(crate::Error::from(crate::ErrorKind::InputError(
+                error.to_string(),
+            )));
+        }
+    };
+
+    let tunnel_up = Arc::new(AtomicBool::new(true));
+    let reason = Arc::new(std::sync::Mutex::new(None));
+    let task = tokio::spawn(run_tunnel(
+        control,
+        Tunnel {
+            session_id: session_id.clone(),
+            token: tunnel_token,
+            host: tunnel_host,
+            port: tunnel_port,
+            local_port,
+        },
         Arc::clone(&tunnel_up),
+        Arc::clone(&reason),
     ));
 
     RELAYS.insert(
@@ -389,6 +436,7 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
             local_port,
             task,
             tunnel_up,
+            reason,
         },
     );
 
@@ -492,12 +540,22 @@ async fn resolve_identity(
     let mut identities = identities(state).await?;
 
     if !account_name.is_empty() {
-        if let Some(at) = identities
-            .iter()
-            .position(|identity| identity.matches(account_name))
-        {
+        if let Some(at) = identities.iter().position(|identity| {
+            identity.matches(account_name)
+                && matches!(identity, RelayIdentity::Online { .. })
+        }) {
             return Ok(identities.swap_remove(at));
         }
+    }
+
+    // The relay only takes an account it knows. A game started under a bare
+    // nickname is published through whichever real account is signed in, and
+    // only when there is none is the nickname kept, to be refused with a reason.
+    if let Some(at) = identities
+        .iter()
+        .position(|identity| matches!(identity, RelayIdentity::Online { .. }))
+    {
+        return Ok(identities.swap_remove(at));
     }
 
     identities
@@ -705,64 +763,171 @@ async fn relay_request(
     Ok(body)
 }
 
+/// How long a step of the tunnel's own handshake is waited for.
+const HANDSHAKE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// How many times a dropped control connection is opened again before the
+/// world is given up as lost, and how long is waited before each attempt.
+const RECONNECT_DELAYS: [u64; 5] = [1, 2, 4, 8, 15];
+
+/// Everything needed to talk to the relay about one session.
+#[derive(Clone)]
+struct Tunnel {
+    session_id: String,
+    token: String,
+    host: String,
+    port: u16,
+    local_port: u16,
+}
+
+/// Why opening the control connection did not work.
+enum ControlError {
+    /// The relay could not be reached. Worth trying again.
+    Unreachable(String),
+    /// The relay answered and would not take the session. It is gone.
+    Refused(String),
+}
+
+impl std::fmt::Display for ControlError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unreachable(error) => {
+                write!(f, "the relay could not be reached: {error}")
+            }
+            Self::Refused(answer) => {
+                write!(f, "the relay refused the tunnel: {answer}")
+            }
+        }
+    }
+}
+
+/// Opens the control connection and says which session it is for.
+///
+/// The reader is handed back as it is, buffer and all: the relay may already
+/// have sent the first `CONNECT` behind its greeting, and unwrapping the reader
+/// here would throw that line away.
+async fn open_control(
+    session_id: &str,
+    token: &str,
+    host: &str,
+    port: u16,
+) -> Result<BufReader<TcpStream>, ControlError> {
+    let mut control =
+        tokio::time::timeout(HANDSHAKE_TIMEOUT, TcpStream::connect((host, port)))
+            .await
+            .map_err(|_| ControlError::Unreachable("timed out".to_string()))?
+            .map_err(|error| ControlError::Unreachable(error.to_string()))?;
+    let _ = control.set_nodelay(true);
+    control
+        .write_all(format!("HOST {session_id} {token}\n").as_bytes())
+        .await
+        .map_err(|error| ControlError::Unreachable(error.to_string()))?;
+
+    let mut control = BufReader::new(control);
+    let mut greeting = String::new();
+    match tokio::time::timeout(HANDSHAKE_TIMEOUT, control.read_line(&mut greeting))
+        .await
+    {
+        Err(_) => Err(ControlError::Unreachable("timed out".to_string())),
+        Ok(Err(error)) => Err(ControlError::Unreachable(error.to_string())),
+        Ok(Ok(0)) => Err(ControlError::Unreachable(
+            "the connection was closed".to_string(),
+        )),
+        Ok(Ok(_)) => {
+            if greeting
+                .trim_start()
+                .to_ascii_uppercase()
+                .starts_with("OK HOST")
+            {
+                Ok(control)
+            } else {
+                Err(ControlError::Refused(greeting.trim().to_string()))
+            }
+        }
+    }
+}
+
+/// How a control connection came to an end.
+enum ControlEnd {
+    /// The relay said `CLOSE`: the session is over.
+    Closed,
+    /// The connection dropped without a word.
+    Dropped,
+}
+
 /// Holds one published world open.
 ///
 /// The relay is told which session this is and then left to talk. Every
 /// `CONNECT` it asks for is answered on a connection of its own, because the
-/// control connection is the one carrying the questions.
+/// control connection is the one carrying the questions. A control connection
+/// that drops is opened again for as long as the world is still open, because
+/// the network blinking for a second is no reason to hand out a new address.
 async fn run_tunnel(
-    session_id: String,
-    tunnel_token: String,
-    tunnel_host: String,
-    tunnel_port: u16,
-    local_port: u16,
+    mut control: BufReader<TcpStream>,
+    tunnel: Tunnel,
     tunnel_up: Arc<AtomicBool>,
+    reason: Arc<std::sync::Mutex<Option<String>>>,
 ) {
     let _up = UpUntilDrop(tunnel_up);
-    carry_connections(
-        &session_id,
-        &tunnel_token,
-        &tunnel_host,
-        tunnel_port,
-        local_port,
-    )
-    .await;
+    let give_up = |why: String| {
+        tracing::warn!("LAN relay {} stopped: {why}", tunnel.session_id);
+        if let Ok(mut reason) = reason.lock() {
+            *reason = Some(why);
+        }
+    };
+
+    'session: loop {
+        if let ControlEnd::Closed = carry_connections(control, &tunnel).await {
+            give_up("The relay closed the session".to_string());
+            return;
+        }
+
+        for delay in RECONNECT_DELAYS {
+            tokio::time::sleep(std::time::Duration::from_secs(delay)).await;
+            if !is_serving(tunnel.local_port).await {
+                give_up(
+                    "The world was closed to the network in the game"
+                        .to_string(),
+                );
+                return;
+            }
+            match open_control(
+                &tunnel.session_id,
+                &tunnel.token,
+                &tunnel.host,
+                tunnel.port,
+            )
+            .await
+            {
+                Ok(reopened) => {
+                    control = reopened;
+                    continue 'session;
+                }
+                Err(ControlError::Refused(answer)) => {
+                    give_up(format!("The relay ended the session: {answer}"));
+                    return;
+                }
+                Err(ControlError::Unreachable(_)) => {}
+            }
+        }
+
+        give_up("The connection to the relay was lost".to_string());
+        return;
+    }
 }
 
 async fn carry_connections(
-    session_id: &str,
-    tunnel_token: &str,
-    tunnel_host: &str,
-    tunnel_port: u16,
-    local_port: u16,
-) {
-    let Ok(mut control) = TcpStream::connect((tunnel_host, tunnel_port)).await
-    else {
-        return;
-    };
-    if control
-        .write_all(format!("HOST {session_id} {tunnel_token}\n").as_bytes())
-        .await
-        .is_err()
-    {
-        return;
-    }
-
-    let mut lines = BufReader::new(control);
-    let mut greeting = String::new();
-    if lines.read_line(&mut greeting).await.is_err()
-        || !greeting
-            .trim_start()
-            .to_ascii_uppercase()
-            .starts_with("OK HOST")
-    {
-        return;
-    }
-
-    let control = lines.into_inner();
-    let (reader, _writer) = tokio::io::split(control);
-    let mut lines = BufReader::new(reader).lines();
-    while let Ok(Some(line)) = lines.next_line().await {
+    control: BufReader<TcpStream>,
+    tunnel: &Tunnel,
+) -> ControlEnd {
+    // The connection is read whole, buffer included, so nothing the relay sent
+    // behind its greeting is lost, and it stays open from this side.
+    let mut lines = control.lines();
+    loop {
+        let line = match lines.next_line().await {
+            Ok(Some(line)) => line,
+            Ok(None) | Err(_) => return ControlEnd::Dropped,
+        };
         let parts: Vec<&str> = line.split_whitespace().collect();
         match parts.first().copied() {
             Some(directive) if directive.eq_ignore_ascii_case("CONNECT") => {
@@ -770,22 +935,14 @@ async fn carry_connections(
                     continue;
                 };
                 let connection_id = connection_id.to_string();
-                let host = tunnel_host.to_string();
-                let session_id = session_id.to_string();
-                let token = tunnel_token.to_string();
+                let tunnel = tunnel.clone();
                 tokio::spawn(async move {
-                    carry_one_connection(
-                        &host,
-                        tunnel_port,
-                        &session_id,
-                        &token,
-                        &connection_id,
-                        local_port,
-                    )
-                    .await;
+                    carry_one_connection(&tunnel, &connection_id).await;
                 });
             }
-            Some(directive) if directive.eq_ignore_ascii_case("CLOSE") => break,
+            Some(directive) if directive.eq_ignore_ascii_case("CLOSE") => {
+                return ControlEnd::Closed;
+            }
             _ => {}
         }
     }
@@ -802,20 +959,23 @@ impl Drop for UpUntilDrop {
 }
 
 /// Carries one player's connection through to the world.
-async fn carry_one_connection(
-    host: &str,
-    port: u16,
-    session_id: &str,
-    token: &str,
-    connection_id: &str,
-    local_port: u16,
-) {
-    let Ok(mut remote) = TcpStream::connect((host, port)).await else {
+async fn carry_one_connection(tunnel: &Tunnel, connection_id: &str) {
+    let Ok(Ok(mut remote)) = tokio::time::timeout(
+        HANDSHAKE_TIMEOUT,
+        TcpStream::connect((tunnel.host.as_str(), tunnel.port)),
+    )
+    .await
+    else {
         return;
     };
+    let _ = remote.set_nodelay(true);
     if remote
         .write_all(
-            format!("DATA {session_id} {token} {connection_id}\n").as_bytes(),
+            format!(
+                "DATA {} {} {connection_id}\n",
+                tunnel.session_id, tunnel.token
+            )
+            .as_bytes(),
         )
         .await
         .is_err()
@@ -823,20 +983,91 @@ async fn carry_one_connection(
         return;
     }
 
+    // The player's first bytes can arrive in the same packet as the relay's
+    // answer. The buffered reader is what copies on from here, so whatever it
+    // already holds goes to the world instead of being dropped — losing it
+    // would cut the game's handshake short and the player would never get in.
     let mut greeting = String::new();
     let mut remote = BufReader::new(remote);
-    if remote.read_line(&mut greeting).await.is_err()
-        || !greeting
-            .trim_start()
-            .to_ascii_uppercase()
-            .starts_with("OK DATA")
+    match tokio::time::timeout(HANDSHAKE_TIMEOUT, remote.read_line(&mut greeting))
+        .await
+    {
+        Ok(Ok(read)) if read > 0 => {}
+        _ => return,
+    }
+    if !greeting
+        .trim_start()
+        .to_ascii_uppercase()
+        .starts_with("OK DATA")
     {
         return;
     }
 
-    let Ok(mut local) = TcpStream::connect(("127.0.0.1", local_port)).await else {
+    let Ok(mut local) =
+        TcpStream::connect(("127.0.0.1", tunnel.local_port)).await
+    else {
         return;
     };
-    let mut remote = remote.into_inner();
+    let _ = local.set_nodelay(true);
     let _ = tokio::io::copy_bidirectional(&mut remote, &mut local).await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::net::TcpListener;
+
+    /// The relay is free to send its first `CONNECT` in the same packet as its
+    /// greeting, and a player's first bytes in the same packet as `OK DATA`.
+    /// Neither may be lost on the way to the world.
+    #[tokio::test]
+    async fn carries_what_arrives_behind_the_greetings() {
+        let world = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+        let local_port = world.local_addr().unwrap().port();
+        let relay = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+        let relay_port = relay.local_addr().unwrap().port();
+
+        tokio::spawn(async move {
+            let (mut control, _) = relay.accept().await.unwrap();
+            let mut line = String::new();
+            let mut reader = BufReader::new(&mut control);
+            reader.read_line(&mut line).await.unwrap();
+            assert_eq!(line, "HOST s1 t1\n");
+            control.write_all(b"OK HOST\nCONNECT c1\n").await.unwrap();
+
+            let (mut data, _) = relay.accept().await.unwrap();
+            let mut line = String::new();
+            BufReader::new(&mut data).read_line(&mut line).await.unwrap();
+            assert_eq!(line, "DATA s1 t1 c1\n");
+            data.write_all(b"OK DATA\nhello").await.unwrap();
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            drop(control);
+        });
+
+        let control = open_control("s1", "t1", "127.0.0.1", relay_port)
+            .await
+            .unwrap_or_else(|error| panic!("{error}"));
+        let tunnel = Tunnel {
+            session_id: "s1".to_string(),
+            token: "t1".to_string(),
+            host: "127.0.0.1".to_string(),
+            port: relay_port,
+            local_port,
+        };
+        tokio::spawn(async move {
+            carry_connections(control, &tunnel).await;
+        });
+
+        let (mut player, _) =
+            tokio::time::timeout(HANDSHAKE_TIMEOUT, world.accept())
+                .await
+                .unwrap()
+                .unwrap();
+        let mut received = [0u8; 5];
+        tokio::time::timeout(HANDSHAKE_TIMEOUT, player.read_exact(&mut received))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(&received, b"hello");
+    }
 }

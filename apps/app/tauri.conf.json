@@ -68,8 +68,8 @@
 			"mobile": []
 		},
 		"updater": {
-			"endpoints": ["https://raw.githubusercontent.com/Everelsu/Portalrinth/updater/latest.json"],
-			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDcwNzFFM0EzMzNBRTU1MDUKUldRRlZhNHpvK054Y0xWa3pnQVpRZnJUbXZYNWprRkhvTW5JS0xUYmZKK2l3TkdHTWh5eGw1VWUK"
+			"endpoints": ["https://raw.githubusercontent.com/manusportalgpt-beep/Portalrinth/updater/latest.json"],
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFFRjgzQUY3RDhBMzFFQjYKUldTMkhxUFk5enI0cmx6eFRrQWp4aU9Cd3RmdkVMQ2VoU2RiQnV5YkhqMDJzbEVYUC9BcW50cVgK"
 		}
 	},
 	"app": {

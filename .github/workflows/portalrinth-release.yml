@@ -30,6 +30,19 @@ name: Portalrinth Release
 #   installs already on that version take the update — the version alone cannot
 #   tell two builds of it apart. See `manifest_patch` in apps/app/src/main.rs.
 #
+# Releasing from the GitHub page:
+#   Creating and publishing a release on GitHub (Releases -> Draft a new
+#   release -> a new tag such as `0.22.1` or `v0.22.1` -> Publish) is enough on
+#   its own: this workflow builds every OS into that release, signs the
+#   bundles and publishes the updater manifest, and every install offers the
+#   update within minutes.
+#   The version built is the one in the release's tag, not whatever VERSION
+#   says — an install of a release must report exactly the version the
+#   manifest announces, or it would offer itself the same update again after
+#   installing it. VERSION's `+build` survives when its version matches.
+#   Publishing a draft this workflow made earlier only publishes the manifest;
+#   nothing is rebuilt.
+#
 # Note on tags: `git fetch upstream` pulls in Modrinth's own `v*` tags. Those
 # stay local unless you run `git push --tags`; push only the specific release
 # tag (`git push origin v0.17.3`) so an upstream tag never triggers a build.
@@ -51,6 +64,11 @@ on:
       # builds that would fight over the same GitHub release.
       - '!v*-*'
       - '!portalrinth-v*-*'
+      # A release made on the GitHub page with a bare version as its tag.
+      - '[0-9]*'
+      - '![0-9]*-*'
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       tag:
@@ -62,11 +80,110 @@ on:
         default: false
 
 concurrency:
-  group: portalrinth-release-${{ github.ref }}
-  cancel-in-progress: true
+  group: portalrinth-release-${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}
+  # Queued, not cancelled: a release made on the GitHub page fires both the tag
+  # push and the release event, and the second run has to see what the first
+  # did (see `plan`) rather than kill it halfway through an upload.
+  cancel-in-progress: false
 
 jobs:
+  # Works out which release this is, which version it builds, and whether
+  # there is anything left to do for it.
+  plan:
+    name: Plan the release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+      version: ${{ steps.plan.outputs.version }}
+      patch: ${{ steps.plan.outputs.patch }}
+      build: ${{ steps.plan.outputs.build }}
+      publish: ${{ steps.plan.outputs.publish }}
+      draft: ${{ steps.plan.outputs.draft }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Plan
+        id: plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}
+          MICROPATCH: ${{ github.event.inputs.micropatch }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          # The version is the tag's when the tag is one, so the installed app
+          # and the manifest can never disagree about which version it is.
+          DECLARED=$(tr -d "[:space:]" < VERSION)
+          FROM_TAG=${TAG#portalrinth-}
+          FROM_TAG=${FROM_TAG#v}
+          if [[ "$FROM_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            if [ "${DECLARED%%+*}" = "$FROM_TAG" ]; then
+              VERSION="$DECLARED"
+            else
+              VERSION="$FROM_TAG"
+              echo "::notice::Building $FROM_TAG from the tag (VERSION says $DECLARED)"
+            fi
+          else
+            VERSION="$DECLARED"
+          fi
+          case "$VERSION" in
+            *+*) PATCH=${VERSION#*+} ;;
+            *) PATCH=0 ;;
+          esac
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "patch=$PATCH" >> "$GITHUB_OUTPUT"
+
+          build=true
+          publish=true
+          draft=true
+
+          if [ "$EVENT" = "release" ] && [ "$PRERELEASE" = "true" ]; then
+            echo "::notice::$TAG is a pre-release; portalrinth-prerelease.yml handles those."
+            build=false
+            publish=false
+          fi
+
+          # Already built and announced: the other event of the same release.
+          MANIFEST=$(curl -fsSL "https://raw.githubusercontent.com/$REPO/updater/latest.json" 2>/dev/null || true)
+          LIVE_VERSION=$(jq -r '.version // empty' <<<"$MANIFEST" 2>/dev/null || true)
+          LIVE_PATCH=$(jq -r '.notes // empty' <<<"$MANIFEST" 2>/dev/null | sed -n 's/.*portalrinth-patch:\([0-9]*\).*/\1/p' || true)
+          if [ "$MICROPATCH" != "true" ] && [ "$LIVE_VERSION" = "${VERSION%%+*}" ] && [ "${LIVE_PATCH:-0}" = "$PATCH" ]; then
+            echo "::notice::$VERSION is already published to the updater; nothing to do."
+            build=false
+            publish=false
+          fi
+
+          ASSETS=$(gh release view "$TAG" --repo "$REPO" --json assets,isDraft 2>/dev/null || echo '{}')
+          IS_DRAFT=$(jq -r '.isDraft // "missing"' <<<"$ASSETS")
+          # A draft this workflow made earlier, now published: the bundles are
+          # there, only the manifest is left.
+          if [ "$build" = true ] && [ "$MICROPATCH" != "true" ] \
+            && jq -e '[.assets[]?.name] | index("latest.json")' <<<"$ASSETS" >/dev/null; then
+            build=false
+          fi
+
+          # Only a tag pushed by hand gets a draft to review; a release that is
+          # already public is built into as it is.
+          if [ "$EVENT" = "release" ] || [ "$MICROPATCH" = "true" ] || [ "$IS_DRAFT" = "false" ]; then
+            draft=false
+          fi
+
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "draft=$draft" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG version=$VERSION build=$build publish=$publish draft=$draft"
+
   release:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
     permissions:
       contents: write
 
@@ -175,6 +292,14 @@ jobs:
           printf 'VITE_CURSEFORGE_API_KEY=%s\n' "$CURSEFORGE_API_KEY" \
             > apps/app-frontend/.env.local
 
+      - name: Take the version from the release
+        shell: bash
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          printf '%s\n' "$VERSION" > VERSION
+          echo "Building $VERSION"
+
       - name: Check the version is a stable one
         shell: bash
         run: |
@@ -215,12 +340,12 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/app
-          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          tagName: ${{ needs.plan.outputs.tag }}
           releaseName: 'Portalrinth __VERSION__'
           # A micropatch goes onto a release that is already out, so there is
           # nothing to draft and review: the files on it are replaced one by one
           # as each build finishes.
-          releaseDraft: ${{ github.event.inputs.micropatch != 'true' }}
+          releaseDraft: ${{ needs.plan.outputs.draft == 'true' }}
           prerelease: false
           args: ${{ matrix.args }}
 
@@ -320,7 +445,12 @@ jobs:
   # removed from the release so only the actual installers remain visible.
   finalize:
     name: Publish updater manifest
-    needs: release
+    needs: [plan, release]
+    # After a build, or without one when the bundles were already there.
+    if: >-
+      always() && needs.plan.result == 'success' &&
+      needs.plan.outputs.publish == 'true' &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -332,7 +462,8 @@ jobs:
       - name: Set release notes from Portalrinth changelog
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          PLANNED_VERSION: ${{ needs.plan.outputs.version }}
         shell: bash
         run: |
           set -euo pipefail
@@ -340,7 +471,7 @@ jobs:
           # crate versions came from — independent of the tag name.
           # VERSION may carry the build number of a micropatch after a `+`,
           # which has an entry of its own; the script reads both.
-          VERSION=$(tr -d "[:space:]" < VERSION)
+          VERSION="$PLANNED_VERSION"
 
           # Pull the matching entry out of portalrinth-changelog.ts. If there
           # isn't one we leave the auto-generated body alone rather than fail
@@ -355,9 +486,18 @@ jobs:
       - name: Relocate updater manifest and strip signatures
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          PLANNED_VERSION: ${{ needs.plan.outputs.version }}
         run: |
           set -euo pipefail
+
+          # A draft is not out yet: the installers behind its manifest are not
+          # downloadable, so announcing it would only hand every install a 404.
+          # Publishing the draft runs this workflow again, and that run does it.
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = "true" ]; then
+            echo "::notice::$TAG is still a draft; the manifest is published when the release is."
+            exit 0
+          fi
 
           # Grab the updater manifest produced by the build jobs.
           mkdir -p manifest
@@ -369,7 +509,7 @@ jobs:
           # Which build of this version this is: the part of VERSION after a
           # `+`, and 0 when it has none. Read before switching branches — the
           # `updater` branch holds nothing but the manifest.
-          DECLARED=$(tr -d "[:space:]" < VERSION)
+          DECLARED="$PLANNED_VERSION"
           case "$DECLARED" in
             *+*) PATCH=${DECLARED#*+} ;;
             *) PATCH=0 ;;

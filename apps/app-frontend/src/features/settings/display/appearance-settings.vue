@@ -18,12 +18,12 @@ import {
 	ACCENT_PRESETS,
 	accentColorFor,
 	addCustomAccentColor,
+	CUSTOM_ACCENT_ID,
 	DEFAULT_ACCENT_PRESET,
 	findAccentPreset,
 	MAX_CUSTOM_ACCENT_COLORS,
 	removeCustomAccentColor,
-	setAccentPreset,
-	setCustomAccentColor,
+	showAccent,
 	useAccentPreset,
 } from '@/composables/use-accent.ts'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
@@ -38,20 +38,39 @@ const theme = useTheme()
 const pickedColor = ref('#c1121f')
 
 /**
- * A colour from the wheel: kept, and painted with.
+ * A colour chosen with the tick, or one of the kept ones clicked.
  *
- * A colour kept past the limit is refused rather than put on a second line:
- * the row is one line, and a colour that does not fit is a decision to make
- * rather than a thing to work around.
+ * Choosing is not saving: the colour becomes the pending accent, the interface
+ * shows it, and the Save / Reset bar decides whether it stays - the same as
+ * every other setting here. It is also kept in the row, so it can be found
+ * again; a colour past the limit is simply not kept.
  */
 function onColourPicked(color: string): void {
 	pickedColor.value = color
 	if (!addCustomAccentColor(color)) {
-		// The row is full. The wheel says so; this says it where the colour
-		// was asked for.
 		console.warn('The row of accent colours is full.')
 	}
 	current.value.accentColor = color
+	current.value.accentPreset = CUSTOM_ACCENT_ID
+}
+
+/** Shows a colour under the pointer without choosing it. */
+function previewAccent(preset: string, color?: string | null): void {
+	showAccent(preset, current.value.accentTintBackground, color ?? current.value.accentColor)
+}
+
+/** Puts back whatever is pending once the pointer has moved on. */
+function endAccentPreview(): void {
+	showAccent(
+		current.value.accentPreset,
+		current.value.accentTintBackground,
+		current.value.accentColor,
+	)
+}
+
+function onPickerPreview(color: string | null): void {
+	if (color) previewAccent(CUSTOM_ACCENT_ID, color)
+	else endAccentPreview()
 }
 
 function onCustomColoursChanged(colors: string[]): void {
@@ -75,8 +94,12 @@ const accent = useAccentPreset()
 // preview would read back as the saved value and nothing would count as a
 // change. Upstream keeps the theme apart the same way, through `theme.preview`.
 const savedAccent = ref({
-	preset: findAccentPreset(accent.id.value)?.id ?? DEFAULT_ACCENT_PRESET,
+	preset:
+		accent.id.value === CUSTOM_ACCENT_ID
+			? CUSTOM_ACCENT_ID
+			: (findAccentPreset(accent.id.value)?.id ?? DEFAULT_ACCENT_PRESET),
 	tint: accent.tintBackground.value,
+	color: accent.customColor.value,
 })
 
 const { formatMessage } = useVIntl()
@@ -133,6 +156,7 @@ type AppearanceSettingsState = {
 	nativeDecorations: boolean
 	accentPreset: string
 	accentTintBackground: boolean
+	accentColor: string
 }
 
 function getAppearanceSettingsState(): AppearanceSettingsState {
@@ -143,7 +167,7 @@ function getAppearanceSettingsState(): AppearanceSettingsState {
 		nativeDecorations: appSettings.nativeDecorations,
 		accentPreset: savedAccent.value.preset,
 		accentTintBackground: savedAccent.value.tint,
-		accentColor: accent.customColor.value,
+		accentColor: savedAccent.value.color,
 	}
 }
 
@@ -180,7 +204,11 @@ const { saved, current, changes, saving, hasChanges, reset, save } = useSavable(
 		theme.syncAcrossDevices = value.syncAcrossDevices
 		theme.advancedRendering = value.advancedRendering
 		appSettings.nativeDecorations = value.nativeDecorations
-		savedAccent.value = { preset: value.accentPreset, tint: value.accentTintBackground }
+		savedAccent.value = {
+			preset: value.accentPreset,
+			tint: value.accentTintBackground,
+			color: value.accentColor,
+		}
 	},
 )
 
@@ -231,20 +259,13 @@ function setNativeDecorations(enabled: boolean): void {
 // The accent is previewed the same way the theme is: the whole app recolours
 // while the slider moves, and closing the tab without saving puts back what was
 // saved тАФ which `useSavable` has already restored into `saved` by then.
-watch([() => current.value.accentPreset, () => current.value.accentTintBackground], ([id, tint]) =>
-	setAccentPreset(id, tint),
-)
-
-// A colour typed into the field has to reach the store as it is typed, or the
-// swatch beside it moves and nothing else does. It sits here rather than beside
-// the `current` it reads: `current` does not exist yet at the top of the file,
-// and reading it before it is declared throws while the page is being set up тАФ
-// which is the whole settings page, not this one control.
 watch(
-	() => current.value.accentColor,
-	(hex) => {
-		if (hex) setCustomAccentColor(hex)
-	},
+	[
+		() => current.value.accentPreset,
+		() => current.value.accentTintBackground,
+		() => current.value.accentColor,
+	],
+	([id, tint, color]) => showAccent(id, tint, color),
 )
 
 watch(
@@ -276,7 +297,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
 	theme.preview = null
-	setAccentPreset(saved.value.accentPreset, saved.value.accentTintBackground)
+	showAccent(saved.value.accentPreset, saved.value.accentTintBackground, saved.value.accentColor)
 	settingsModal?.registerUnsavedChangesController(null)
 })
 
@@ -342,6 +363,8 @@ provideAppearanceSettings({
 					current.accentPreset === preset.id ? 'border-contrast scale-110' : 'border-transparent'
 				"
 				:style="{ background: accentColorFor(preset, theme.active) }"
+				@mouseenter="previewAccent(preset.id)"
+				@mouseleave="endAccentPreview"
 				@click="current.accentPreset = preset.id"
 			/>
 		</div>
@@ -364,7 +387,8 @@ provideAppearanceSettings({
 				:custom-colors-full-label="formatMessage(messages.accentTooManyColours)"
 				:custom-colors-limit="MAX_CUSTOM_ACCENT_COLORS"
 				class="!h-8 !w-8 !rounded-full"
-				@change="onColourPicked"
+				@update:model-value="onColourPicked"
+				@preview="onPickerPreview"
 				@update:custom-colors="onCustomColoursChanged"
 			>
 				<template #trigger>
@@ -380,9 +404,17 @@ provideAppearanceSettings({
 				v-for="color in accent.customColors.value"
 				:key="color"
 				type="button"
-				class="h-8 w-8 cursor-pointer rounded-full border-0 p-0 transition-transform hover:scale-110"
+				class="h-8 w-8 cursor-pointer rounded-full border-2 p-0 transition-transform hover:scale-110"
+				:class="
+					current.accentPreset === CUSTOM_ACCENT_ID && current.accentColor === color
+						? 'border-contrast scale-110'
+						: 'border-transparent'
+				"
 				:style="{ background: color }"
 				:aria-label="formatMessage(messages.accentUseColour, { color })"
+				:aria-pressed="current.accentPreset === CUSTOM_ACCENT_ID && current.accentColor === color"
+				@mouseenter="previewAccent(CUSTOM_ACCENT_ID, color)"
+				@mouseleave="endAccentPreview"
 				@click="onColourPicked(color)"
 			/>
 		</div>
