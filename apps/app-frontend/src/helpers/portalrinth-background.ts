@@ -97,6 +97,36 @@ export async function saveBackgroundBlur(blur: boolean): Promise<void> {
 	await setSettings({ ...(await getSettings()), background_blur: blur })
 }
 
+/**
+ * How much darker the page in the middle is than the frame around it, from 0,
+ * the same as the panels, to 100, solid. Kept on this computer, as it only
+ * says how this window is drawn.
+ */
+const PAGE_SHADE_KEY = 'portalrinth.background.page-shade'
+export const DEFAULT_PAGE_SHADE = 50
+
+function readPageShade(): number {
+	try {
+		const stored = Number(localStorage.getItem(PAGE_SHADE_KEY))
+		const raw = localStorage.getItem(PAGE_SHADE_KEY)
+		if (raw === null || !Number.isFinite(stored)) return DEFAULT_PAGE_SHADE
+		return Math.min(100, Math.max(0, stored))
+	} catch {
+		return DEFAULT_PAGE_SHADE
+	}
+}
+
+export const pageShade = ref(readPageShade())
+
+export function savePageShade(shade: number): void {
+	pageShade.value = Math.min(100, Math.max(0, shade))
+	try {
+		localStorage.setItem(PAGE_SHADE_KEY, String(pageShade.value))
+	} catch {
+		// Not kept, but still shown until the window is closed.
+	}
+}
+
 export async function saveBackgroundDim(dim: number): Promise<void> {
 	await setSettings({ ...(await getSettings()), background_dim: dim })
 }

@@ -10,6 +10,7 @@ import {
 	backgroundDim,
 	backgroundIsVideo,
 	backgroundUrl,
+	pageShade,
 } from '@/helpers/portalrinth-background'
 
 /** The darkening is a veil painted over the picture, in the same layer. */
@@ -20,6 +21,10 @@ const backgroundImage = computed(() => {
 
 watchEffect(() => {
 	document.documentElement.classList.toggle('portalrinth-backdrop-active', !!backgroundUrl.value)
+})
+
+watchEffect(() => {
+	document.documentElement.style.setProperty('--portalrinth-page-shade', `${pageShade.value}%`)
 })
 </script>
 
@@ -116,7 +121,12 @@ watchEffect(() => {
 }
 
 :root.portalrinth-backdrop-active .app-contents {
-	background-color: color-mix(in srgb, var(--color-bg) 50%, transparent);
+	/* How much darker than the frame the page is: a setting, 50% unless set. */
+	background-color: color-mix(
+		in srgb,
+		var(--color-bg) var(--portalrinth-page-shade, 50%),
+		transparent
+	);
 
 	/* The cards on a page let the picture through too, a little. */
 	--surface-2: color-mix(in srgb, var(--portalrinth-solid-surface-2) 72%, transparent);

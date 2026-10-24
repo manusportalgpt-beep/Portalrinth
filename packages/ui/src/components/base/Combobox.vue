@@ -1,7 +1,7 @@
 <template>
 	<div ref="containerRef" class="relative inline-block w-full">
 		<!-- Searchable mode: input trigger -->
-		<div v-if="searchable" class="relative w-full rounded-xl">
+		<div v-if="searchable" class="relative w-full rounded-xl" @mousedown="handleSearchMousedown">
 			<!-- Selection mirror must match InputFrame's leading and trailing slot geometry. -->
 			<div
 				v-if="searchSelectionOverlayVisible"
@@ -1028,7 +1028,40 @@ function handleSearchFocusout(event: FocusEvent) {
 	closeDropdown()
 }
 
+/**
+ * Set when a press on the field's frame has just closed the list, so the
+ * click that follows it does not open the list straight back up.
+ */
+let searchClickClosed = false
+
+/**
+ * A press on the field around the text - its chevron, its padding - would
+ * take the focus off the text, closing the list, only for the field to give
+ * the focus straight back and open it again: a flicker. The focus is kept
+ * where it is instead, and the press opens or closes the list once.
+ */
+function handleSearchMousedown(event: MouseEvent) {
+	searchClickClosed = false
+	if (props.disabled || event.button !== 0) return
+	const input = effectiveTriggerEl.value?.querySelector('input')
+	if (!input || event.target === input) return
+	if (!(event.target instanceof Node) || !effectiveTriggerEl.value?.contains(event.target)) return
+	event.preventDefault()
+	if (input.ownerDocument.activeElement !== input) {
+		input.focus()
+	} else if (isOpen.value) {
+		searchClickClosed = true
+		closeDropdown(false)
+	} else {
+		openDropdown()
+	}
+}
+
 function handleSearchClick() {
+	if (searchClickClosed) {
+		searchClickClosed = false
+		return
+	}
 	if (!isOpen.value) {
 		openDropdown()
 	}

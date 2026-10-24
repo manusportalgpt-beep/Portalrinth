@@ -20,8 +20,10 @@ import {
 	chooseBackground,
 	clearBackground,
 	isBackgroundFile,
+	pageShade,
 	saveBackgroundBlur,
 	saveBackgroundDim,
+	savePageShade,
 	setBackgroundFromPath,
 } from '@/helpers/portalrinth-background'
 
@@ -58,6 +60,15 @@ const messages = defineMessages({
 	dimDescription: {
 		id: 'portalrinth.settings.background.dim.description',
 		defaultMessage: 'For a bright or busy picture, so what is over it stays easy to read.',
+	},
+	shadeTitle: {
+		id: 'portalrinth.settings.background.page-shade.title',
+		defaultMessage: 'Darken the page',
+	},
+	shadeDescription: {
+		id: 'portalrinth.settings.background.page-shade.description',
+		defaultMessage:
+			'How much darker the middle of the window is than the panels: 0 is the same as the panels, 100 is solid.',
 	},
 })
 
@@ -200,6 +211,24 @@ onUnmounted(() => {
 					:step="5"
 					unit="%"
 					@update:model-value="setDim"
+				/>
+			</div>
+			<div class="flex flex-col gap-2.5">
+				<div>
+					<h3 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.shadeTitle) }}
+					</h3>
+					<p class="m-0 mt-1 text-secondary">{{ formatMessage(messages.shadeDescription) }}</p>
+				</div>
+				<Slider
+					id="background-page-shade"
+					:model-value="pageShade"
+					:aria-label="formatMessage(messages.shadeTitle)"
+					:min="0"
+					:max="100"
+					:step="5"
+					unit="%"
+					@update:model-value="savePageShade"
 				/>
 			</div>
 		</template>

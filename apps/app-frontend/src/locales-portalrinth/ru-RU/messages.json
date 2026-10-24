@@ -2392,5 +2392,11 @@
 	},
 	"app.appearance-settings.accent.apply": {
 		"message": "Применить"
+	},
+	"portalrinth.settings.background.page-shade.title": {
+		"message": "Затемнение страницы"
+	},
+	"portalrinth.settings.background.page-shade.description": {
+		"message": "Насколько середина окна темнее панелей: 0 — как панели, 100 — полностью тёмная."
 	}
 }
