@@ -315,11 +315,10 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
         })?;
 
     let Some(local_port) = local_port(&state, &process).await else {
-        return Err(crate::ErrorKind::InputError(
+        return Err(crate::Error::from(crate::ErrorKind::InputError(
             "this world is not open to the network, open it to LAN in Minecraft first"
                 .to_string(),
-        )
-        .as_error());
+        )));
     };
 
     // Whatever was published for this copy before is taken down first, so that
@@ -343,17 +342,16 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
             .as_str()
             .map(String::from)
             .ok_or_else(|| {
-                crate::ErrorKind::OtherError(format!(
+                anyhow::anyhow!(format!(
                     "the relay did not return {name}"
                 ))
-                .as_error()
             })
     };
 
     let session_id = field("sessionId")?;
     let tunnel_token = field("tunnelToken")?;
     let public_port = session["publicPort"].as_u64().ok_or_else(|| {
-        crate::ErrorKind::OtherError(
+        anyhow::anyhow!(
             "the relay did not return a usable public port".to_string(),
         )
     })? as u16;
@@ -506,10 +504,9 @@ async fn resolve_identity(
         .into_iter()
         .next()
         .ok_or_else(|| {
-            crate::ErrorKind::InputError(
+            crate::Error::from(crate::ErrorKind::InputError(
                 "sign in to an account first".to_string(),
-            )
-            .as_error()
+            ))
         })
 }
 
@@ -606,19 +603,17 @@ async fn relay_bearer(
         // answered with a refusal, so a world opened by somebody playing
         // without an account cannot be published - and saying so is better
         // than a token it will not take.
-        return Err(crate::ErrorKind::InputError(
+        return Err(crate::Error::from(crate::ErrorKind::InputError(
             "a Microsoft or Ely.by account is needed to open a world to the \
              network: the relay only takes an account it knows"
                 .to_string(),
-        )
-        .as_error());
+        )));
     };
 
     messenger_token(state, provider, access_token).await.map_err(|error| {
-        crate::ErrorKind::OtherError(format!(
+        anyhow::anyhow!(format!(
             "the account could not be used to open the world to the network: {error}"
         ))
-        .as_error()
     })
 }
 
@@ -646,32 +641,29 @@ async fn messenger_token(
         }))
         .send()
         .await
-        .map_err(|source| crate::ErrorKind::FetchError(source).as_error())?;
+        .map_err(|source| crate::Error::from(crate::ErrorKind::FetchError(source)))?;
 
     let status = response.status();
     let body = response.text().await.unwrap_or_default();
     if !status.is_success() {
-        return Err(crate::ErrorKind::OtherError(format!(
+        return Err(anyhow::anyhow!(format!(
             "the messenger would not issue a relay token: HTTP {status}"
-        ))
-        .as_error());
+        )));
     }
 
     serde_json::from_str::<serde_json::Value>(&body)
         .map_err(|error| {
-            crate::ErrorKind::OtherError(format!(
+            anyhow::anyhow!(format!(
                 "the messenger's answer was not JSON: {error}"
             ))
-            .as_error()
         })?
         .get("token")
         .and_then(|token| token.as_str())
         .map(String::from)
         .ok_or_else(|| {
-            crate::ErrorKind::OtherError(
+            anyhow::anyhow!(
                 "the messenger did not return a token".to_string(),
             )
-            .as_error()
         })
 }
 
@@ -697,19 +689,18 @@ async fn relay_request(
 
     let response = request.send().await.map_err(|source| {
         tracing::warn!("talking to the relay failed: {source}");
-        crate::ErrorKind::FetchError(source).as_error()
+        crate::Error::from(crate::ErrorKind::FetchError(source))
     })?;
 
     let status = response.status();
     let body = response.json::<serde_json::Value>().await.unwrap_or_default();
     if !status.is_success() {
-        return Err(crate::ErrorKind::OtherError(
+        return Err(anyhow::anyhow!(
             body["error"]
                 .as_str()
                 .unwrap_or("the relay refused the request")
                 .to_string(),
-        )
-        .as_error());
+        ));
     }
     Ok(body)
 }

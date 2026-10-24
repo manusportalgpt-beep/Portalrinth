@@ -159,12 +159,11 @@ pub async fn read_pack_manifest(path: &Path) -> crate::Result<PackManifest> {
         return modrinth_manifest(index);
     }
 
-    Err(crate::ErrorKind::InputError(
+    Err(crate::Error::from(crate::ErrorKind::InputError(
         "This archive carries no modpack manifest: it has neither \
          `manifest.json` nor `modrinth.index.json`."
             .to_string(),
-    )
-    .as_error())
+    )))
 }
 
 /// Reads the one manifest out of the archive, whichever of the two it is.
@@ -175,10 +174,9 @@ async fn zip_manifest(pack: &bytes::Bytes) -> crate::Result<Vec<(String, bytes::
     use std::io::Cursor;
 
     let mut reader = ZipFileReader::with_tokio(Cursor::new(pack)).await.map_err(|error| {
-        crate::ErrorKind::InputError(format!(
+        crate::Error::from(crate::ErrorKind::InputError(format!(
             "This file could not be opened as an archive: {error}"
-        ))
-        .as_error()
+        )))
     })?;
 
     let wanted: Vec<(usize, String)> = reader

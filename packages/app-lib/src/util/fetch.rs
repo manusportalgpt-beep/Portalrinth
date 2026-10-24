@@ -2,11 +2,12 @@
 use super::io::{self, IOError};
 use crate::event::LoadingBarId;
 use crate::event::emit::emit_loading;
+use crate::state::content_store::ContentStore;
 use crate::util::content_hash::{ContentHasher, temporary_file};
 use crate::{ErrorKind, LabrinthError};
+use anyhow::{Context, bail};
 use bytes::Bytes;
 use chrono::{DateTime, TimeDelta, Utc};
-use eyre::{Context, eyre};
 use governor::clock::{Clock, DefaultClock};
 use governor::{DefaultDirectRateLimiter, Quota, RateLimiter};
 use parking_lot::Mutex;
@@ -288,7 +289,15 @@ impl ApiRateLimit {
     /// delay too short to notice.
     async fn wait_turn(&self) -> crate::Result<()> {
         loop {
-            // A block is a decision somebody else made, and is not waited out.
+            // A block is a decision somebody else made, and is not waited out
+            // — unless the caller asked to be patient (see [`patiently`]).
+            if is_patient()
+                && let Some(retry_in) = self.retry_in()
+            {
+                debug!(?retry_in, "Patiently waiting out an API rate limit");
+                tokio::time::sleep(retry_in).await;
+                continue;
+            }
             self.ensure_not_blocked()?;
 
             let wait = {
@@ -303,15 +312,11 @@ impl ApiRateLimit {
                 }
             };
 
-            if wait > API_RATE_LIMIT_MAX_WAIT {
+            if wait > API_RATE_LIMIT_MAX_WAIT && !is_patient() {
                 info!(?wait, "API rate limiter wait is too long; reporting it");
                 self.block_for(wait);
-                return Err(ErrorKind::Ratelimited {
-                    retry_in_seconds: self
-                        .retry_in_seconds()
-                        .unwrap_or_else(|| duration_seconds_ceil(wait)),
-                }
-                .into());
+                let retry_in = self.retry_in().unwrap_or(wait);
+                bail!(ErrorKind::RateLimited { retry_in });
             }
 
             debug!(?wait, "Waiting for the API rate limiter");
@@ -338,15 +343,15 @@ impl ApiRateLimit {
 
         self.block_for(retry_after);
 
-        Some(ErrorKind::Ratelimited {
-            retry_in_seconds: self.retry_in_seconds().unwrap_or(0),
+        Some(ErrorKind::RateLimited {
+            retry_in: self.retry_in().unwrap_or_default(),
         })
     }
 
     fn ensure_not_blocked(&self) -> crate::Result<()> {
-        if let Some(retry_in_seconds) = self.retry_in_seconds() {
+        if let Some(retry_in) = self.retry_in() {
             debug!("Hit builtin rate limiter; blocking");
-            return Err(ErrorKind::Ratelimited { retry_in_seconds }.into());
+            bail!(ErrorKind::RateLimited { retry_in });
         }
 
         Ok(())
@@ -363,14 +368,14 @@ impl ApiRateLimit {
         }
     }
 
-    fn retry_in_seconds(&self) -> Option<u64> {
+    fn retry_in(&self) -> Option<Duration> {
         let mut block_until = self.block_until.lock();
         let remaining = (*block_until)?.checked_duration_since(Instant::now());
 
         if let Some(remaining) = remaining
             && !remaining.is_zero()
         {
-            return Some(duration_seconds_ceil(remaining));
+            return Some(remaining);
         }
 
         *block_until = None;
@@ -381,6 +386,21 @@ impl ApiRateLimit {
 static GLOBAL_API_RATE_LIMIT: LazyLock<ApiRateLimit> =
     LazyLock::new(ApiRateLimit::new);
 
+tokio::task_local! {
+    /// Set while a future runs under [`patiently`].
+    static PATIENT: ();
+}
+
+fn is_patient() -> bool {
+    PATIENT.try_with(|_| ()).is_ok()
+}
+
+/// Runs a background job that nobody is waiting on so that API rate limits
+/// are sat out rather than failing it.
+pub async fn patiently<F: Future>(future: F) -> F::Output {
+    PATIENT.scope((), future).await
+}
+
 fn parse_retry_after(value: &str, now: SystemTime) -> Option<Duration> {
     if let Ok(seconds) = value.parse::<u64>() {
         return Some(Duration::from_secs(seconds));
@@ -388,12 +408,6 @@ fn parse_retry_after(value: &str, now: SystemTime) -> Option<Duration> {
 
     let retry_at = httpdate::parse_http_date(value).ok()?;
     Some(retry_at.duration_since(now).unwrap_or(Duration::ZERO))
-}
-
-fn duration_seconds_ceil(duration: Duration) -> u64 {
-    duration
-        .as_secs()
-        .saturating_add(u64::from(duration.subsec_nanos() > 0))
 }
 
 fn reqwest_client_builder_with_timeout() -> reqwest::ClientBuilder {
@@ -522,14 +536,13 @@ impl DownloadedFile {
 
     pub(crate) fn into_staged(self) -> crate::Result<StagedDownload> {
         let DownloadedFilePath::Temporary(path) = self.path else {
-            return Err(ErrorKind::InputError(
-                "Stored content cannot be staged again".to_string(),
-            )
-            .into());
+            bail!(ErrorKind::InputError(
+                "stored content cannot be staged again".to_string(),
+            ));
         };
         let path = Arc::try_unwrap(path).map_err(|_| {
             ErrorKind::InputError(
-                "Downloaded content is still in use and cannot be published"
+                "downloaded content is still in use and cannot be published"
                     .to_string(),
             )
         })?;
@@ -542,12 +555,12 @@ impl DownloadedFile {
 
     pub(crate) async fn store_file(
         &self,
-        state: &crate::State,
+        content_store: &ContentStore,
     ) -> crate::Result<crate::state::content_store::StoredFileHandle> {
         match &self.path {
             DownloadedFilePath::Stored(stored_file) => Ok(stored_file.clone()),
             DownloadedFilePath::Temporary(_) => {
-                state.content_store.store_file(self.path()).await
+                content_store.store_file(self.path()).await
             }
         }
     }
@@ -558,11 +571,9 @@ impl DownloadedFile {
         semaphore: &IoSemaphore,
     ) -> crate::Result<()> {
         let _permit = semaphore.0.acquire().await?;
-        let parent = path.parent().ok_or_else(|| {
-            ErrorKind::InputError(
-                "Download destination has no parent directory".to_string(),
-            )
-        })?;
+        let parent = path.parent().ok_or(ErrorKind::InputError(
+            "download destination has no parent directory".to_string(),
+        ))?;
         io::create_dir_all(parent).await?;
         let parent = parent.to_path_buf();
         let temporary = tokio::task::spawn_blocking(move || {
@@ -604,6 +615,7 @@ pub async fn fetch_file(
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
     progress: Option<&mut FetchProgressFn<'_>>,
+    staging: &Path,
 ) -> crate::Result<DownloadedFile> {
     let body = fetch_advanced_with_target(
         Method::GET,
@@ -620,35 +632,13 @@ pub async fn fetch_file(
         &INSECURE_REQWEST_CLIENT,
         progress,
         true,
-        None,
+        Some(staging),
     )
     .await?;
     match body {
         FetchBody::File(file) => Ok(file),
         FetchBody::Memory(_) => unreachable!("requested a file download"),
     }
-}
-
-pub async fn fetch_file_mirrors(
-    mirrors: &[&str],
-    sha1: Option<&str>,
-    download_meta: Option<&DownloadMeta>,
-    uri_path: Option<&'static str>,
-    semaphore: &FetchSemaphore,
-    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
-    progress: Option<&mut FetchProgressFn<'_>>,
-) -> crate::Result<DownloadedFile> {
-    fetch_file_mirrors_in(
-        mirrors,
-        sha1,
-        download_meta,
-        uri_path,
-        semaphore,
-        exec,
-        progress,
-        None,
-    )
-    .await
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -663,9 +653,7 @@ pub(crate) async fn fetch_file_mirrors_in(
     staging: Option<&Path>,
 ) -> crate::Result<DownloadedFile> {
     if mirrors.is_empty() {
-        return Err(
-            ErrorKind::InputError("No mirrors provided!".to_string()).into()
-        );
+        bail!(ErrorKind::InputError("no mirrors provided".to_string()));
     }
     for (index, mirror) in mirrors.iter().enumerate() {
         let body = fetch_advanced_with_target(
@@ -704,11 +692,7 @@ async fn read_file_response(
     staging: Option<&Path>,
 ) -> crate::Result<DownloadedFile> {
     use futures::StreamExt;
-    let staging = staging.map(Path::to_path_buf).or_else(|| {
-        crate::State::get_if_initialized()
-            .map(|state| state.directories.store_staging_dir())
-    });
-    let (mut file, path) = temporary_file(staging.as_deref()).await?;
+    let (mut file, path) = temporary_file(staging).await?;
     let total = response.content_length().unwrap_or(0);
     let mut stream = response.bytes_stream();
     let mut hasher = ContentHasher::default();
@@ -772,11 +756,9 @@ async fn read_memory_response(
             .try_with(|_| ())
             .is_err()
     {
-        return response
-            .bytes()
-            .await
-            .wrap_err_with(|| eyre!("failed to read response body from {url}"))
-            .map_err(Into::into);
+        return response.bytes().await.with_context(|| {
+            format!("failed to read response body from {url}")
+        });
     }
     use futures::StreamExt;
     let total_size = total_size.unwrap_or(0);
@@ -785,8 +767,8 @@ async fn read_memory_response(
     while let Some(chunk) =
         crate::install::control::download_step(stream.next()).await?
     {
-        let chunk = chunk.wrap_err_with(|| {
-            eyre!("failed to read response body from {url}")
+        let chunk = chunk.with_context(|| {
+            format!("failed to read response body from {url}")
         })?;
         bytes.extend_from_slice(&chunk);
         if let Some((bar, total)) = loading_bar
@@ -1093,10 +1075,9 @@ async fn fetch_advanced_with_target(
         if let Some(fence_key) = fence_key
             && GLOBAL_FETCH_FENCE.is_blocked(fence_key)
         {
-            return Err(ErrorKind::ApiIsDownError(
+            bail!(ErrorKind::ApiIsDownError(
                 GLOBAL_FETCH_FENCE.latest_block_minutes(),
-            )
-            .into());
+            ));
         }
 
         let mut req = client.request(method.clone(), url);
@@ -1150,7 +1131,7 @@ async fn fetch_advanced_with_target(
                         error.method = Some(method.as_str().to_string());
                         error.url = Some(url.to_string());
                         error.route = uri_path.map(str::to_string);
-                        return Err(ErrorKind::LabrinthError(error).into());
+                        return Err(error.into());
                     }
                     return Err(backup_error.into());
                 }
@@ -1188,11 +1169,10 @@ async fn fetch_advanced_with_target(
                             if attempt <= FETCH_ATTEMPTS {
                                 continue;
                             } else {
-                                return Err(ErrorKind::HashError(
+                                bail!(ErrorKind::HashError(
                                     sha1.to_string(),
                                     hash,
-                                )
-                                .into());
+                                ));
                             }
                         }
                     }
@@ -1231,9 +1211,7 @@ pub async fn fetch_mirrors(
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
 ) -> crate::Result<Bytes> {
     if mirrors.is_empty() {
-        return Err(
-            ErrorKind::InputError("No mirrors provided!".to_string()).into()
-        );
+        bail!(ErrorKind::InputError("no mirrors provided".to_string()));
     }
 
     for (index, mirror) in mirrors.iter().enumerate() {

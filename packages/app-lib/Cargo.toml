@@ -11,6 +11,7 @@ required-features = ["export-ts"]
 [dependencies]
 anyhow = { workspace = true }
 ariadne = { workspace = true }
+async-compression = { workspace = true, features = ["tokio", "zstd"] }
 async-minecraft-ping = { workspace = true, features = ["srv"] }
 async-recursion = { workspace = true }
 async-trait = { workspace = true }
@@ -51,6 +52,7 @@ hickory-resolver = { workspace = true }
 httpdate = { workspace = true }
 image = { workspace = true, features = ["gif", "jpeg", "png", "webp"] }
 indicatif = { workspace = true, optional = true }
+infer = { workspace = true }
 itertools = { workspace = true }
 json5 = { workspace = true }
 modrinth-content-management = { workspace = true }
@@ -102,6 +104,7 @@ sqlx = { workspace = true, features = [
   "uuid",
 ] }
 sysinfo = { workspace = true, features = ["disk", "system"] }
+tar = { workspace = true }
 tauri = { workspace = true, features = ["unstable"], optional = true }
 tempfile = { workspace = true }
 thiserror = { workspace = true }

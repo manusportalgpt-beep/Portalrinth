@@ -101,6 +101,51 @@ pub fn api_key() -> Option<String> {
     BUILD_KEY.read().ok().and_then(|slot| slot.clone())
 }
 
+/// The key the person put in their settings, if any — without falling back
+/// to the build's.
+pub fn user_key() -> Option<String> {
+    USER_KEY.read().ok().and_then(|slot| slot.clone())
+}
+
+/// What the CurseForge integration is allowed to do, as set in the frontend.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, Deserialize)]
+#[serde(default)]
+pub struct CurseforgeOptions {
+    pub recognize_files: bool,
+    pub check_updates: bool,
+    pub update_release_type: i64,
+    pub search_other_launchers: bool,
+}
+
+impl Default for CurseforgeOptions {
+    fn default() -> Self {
+        Self {
+            recognize_files: true,
+            check_updates: true,
+            update_release_type: 1,
+            search_other_launchers: true,
+        }
+    }
+}
+
+static OPTIONS: RwLock<Option<CurseforgeOptions>> = RwLock::new(None);
+
+/// The current CurseForge options; the defaults until the frontend says otherwise.
+pub fn options() -> CurseforgeOptions {
+    OPTIONS
+        .read()
+        .ok()
+        .and_then(|slot| *slot)
+        .unwrap_or_default()
+}
+
+/// Called by the frontend whenever the CurseForge options change.
+pub fn set_options(options: CurseforgeOptions) {
+    if let Ok(mut slot) = OPTIONS.write() {
+        *slot = Some(options);
+    }
+}
+
 /// Whether this launcher can ask CurseForge anything at all.
 pub fn is_available() -> bool {
     api_key().is_some()

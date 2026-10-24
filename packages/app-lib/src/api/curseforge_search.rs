@@ -167,10 +167,9 @@ fn client() -> crate::Result<reqwest::Client> {
     crate::util::fetch::api_client_builder()
         .build()
         .map_err(|error| {
-            crate::ErrorKind::OtherError(format!(
+            anyhow::anyhow!(format!(
                 "could not build a CurseForge client: {error}"
             ))
-            .as_error()
         })
 }
 
@@ -267,28 +266,26 @@ async fn json_response(
     operation: &str,
 ) -> crate::Result<serde_json::Value> {
     let response = request.send().await.map_err(|error| {
-        crate::ErrorKind::FetchError(error).as_error()
+        crate::Error::from(crate::ErrorKind::FetchError(error))
     })?;
 
     let status = response.status();
     let body = response.text().await.map_err(|error| {
-        crate::ErrorKind::FetchError(error).as_error()
+        crate::Error::from(crate::ErrorKind::FetchError(error))
     })?;
 
     if !status.is_success() {
-        return Err(crate::ErrorKind::OtherError(format!(
+        return Err(anyhow::anyhow!(format!(
             "CurseForge {operation} failed: HTTP {status} — {}",
             explain(&body)
-        ))
-        .as_error());
+        )));
     }
 
     serde_json::from_str(&body).map_err(|error| {
-        crate::ErrorKind::OtherError(format!(
+        anyhow::anyhow!(format!(
             "CurseForge {operation} returned invalid JSON: {error}. {}",
             preview(&body, 160)
         ))
-        .as_error()
     })
 }
 
@@ -431,10 +428,9 @@ async fn run_page(
 ) -> crate::Result<(Vec<CurseforgeSearchHit>, u64)> {
     let body = json_response(request, "search").await?;
     if let Some(error) = body["error"].as_str() {
-        return Err(crate::ErrorKind::OtherError(format!(
+        return Err(anyhow::anyhow!(format!(
             "CurseForge API error: {error}"
-        ))
-        .as_error());
+        )));
     }
 
     let mods = body["data"].as_array().cloned().unwrap_or_default();
@@ -587,11 +583,10 @@ fn urlencode(value: &str) -> String {
 /// that belongs in it.
 pub async fn download_urls(mod_id: u64, file_id: u64) -> crate::Result<Vec<String>> {
     let Some(key) = crate::api::curseforge_metadata::api_key() else {
-        return Err(crate::ErrorKind::InputError(
+        return Err(crate::Error::from(crate::ErrorKind::InputError(
             "this build has no CurseForge key, so CurseForge files cannot be fetched"
                 .to_string(),
-        )
-        .as_error());
+        )));
     };
     let http = client()?;
 
@@ -639,11 +634,10 @@ pub async fn download_urls(mod_id: u64, file_id: u64) -> crate::Result<Vec<Strin
 
     match fallback().await {
         Ok(urls) => Ok(urls),
-        Err(error) => Err(crate::ErrorKind::OtherError(format!(
+        Err(error) => Err(anyhow::anyhow!(format!(
             "CurseForge gave no download address for file {file_id}: {}",
-            error.raw
-        ))
-        .as_error()),
+            error
+        ))),
     }
 }
 
@@ -797,10 +791,9 @@ pub async fn best_file_for(
     files.sort_by(|left, right| right.file_date.cmp(&left.file_date));
 
     files.into_iter().next().ok_or_else(|| {
-        crate::ErrorKind::InputError(format!(
+        crate::Error::from(crate::ErrorKind::InputError(format!(
             "CurseForge project {mod_id} has no file for this game version"
-        ))
-        .as_error()
+        )))
     })
 }
 

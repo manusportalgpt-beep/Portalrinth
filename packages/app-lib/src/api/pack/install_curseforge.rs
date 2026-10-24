@@ -437,6 +437,7 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
         instance_id,
         false,
         Some(reporter.clone()),
+        &state,
     )
     .await?;
     reporter.clear_context().await?;
@@ -452,10 +453,12 @@ async fn apply_manifest_to_instance(
 ) -> crate::Result<()> {
     let (loader, manifest_loader_version) = pick_loader(manifest);
     let loader_version = if loader != ModLoader::Vanilla {
+        let state = crate::State::get().await?;
         crate::launcher::get_loader_version_from_profile(
             &manifest.minecraft.version,
             loader,
             manifest_loader_version.as_deref(),
+            &state.directories,
         )
         .await?
     } else {
@@ -585,10 +588,6 @@ async fn download_cf_file(
     let safe_file_name = sanitize_filename(&cf_file.file_name);
     let cf_project_id = cf_file.mod_id.to_string();
     let cf_file_id = cf_file.id.to_string();
-    // Serialize the DB-and-filesystem bookkeeping while the downloads above
-    // still run in parallel вЂ” mirrors the mrpack installer's use of the
-    // install DB semaphore.
-    let _permit = state.install_db_semaphore.acquire().await?;
     crate::state::instances::commands::add_project_bytes(
         instance_id,
         &safe_file_name,
@@ -621,12 +620,11 @@ pub async fn install_curseforge_mod(
     state: &State,
 ) -> crate::Result<String> {
     let Some(key) = crate::api::curseforge_metadata::api_key() else {
-        return Err(crate::ErrorKind::InputError(
+        return Err(crate::Error::from(crate::ErrorKind::InputError(
             "No CurseForge API key is configured, so CurseForge content cannot be \
              fetched. One can be added in Settings, Resources."
                 .to_string(),
-        )
-        .as_error());
+        )));
     };
 
     let url =
@@ -653,11 +651,10 @@ pub async fn install_curseforge_mod(
         .await?;
     let mirrors: Vec<&str> = mirrors.iter().map(String::as_str).collect();
     if mirrors.is_empty() {
-        return Err(crate::ErrorKind::InputError(format!(
+        return Err(crate::Error::from(crate::ErrorKind::InputError(format!(
             "no download URL could be determined (file id {})",
             file.id
-        ))
-        .as_error());
+        ))));
     }
     let download_meta = DownloadMeta {
         reason: DownloadReason::Standalone,
@@ -688,7 +685,6 @@ pub async fn install_curseforge_mod(
     let safe_file_name = sanitize_filename(&file.file_name);
     let project_id = file.mod_id.to_string();
     let curseforge_file_id = file.id.to_string();
-    let _permit = state.install_db_semaphore.acquire().await?;
     crate::state::instances::commands::add_project_bytes(
         instance_id,
         &safe_file_name,
@@ -816,10 +812,9 @@ async fn install_standalone_curseforge_file(
     let mirrors = crate::api::curseforge_search::download_urls(mod_id, file_id).await?;
     let mirrors: Vec<&str> = mirrors.iter().map(String::as_str).collect();
     if mirrors.is_empty() {
-        return Err(crate::ErrorKind::InputError(format!(
+        return Err(crate::Error::from(crate::ErrorKind::InputError(format!(
             "no download URL could be determined for CurseForge file {file_id}"
-        ))
-        .as_error());
+        ))));
     }
 
     let bytes = fetch_mirrors(
@@ -838,7 +833,6 @@ async fn install_standalone_curseforge_file(
     .await?;
 
     let safe_file_name = sanitize_filename(&file.file_name);
-    let _permit = state.install_db_semaphore.acquire().await?;
     crate::state::instances::commands::add_project_bytes(
         instance_id,
         &safe_file_name,
@@ -1062,9 +1056,9 @@ async fn extract_overrides(
             .iter()
             .find_map(|p| raw_path.strip_prefix(p).ok())
             .ok_or_else(|| {
-                crate::Error::from(crate::ErrorKind::OtherError(
+                anyhow::anyhow!(
                     "Failed to strip override prefix".to_string(),
-                ))
+                )
             })?;
         let safe_relative_path =
             crate::util::io::sanitize_relative_path(relative_path.as_str());

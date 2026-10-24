@@ -1,5 +1,6 @@
 //! Theseus settings file
 
+use anyhow::bail;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite};
 use std::collections::HashMap;
@@ -136,6 +137,9 @@ pub struct Settings {
     /// that an older settings row reads as on without a migration step.
     pub browse_infinite_scroll: bool,
 
+    /// Where Java is downloaded from: `auto`, or one provider pinned.
+    pub java_provider: String,
+
     pub version: usize,
 }
 
@@ -215,6 +219,11 @@ let accent_preset: Option<String> =
 
         let browse_infinite_scroll: i64 =
             sqlx::query_scalar("SELECT browse_infinite_scroll FROM settings")
+                .fetch_one(exec)
+                .await?;
+
+        let java_provider: String =
+            sqlx::query_scalar("SELECT java_provider FROM settings")
                 .fetch_one(exec)
                 .await?;
 
@@ -327,6 +336,7 @@ let accent_preset: Option<String> =
             background_dim: background_dim.clamp(0, 100) as u32,
             curseforge_api_key,
             browse_infinite_scroll: browse_infinite_scroll == 1,
+            java_provider,
             sync_theme_across_devices: res.sync_theme_across_devices == 1,
             sync_behavior_across_devices: res.sync_behavior_across_devices == 1,
             sync_features_across_devices: res.sync_features_across_devices == 1,
@@ -529,6 +539,11 @@ let accent_preset: Option<String> =
             .execute(exec)
             .await?;
 
+        sqlx::query("UPDATE settings SET java_provider = $1")
+            .bind(&self.java_provider)
+            .execute(exec)
+            .await?;
+
         Ok(())
     }
 
@@ -593,12 +608,7 @@ let accent_preset: Option<String> =
 
                 self.version = 3;
             }
-            version => {
-                return Err(crate::ErrorKind::OtherError(format!(
-                    "Invalid settings version: {version}"
-                ))
-                .into());
-            }
+            version => bail!("invalid settings version {version}"),
         }
 
         Ok(())
