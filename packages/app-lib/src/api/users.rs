@@ -67,6 +67,54 @@ pub async fn get_user_projects(user_id: &str) -> crate::Result<Value> {
     .await
 }
 
+/// The projects an organization owns, as Modrinth lists them on its page.
+#[tracing::instrument]
+pub async fn get_organization_projects(
+    organization_id: &str,
+) -> crate::Result<Value> {
+    let state = State::get().await?;
+    let organization_id = urlencoding::encode(organization_id);
+
+    fetch_json(
+        Method::GET,
+        &format!(
+            "{}organization/{}/projects",
+            env!("MODRINTH_API_URL_V3"),
+            organization_id
+        ),
+        None,
+        None,
+        Some("/v3/organization/:id/projects"),
+        &state.api_semaphore,
+        &state.pool,
+    )
+    .await
+}
+
+/// An organization with its members, fresh from Modrinth.
+#[tracing::instrument]
+pub async fn get_organization_profile(
+    organization_id: &str,
+) -> crate::Result<Value> {
+    let state = State::get().await?;
+    let organization_id = urlencoding::encode(organization_id);
+
+    fetch_json(
+        Method::GET,
+        &format!(
+            "{}organization/{}",
+            env!("MODRINTH_API_URL_V3"),
+            organization_id
+        ),
+        None,
+        None,
+        Some("/v3/organization/:id"),
+        &state.api_semaphore,
+        &state.pool,
+    )
+    .await
+}
+
 #[tracing::instrument]
 pub async fn get_user_organizations(user_id: &str) -> crate::Result<Value> {
     let state = State::get().await?;

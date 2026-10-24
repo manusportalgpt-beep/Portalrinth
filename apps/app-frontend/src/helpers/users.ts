@@ -78,3 +78,22 @@ export async function unblock_user(userId: string): Promise<void> {
 export async function get_blocked_users(): Promise<Labrinth.BlockedUsers.v3.BlockedUserId[]> {
 	return await invoke<Labrinth.BlockedUsers.v3.BlockedUserId[]>('plugin:users|get_blocked_users')
 }
+
+/** An organization with its members, as its page on Modrinth shows it. */
+export async function get_organization_profile(
+	organizationId: string,
+): Promise<Labrinth.Organizations.v3.Organization> {
+	return await invoke<Labrinth.Organizations.v3.Organization>(
+		'plugin:users|get_organization_profile',
+		{ organizationId },
+	)
+}
+
+/** The projects an organization owns. */
+export async function get_organization_projects(
+	organizationId: string,
+): Promise<Labrinth.Projects.v3.Project[]> {
+	return await invoke<Labrinth.Projects.v3.Project[]>('plugin:users|get_organization_projects', {
+		organizationId,
+	})
+}

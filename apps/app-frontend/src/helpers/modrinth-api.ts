@@ -121,10 +121,11 @@ export async function getUserCollections(userId: string): Promise<Collection[]> 
 }
 
 export async function getCollection(id: string): Promise<Collection> {
-	const auth = await authHeader()
+	// Public collections of other people open without signing in.
+	const creds = await getCreds()
 	const res = await tauriFetch(`${API_BASE}/v3/collection/${encodeURIComponent(id)}`, {
 		method: 'GET',
-		headers: { Authorization: auth },
+		headers: creds ? { Authorization: creds.session } : {},
 	})
 	if (!res.ok) {
 		const body = await readBody(res)

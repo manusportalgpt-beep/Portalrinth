@@ -160,7 +160,7 @@ function describeItem(file: FileItem): FileItemDescription | undefined {
 						if (owner.external_url) void openUrl(owner.external_url)
 						else if (owner.type === 'user')
 							void router.push(`/user/${encodeURIComponent(owner.id)}`)
-						else void openUrl(`https://modrinth.com/organization/${owner.id}`)
+						else void router.push(`/organization/${encodeURIComponent(owner.id)}`)
 					},
 				}
 			: null,

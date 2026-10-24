@@ -18,6 +18,16 @@ pub async fn get_user_projects(user_id: &str) -> Result<Value> {
 }
 
 #[tauri::command]
+pub async fn get_organization_profile(organization_id: &str) -> Result<Value> {
+    Ok(theseus::users::get_organization_profile(organization_id).await?)
+}
+
+#[tauri::command]
+pub async fn get_organization_projects(organization_id: &str) -> Result<Value> {
+    Ok(theseus::users::get_organization_projects(organization_id).await?)
+}
+
+#[tauri::command]
 pub async fn get_user_organizations(user_id: &str) -> Result<Value> {
     Ok(theseus::users::get_user_organizations(user_id).await?)
 }
@@ -85,6 +95,8 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             get_user_projects,
             get_user_organizations,
             get_user_collections,
+            get_organization_profile,
+            get_organization_projects,
             get_user_preferences,
             patch_user_preferences,
             patch_user,

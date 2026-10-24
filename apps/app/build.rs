@@ -394,6 +394,8 @@ fn main() {
                         "get_user_projects",
                         "get_user_organizations",
                         "get_user_collections",
+                        "get_organization_profile",
+                        "get_organization_projects",
                         "get_user_preferences",
                         "patch_user_preferences",
                         "patch_user",

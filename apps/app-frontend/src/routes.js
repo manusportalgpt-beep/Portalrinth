@@ -100,6 +100,11 @@ export default new createRouter({
 			component: () => import('@/pages/Screenshots.vue'),
 		},
 		{
+			path: '/organization/:id/:projectType?',
+			name: 'Organization',
+			component: () => import('@/pages/Organization.vue'),
+		},
+		{
 			path: '/user/:user/:projectType?',
 			name: 'User',
 			component: () => import('@/pages/User.vue'),

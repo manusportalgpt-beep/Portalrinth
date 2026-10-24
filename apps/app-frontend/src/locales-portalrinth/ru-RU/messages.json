@@ -2398,5 +2398,41 @@
 	},
 	"portalrinth.settings.background.page-shade.description": {
 		"message": "Насколько середина окна темнее панелей: 0 — как панели, 100 — полностью тёмная."
+	},
+	"app.organization.label": {
+		"message": "Организация"
+	},
+	"app.organization.members-count": {
+		"message": "{count, plural, one {участник} few {участника} many {участников} other {участника}}"
+	},
+	"app.organization.projects-count": {
+		"message": "{count, plural, one {проект} few {проекта} many {проектов} other {проекта}}"
+	},
+	"app.organization.downloads-count": {
+		"message": "{count, plural, one {скачивание} few {скачивания} many {скачиваний} other {скачивания}}"
+	},
+	"app.organization.members": {
+		"message": "Участники"
+	},
+	"app.organization.owner": {
+		"message": "Владелец"
+	},
+	"app.organization.open-on-modrinth": {
+		"message": "Открыть на Modrinth"
+	},
+	"app.organization.no-projects": {
+		"message": "У этой организации пока нет проектов"
+	},
+	"app.organization.not-found": {
+		"message": "Организация не найдена"
+	},
+	"app.organization.load-error": {
+		"message": "Не удалось загрузить организацию. Проверьте подключение и попробуйте снова."
+	},
+	"app.project.more-from-creator.title": {
+		"message": "Другие проекты: {name}"
+	},
+	"app.project.more-from-creator.view-all": {
+		"message": "Все проекты ({count})"
 	}
 }

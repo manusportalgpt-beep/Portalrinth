@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { PackageOpenIcon } from '@modrinth/assets'
 import { computed } from 'vue'
 
-import { getTagMessage, sortTagsForDisplay } from '../../../utils'
-import { TagTagItem } from '../../base'
+import { useVIntl } from '../../../composables'
+import { commonMessages, getTagMessage, sortTagsForDisplay } from '../../../utils'
+import { TagItem, TagTagItem } from '../../base'
 import TagsOverflow from '../TagsOverflow.vue'
 
 function isLoader(tag: string) {
@@ -20,14 +22,19 @@ const props = withDefaults(
 		deprioritizedTags?: string[]
 		excludeLoaders?: boolean
 		maxTags?: number
+		/** Whether the project is a modpack, said with a chip of its own first. */
+		modpack?: boolean
 	}>(),
 	{
 		maxTags: 5,
 		excludeLoaders: false,
+		modpack: false,
 		extraTags: () => [],
 		deprioritizedTags: () => [],
 	},
 )
+
+const { formatMessage } = useVIntl()
 
 const sortedTags = computed(() => uniqueSorted(props.tags))
 const sortedExtraTags = computed(() => uniqueSorted(props.extraTags))
@@ -62,6 +69,10 @@ const overflowTags = computed(() => [
 </script>
 
 <template>
+	<TagItem v-if="modpack">
+		<PackageOpenIcon />
+		{{ formatMessage(commonMessages.modpackLabel) }}
+	</TagItem>
 	<TagTagItem v-for="tag in visibleTags" :key="'visible-tag-' + tag" :tag="tag" />
 	<TagsOverflow
 		v-if="overflowTags.length > 0"

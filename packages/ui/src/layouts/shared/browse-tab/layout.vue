@@ -399,9 +399,7 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 						link:
 							result.organization_id == null
 								? `/user/${encodeURIComponent(result.author_id ?? result.author)}`
-								: ctx.variant === 'web'
-									? `/organization/${result.organization_id}`
-									: `https://modrinth.com/organization/${result.organization_id}`,
+								: `/organization/${result.organization_id}`,
 						avatar: ctx.getAuthorAvatar?.(result),
 						organization: result.organization_id != null,
 					}"
@@ -412,6 +410,7 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 					"
 					:downloads="result.downloads"
 					:summary="result.summary"
+					:project-types="result.project_types"
 					:tags="getProjectCardTags(result, true)"
 					:all-tags="getProjectCardTags(result, false)"
 					:deprioritized-tags="ctx.deprioritizedTags.value"

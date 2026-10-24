@@ -542,6 +542,8 @@ const props = withDefaults(
 		variant?: 'web' | 'app'
 		siteUrl?: string
 		externalNavigation?: boolean
+		/** Paths that stay inside the app even with external navigation on. */
+		inAppPaths?: string[]
 		projectLinkMode?: 'website' | 'app'
 		editProfileLink?: string | (() => void)
 		onCreateProject?: (event?: MouseEvent) => void
@@ -554,6 +556,7 @@ const props = withDefaults(
 		variant: 'web',
 		siteUrl: 'https://modrinth.com',
 		externalNavigation: false,
+		inAppPaths: () => [],
 		projectLinkMode: 'website',
 		editProfileLink: undefined,
 		onCreateProject: undefined,
@@ -976,6 +979,7 @@ function externalUrl(path: string): string {
 
 function linkTarget(path: string): string | (() => void) {
 	if (!props.externalNavigation) return path
+	if (props.inAppPaths.some((prefix) => path.startsWith(prefix))) return path
 	return () => pageContext.openExternalUrl(externalUrl(path))
 }
 

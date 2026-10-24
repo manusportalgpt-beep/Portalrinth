@@ -316,9 +316,7 @@ function contentOwnerLink(owner: ContentOwner): NonNullable<ContentOwner['link']
 		}
 	}
 	if (owner.type === 'user') return `/user/${encodeURIComponent(owner.id)}`
-	return () => {
-		void openUrl(`https://modrinth.com/organization/${owner.id}`)
-	}
+	return `/organization/${encodeURIComponent(owner.id)}`
 }
 
 const { formatMessage } = useVIntl()

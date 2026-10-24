@@ -8,6 +8,7 @@
 			project-link-mode="app"
 			:edit-profile-link="openProfileSettings"
 			external-navigation
+			:in-app-paths="['/organization/', '/collection/']"
 		>
 			<template #project-actions="{ project }">
 				<Button

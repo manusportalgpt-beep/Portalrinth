@@ -74,6 +74,7 @@
 							:tags="tags"
 							:exclude-loaders="excludeLoaders"
 							:deprioritized-tags="deprioritizedTags"
+							:modpack="projectTypes?.includes('modpack')"
 							:max-tags="(maxTags || 6) + (!!environment ? 0 : 1)"
 						/>
 						<ServerModpackContent
@@ -171,6 +172,7 @@
 							:extra-tags="extraTags"
 							:exclude-loaders="excludeLoaders"
 							:deprioritized-tags="deprioritizedTags"
+							:modpack="projectTypes?.includes('modpack')"
 							:max-tags="(maxTags || (!!$slots.actions ? 4 : 5)) + (!!environment ? 0 : 1)"
 						/>
 					</div>
@@ -230,6 +232,8 @@ const props = defineProps<{
 		organization?: boolean
 	}
 	summary?: string
+	/** The kinds the project is, for those that get a chip of their own. */
+	projectTypes?: string[]
 	tags?: string[]
 	allTags?: string[]
 	deprioritizedTags?: string[]

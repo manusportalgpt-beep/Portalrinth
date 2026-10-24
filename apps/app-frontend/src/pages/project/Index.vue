@@ -30,10 +30,15 @@
 			<ProjectSidebarCreators
 				:organization="organization"
 				:members="members"
-				:org-link="(slug) => `https://modrinth.com/organization/${slug}`"
+				:org-link="(slug) => `/organization/${slug}`"
 				:user-link="(username) => `/user/${encodeURIComponent(username)}`"
-				link-target="_blank"
 				:user-link-target="null"
+				class="project-sidebar-section"
+			/>
+			<ProjectMoreFromCreator
+				:project-id="data.id"
+				:organization="organization"
+				:owner="members.find((member) => member.is_owner)?.user ?? null"
 				class="project-sidebar-section"
 			/>
 			<ProjectSidebarDetails
@@ -301,6 +306,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { SwapIcon } from '@/assets/icons/index.js'
 import InstanceIndicator from '@/components/ui/InstanceIndicator.vue'
+import ProjectMoreFromCreator from '@/components/ui/ProjectMoreFromCreator.vue'
 import SaveToCollectionButton from '@/components/ui/SaveToCollectionButton.vue'
 import {
 	fetchCachedServerStatus,
