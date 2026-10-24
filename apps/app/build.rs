@@ -646,7 +646,12 @@ fn main() {
             .plugin(
                 "portalrinth-lan",
                 InlinedPlugin::new()
-                    .commands(&["lan_list", "lan_start", "lan_stop"])
+                    .commands(&[
+                        "lan_list",
+                        "lan_start",
+                        "lan_stop",
+                        "lan_publish_progress",
+                    ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),

@@ -473,6 +473,8 @@ pub struct SearchHit {
     pub slug: Option<String>,
     pub author: String,
     pub author_id: Option<String>,
+    /// The first author's picture, drawn beside their name on the card.
+    pub author_avatar_url: Option<String>,
     pub organization: Option<String>,
     pub organization_id: Option<String>,
     pub name: String,
@@ -666,6 +668,10 @@ fn search_hit(project: ApiMod, project_type: &str) -> SearchHit {
             .map(|author| author.name.clone())
             .unwrap_or_default(),
         author_id: None,
+        author_avatar_url: project
+            .authors
+            .first()
+            .and_then(|author| https_only(author.avatar_url.clone())),
         organization: None,
         organization_id: None,
         name: project.name,

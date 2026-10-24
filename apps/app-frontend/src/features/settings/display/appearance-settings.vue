@@ -21,6 +21,7 @@ import {
 	CUSTOM_ACCENT_ID,
 	DEFAULT_ACCENT_PRESET,
 	findAccentPreset,
+	MAX_ACCENT_GRADIENT_STOPS,
 	MAX_CUSTOM_ACCENT_COLORS,
 	removeCustomAccentColor,
 	showAccent,
@@ -125,6 +126,21 @@ const messages = defineMessages({
 		id: 'app.appearance-settings.accent.too-many-colours',
 		defaultMessage: 'The row is full - remove one of your colours first',
 	},
+	accentSolid: { id: 'app.appearance-settings.accent.solid', defaultMessage: 'Colour' },
+	accentGradient: { id: 'app.appearance-settings.accent.gradient', defaultMessage: 'Gradient' },
+	accentDirection: {
+		id: 'app.appearance-settings.accent.direction',
+		defaultMessage: 'Direction',
+	},
+	accentAddStop: {
+		id: 'app.appearance-settings.accent.add-stop',
+		defaultMessage: 'Add a colour to the gradient',
+	},
+	accentRemoveStop: {
+		id: 'app.appearance-settings.accent.remove-stop',
+		defaultMessage: 'Remove from the gradient',
+	},
+	accentApply: { id: 'app.appearance-settings.accent.apply', defaultMessage: 'Use it' },
 	accentUseColour: {
 		id: 'app.appearance-settings.accent.use-colour',
 		defaultMessage: 'Use {color}',
@@ -386,6 +402,14 @@ provideAppearanceSettings({
 				:custom-colors-remove-label="formatMessage(messages.accentRemoveColour)"
 				:custom-colors-full-label="formatMessage(messages.accentTooManyColours)"
 				:custom-colors-limit="MAX_CUSTOM_ACCENT_COLORS"
+				allow-gradient
+				:max-stops="MAX_ACCENT_GRADIENT_STOPS"
+				:solid-label="formatMessage(messages.accentSolid)"
+				:gradient-label="formatMessage(messages.accentGradient)"
+				:direction-label="formatMessage(messages.accentDirection)"
+				:add-stop-label="formatMessage(messages.accentAddStop)"
+				:remove-stop-label="formatMessage(messages.accentRemoveStop)"
+				:apply-label="formatMessage(messages.accentApply)"
 				class="!h-8 !w-8 !rounded-full"
 				@update:model-value="onColourPicked"
 				@preview="onPickerPreview"

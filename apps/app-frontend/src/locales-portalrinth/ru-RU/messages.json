@@ -894,7 +894,7 @@
 		"message": "Адрес скопирован"
 	},
 	"app.lan.description": {
-		"message": "Откройте мир для сети в Minecraft, а потом опубликуйте его отсюда."
+		"message": "Играйте вместе через интернет: откройте мир для сети в Minecraft и поделитесь им с друзьями отсюда."
 	},
 	"app.lan.empty-description": {
 		"message": "Запустите сборку — она появится здесь."
@@ -2269,5 +2269,128 @@
 	},
 	"friends.find.description": {
 		"message": "Ищите по нику на Modrinth и отправляйте заявку."
+	},
+	"app.browse.curseforge.key.title": {
+		"message": "Для CurseForge нужен API-ключ"
+	},
+	"app.browse.curseforge.key.description": {
+		"message": "В эту сборку не встроен ключ CurseForge. Добавьте свой в настройках, и проекты CurseForge появятся здесь."
+	},
+	"app.browse.curseforge.key.action": {
+		"message": "Открыть настройки CurseForge"
+	},
+	"app.browse.source.label": {
+		"message": "Где искать"
+	},
+	"app.lan.card.closed": {
+		"message": "Ждём мир"
+	},
+	"app.lan.card.ready": {
+		"message": "Мир открыт"
+	},
+	"app.lan.card.lost": {
+		"message": "Связь потеряна"
+	},
+	"app.lan.card.closed-hint": {
+		"message": "В Minecraft нажмите Esc, затем «Открыть для сети» и «Начать». Карточка заметит это сама."
+	},
+	"app.lan.card.ready-hint": {
+		"message": "Мир открыт на порту {port}. Откройте его друзьям — и они смогут зайти откуда угодно."
+	},
+	"app.lan.card.live-hint": {
+		"message": "Друзья добавляют этот адрес как сервер в Minecraft."
+	},
+	"app.lan.flow.header": {
+		"message": "Открываем мир друзьям"
+	},
+	"app.lan.flow.node.build": {
+		"message": "Ваша сборка"
+	},
+	"app.lan.flow.node.relay": {
+		"message": "Ретранслятор"
+	},
+	"app.lan.flow.node.friends": {
+		"message": "Друзья"
+	},
+	"app.lan.flow.explain": {
+		"message": "Мир остаётся на вашем компьютере. Ретранслятор только передаёт соединение, поэтому друзья заходят откуда угодно, а открывать порты не нужно."
+	},
+	"app.lan.flow.world.title": {
+		"message": "Ищем мир"
+	},
+	"app.lan.flow.world.description": {
+		"message": "Мир, открытый для сети в Minecraft"
+	},
+	"app.lan.flow.account.title": {
+		"message": "Проверяем аккаунт"
+	},
+	"app.lan.flow.account.description": {
+		"message": "Ретранслятор узнаёт, кто открывает мир, и выдаёт токен"
+	},
+	"app.lan.flow.session.title": {
+		"message": "Получаем адрес"
+	},
+	"app.lan.flow.session.description": {
+		"message": "Ретранслятор резервирует для мира публичный адрес"
+	},
+	"app.lan.flow.tunnel.title": {
+		"message": "Открываем туннель"
+	},
+	"app.lan.flow.tunnel.description": {
+		"message": "Соединение, через которое придут игроки"
+	},
+	"app.lan.flow.done.title": {
+		"message": "Мир открыт"
+	},
+	"app.lan.flow.done.description": {
+		"message": "Отправьте этот адрес друзьям: в Minecraft они добавляют его как сервер."
+	},
+	"app.lan.flow.failed.title": {
+		"message": "Остановились на шаге «{step}»"
+	},
+	"app.lan.flow.failed.world": {
+		"message": "Мир больше не открыт для сети. Откройте его в игре снова и повторите."
+	},
+	"app.lan.flow.failed.account": {
+		"message": "Ретранслятор не принял аккаунт. Нужен аккаунт Microsoft или Ely.by; обычно помогает войти в него заново."
+	},
+	"app.lan.flow.failed.session": {
+		"message": "Ретранслятор не выдал адрес. Возможно, он сейчас занят — попробуйте через минуту."
+	},
+	"app.lan.flow.failed.tunnel": {
+		"message": "Не удалось открыть туннель. Проверьте интернет и что брандмауэр выпускает лаунчер в сеть."
+	},
+	"app.lan.flow.details": {
+		"message": "Подробности"
+	},
+	"app.lan.flow.retry": {
+		"message": "Повторить"
+	},
+	"app.lan.flow.close": {
+		"message": "Закрыть"
+	},
+	"app.lan.flow.done": {
+		"message": "Готово"
+	},
+	"app.lan.flow.copy": {
+		"message": "Копировать"
+	},
+	"app.appearance-settings.accent.solid": {
+		"message": "Цвет"
+	},
+	"app.appearance-settings.accent.gradient": {
+		"message": "Градиент"
+	},
+	"app.appearance-settings.accent.direction": {
+		"message": "Направление"
+	},
+	"app.appearance-settings.accent.add-stop": {
+		"message": "Добавить цвет в градиент"
+	},
+	"app.appearance-settings.accent.remove-stop": {
+		"message": "Убрать из градиента"
+	},
+	"app.appearance-settings.accent.apply": {
+		"message": "Применить"
 	}
 }

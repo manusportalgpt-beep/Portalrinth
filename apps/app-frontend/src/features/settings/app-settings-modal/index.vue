@@ -2,6 +2,7 @@
 import {
 	CodeIcon,
 	CoffeeIcon,
+	CurseForgeIcon,
 	EyeOffIcon,
 	GaugeIcon,
 	HeartHandshakeIcon,
@@ -46,6 +47,7 @@ import LaunchHooksSettings from '@/features/settings/instance-defaults/launch-ho
 import WindowSettings from '@/features/settings/instance-defaults/window-settings.vue'
 import type { InstanceDefaultsTab } from '@/features/settings/settings-actions'
 import SyncingSettings from '@/features/settings/syncing/syncing-settings.vue'
+import CurseforgeSettings from '@/features/settings/system/CurseforgeSettings.vue'
 import ResourceManagementSettings from '@/features/settings/system/resource-management-settings/index.vue'
 import TroubleshootingSettings from '@/features/settings/system/troubleshooting-settings.vue'
 import { appSettingsKeys, appSettingsQueryOptions, set } from '@/helpers/settings.ts'
@@ -206,6 +208,15 @@ const tabs = [
 		icon: WrenchIcon,
 		content: TroubleshootingSettings,
 	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.curseforge',
+			defaultMessage: 'CurseForge',
+		}),
+		category: tabCategories.system,
+		icon: CurseForgeIcon,
+		content: CurseforgeSettings,
+	},
 ]
 
 const availableTabs = computed(() =>
@@ -306,7 +317,22 @@ function showInstanceDefaults(tab: InstanceDefaultsTab): void {
 	modal.value?.show()
 }
 
-defineExpose({ show, showProfile, showFeatureFlags, showSyncedOptions, showInstanceDefaults })
+function showCurseforge(): void {
+	const tabIndex = availableTabs.value.findIndex((tab) => tab.content === CurseforgeSettings)
+	if (tabIndex >= 0) {
+		modal.value?.setTab(tabIndex)
+	}
+	modal.value?.show()
+}
+
+defineExpose({
+	show,
+	showProfile,
+	showFeatureFlags,
+	showSyncedOptions,
+	showInstanceDefaults,
+	showCurseforge,
+})
 
 const { progress, version: downloadingVersion } = injectAppUpdateDownloadProgress()
 

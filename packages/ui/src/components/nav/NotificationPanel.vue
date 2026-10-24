@@ -7,6 +7,7 @@
 			'location-right': notificationLocation === 'right',
 			'has-sidebar': hasSidebar && !hasModalActive,
 		}"
+		:style="{ '--notification-sidebar-width': props.sidebarWidth }"
 	>
 		<transition-group name="notifs">
 			<div
@@ -206,12 +207,19 @@ onMounted(() => {
 
 const { hasModal: hasModalActive } = useModalStack()
 
-withDefaults(
+const props = withDefaults(
 	defineProps<{
 		hasSidebar?: boolean
+		/**
+		 * How much of the window's right edge the sidebar takes, so the panel sits
+		 * clear of it whether it is open or folded to its rail. Without it, an open
+		 * sidebar's width is assumed.
+		 */
+		sidebarWidth?: string
 	}>(),
 	{
 		hasSidebar: false,
+		sidebarWidth: '300px',
 	},
 )
 </script>
@@ -229,7 +237,7 @@ withDefaults(
 		transition: right 0.25s ease-in-out;
 
 		&.has-sidebar {
-			right: 325px;
+			right: calc(var(--notification-sidebar-width, 300px) + 1.5rem);
 		}
 	}
 

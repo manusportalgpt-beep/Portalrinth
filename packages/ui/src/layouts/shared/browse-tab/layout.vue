@@ -304,7 +304,9 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 		:provided-message="lockedMessages?.providedBy"
 	/>
 
-	<div class="search mt-1 [overflow-anchor:none]">
+	<!-- Portalrinth's own: lets the app say why there is nothing to show instead of the results. -->
+	<slot name="results-replacement" />
+	<div v-if="!$slots['results-replacement']" class="search mt-1 [overflow-anchor:none]">
 		<section v-if="ctx.loading.value" class="offline">
 			<component :is="ctx.loadingComponent ?? LoadingIndicator" />
 		</section>
@@ -400,6 +402,8 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 								: ctx.variant === 'web'
 									? `/organization/${result.organization_id}`
 									: `https://modrinth.com/organization/${result.organization_id}`,
+						avatar: ctx.getAuthorAvatar?.(result),
+						organization: result.organization_id != null,
 					}"
 					:date-updated="result.date_modified"
 					:date-published="result.date_created"

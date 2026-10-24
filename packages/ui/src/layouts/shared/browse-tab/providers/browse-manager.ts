@@ -89,6 +89,8 @@ export interface BrowseManagerContext {
 		result: Labrinth.Search.v3.ResultSearchProject,
 	) => ServerModpackContent | undefined
 
+	/** The picture of whoever made a project, to draw beside their name. */
+	getAuthorAvatar?: (result: Labrinth.Search.v3.ResultSearchProject) => string | null | undefined
 	onProjectHover?: (result: Labrinth.Search.v3.ResultSearchProject) => void
 	onServerProjectHover?: (result: Labrinth.Search.v3.ResultSearchProject) => void
 	onProjectHoverEnd?: () => void

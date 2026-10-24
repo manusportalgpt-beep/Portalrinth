@@ -265,6 +265,18 @@ watch(sidebarVisible, (visible) => markSidebarMoving(visible))
  * wider; open, the column is the panel's width and the page gives it up.
  */
 const sidebarCollapsed = ref(false)
+/**
+ * How much of the window's right edge the panel takes as drawn - the panel's
+ * width, the rail's when folded, nothing when hidden - for whatever floats over
+ * the page (notifications, the action bar) to stay clear of it.
+ */
+const sidebarOccupiedWidth = computed(() =>
+	!sidebarVisible.value
+		? '0px'
+		: sidebarCollapsed.value
+			? APP_LEFT_NAV_WIDTH
+			: `${APP_SIDEBAR_WIDTH}px`,
+)
 const hostingRouteActive = computed(() => route.path.startsWith('/hosting'))
 const hostingUpdateRequired = computed(
 	() =>
@@ -353,7 +365,7 @@ providePageContext({
 	adConsentAvailable,
 	floatingActionBarOffsets: {
 		left: ref(APP_LEFT_NAV_WIDTH),
-		right: computed(() => (sidebarVisible.value ? `${APP_SIDEBAR_WIDTH}px` : '0px')),
+		right: sidebarOccupiedWidth,
 	},
 	intercomBubble: hostingIntercom.intercomBubble,
 	featureFlags: {
@@ -1094,6 +1106,7 @@ const settingsActions = provideSettingsActions({
 	openFeatureFlags: () => appSettingsModal.value?.showFeatureFlags(),
 	openSyncedOptions: () => appSettingsModal.value?.showSyncedOptions(),
 	openInstanceDefaults: (tab) => appSettingsModal.value?.showInstanceDefaults(tab),
+	openCurseforge: () => appSettingsModal.value?.showCurseforge(),
 })
 
 watch(incompatibilityWarningModal, (modal) => {
@@ -2576,7 +2589,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 		/>
 	</div>
 	<I18nDebugPanel />
-	<NotificationPanel :has-sidebar="sidebarVisible" />
+	<NotificationPanel :has-sidebar="sidebarVisible" :sidebar-width="sidebarOccupiedWidth" />
 	<PopupNotificationPanel :has-sidebar="sidebarVisible" />
 	<ErrorModal ref="errorModal" />
 	<PortalrinthCrashModal />

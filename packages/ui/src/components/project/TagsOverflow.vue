@@ -17,12 +17,7 @@ defineOptions({
 		<TagItem v-if="tags.length > 0" v-bind="$attrs" tabindex="0"> +{{ tags.length }} </TagItem>
 		<template #popper>
 			<div class="flex gap-1 flex-wrap max-w-[20rem]">
-				<TagTagItem
-					v-for="tag in tags"
-					:key="'overflow-tag-' + tag"
-					hide-non-loader-icon
-					:tag="tag"
-				/>
+				<TagTagItem v-for="tag in tags" :key="'overflow-tag-' + tag" :tag="tag" />
 			</div>
 		</template>
 	</Tooltip>

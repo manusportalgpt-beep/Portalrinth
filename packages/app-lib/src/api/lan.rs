@@ -99,6 +99,66 @@ struct ActiveRelay {
 static RELAYS: LazyLock<DashMap<Uuid, ActiveRelay>> =
     LazyLock::new(DashMap::new);
 
+/// Where publishing a world has got to, one step after another.
+///
+/// Publishing takes a few round trips, and each of them can be the one that
+/// fails. The steps are said out loud so that the launcher can show them as
+/// they happen, and say which one it was when one of them does not work.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LanPublishStep {
+    /// Finding the port the world is open on in the game.
+    World,
+    /// Choosing the account and trading its token for the relay's.
+    Account,
+    /// Asking the relay for a public address.
+    Session,
+    /// Opening the tunnel the players are carried through.
+    Tunnel,
+    /// Published.
+    Done,
+}
+
+/// How far the last attempt to publish one copy's world got.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct LanPublishProgress {
+    pub step: LanPublishStep,
+    /// Whether `step` is the one that failed, rather than the one under way.
+    pub failed: bool,
+    /// Why it failed, in the words the step gave.
+    pub error: Option<String>,
+    /// The service the world is published through.
+    pub relay_host: String,
+}
+
+static PROGRESS: LazyLock<DashMap<Uuid, LanPublishProgress>> =
+    LazyLock::new(DashMap::new);
+
+fn set_step(process_uuid: Uuid, step: LanPublishStep) {
+    PROGRESS.insert(
+        process_uuid,
+        LanPublishProgress {
+            step,
+            failed: false,
+            error: None,
+            relay_host: RELAY_BASE.trim_start_matches("https://").to_string(),
+        },
+    );
+}
+
+/// How far publishing a copy's world has got, or nothing when it was never
+/// tried since the launcher started.
+pub fn publish_progress(process_uuid: Uuid) -> Option<LanPublishProgress> {
+    PROGRESS.get(&process_uuid).map(|progress| progress.clone())
+}
+
+/// The words an error was made with, without the kind it was filed under.
+fn plain_message(error: &crate::Error) -> String {
+    match error.downcast_ref::<crate::ErrorKind>() {
+        Some(crate::ErrorKind::InputError(message)) => message.clone(),
+        _ => error.to_string(),
+    }
+}
 
 /// Every copy of an instance that is running right now, and where its world can
 /// be reached.
@@ -202,14 +262,21 @@ async fn local_port(
     let process_uuid = process.uuid.to_string();
 
     if let Some(port) = crate::state::lan::port_for_process(&process_uuid) {
-        return Some(port);
+        // The game does not always say that a world was closed - leaving it
+        // for the title screen can go unsaid - so a remembered port is only
+        // kept for as long as something still answers on it.
+        if is_serving(port).await {
+            return Some(port);
+        }
+        crate::state::lan::forget_process(&process_uuid);
     }
 
     // Both logs are read, and neither is skipped because the other was read
     // before: the line may be in either, and which one it is in is not a
     // thing to guess at. The game's own log is only read again when it has
     // grown, because that is the one that is being written to.
-    if let Some(port) = port_from_log_tail(state, &process.instance_path).await {
+    if let Some(port) = port_from_log_tail(state, &process.instance_path).await
+    {
         if is_serving(port).await {
             crate::state::lan::note_opened_port(&process_uuid, port);
             return Some(port);
@@ -223,15 +290,22 @@ async fn local_port(
 ///
 /// The log is the only place the game says it. It is read a little at a time,
 /// from the end, and only the lines about people are looked at.
-async fn players_in_world(state: &crate::State, instance_path: &str) -> Vec<String> {
+async fn players_in_world(
+    state: &crate::State,
+    instance_path: &str,
+) -> Vec<String> {
     let Some(length) = log_length(state, instance_path).await else {
         return Vec::new();
     };
-    let Ok(mut file) = tokio::fs::File::open(game_log(state, instance_path)).await else {
+    let Ok(mut file) =
+        tokio::fs::File::open(game_log(state, instance_path)).await
+    else {
         return Vec::new();
     };
     if file
-        .seek(std::io::SeekFrom::Start(length.saturating_sub(MAX_LOG_TAIL)))
+        .seek(std::io::SeekFrom::Start(
+            length.saturating_sub(MAX_LOG_TAIL),
+        ))
         .await
         .is_err()
     {
@@ -275,7 +349,10 @@ fn game_log(state: &crate::State, instance_path: &str) -> std::path::PathBuf {
 /// everything the game printed. Which of them has the line saying the world
 /// was opened depends on the game and the version, so both are read rather
 /// than one of them being guessed at.
-fn launcher_log(state: &crate::State, instance_path: &str) -> std::path::PathBuf {
+fn launcher_log(
+    state: &crate::State,
+    instance_path: &str,
+) -> std::path::PathBuf {
     state
         .directories
         .instance_logs_dir(instance_path)
@@ -318,23 +395,34 @@ async fn port_in_file(path: &std::path::Path) -> Option<u16> {
 
     let mut tail = String::new();
     file.read_to_string(&mut tail).await.ok()?;
-    tail.lines()
-        .rev()
-        .find_map(crate::state::lan::port_in_line)
+    tail.lines().rev().find_map(crate::state::lan::port_in_line)
 }
 
 /// Publishes the world a running copy of an instance has open.
 #[tracing::instrument]
 pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
+    set_step(process_uuid, LanPublishStep::World);
+    let result = publish(process_uuid).await;
+    match &result {
+        Ok(_) => set_step(process_uuid, LanPublishStep::Done),
+        Err(error) => {
+            if let Some(mut progress) = PROGRESS.get_mut(&process_uuid) {
+                progress.failed = true;
+                progress.error = Some(plain_message(error));
+            }
+        }
+    }
+    result
+}
+
+/// Publishing itself, telling [`PROGRESS`] about each step as it begins.
+async fn publish(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
     let state = crate::State::get().await?;
-    let process = state
-        .process_manager
-        .get(process_uuid)
-        .ok_or_else(|| {
-            crate::ErrorKind::InputError(
-                "that instance is no longer running".to_string(),
-            )
-        })?;
+    let process = state.process_manager.get(process_uuid).ok_or_else(|| {
+        crate::ErrorKind::InputError(
+            "that instance is no longer running".to_string(),
+        )
+    })?;
 
     let Some(local_port) = local_port(&state, &process).await else {
         return Err(crate::Error::from(crate::ErrorKind::InputError(
@@ -347,9 +435,11 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
     // starting twice leaves one address behind rather than two.
     stop(process_uuid).await?;
 
+    set_step(process_uuid, LanPublishStep::Account);
     let identity = resolve_identity(&state, &process.account_name).await?;
     let bearer = relay_bearer(&state, &identity).await?;
 
+    set_step(process_uuid, LanPublishStep::Session);
     let session = relay_request(
         &state,
         reqwest::Method::POST,
@@ -360,14 +450,9 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
     .await?;
 
     let field = |name: &str| -> crate::Result<String> {
-        session[name]
-            .as_str()
-            .map(String::from)
-            .ok_or_else(|| {
-                anyhow::anyhow!(format!(
-                    "the relay did not return {name}"
-                ))
-            })
+        session[name].as_str().map(String::from).ok_or_else(|| {
+            anyhow::anyhow!(format!("the relay did not return {name}"))
+        })
     };
 
     let session_id = field("sessionId")?;
@@ -384,7 +469,9 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
         .as_str()
         .or(session["tunnelHost"].as_str())
         .map(String::from)
-        .unwrap_or_else(|| RELAY_BASE.trim_start_matches("https://").to_string());
+        .unwrap_or_else(|| {
+            RELAY_BASE.trim_start_matches("https://").to_string()
+        });
     let tunnel_host = session["tunnelHost"]
         .as_str()
         .unwrap_or(public_host.as_str())
@@ -394,6 +481,7 @@ pub async fn start(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
     // The control connection is opened here rather than in the background, so
     // that a relay which will not take the session is said to be one instead
     // of the world being reported as published when nobody can reach it.
+    set_step(process_uuid, LanPublishStep::Tunnel);
     let control = match open_control(
         &session_id,
         &tunnel_token,
@@ -479,6 +567,7 @@ pub async fn stop(process_uuid: Uuid) -> crate::Result<()> {
 /// Called from the process manager, which cannot wait and which has already torn
 /// the world down — there is nothing left to publish either way.
 pub fn detach_process(process_uuid: Uuid) {
+    PROGRESS.remove(&process_uuid);
 
     let Some((_, tunnel)) = RELAYS.remove(&process_uuid) else {
         return;
@@ -558,20 +647,15 @@ async fn resolve_identity(
         return Ok(identities.swap_remove(at));
     }
 
-    identities
-        .into_iter()
-        .next()
-        .ok_or_else(|| {
-            crate::Error::from(crate::ErrorKind::InputError(
-                "sign in to an account first".to_string(),
-            ))
-        })
+    identities.into_iter().next().ok_or_else(|| {
+        crate::Error::from(crate::ErrorKind::InputError(
+            "sign in to an account first".to_string(),
+        ))
+    })
 }
 
 /// Every account the launcher holds, most specific first.
-async fn identities(
-    state: &crate::State,
-) -> crate::Result<Vec<RelayIdentity>> {
+async fn identities(state: &crate::State) -> crate::Result<Vec<RelayIdentity>> {
     let mut found = Vec::new();
 
     for credentials in
@@ -616,10 +700,11 @@ async fn identities(
         // about not being signed in when they are - the one thing they are
         // not. It is kept, and the messenger is asked about it, and the
         // messenger is the one that says it is no good.
-        let access_token = match crate::state::oauth_refresh(&refresh_token).await {
-            Ok(refreshed) => refreshed.value.access_token,
-            Err(_) => String::new(),
-        };
+        let access_token =
+            match crate::state::oauth_refresh(&refresh_token).await {
+                Ok(refreshed) => refreshed.value.access_token,
+                Err(_) => String::new(),
+            };
         found.push(RelayIdentity::Online {
             provider: "msa",
             username,
@@ -656,7 +741,12 @@ async fn relay_bearer(
     state: &crate::State,
     identity: &RelayIdentity,
 ) -> crate::Result<String> {
-    let RelayIdentity::Online { provider, access_token, .. } = identity else {
+    let RelayIdentity::Online {
+        provider,
+        access_token,
+        ..
+    } = identity
+    else {
         // The relay does not take a name on its own. It was asked to, and it
         // answered with a refusal, so a world opened by somebody playing
         // without an account cannot be published - and saying so is better
@@ -699,7 +789,9 @@ async fn messenger_token(
         }))
         .send()
         .await
-        .map_err(|source| crate::Error::from(crate::ErrorKind::FetchError(source)))?;
+        .map_err(|source| {
+            crate::Error::from(crate::ErrorKind::FetchError(source))
+        })?;
 
     let status = response.status();
     let body = response.text().await.unwrap_or_default();
@@ -719,9 +811,7 @@ async fn messenger_token(
         .and_then(|token| token.as_str())
         .map(String::from)
         .ok_or_else(|| {
-            anyhow::anyhow!(
-                "the messenger did not return a token".to_string(),
-            )
+            anyhow::anyhow!("the messenger did not return a token".to_string(),)
         })
 }
 
@@ -751,7 +841,10 @@ async fn relay_request(
     })?;
 
     let status = response.status();
-    let body = response.json::<serde_json::Value>().await.unwrap_or_default();
+    let body = response
+        .json::<serde_json::Value>()
+        .await
+        .unwrap_or_default();
     if !status.is_success() {
         return Err(anyhow::anyhow!(
             body["error"]
@@ -764,7 +857,8 @@ async fn relay_request(
 }
 
 /// How long a step of the tunnel's own handshake is waited for.
-const HANDSHAKE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+const HANDSHAKE_TIMEOUT: std::time::Duration =
+    std::time::Duration::from_secs(10);
 
 /// How many times a dropped control connection is opened again before the
 /// world is given up as lost, and how long is waited before each attempt.
@@ -812,11 +906,13 @@ async fn open_control(
     host: &str,
     port: u16,
 ) -> Result<BufReader<TcpStream>, ControlError> {
-    let mut control =
-        tokio::time::timeout(HANDSHAKE_TIMEOUT, TcpStream::connect((host, port)))
-            .await
-            .map_err(|_| ControlError::Unreachable("timed out".to_string()))?
-            .map_err(|error| ControlError::Unreachable(error.to_string()))?;
+    let mut control = tokio::time::timeout(
+        HANDSHAKE_TIMEOUT,
+        TcpStream::connect((host, port)),
+    )
+    .await
+    .map_err(|_| ControlError::Unreachable("timed out".to_string()))?
+    .map_err(|error| ControlError::Unreachable(error.to_string()))?;
     let _ = control.set_nodelay(true);
     control
         .write_all(format!("HOST {session_id} {token}\n").as_bytes())
@@ -825,8 +921,11 @@ async fn open_control(
 
     let mut control = BufReader::new(control);
     let mut greeting = String::new();
-    match tokio::time::timeout(HANDSHAKE_TIMEOUT, control.read_line(&mut greeting))
-        .await
+    match tokio::time::timeout(
+        HANDSHAKE_TIMEOUT,
+        control.read_line(&mut greeting),
+    )
+    .await
     {
         Err(_) => Err(ControlError::Unreachable("timed out".to_string())),
         Ok(Err(error)) => Err(ControlError::Unreachable(error.to_string())),
@@ -989,8 +1088,11 @@ async fn carry_one_connection(tunnel: &Tunnel, connection_id: &str) {
     // would cut the game's handshake short and the player would never get in.
     let mut greeting = String::new();
     let mut remote = BufReader::new(remote);
-    match tokio::time::timeout(HANDSHAKE_TIMEOUT, remote.read_line(&mut greeting))
-        .await
+    match tokio::time::timeout(
+        HANDSHAKE_TIMEOUT,
+        remote.read_line(&mut greeting),
+    )
+    .await
     {
         Ok(Ok(read)) if read > 0 => {}
         _ => return,
@@ -1037,7 +1139,10 @@ mod tests {
 
             let (mut data, _) = relay.accept().await.unwrap();
             let mut line = String::new();
-            BufReader::new(&mut data).read_line(&mut line).await.unwrap();
+            BufReader::new(&mut data)
+                .read_line(&mut line)
+                .await
+                .unwrap();
             assert_eq!(line, "DATA s1 t1 c1\n");
             data.write_all(b"OK DATA\nhello").await.unwrap();
             tokio::time::sleep(std::time::Duration::from_secs(5)).await;
@@ -1064,10 +1169,13 @@ mod tests {
                 .unwrap()
                 .unwrap();
         let mut received = [0u8; 5];
-        tokio::time::timeout(HANDSHAKE_TIMEOUT, player.read_exact(&mut received))
-            .await
-            .unwrap()
-            .unwrap();
+        tokio::time::timeout(
+            HANDSHAKE_TIMEOUT,
+            player.read_exact(&mut received),
+        )
+        .await
+        .unwrap()
+        .unwrap();
         assert_eq!(&received, b"hello");
     }
 }

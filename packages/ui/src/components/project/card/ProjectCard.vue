@@ -224,6 +224,10 @@ const props = defineProps<{
 	author?: {
 		name: string
 		link?: string
+		/** The author's picture. Absent, a placeholder is drawn in its place. */
+		avatar?: string | null
+		/** Whether the author is an organization, whose picture is square. */
+		organization?: boolean
 	}
 	summary?: string
 	tags?: string[]

@@ -40,7 +40,19 @@ const filteredTags = computed(() => {
 	)
 })
 
-const visibleTags = computed(() => filteredTags.value?.slice(0, props.maxTags))
+/**
+ * How many categories a card shows by name. The rest are behind the "+N" chip,
+ * so a project with many categories says so instead of filling the row.
+ */
+const MAX_CATEGORY_TAGS = 2
+
+const visibleTags = computed(() => {
+	if (!filteredTags.value) return undefined
+	let categories = 0
+	return filteredTags.value
+		.filter((tag) => isLoader(tag) || ++categories <= MAX_CATEGORY_TAGS)
+		.slice(0, props.maxTags)
+})
 const overflowTags = computed(() => [
 	...new Set([
 		...(props.tags.filter((x) => !visibleTags.value?.includes(x)) ?? []),
@@ -50,14 +62,9 @@ const overflowTags = computed(() => [
 </script>
 
 <template>
-	<TagTagItem
-		v-for="tag in visibleTags"
-		:key="'visible-tag-' + tag"
-		hide-non-loader-icon
-		:tag="tag"
-	/>
+	<TagTagItem v-for="tag in visibleTags" :key="'visible-tag-' + tag" :tag="tag" />
 	<TagsOverflow
-		v-if="overflowTags"
+		v-if="overflowTags.length > 0"
 		:tags="overflowTags"
 		class="smart-clickable:allow-pointer-events"
 	/>

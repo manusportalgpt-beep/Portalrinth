@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ExternalIcon } from '@modrinth/assets'
 
-import { AutoLink } from '../../base'
+import { AutoLink, Avatar } from '../../base'
 
 export type ProjectCardAuthorDetails = {
 	name: string
 	link?: string
+	/** The author's picture. Absent, a placeholder is drawn in its place. */
+	avatar?: string | null
+	/** Whether the author is an organization, whose picture is square. */
+	organization?: boolean
 }
 
 defineProps<{
@@ -28,6 +32,15 @@ defineProps<{
 					: ''
 			"
 		>
+			<Avatar
+				:src="author.avatar"
+				:alt="author.name"
+				size="1.125rem"
+				:circle="!author.organization"
+				no-shadow
+				loading="lazy"
+				class="project-card-author-avatar mx-1 inline-block align-[-0.25em]"
+			/>
 			<span
 				class="group-focus:underline group-focus:brightness-[--hover-brightness] group-hover:brightness-[--hover-brightness] group-hover:underline"
 			>

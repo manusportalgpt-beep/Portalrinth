@@ -4,7 +4,7 @@
 //! was opened on is found.
 
 use crate::api::Result;
-use theseus::lan::{self, LanRelayInfo};
+use theseus::lan::{self, LanPublishProgress, LanRelayInfo};
 use uuid::Uuid;
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
@@ -13,6 +13,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             lan_list,
             lan_start,
             lan_stop,
+            lan_publish_progress,
         ])
         .build()
 }
@@ -36,4 +37,11 @@ pub async fn lan_start(process_uuid: Uuid) -> Result<LanRelayInfo> {
 #[tauri::command]
 pub async fn lan_stop(process_uuid: Uuid) -> Result<()> {
     Ok(lan::stop(process_uuid).await?)
+}
+/// How far the last attempt to publish a copy's world got, step by step.
+#[tauri::command]
+pub async fn lan_publish_progress(
+    process_uuid: Uuid,
+) -> Result<Option<LanPublishProgress>> {
+    Ok(lan::publish_progress(process_uuid))
 }

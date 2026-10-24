@@ -46,3 +46,31 @@ export async function start_lan_relay(processUuid: string): Promise<LanRelayInfo
 export async function stop_lan_relay(processUuid: string): Promise<void> {
 	await invoke('plugin:portalrinth-lan|lan_stop', { processUuid })
 }
+
+/**
+ * The steps publishing a world goes through, in order.
+ *
+ * `world` — the port the world is open on in the game.
+ * `account` — the account, and the relay's token for it.
+ * `session` — the public address, asked of the relay.
+ * `tunnel` — the connection players are carried through.
+ * `done` — published.
+ */
+export type LanPublishStep = 'world' | 'account' | 'session' | 'tunnel' | 'done'
+
+/** How far the last attempt to publish one copy's world got. */
+export interface LanPublishProgress {
+	step: LanPublishStep
+	/** Whether `step` is the one that failed, rather than the one under way. */
+	failed: boolean
+	error: string | null
+	/** The service the world is published through. */
+	relay_host: string
+}
+
+/** How far publishing a copy's world has got, or nothing if it was never tried. */
+export async function get_lan_publish_progress(
+	processUuid: string,
+): Promise<LanPublishProgress | null> {
+	return await invoke('plugin:portalrinth-lan|lan_publish_progress', { processUuid })
+}

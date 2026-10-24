@@ -8,11 +8,13 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { useQuery } from '@tanstack/vue-query'
-import { computed } from 'vue'
+import { computed, useTemplateRef } from 'vue'
 
 import { getInstanceIconUrl } from '@/helpers/instance'
+import type { LanRelayInfo } from '@/helpers/lan'
 import { instanceListQueryOptions } from '@/pages/instance/query-options'
 
+import LanPublishFlow from './publish-flow.vue'
 import LanRelayRow from './row.vue'
 import { useLanRelays } from './use-lan-relay'
 
@@ -21,7 +23,8 @@ const messages = defineMessages({
 	heading: { id: 'app.lan.heading', defaultMessage: 'LAN' },
 	description: {
 		id: 'app.lan.description',
-		defaultMessage: 'Open a world to LAN in Minecraft, then publish it from here.',
+		defaultMessage:
+			'Play together over the internet: open the world to LAN in Minecraft, and share it with friends from here.',
 	},
 	emptyHeading: { id: 'app.lan.empty-heading', defaultMessage: 'Nothing is running' },
 	emptyDescription: {
@@ -31,8 +34,12 @@ const messages = defineMessages({
 	errorHeading: { id: 'app.lan.error-heading', defaultMessage: 'Failed to read running instances' },
 })
 
-const { relays, relaysQuery, start, stop, isPublishing, isStopping, copyAddress, hint } =
-	useLanRelays()
+const { relays, relaysQuery, start, stop, isPublishing, isStopping, copyAddress } = useLanRelays()
+
+const publishFlow = useTemplateRef<InstanceType<typeof LanPublishFlow>>('publishFlow')
+function publish(relay: LanRelayInfo) {
+	publishFlow.value?.open(relay, iconsByInstance.value.get(relay.instance_id) ?? null)
+}
 
 const instancesQuery = useQuery(instanceListQueryOptions())
 const iconsByInstance = computed(
@@ -84,12 +91,13 @@ const iconsByInstance = computed(
 					:icon-url="iconsByInstance.get(relay.instance_id) ?? null"
 					:publishing="isPublishing(relay.process_uuid)"
 					:stopping="isStopping(relay.process_uuid)"
-					@publish="start"
+					@publish="publish"
 					@unpublish="stop"
 					@copy="copyAddress"
-					@hint="hint"
 				/>
 			</div>
 		</ReadyTransition>
+
+		<LanPublishFlow ref="publishFlow" :start="start" @copy="copyAddress" />
 	</div>
 </template>

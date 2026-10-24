@@ -190,6 +190,85 @@ const GRADIENT_VARIABLES = [
 	'--splash-wash',
 ] as const
 
+/**
+ * A run of colours chosen as the accent, written the way CSS draws it:
+ * `linear-gradient(<angle>deg, #hex, #hex, ...)`, evenly spaced, two to ten.
+ *
+ * Kept in the same setting a single colour of one's own is, because it is the
+ * same choice - a colour of one's own - only more of it.
+ */
+export interface AccentGradient {
+	angle: number
+	stops: string[]
+}
+
+export const MAX_ACCENT_GRADIENT_STOPS = 10
+const GRADIENT = /^linear-gradient\(\s*(-?\d+(?:\.\d+)?)deg\s*,(.+)\)$/i
+
+export function parseAccentGradient(value: string | null | undefined): AccentGradient | null {
+	if (typeof value !== 'string') return null
+	const match = GRADIENT.exec(value.trim())
+	if (!match) return null
+	const stops = match[2].split(',').map((part) => part.trim().toLowerCase())
+	if (
+		stops.length < 2 ||
+		stops.length > MAX_ACCENT_GRADIENT_STOPS ||
+		stops.some((stop) => !/^#[\da-f]{6}$/.test(stop))
+	)
+		return null
+	return { angle: ((Number(match[1]) % 360) + 360) % 360, stops }
+}
+
+function gradientCss({ angle, stops }: AccentGradient, direction: string = `${angle}deg`): string {
+	return `linear-gradient(${direction}, ${stops.join(', ')})`
+}
+
+/** Whether a value is something the accent can be: one colour, or a run of them. */
+export function isAccentColor(value: string | null | undefined): value is string {
+	if (typeof value !== 'string') return false
+	return /^#[\da-f]{6}$/i.test(value.trim()) || parseAccentGradient(value) !== null
+}
+
+/**
+ * The one colour an accent comes down to where only one will do - a label, a
+ * border, the window's icon. For a run, its first colour: the one it starts
+ * from, and the one the picker was opened on.
+ */
+export function accentBaseColor(value: string): string {
+	return parseAccentGradient(value)?.stops[0] ?? value
+}
+
+/**
+ * The parts of the interface that are filled with the accent rather than
+ * drawn in it: brand buttons, switches that are on, anything painted
+ * `bg-brand`. With a run of colours chosen, those are filled with the run.
+ */
+const GRADIENT_STYLE_ID = 'portalrinth-accent-gradient'
+const GRADIENT_CLASS = 'portalrinth-accent-gradient'
+const GRADIENT_STYLESHEET = `
+html.${GRADIENT_CLASS} .bg-brand,
+html.${GRADIENT_CLASS} .button-frame--colored[style*="var(--color-brand)"] {
+	background-image: var(--portalrinth-accent-gradient);
+}
+`
+
+function setGradient(gradient: AccentGradient | null): void {
+	const html = document.documentElement
+	if (!gradient) {
+		html.classList.remove(GRADIENT_CLASS)
+		html.style.removeProperty('--portalrinth-accent-gradient')
+		return
+	}
+	if (!document.getElementById(GRADIENT_STYLE_ID)) {
+		const style = document.createElement('style')
+		style.id = GRADIENT_STYLE_ID
+		style.textContent = GRADIENT_STYLESHEET
+		document.head.appendChild(style)
+	}
+	html.style.setProperty('--portalrinth-accent-gradient', gradientCss(gradient))
+	html.classList.add(GRADIENT_CLASS)
+}
+
 const HEX = /^#([0-9a-f]{3,8})$/i
 const RGB = /^rgba?\(([^)]+)\)$/i
 
@@ -327,14 +406,9 @@ function readCache(): {
 					? cached.preset
 					: DEFAULT_ACCENT_PRESET,
 			tint: cached?.tint !== false,
-			color:
-				typeof cached?.color === 'string' && /^#[\da-f]{6}$/i.test(cached.color)
-					? cached.color
-					: null,
+			color: typeof cached?.color === 'string' && isAccentColor(cached.color) ? cached.color : null,
 			customColors: Array.isArray(cached?.customColors)
-				? cached.customColors.filter(
-						(color): color is string => typeof color === 'string' && /^#[\da-f]{6}$/i.test(color),
-					)
+				? cached.customColors.filter((color): color is string => isAccentColor(color))
 				: [],
 		}
 	} catch {
@@ -379,7 +453,7 @@ const theme = useTheme()
 const THEME_ACCENTS: Record<string, string> = { retro: '#4d9227' }
 
 export function accentColorFor(preset: AccentPreset, active: string = theme.active): string {
-	if (preset.id === CUSTOM_ACCENT_ID) return customColor.value
+	if (preset.id === CUSTOM_ACCENT_ID) return accentBaseColor(customColor.value)
 	if (preset.id === THEME_ACCENT_ID)
 		return THEME_ACCENTS[active] ?? (active === 'light' ? preset.light : preset.dark)
 	return active === 'light' ? preset.light : preset.dark
@@ -393,10 +467,12 @@ function apply(id: string, tint: boolean): void {
 	for (const variable of [...ACCENT_VARIABLES, ...SURFACE_VARIABLES, ...GRADIENT_VARIABLES]) {
 		html.style.removeProperty(variable)
 	}
+	const gradient = id === CUSTOM_ACCENT_ID ? parseAccentGradient(customColor.value) : null
+	setGradient(gradient)
 
 	// A colour of someone's own is not a preset; it is drawn from where the wheel
 	// left it, and everything below works on it exactly as on one.
-	const hex = id === CUSTOM_ACCENT_ID ? customColor.value : null
+	const hex = id === CUSTOM_ACCENT_ID ? accentBaseColor(customColor.value) : null
 
 	// Only `theme` is a request to leave the interface as the theme drew it.
 	// Every other id, the default one included, is a colour to paint: the default
@@ -430,7 +506,10 @@ function apply(id: string, tint: boolean): void {
 	for (const [variable, value] of Object.entries(brandGradients(accent, borderAlpha))) {
 		html.style.setProperty(variable, value)
 	}
-	html.style.setProperty('--loading-bar-gradient', loadingBarGradient(accent, theme.active))
+	html.style.setProperty(
+		'--loading-bar-gradient',
+		gradient ? gradientCss(gradient, 'to right') : loadingBarGradient(accent, theme.active),
+	)
 
 	if (!tint) return
 
@@ -458,9 +537,7 @@ watch(
 		// purple any more. Loaded lazily: it is the one part of this that talks to
 		// the window, and nothing waits on it.
 		const preset =
-			id === CUSTOM_ACCENT_ID
-				? ({ id: CUSTOM_ACCENT_ID } as AccentPreset)
-				: findAccentPreset(id)
+			id === CUSTOM_ACCENT_ID ? ({ id: CUSTOM_ACCENT_ID } as AccentPreset) : findAccentPreset(id)
 		if (preset) {
 			void import('@/helpers/portalrinth-window-icon').then(({ paintWindowIcon }) =>
 				paintWindowIcon(
@@ -496,8 +573,8 @@ export function useAccentPreset() {
  * list. The id becomes `custom`, which is what `apply` resolves through here.
  */
 export function setCustomAccentColor(hex: string | null | undefined): void {
-	const next = typeof hex === 'string' ? hex.trim() : ''
-	customColor.value = /^#[\da-f]{6}$/i.test(next) ? next.toLowerCase() : DEFAULT_CUSTOM_ACCENT
+	const next = typeof hex === 'string' ? hex.trim().toLowerCase() : ''
+	customColor.value = isAccentColor(next) ? next : DEFAULT_CUSTOM_ACCENT
 	presetId.value = CUSTOM_ACCENT_ID
 }
 
@@ -536,7 +613,7 @@ export const MAX_CUSTOM_ACCENT_COLORS = 8
 
 export function addCustomAccentColor(hex: string | null | undefined): boolean {
 	const color = hex?.trim().toLowerCase()
-	if (!color || !/^#[\da-f]{6}$/i.test(color)) return false
+	if (!color || !isAccentColor(color)) return false
 	if (customColors.value.length >= MAX_CUSTOM_ACCENT_COLORS) return false
 	if (!customColors.value.includes(color)) {
 		customColors.value = [...customColors.value, color]

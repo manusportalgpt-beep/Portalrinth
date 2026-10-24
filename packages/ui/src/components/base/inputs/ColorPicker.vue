@@ -20,7 +20,7 @@
 		<slot name="trigger" :model="model">
 			<span
 				class="size-full rounded-xl border border-solid border-surface-5"
-				:style="{ backgroundColor: model }"
+				:style="{ background: model }"
 			/>
 		</slot>
 	</button>
@@ -31,13 +31,123 @@
 				v-if="isOpen"
 				:id="panelId"
 				ref="panelRef"
-				class="fixed isolate z-[9999] w-56 rounded-[14px] bg-surface-3 p-3 shadow-lg ring-1 ring-surface-5"
+				class="fixed isolate z-[9999] rounded-[14px] bg-surface-3 p-3 shadow-lg ring-1 ring-surface-5"
+				:class="allowGradient ? 'w-64' : 'w-56'"
 				:style="panelStyle"
 				role="dialog"
 				:aria-label="label"
 				tabindex="-1"
 				@keydown="handlePanelKeydown"
 			>
+				<!--
+					A colour, or a run of them. The switch is the same two-way
+					choice the rest of the app draws as a pair of chips.
+				-->
+				<div
+					v-if="allowGradient"
+					class="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-surface-4 p-1"
+					role="tablist"
+				>
+					<button
+						v-for="option in ['solid', 'gradient'] as const"
+						:key="option"
+						type="button"
+						role="tab"
+						:aria-selected="mode === option"
+						class="cursor-pointer rounded-lg border-0 px-2 py-1 text-sm font-semibold transition-colors"
+						:class="
+							mode === option
+								? 'bg-brand-highlight text-brand'
+								: 'bg-transparent text-secondary hover:text-contrast'
+						"
+						@click="setMode(option)"
+					>
+						{{ option === 'solid' ? solidLabel : gradientLabel }}
+					</button>
+				</div>
+
+				<div v-if="mode === 'gradient'" class="mb-3 flex flex-col gap-2">
+					<!-- The run itself, and its colours under it, one to pick and edit. -->
+					<div
+						class="h-8 w-full rounded-lg border border-solid border-surface-5"
+						:style="{ background: gradientCss(90, stops) }"
+					/>
+					<div class="flex flex-wrap items-center gap-1.5">
+						<span v-for="(stop, index) in stops" :key="index" class="group relative inline-flex">
+							<button
+								type="button"
+								class="size-6 cursor-pointer rounded-full border-2 border-solid p-0 transition-transform"
+								:class="index === activeStop ? 'scale-110 border-contrast' : 'border-transparent'"
+								:style="{ backgroundColor: stop }"
+								:aria-label="`${gradientLabel} ${index + 1}: ${stop}`"
+								:aria-pressed="index === activeStop"
+								@click="selectStop(index)"
+							/>
+							<button
+								v-if="stops.length > 2"
+								type="button"
+								class="absolute -right-1 -top-1 hidden size-3.5 cursor-pointer place-items-center rounded-full border-0 bg-surface-5 p-0 text-[10px] leading-none text-contrast group-hover:grid"
+								:aria-label="`${removeStopLabel}: ${stop}`"
+								@click="removeStop(index)"
+							>
+								×
+							</button>
+						</span>
+						<button
+							type="button"
+							class="size-6 cursor-pointer rounded-full border-0 p-0 disabled:cursor-not-allowed disabled:opacity-40"
+							:disabled="stops.length >= maxStops"
+							:title="addStopLabel"
+							:aria-label="addStopLabel"
+							@click="addStop"
+						>
+							<span
+								class="grid size-full place-items-center rounded-full border-2 border-dashed border-surface-5 text-secondary"
+								>+</span
+							>
+						</button>
+						<span class="ml-auto text-xs text-secondary">{{ stops.length }}/{{ maxStops }}</span>
+					</div>
+
+					<!--
+						Which way it runs, as arrows around a picture of it: the
+						arrow is the direction, so nothing has to be read.
+					-->
+					<div class="flex items-center gap-3">
+						<span class="text-xs text-secondary">{{ directionLabel }}</span>
+						<div
+							class="ml-auto grid grid-cols-3 gap-1"
+							role="radiogroup"
+							:aria-label="directionLabel"
+						>
+							<template v-for="cell in DIRECTION_GRID" :key="cell">
+								<span
+									v-if="cell === null"
+									class="size-7 rounded-md border border-solid border-surface-5"
+									:style="{ background: gradientCss(angle, stops) }"
+									aria-hidden="true"
+								/>
+								<button
+									v-else
+									type="button"
+									role="radio"
+									:aria-checked="angle === cell"
+									:aria-label="`${directionLabel}: ${cell}°`"
+									class="grid size-7 cursor-pointer place-items-center rounded-md border-0 p-0 transition-colors"
+									:class="
+										angle === cell
+											? 'bg-brand text-brand-inverted'
+											: 'bg-surface-4 text-secondary hover:text-contrast'
+									"
+									@click="setAngle(cell)"
+								>
+									<ArrowUpIcon class="size-4" :style="{ transform: `rotate(${cell}deg)` }" />
+								</button>
+							</template>
+						</div>
+					</div>
+				</div>
+
 				<div
 					ref="svRef"
 					class="relative h-36 w-full touch-none select-none rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-brand-shadow"
@@ -109,7 +219,7 @@
 							<button
 								type="button"
 								class="size-6 cursor-pointer rounded-full border-0 p-0"
-								:style="{ backgroundColor: color }"
+								:style="{ background: color }"
 								:aria-label="`${customColorsLabel}: ${color}`"
 								@mouseenter="emit('preview', color)"
 								@mouseleave="emit('preview', picked)"
@@ -155,7 +265,7 @@
 </template>
 
 <script setup lang="ts">
-import { CheckIcon } from '@modrinth/assets'
+import { ArrowUpIcon, CheckIcon } from '@modrinth/assets'
 import { colord } from 'colord'
 import { computed, onMounted, ref, useId, watch } from 'vue'
 
@@ -189,6 +299,18 @@ const props = withDefaults(
 		customColorsLimit?: number
 		/** What the tick says it does. */
 		applyLabel?: string
+		/**
+		 * Whether a run of colours can be picked as well as one. The model is
+		 * then either a hex colour or `linear-gradient(<angle>deg, #hex, ...)`.
+		 */
+		allowGradient?: boolean
+		/** How many colours a run can have. */
+		maxStops?: number
+		solidLabel?: string
+		gradientLabel?: string
+		directionLabel?: string
+		addStopLabel?: string
+		removeStopLabel?: string
 	}>(),
 	{
 		disabled: false,
@@ -200,6 +322,13 @@ const props = withDefaults(
 		customColorsFullLabel: 'The row is full - remove one of your colours first',
 		customColorsLimit: 8,
 		applyLabel: 'Use this colour',
+		allowGradient: false,
+		maxStops: 10,
+		solidLabel: 'Colour',
+		gradientLabel: 'Gradient',
+		directionLabel: 'Direction',
+		addStopLabel: 'Add a colour',
+		removeStopLabel: 'Remove this colour',
 	},
 )
 
@@ -219,6 +348,14 @@ const emit = defineEmits<{
 
 /** Puts a colour in the wheel without applying it; the tick does that. */
 function pickColor(color: string) {
+	if (mode.value === 'gradient' && !parseGradient(color)) {
+		// A plain colour clicked while editing a run goes into the colour
+		// being edited, rather than throwing the run away.
+		stops.value[activeStop.value] = color
+		syncWheel(color)
+		picked.value = gradientCss(angle.value, stops.value)
+		return
+	}
 	picked.value = color
 	syncFromModel(color)
 }
@@ -258,6 +395,85 @@ const hue = ref(0)
 const saturation = ref(0)
 const brightness = ref(100)
 const hexInput = ref('')
+
+/**
+ * A run of colours: the direction it goes in, and the colours it goes through,
+ * evenly spaced. Written the way CSS draws it, so the string is the picture.
+ */
+const DIRECTION_GRID = [315, 0, 45, 270, null, 90, 225, 180, 135] as const
+const GRADIENT = /^linear-gradient\(\s*(-?\d+(?:\.\d+)?)deg\s*,(.+)\)$/i
+
+function parseGradient(value: string): { angle: number; stops: string[] } | null {
+	const match = GRADIENT.exec(value.trim())
+	if (!match) return null
+	const colors = match[2].split(',').map((part) => part.trim().toLowerCase())
+	if (colors.length < 2 || colors.some((color) => !/^#[0-9a-f]{6}$/.test(color))) return null
+	return { angle: ((Number(match[1]) % 360) + 360) % 360, stops: colors }
+}
+
+function gradientCss(direction: number, colors: string[]): string {
+	return `linear-gradient(${direction}deg, ${colors.join(', ')})`
+}
+
+const mode = ref<'solid' | 'gradient'>('solid')
+const stops = ref<string[]>(['#c1121f', '#ff8f4a'])
+const angle = ref(180)
+const activeStop = ref(0)
+
+/** The colour being edited in the wheel: the one colour, or one of the run. */
+function syncWheel(color: string) {
+	const hsv = hexToHsv(color)
+	if (!hsv) return
+	hue.value = hsv.h
+	saturation.value = hsv.s
+	brightness.value = hsv.v
+	hexInput.value = color.replace('#', '').toUpperCase()
+}
+
+function setMode(next: 'solid' | 'gradient') {
+	if (mode.value === next) return
+	if (next === 'gradient') {
+		// The run starts from the colour that was being looked at, so
+		// switching keeps what was there.
+		const base = /^#[0-9a-f]{6}$/i.test(picked.value) ? picked.value.toLowerCase() : stops.value[0]
+		const second = colord(base).rotate(40).lighten(0.08).toHex()
+		stops.value = [base, second]
+		activeStop.value = 0
+		mode.value = 'gradient'
+		syncWheel(base)
+		picked.value = gradientCss(angle.value, stops.value)
+	} else {
+		const base = stops.value[activeStop.value] ?? stops.value[0]
+		mode.value = 'solid'
+		picked.value = base
+		syncWheel(base)
+	}
+}
+
+function selectStop(index: number) {
+	activeStop.value = index
+	syncWheel(stops.value[index])
+}
+
+function addStop() {
+	if (stops.value.length >= props.maxStops) return
+	const last = stops.value[stops.value.length - 1]
+	stops.value = [...stops.value, colord(last).rotate(30).toHex()]
+	selectStop(stops.value.length - 1)
+	picked.value = gradientCss(angle.value, stops.value)
+}
+
+function removeStop(index: number) {
+	if (stops.value.length <= 2) return
+	stops.value = stops.value.filter((_, at) => at !== index)
+	selectStop(Math.min(activeStop.value, stops.value.length - 1))
+	picked.value = gradientCss(angle.value, stops.value)
+}
+
+function setAngle(next: number) {
+	angle.value = next
+	picked.value = gradientCss(angle.value, stops.value)
+}
 /**
  * The colour being looked at, which is not yet the colour in force.
  *
@@ -285,12 +501,18 @@ function hsvToHex(h: number, s: number, v: number) {
 }
 
 function syncFromModel(value: string) {
-	const hsv = hexToHsv(value)
-	if (!hsv) return
-	hue.value = hsv.h
-	saturation.value = hsv.s
-	brightness.value = hsv.v
-	hexInput.value = value.replace('#', '').toUpperCase()
+	const gradient = props.allowGradient ? parseGradient(value) : null
+	if (gradient) {
+		mode.value = 'gradient'
+		stops.value = gradient.stops
+		angle.value = gradient.angle
+		activeStop.value = 0
+		syncWheel(gradient.stops[0])
+		return
+	}
+	if (!hexToHsv(value)) return
+	mode.value = 'solid'
+	syncWheel(value)
 }
 
 watch(
@@ -315,7 +537,19 @@ watch(isOpen, (open) => {
 function applyHsv() {
 	const hex = hsvToHex(hue.value, saturation.value, brightness.value)
 	hexInput.value = hex.replace('#', '').toUpperCase()
-	picked.value = hex
+	setEdited(hex)
+}
+
+/** Puts a colour into whatever is being edited: the one colour, or one of the run. */
+function setEdited(hex: string) {
+	if (mode.value === 'gradient') {
+		const next = [...stops.value]
+		next[activeStop.value] = hex
+		stops.value = next
+		picked.value = gradientCss(angle.value, next)
+	} else {
+		picked.value = hex
+	}
 }
 
 /**
@@ -381,10 +615,12 @@ function onHueInput(event: Event) {
 function commitHexInput() {
 	const normalized = hexInput.value.trim().replace('#', '')
 	if (/^[0-9a-f]{6}$/i.test(normalized)) {
-		picked.value = `#${normalized.toLowerCase()}`
-		syncFromModel(picked.value)
+		const hex = `#${normalized.toLowerCase()}`
+		setEdited(hex)
+		syncWheel(hex)
 	} else {
-		hexInput.value = model.value.replace('#', '').toUpperCase()
+		const current = mode.value === 'gradient' ? stops.value[activeStop.value] : picked.value
+		hexInput.value = (current ?? '').replace('#', '').toUpperCase()
 	}
 }
 

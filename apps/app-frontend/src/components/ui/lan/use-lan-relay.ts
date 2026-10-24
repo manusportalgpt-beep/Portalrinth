@@ -7,13 +7,8 @@ import { start_lan_relay, stop_lan_relay } from '@/helpers/lan'
 import { lanRelayKey, lanRelaysQueryOptions } from './queries'
 
 const messages = defineMessages({
-	published: {
-		id: 'app.lan.published',
-		defaultMessage: 'Published at {address}',
-	},
 	stopped: { id: 'app.lan.stopped', defaultMessage: 'No longer published' },
 	copied: { id: 'app.lan.copied', defaultMessage: 'Address copied' },
-	hint: { id: 'app.lan.hint', defaultMessage: 'Open LAN' },
 })
 
 /** The address a published world is reachable at, or nothing when it is not. */
@@ -38,17 +33,11 @@ export function useLanRelays() {
 		await queryClient.invalidateQueries({ queryKey: lanRelayKey })
 	}
 
+	// What publishing went through, and where it stopped if it did, is shown
+	// step by step by the publishing window rather than said in a notification.
 	const startMutation = useMutation({
 		mutationFn: (processUuid: string) => start_lan_relay(processUuid),
-		onSuccess: async (published) => {
-			await refresh()
-			const address = lanAddress(published)
-			addNotification({
-				type: 'success',
-				title: formatMessage(messages.published, { address: address ?? '' }),
-			})
-		},
-		onError: handleError,
+		onSettled: refresh,
 	})
 
 	const stopMutation = useMutation({
@@ -68,11 +57,6 @@ export function useLanRelays() {
 		return stopMutation.isPending.value && stopMutation.variables.value === processUuid
 	}
 
-	/** Says something that is not an error but is worth saying. */
-	function hint(text: string) {
-		addNotification({ type: 'info', title: formatMessage(messages.hint), text })
-	}
-
 	async function copyAddress(address: string) {
 		try {
 			await navigator.clipboard.writeText(address)
@@ -85,11 +69,10 @@ export function useLanRelays() {
 	return {
 		relays,
 		relaysQuery,
-		start: (processUuid: string) => startMutation.mutate(processUuid),
+		start: (processUuid: string) => startMutation.mutateAsync(processUuid),
 		stop: (processUuid: string) => stopMutation.mutate(processUuid),
 		isPublishing,
 		isStopping,
 		copyAddress,
-		hint,
 	}
 }

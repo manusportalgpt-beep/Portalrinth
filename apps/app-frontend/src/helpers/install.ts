@@ -43,7 +43,16 @@ export interface PackLocationFile {
 	keep?: string[] | null
 }
 
-export type CreatePackLocation = PackLocationVersionId | PackLocationFile
+/** Portalrinth's own: a CurseForge modpack, downloaded inside the install job. */
+export interface PackLocationCurseforge {
+	type: 'fromCurseforge'
+	project_id: string
+	file_id?: string | null
+	title: string
+	icon_url?: string | null
+}
+
+export type CreatePackLocation = PackLocationVersionId | PackLocationFile | PackLocationCurseforge
 
 /**
  * Build a `fromFile` pack location.
