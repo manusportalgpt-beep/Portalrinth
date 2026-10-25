@@ -127,6 +127,46 @@ export function savePageShade(shade: number): void {
 	}
 }
 
+/**
+ * How dark the bar over the search is while content is added to an instance,
+ * from 0, see-through, to 100, solid. Its own setting, so the bar can be made
+ * darker than the page under it and the list scrolling beneath stays out of
+ * its text.
+ */
+const HEADER_SHADE_KEY = 'portalrinth.background.header-shade'
+export const DEFAULT_HEADER_SHADE = 50
+
+function readHeaderShade(): number {
+	try {
+		const raw = localStorage.getItem(HEADER_SHADE_KEY)
+		const stored = Number(raw)
+		if (raw === null || !Number.isFinite(stored)) return DEFAULT_HEADER_SHADE
+		return Math.min(100, Math.max(0, stored))
+	} catch {
+		return DEFAULT_HEADER_SHADE
+	}
+}
+
+export const headerShade = ref(readHeaderShade())
+
+export function saveHeaderShade(shade: number): void {
+	headerShade.value = Math.min(100, Math.max(0, shade))
+	try {
+		localStorage.setItem(HEADER_SHADE_KEY, String(headerShade.value))
+	} catch {
+		// Not kept, but still shown until the window is closed.
+	}
+}
+
+/**
+ * The opacity the bar is painted at. Eased so the middle of the slider is
+ * already well covered (50 is 75%), while 100 is still fully solid.
+ */
+export function headerShadeOpacity(shade: number): number {
+	const rest = 100 - Math.min(100, Math.max(0, shade))
+	return Math.round(100 - (rest * rest) / 100)
+}
+
 export async function saveBackgroundDim(dim: number): Promise<void> {
 	await setSettings({ ...(await getSettings()), background_dim: dim })
 }

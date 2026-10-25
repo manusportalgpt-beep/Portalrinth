@@ -700,19 +700,12 @@ async fn identities(state: &crate::State) -> crate::Result<Vec<RelayIdentity>> {
         });
     }
 
-    for (username, refresh_token, uuid) in microsoft_accounts(state).await? {
-        // What is stored against a Microsoft account is the token Minecraft
-        // accepts, and the relay is not Minecraft.
-        // An account whose token could not be refreshed is still that
-        // account. Dropping it here would leave the person with an error
-        // about not being signed in when they are - the one thing they are
-        // not. It is kept, and the messenger is asked about it, and the
-        // messenger is the one that says it is no good.
-        let access_token =
-            match crate::state::oauth_refresh(&refresh_token).await {
-                Ok(refreshed) => refreshed.value.access_token,
-                Err(_) => String::new(),
-            };
+    for (username, access_token, uuid) in microsoft_accounts(state).await? {
+        // The messenger checks a Microsoft account the way Minecraft's own
+        // services do: with the Minecraft access token, the one the game is
+        // launched with. The Microsoft OAuth token behind it is refused as
+        // `msa_token_invalid`. `Credentials::get_all` has already renewed the
+        // Minecraft token if it was about to run out.
         found.push(RelayIdentity::Online {
             provider: "msa",
             username,
@@ -726,8 +719,8 @@ async fn identities(state: &crate::State) -> crate::Result<Vec<RelayIdentity>> {
 
 /// The Microsoft accounts, copied out of the map they are held in.
 ///
-/// The token is exchanged for a live one over the network, and a borrow of the
-/// map cannot be held across that.
+/// Each with the Minecraft access token, already renewed by `get_all` when it
+/// was close to running out.
 async fn microsoft_accounts(
     state: &crate::State,
 ) -> crate::Result<Vec<(String, String, Uuid)>> {
@@ -737,7 +730,7 @@ async fn microsoft_accounts(
         .map(|entry| {
             (
                 entry.offline_profile.name.clone(),
-                entry.refresh_token.clone(),
+                entry.access_token.clone(),
                 entry.offline_profile.id,
             )
         })
@@ -804,8 +797,21 @@ async fn messenger_token(
     let status = response.status();
     let body = response.text().await.unwrap_or_default();
     if !status.is_success() {
+        // The messenger says which check failed (`msa_token_invalid`,
+        // `ely_token_invalid`, ...); without it every refusal reads the same.
+        let code = serde_json::from_str::<serde_json::Value>(&body)
+            .ok()
+            .and_then(|value| {
+                value
+                    .get("code")
+                    .or_else(|| value.get("error"))
+                    .and_then(|code| code.as_str())
+                    .map(String::from)
+            })
+            .map(|code| format!(" ({provider}: {code})"))
+            .unwrap_or_default();
         return Err(anyhow::anyhow!(format!(
-            "the messenger would not issue a relay token: HTTP {status}"
+            "the messenger would not issue a relay token: HTTP {status}{code}"
         )));
     }
 

@@ -20,7 +20,13 @@
 				class="!text-brand"
 				aria-hidden="true"
 			/>
-			<component :is="formatIcon(item)" v-if="formatIcon?.(item)" aria-hidden="true" />
+			<component
+				:is="formatIcon(item)"
+				v-if="formatIcon?.(item)"
+				class="chip-icon"
+				:class="selected === item ? 'text-brand' : 'opacity-70'"
+				aria-hidden="true"
+			/>
 			<span>{{ formatLabel(item) }}</span>
 		</Button>
 	</div>

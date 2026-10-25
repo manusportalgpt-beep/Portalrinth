@@ -2704,5 +2704,11 @@
 	},
 	"curseforge.category.utility": {
 		"message": "Утилиты"
+	},
+	"portalrinth.settings.background.header-shade.title": {
+		"message": "Затемнение верхней плашки"
+	},
+	"portalrinth.settings.background.header-shade.description": {
+		"message": "Плашка сверху при добавлении контента в сборку, чтобы список под ней не просвечивал сквозь текст: 0 — прозрачная, 100 — полностью тёмная."
 	}
 }

@@ -38,6 +38,7 @@ import _SteamColorIcon from './external/color/steam.svg?component'
 import _USDCColorIcon from './external/color/usdc.svg?component'
 import _VenmoColorIcon from './external/color/venmo.svg?component'
 import _CurseForgeIcon from './external/curseforge.svg?component'
+import _ModrinthBrandIcon from './external/modrinth.svg?component'
 import _DiscordIcon from './external/discord.svg?component'
 import _FacebookIcon from './external/facebook.svg?component'
 import _FlathubIcon from './external/flathub.svg?component'
@@ -111,6 +112,7 @@ export const BlueskyIcon = _BlueskyIcon
 export const BuyMeACoffeeIcon = _BuyMeACoffeeIcon
 export const GithubIcon = _GithubIcon
 export const CurseForgeIcon = _CurseForgeIcon
+export const ModrinthBrandIcon = _ModrinthBrandIcon
 export const DiscordIcon = _DiscordIcon
 export const FacebookIcon = _FacebookIcon
 export const FlathubIcon = _FlathubIcon

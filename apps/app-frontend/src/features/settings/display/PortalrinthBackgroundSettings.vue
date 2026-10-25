@@ -19,10 +19,12 @@ import {
 	backgroundUrl,
 	chooseBackground,
 	clearBackground,
+	headerShade,
 	isBackgroundFile,
 	pageShade,
 	saveBackgroundBlur,
 	saveBackgroundDim,
+	saveHeaderShade,
 	savePageShade,
 	setBackgroundFromPath,
 } from '@/helpers/portalrinth-background'
@@ -69,6 +71,15 @@ const messages = defineMessages({
 		id: 'portalrinth.settings.background.page-shade.description',
 		defaultMessage:
 			'How much darker the middle of the window is than the panels: 0 is the same as the panels, 100 is solid.',
+	},
+	headerShadeTitle: {
+		id: 'portalrinth.settings.background.header-shade.title',
+		defaultMessage: 'Darken the bar over the search',
+	},
+	headerShadeDescription: {
+		id: 'portalrinth.settings.background.header-shade.description',
+		defaultMessage:
+			'The bar at the top while adding content to an instance, so the list under it does not show through its text: 0 is see-through, 100 is solid.',
 	},
 })
 
@@ -229,6 +240,26 @@ onUnmounted(() => {
 					:step="5"
 					unit="%"
 					@update:model-value="savePageShade"
+				/>
+			</div>
+			<div class="flex flex-col gap-2.5">
+				<div>
+					<h3 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.headerShadeTitle) }}
+					</h3>
+					<p class="m-0 mt-1 text-secondary">
+						{{ formatMessage(messages.headerShadeDescription) }}
+					</p>
+				</div>
+				<Slider
+					id="background-header-shade"
+					:model-value="headerShade"
+					:aria-label="formatMessage(messages.headerShadeTitle)"
+					:min="0"
+					:max="100"
+					:step="5"
+					unit="%"
+					@update:model-value="saveHeaderShade"
 				/>
 			</div>
 		</template>

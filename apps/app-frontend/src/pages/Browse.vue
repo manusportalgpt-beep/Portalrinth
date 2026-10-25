@@ -6,6 +6,7 @@ import {
 	CurseForgeIcon,
 	ExternalIcon,
 	GlobeIcon,
+	ModrinthBrandIcon,
 	PlusIcon,
 	ServerStackIcon,
 	SettingsIcon,
@@ -699,6 +700,8 @@ const projectType = ref<ProjectType>(route.params.projectType as ProjectType)
 // the build has a key, only for the project types CurseForge has, and never
 // while adding to a server, whose flow is Modrinth's from end to end.
 const BROWSE_SOURCES: BrowseSource[] = ['modrinth', 'curseforge']
+const browseSourceIcon = (source: BrowseSource) =>
+	source === 'curseforge' ? CurseForgeIcon : ModrinthBrandIcon
 const browseSource = ref<BrowseSource>(
 	curseforgeSettings.enabled &&
 		(route.query.src === 'cf' ||
@@ -1754,6 +1757,8 @@ provideBrowseManager({
 					v-model="browseSource"
 					:items="BROWSE_SOURCES"
 					:format-label="formatBrowseSource"
+					:format-icon="browseSourceIcon"
+					hide-checkmark-icon
 					:capitalize="false"
 					:aria-label="formatMessage(messages.browseSourceLabel)"
 					size="small"

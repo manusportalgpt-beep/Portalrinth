@@ -7,10 +7,11 @@
 		@wheel="onWheel"
 	>
 		<div
+			ref="previewControlsElement"
 			data-skin-preview-debug="controls"
 			class="skin-hints absolute left-0 right-0 z-10 flex items-center justify-center pointer-events-none transition-opacity duration-300"
 			:class="{ 'opacity-0': modelZoom > 1.05 }"
-			:style="previewControlsPositionStyle"
+			:style="boundedPreviewControlsPositionStyle"
 		>
 			<span
 				class="skin-hints__row flex items-center justify-center gap-3 text-sm font-medium leading-6 text-secondary"
@@ -212,6 +213,10 @@ const hasSubtitle = computed(() => Boolean(slots.subtitle))
 const hasNametagBadge = computed(() => Boolean(slots['nametag-badge']))
 const isSubtitleWrapped = ref(false)
 const { height: subtitleHeight } = useElementSize(subtitleElement, undefined, { box: 'border-box' })
+const previewControlsElement = ref<HTMLElement | null>(null)
+const { height: previewControlsHeight } = useElementSize(previewControlsElement, undefined, {
+	box: 'border-box',
+})
 const selectedModelSrc = computed(() =>
 	props.variant === 'SLIM' ? SlimPlayerModel : ClassicPlayerModel,
 )
@@ -368,6 +373,18 @@ const boundedSubtitlePositionStyle = computed(() => {
 		typeof style.top === 'string' && style.top.endsWith('px') ? parseFloat(style.top) : NaN
 	const limit = containerSize.value.height - subtitleHeight.value - 4
 	if (!Number.isFinite(top) || subtitleHeight.value <= 0 || limit <= 0) return style
+	return { ...style, top: `${Math.min(top, limit)}px` }
+})
+
+// The hints under the feet move with the model too: taking the cape off makes
+// the model shorter, its feet drop, and the hints with them. Kept inside the
+// preview so the dialog or page around it never grows a scrollbar for it.
+const boundedPreviewControlsPositionStyle = computed(() => {
+	const style = previewControlsPositionStyle.value
+	const top =
+		typeof style.top === 'string' && style.top.endsWith('px') ? parseFloat(style.top) : NaN
+	const limit = containerSize.value.height - previewControlsHeight.value - 4
+	if (!Number.isFinite(top) || previewControlsHeight.value <= 0 || limit <= 0) return style
 	return { ...style, top: `${Math.min(top, limit)}px` }
 })
 

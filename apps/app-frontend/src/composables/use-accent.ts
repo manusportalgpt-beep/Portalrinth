@@ -243,7 +243,10 @@ ${G} .bg-brand,
 ${G} .\\!bg-brand,
 ${G} .btn.btn-primary:not(.btn-outline):not(.btn-transparent),
 ${G} .button-frame--colored${BRAND},
-${G}.light-mode .bg-button-bgSelected {
+${G}.light-mode .bg-button-bgSelected,
+${G}.light-mode .nav-button.router-link-active::before,
+${G} .selected-option,
+${G} .portalrinth-gradient-fill {
 	background-image: var(--portalrinth-accent-gradient) !important;
 }
 
@@ -254,7 +257,14 @@ ${G} .chips .selected,
 ${G} .btn.btn-secondary,
 ${G}:not(.light-mode) .bg-button-bgSelected,
 ${G} .button-frame--colored-text${BRAND},
-${G} .button-frame--outlined${BRAND} {
+${G} .button-frame--outlined${BRAND},
+${G}:not(.light-mode) .nav-button.router-link-active::before,
+${G} [class*='bg-[color-mix(in_srgb,var(--color-brand)'],
+${G} .bg-brand\\/8,
+${G} .bg-brand\\/10,
+${G} .bg-brand\\/20,
+${G} .btn.featured,
+${G} .indicator[data-tone='green'] {
 	background-color: transparent !important;
 	background-image: var(--portalrinth-accent-gradient-soft) !important;
 }

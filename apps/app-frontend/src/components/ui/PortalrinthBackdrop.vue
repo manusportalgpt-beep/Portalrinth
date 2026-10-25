@@ -10,6 +10,8 @@ import {
 	backgroundDim,
 	backgroundIsVideo,
 	backgroundUrl,
+	headerShade,
+	headerShadeOpacity,
 	pageShade,
 } from '@/helpers/portalrinth-background'
 
@@ -25,6 +27,13 @@ watchEffect(() => {
 
 watchEffect(() => {
 	document.documentElement.style.setProperty('--portalrinth-page-shade', `${pageShade.value}%`)
+})
+
+watchEffect(() => {
+	document.documentElement.style.setProperty(
+		'--portalrinth-header-shade',
+		`${headerShadeOpacity(headerShade.value)}%`,
+	)
 })
 </script>
 
@@ -159,7 +168,7 @@ watchEffect(() => {
 :root.portalrinth-backdrop-active .browse-install-header {
 	background-color: color-mix(
 		in srgb,
-		var(--color-bg) var(--portalrinth-page-shade, 50%),
+		var(--color-bg) var(--portalrinth-header-shade, 75%),
 		transparent
 	);
 	backdrop-filter: blur(24px) saturate(1.3);
