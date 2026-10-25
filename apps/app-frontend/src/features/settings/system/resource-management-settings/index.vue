@@ -1,11 +1,12 @@
 <script setup>
-import { BoxIcon, FolderSearchIcon, KeyIcon } from '@modrinth/assets'
+import { BoxIcon, CheckIcon, FolderSearchIcon, KeyIcon } from '@modrinth/assets'
 import { defineMessages, IconButton, Input, Slider, useVIntl } from '@modrinth/ui'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { onMounted, ref, watch } from 'vue'
 
 import { get, set } from '@/helpers/settings.ts'
+import { setSkinRenderService, useSkinRenderService } from '@/helpers/skin-render-service'
 
 import ContentStorageSettings from './content-storage.vue'
 
@@ -70,7 +71,39 @@ const messages = defineMessages({
 		defaultMessage:
 			'Number of files the app can write to disk at once. Lower this if you frequently encounter I/O errors. Requires an app restart.',
 	},
+	skinServicesTitle: {
+		id: 'app.settings.resource-management.skin-services.title',
+		defaultMessage: 'Skin services',
+	},
+	skinServicesDescription: {
+		id: 'app.settings.resource-management.skin-services.description',
+		defaultMessage:
+			'Who draws the 3D previews of skins. One service works at a time, everywhere previews are shown, and it can be switched.',
+	},
+	skinServicesLaby: {
+		id: 'app.settings.resource-management.skin-services.laby',
+		defaultMessage:
+			"The skin library's own render: understands the hashes of every skin in Discover. Chosen by default.",
+	},
+	skinServicesCrafty: {
+		id: 'app.settings.resource-management.skin-services.crafty',
+		defaultMessage:
+			'Renders by texture hash, but only knows the textures Mojang has indexed - library skins can come out as the default Steve.',
+	},
+	skinServicesMcskin: {
+		id: 'app.settings.resource-management.skin-services.mcskin',
+		defaultMessage:
+			'Renders players by name or UUID and has no render for a bare texture hash, so previews are drawn by the launcher itself.',
+	},
 })
+
+const skinService = useSkinRenderService()
+
+const skinServiceOptions = [
+	{ id: 'laby', name: 'Laby.net', description: messages.skinServicesLaby },
+	{ id: 'crafty', name: 'Crafty.gg', description: messages.skinServicesCrafty },
+	{ id: 'mcskin', name: 'mcskin.me', description: messages.skinServicesMcskin },
+]
 
 watch(
 	settings,
@@ -217,6 +250,41 @@ async function findLauncherDir() {
 						: formatMessage(messages.curseforgeMissing)
 				}}
 			</p>
+		</div>
+
+		<div class="flex flex-col gap-2.5">
+			<h2 class="mt-0 m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.skinServicesTitle) }}
+			</h2>
+			<p class="m-0 leading-tight text-secondary">
+				{{ formatMessage(messages.skinServicesDescription) }}
+			</p>
+			<div class="mt-1 flex flex-col gap-2">
+				<button
+					v-for="option in skinServiceOptions"
+					:key="option.id"
+					type="button"
+					class="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border-2 border-solid p-4 text-left transition-colors"
+					:class="
+						skinService === option.id
+							? 'border-contrast bg-surface-2'
+							: 'border-surface-5 hover:border-surface-4'
+					"
+					:aria-pressed="skinService === option.id"
+					@click="setSkinRenderService(option.id)"
+				>
+					<span class="flex min-w-0 flex-col gap-1">
+						<span class="font-semibold text-contrast">{{ option.name }}</span>
+						<span class="text-sm leading-snug text-secondary">
+							{{ formatMessage(option.description) }}
+						</span>
+					</span>
+					<CheckIcon
+						v-if="skinService === option.id"
+						class="size-5 shrink-0 text-contrast"
+					/>
+				</button>
+			</div>
 		</div>
 	</div>
 </template>

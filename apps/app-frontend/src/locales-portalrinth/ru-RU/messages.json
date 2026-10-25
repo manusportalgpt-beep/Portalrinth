@@ -3136,5 +3136,20 @@
 	},
 	"app.settings.sound.effects-volume": {
 		"message": "Громкость звуков"
+	},
+	"app.settings.resource-management.skin-services.title": {
+		"message": "Сервис-скинов"
+	},
+	"app.settings.resource-management.skin-services.description": {
+		"message": "Кто рисует 3D-превью скинов. Работает один сервис целиком — во всех превью сразу, без смешивания, — и его можно выбрать."
+	},
+	"app.settings.resource-management.skin-services.laby": {
+		"message": "Родной рендер библиотеки скинов: понимает хэши всех скинов в «Обзоре». Выбран по умолчанию."
+	},
+	"app.settings.resource-management.skin-services.crafty": {
+		"message": "Рендерит по хэшу текстуры, но знает только текстуры, проиндексированные Mojang, — скины библиотеки может показать Стивом."
+	},
+	"app.settings.resource-management.skin-services.mcskin": {
+		"message": "Рисует игроков по нику или UUID и не умеет рендерить по хэшу текстуры — превью скинов рисует сам лаунчер."
 	}
 }

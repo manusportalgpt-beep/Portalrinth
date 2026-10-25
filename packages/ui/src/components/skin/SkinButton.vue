@@ -11,9 +11,8 @@ const messages = defineMessages({
 })
 
 const emit = defineEmits<{
-	(e: 'select'): void
+	(e: 'select' | 'error'): void
 	(e: 'edit', event: MouseEvent): void
-	(e: 'error'): void
 }>()
 
 const props = withDefaults(

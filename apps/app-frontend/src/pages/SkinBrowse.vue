@@ -38,7 +38,6 @@ import {
 	type LabySkin,
 	labySkinPageUrl,
 	labySkinPreview,
-	labySkinRenderUrl,
 	labySkinTags,
 	labySkinTexture,
 	labySkinVariant,
@@ -47,6 +46,7 @@ import {
 	similarSkinReference,
 } from '@/helpers/laby-skins'
 import { add_and_equip_custom_skin, type Cape, get_available_capes } from '@/helpers/skins'
+import { skinRenderUrl } from '@/helpers/skin-render-service'
 import { playSoundEffect } from '@/helpers/portalrinth-sfx'
 import { type BreadcrumbDefinition, injectBreadcrumbManager } from '@/shared/breadcrumbs'
 
@@ -143,27 +143,44 @@ let requestId = 0
 const previews = ref<Record<string, string>>({})
 
 /**
- * The preview of a skin: the 3D render laby.net itself draws, straight from
- * the host the skin list came from. Nothing has to be downloaded or drawn
- * here, so a page of skins fills in as fast as the pictures arrive, and the
+ * The preview of a skin: the 3D render the chosen service draws (settings,
+ * Resources, "Сервис-скинов"). Nothing has to be downloaded or drawn here,
+ * so a page of skins fills in as fast as the pictures arrive, and the
  * webview's own cache keeps the ones it has already shown.
  */
 function previewSrc(hash: string) {
-	return previews.value[hash] ?? labySkinRenderUrl(hash)
+	const remote = skinRenderUrl(hash)
+	if (remote) return previews.value[hash] ?? remote
+	// The chosen service has no render for a bare texture hash - the skin is
+	// drawn right here, so the grid still fills with real previews.
+	drawPreviewLocally(hash)
+	return previews.value[hash]
 }
 
-/**
- * The render did not come through - some networks drop part of their requests
- * to laby.net. The skin is then drawn here on a canvas from its texture, the
- * way the grid used to, and what that fails to load too is left as it was.
- */
-function onPreviewError(hash: string) {
-	if (previews.value[hash]) return
+const localPreviewsPending = new Set<string>()
+
+/** Draws a skin on the canvas from its texture, once, whoever asked. */
+function drawPreviewLocally(hash: string) {
+	if (previews.value[hash] || localPreviewsPending.has(hash)) return
+	localPreviewsPending.add(hash)
 	labySkinPreview(hash)
 		.then((url) => {
 			previews.value = { ...previews.value, [hash]: url }
 		})
 		.catch(() => {})
+		.finally(() => {
+			localPreviewsPending.delete(hash)
+		})
+}
+
+/**
+ * The render did not come through - some networks drop part of their requests
+ * to the render service. The skin is then drawn here on a canvas from its
+ * texture, the way the grid used to, and what that fails to load too is left
+ * as it was.
+ */
+function onPreviewError(hash: string) {
+	drawPreviewLocally(hash)
 }
 
 async function load(reset: boolean) {
@@ -281,7 +298,17 @@ async function select(skin: LabySkin) {
 	const id = ++viewerRequest
 	current.value = skin
 	currentTexture.value = ''
-	currentRender.value = labySkinRenderUrl(skin.image_hash, 400, 640)
+	const remoteRender = skinRenderUrl(skin.image_hash, 400, 640)
+	currentRender.value = remoteRender ?? ''
+	if (!remoteRender) {
+		// The chosen service cannot render a bare texture hash - the local
+		// canvas draw stands in until the texture itself arrives.
+		labySkinPreview(skin.image_hash)
+			.then((url) => {
+				if (id === viewerRequest && !currentTexture.value) currentRender.value = url
+			})
+			.catch(() => {})
+	}
 	similar.value = []
 	try {
 		const texture = await labySkinTexture(skin.image_hash)

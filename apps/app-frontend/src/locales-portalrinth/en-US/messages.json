@@ -1516,5 +1516,20 @@
 	},
 	"app.settings.sound.effects-volume": {
 		"message": "Effects volume"
+	},
+	"app.settings.resource-management.skin-services.title": {
+		"message": "Skin services"
+	},
+	"app.settings.resource-management.skin-services.description": {
+		"message": "Who draws the 3D previews of skins. One service works at a time, everywhere previews are shown, and it can be switched."
+	},
+	"app.settings.resource-management.skin-services.laby": {
+		"message": "The skin library's own render: understands the hashes of every skin in Discover. Chosen by default."
+	},
+	"app.settings.resource-management.skin-services.crafty": {
+		"message": "Renders by texture hash, but only knows the textures Mojang has indexed - library skins can come out as the default Steve."
+	},
+	"app.settings.resource-management.skin-services.mcskin": {
+		"message": "Renders players by name or UUID and has no render for a bare texture hash, so previews are drawn by the launcher itself."
 	}
 }

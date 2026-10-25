@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tokio::sync::watch;
 use uuid::Uuid;
 
@@ -21,7 +21,6 @@ enum Mode {
 
 #[derive(Debug)]
 pub(crate) struct InstallControl {
-    job_id: Uuid,
     mode: watch::Sender<Mode>,
     rate_limited_until: Mutex<Option<Instant>>,
 }
@@ -94,43 +93,6 @@ impl InstallControl {
         }
     }
 
-    /// Sits out an API rate limit for `wait`, showing the job as waiting, with
-    /// a countdown, until it is over.
-    pub(crate) async fn wait_out_rate_limit(
-        &self,
-        wait: Duration,
-    ) -> crate::Result<()> {
-        let until = Instant::now() + wait;
-        {
-            let mut current = self.lock_rate_limited_until();
-            if current.is_none_or(|current| current < until) {
-                *current = Some(until);
-            }
-        }
-        let result = async {
-            loop {
-                self.emit_snapshot().await;
-                let left = until.saturating_duration_since(Instant::now());
-                if left.is_zero() {
-                    return Ok(());
-                }
-                download_step(tokio::time::sleep(
-                    left.min(Duration::from_secs(1)),
-                ))
-                .await?;
-            }
-        }
-        .await;
-        {
-            let mut current = self.lock_rate_limited_until();
-            if current.is_some_and(|current| current <= Instant::now()) {
-                *current = None;
-            }
-        }
-        self.emit_snapshot().await;
-        result
-    }
-
     fn rate_limit_seconds(&self) -> Option<u32> {
         let left = (*self.lock_rate_limited_until())?
             .saturating_duration_since(Instant::now());
@@ -147,17 +109,6 @@ impl InstallControl {
         self.rate_limited_until
             .lock()
             .unwrap_or_else(|error| error.into_inner())
-    }
-
-    async fn emit_snapshot(&self) {
-        let Ok(state) = crate::State::get().await else {
-            return;
-        };
-        if let Ok(record) =
-            super::store::get_required(self.job_id, &state.pool).await
-        {
-            let _ = super::events::emit_install_job(&record.snapshot()).await;
-        }
     }
 
     pub(super) fn finish_failed(&self) {
@@ -190,7 +141,6 @@ impl Drop for Registration {
 pub(super) fn register(job_id: Uuid) -> Registration {
     let (mode, _) = watch::channel(Mode::Running);
     let control = Arc::new(InstallControl {
-        job_id,
         mode,
         rate_limited_until: Mutex::new(None),
     });
