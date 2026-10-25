@@ -59,15 +59,52 @@ export async function searchLabySkins(query: string, page = 1): Promise<LabySkin
 	return data.textures ?? []
 }
 
-/** The skin as a 64×64 PNG, older 64×32 ones filled out the way the game does. */
+/** Every way a texture can come in, most likely to serve first: laby.net's
+ * own hosts, then an image proxy that fetches on its own servers, for the
+ * networks whose route to laby.net's CDN drops a share of the requests. */
+export function labySkinTextureSources(hash: string): string[] {
+	const main = labySkinTextureUrl(hash)
+	const cdn = `https://texture.laby.net/${hash}.png`
+	const through = (url: string) =>
+		`https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=png`
+	return [main, cdn, through(main), through(cdn)]
+}
+
+/** Reads a texture with the webview's own network stack. Both laby.net hosts
+ * answer with open CORS, and to Cloudflare a browser is a known face where
+ * the app's client is not. */
+async function browserTextureBytes(url: string): Promise<Uint8Array> {
+	const response = await fetch(url, { mode: 'cors', cache: 'force-cache' })
+	if (!response.ok) throw new Error(`skin texture: ${response.status}`)
+	return new Uint8Array(await response.arrayBuffer())
+}
+
+/** The skin as a 64×64 PNG, older 64×32 ones filled out the way the game does.
+ * Every source is tried over the app's client, then over the webview's own,
+ * and the whole run is given a second chance after a pause — whatever the
+ * network drops once, it usually lets through the next moment. */
 export async function labySkinTexture(hash: string): Promise<Uint8Array> {
-	// Comes back over IPC as a plain list of bytes, not a typed array.
-	try {
-		return new Uint8Array(await normalize_skin_texture(labySkinTextureUrl(hash)))
-	} catch {
-		// If laby.net itself refuses too, the old texture CDN is the second try.
-		return new Uint8Array(await normalize_skin_texture(`https://texture.laby.net/${hash}.png`))
+	const sources = labySkinTextureSources(hash)
+	let lastError: unknown
+	for (let round = 0; round < 2; round++) {
+		for (const source of sources) {
+			try {
+				// Comes back over IPC as a plain list of bytes, not a typed array.
+				return new Uint8Array(await normalize_skin_texture(source))
+			} catch (error) {
+				lastError = error
+			}
+		}
+		for (const source of sources) {
+			try {
+				return new Uint8Array(await normalize_skin_texture(await browserTextureBytes(source)))
+			} catch (error) {
+				lastError = error
+			}
+		}
+		if (round === 0) await new Promise((resolve) => setTimeout(resolve, 700))
 	}
+	throw lastError ?? new Error(`The skin texture ${hash} could not be loaded`)
 }
 
 export function pngDataUrl(png: Uint8Array) {
