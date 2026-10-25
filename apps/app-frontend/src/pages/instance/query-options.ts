@@ -104,7 +104,10 @@ export function instanceProcessesQueryOptions(instanceId: string) {
 export function instanceLinkedProjectQueryOptions(projectId: string) {
 	return queryOptions({
 		queryKey: instanceKeys.linkedProject(projectId),
-		queryFn: () => get_project_v3(projectId, 'must_revalidate'),
+		// The cache serves what it has and revalidates in the background;
+		// forcing a network round trip before anything is handed back made
+		// the instance page hang on a slow connection.
+		queryFn: () => get_project_v3(projectId),
 		staleTime: 30_000,
 	})
 }

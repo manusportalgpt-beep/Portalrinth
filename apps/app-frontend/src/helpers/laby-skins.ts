@@ -29,8 +29,14 @@ export function labySkinTextureUrl(hash: string) {
 	return `https://texture.laby.net/${hash}.png`
 }
 
+/**
+ * The preview render of a skin, by its texture hash. The render itself comes
+ * from crafty.gg's skin service: laby.net's own render endpoint turns more
+ * requests away than it serves, which is what left Discover's skin grid with
+ * broken icons.
+ */
 export function labySkinRenderUrl(hash: string, width = 135, height = 257) {
-	return `https://laby.net/api/v3/render/skin/${hash}.png?width=${width}&height=${height}`
+	return `https://render.crafty.gg/3d/full/${hash}?width=${width}&height=${height}`
 }
 
 export function labySkinPageUrl(hash: string) {

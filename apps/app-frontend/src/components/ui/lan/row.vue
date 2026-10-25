@@ -10,7 +10,6 @@ import {
 } from '@modrinth/assets'
 import { Avatar, Button, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 
 import type { LanGameMode, LanRelayInfo } from '@/helpers/lan'
 
@@ -30,7 +29,6 @@ const emit = defineEmits<{
 }>()
 
 const { formatMessage } = useVIntl()
-const router = useRouter()
 const messages = defineMessages({
 	stateClosed: {
 		id: 'app.lan.card.closed',
@@ -91,12 +89,6 @@ function headOf(player: string) {
 	return `https://mc-heads.net/avatar/${encodeURIComponent(player)}/64`
 }
 
-/**
- * The face of whoever opened the world: their Minecraft head, the same as for
- * everybody who comes in.
- */
-const ownerAvatar = computed(() => headOf(props.relay.account_name || 'MHF_Steve'))
-
 /** The game mode a player is in, as far as the game has said. */
 function modeOf(player: string): LanGameMode | null {
 	return props.relay.player_modes?.[player] ?? props.relay.world_mode ?? null
@@ -110,11 +102,6 @@ const gameModeMessages = defineMessages({
 	hardcore: { id: 'app.lan.mode.hardcore', defaultMessage: 'Hardcore' },
 })
 
-/** The profile a name belongs to. */
-function openProfile(username: string) {
-	void router.push(`/user/${encodeURIComponent(username)}`)
-}
-
 function copyAddress() {
 	if (address.value) emit('copy', address.value)
 }
@@ -126,18 +113,6 @@ function copyAddress() {
 			<Avatar :src="iconUrl" :tint-by="relay.instance_id" alt="" size="3rem" class="shrink-0" />
 			<div class="flex min-w-0 flex-col gap-1">
 				<span class="truncate text-lg font-bold text-contrast">{{ relay.instance_name }}</span>
-				<!-- Whoever is playing it; the name opens the profile it belongs to. -->
-				<button
-					type="button"
-					class="flex min-w-0 cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 text-left"
-					:aria-label="relay.account_name"
-					@click="openProfile(relay.account_name)"
-				>
-					<Avatar :src="ownerAvatar" alt="" size="1.25rem" circle no-shadow />
-					<span class="truncate text-sm text-secondary hover:underline">
-						{{ relay.account_name }}
-					</span>
-				</button>
 			</div>
 			<div class="ml-auto flex shrink-0 items-center gap-2">
 				<span class="lan-card-state">

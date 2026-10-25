@@ -17,7 +17,7 @@ import {
 } from '@modrinth/ui'
 import { useQuery } from '@tanstack/vue-query'
 import dayjs from 'dayjs'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import NavButton from '@/components/ui/NavButton.vue'
@@ -50,6 +50,7 @@ const { formatMessage } = useVIntl()
 
 const container = ref()
 const footer = ref()
+const bedrockSection = ref()
 let resizeObserver
 const maxAuto = ref(0)
 const allInstances = computed(() =>
@@ -89,13 +90,28 @@ const updateMaxAuto = () => {
 	const dividerHeight = rem + 1
 	const gap = rem / 4
 	const footerHeight = (footer.value?.clientHeight ?? 0) + gap
+	const bedrockHeight = bedrockSection.value?.clientHeight ?? 0
 	maxAuto.value = Math.max(
 		0,
 		Math.floor(
-			(container.value.clientHeight - footerHeight - 2 * dividerHeight - gap) / (3 * rem + gap),
+			(container.value.clientHeight - footerHeight - 2 * dividerHeight - gap - bedrockHeight) /
+				(3 * rem + gap),
 		),
 	)
 }
+
+// The Bedrock section renders below the Java list, so its height has to be
+// reserved too, otherwise Java cards overflow out of reach.
+watch(
+	() => [bedrockProfiles.value.length, bedrockVisible.value],
+	async () => {
+		await nextTick()
+		if (bedrockSection.value) {
+			resizeObserver?.observe(bedrockSection.value)
+		}
+		updateMaxAuto()
+	},
+)
 
 const setLimit = (count) => {
 	const clamped = Math.max(0, Math.min(count, maxVisible.value))
@@ -196,7 +212,13 @@ onMounted(() => {
 	resizeObserver.observe(footer.value)
 	updateMaxAuto()
 	checkProcesses()
-	void refreshBedrockProfiles()
+	void refreshBedrockProfiles().then(async () => {
+		await nextTick()
+		if (bedrockSection.value) {
+			resizeObserver.observe(bedrockSection.value)
+		}
+		updateMaxAuto()
+	})
 })
 
 onUnmounted(() => {
@@ -340,6 +362,7 @@ function openContextMenu(event, instance) {
 			</TransitionGroup>
 			<div
 				v-if="bedrockVisible && bedrockProfiles.length"
+				ref="bedrockSection"
 				class="flex shrink-0 flex-col items-center"
 			>
 				<NavButton

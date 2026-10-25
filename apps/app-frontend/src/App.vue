@@ -2410,8 +2410,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				:is-primary="(route) => route.path === '/'"
 				:is-subpage="
 					() =>
-						(route.path.startsWith('/browse') ||
-							route.path.startsWith('/project') ||
+						(route.path.startsWith('/project') ||
 							route.path.startsWith('/curseforge')) &&
 						route.query.i
 				"
@@ -2421,7 +2420,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			<NavButton
 				v-tooltip.right="formatMessage(commonMessages.discoverContentLabel)"
 				to="/browse/modpack"
-				:is-primary="() => route.path.startsWith('/browse') && !route.query.i && !route.query.sid"
+				:is-primary="() => route.path.startsWith('/browse')"
 				:is-subpage="
 					(route) =>
 						(route.path.startsWith('/project') || route.path.startsWith('/curseforge')) &&

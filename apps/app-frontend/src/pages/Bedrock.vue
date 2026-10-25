@@ -138,6 +138,9 @@ useRootBreadcrumb({
 })
 
 async function loadProfile() {
+	// Navigating away empties the route id; asking the backend for a build
+	// with no id only ever comes back with a "no Bedrock build" error.
+	if (!profileId.value) return
 	try {
 		profile.value = await getBedrock(profileId.value)
 	} catch (error) {
@@ -155,7 +158,7 @@ async function loadStatus() {
 }
 
 watch(profileId, () => {
-	void loadProfile()
+	if (profileId.value) void loadProfile()
 })
 
 onMounted(() => {

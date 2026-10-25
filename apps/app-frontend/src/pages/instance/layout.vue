@@ -265,8 +265,10 @@ const contentSyncQuery = useQuery(
 			},
 			enabled: !!targetInstanceId && instance.value?.install_stage === 'installed',
 			networkMode: 'always' as const,
-			staleTime: 0,
-			gcTime: 0,
+			// A full walk of the instance's files used to run on every
+			// open of the page; a minute of grace keeps repeated visits
+			// instant while still noticing the changes made outside.
+			staleTime: 60_000,
 			refetchOnWindowFocus: false,
 			refetchOnReconnect: false,
 			retry: false,
