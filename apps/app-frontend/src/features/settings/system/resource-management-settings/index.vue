@@ -220,40 +220,6 @@ async function findLauncherDir() {
 
 		<div class="flex flex-col gap-2.5">
 			<h2 class="mt-0 m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.curseforgeTitle) }}
-			</h2>
-			<Input
-				id="curseforge-api-key"
-				v-model="settings.curseforge_api_key"
-				:icon="KeyIcon"
-				type="password"
-				placeholder="••••••••••••••••"
-				wrapper-class="w-full"
-			/>
-			<p class="m-0 leading-tight text-secondary">
-				{{ formatMessage(messages.curseforgeDescription) }}
-			</p>
-			<span class="text-sm text-secondary">
-				{{ formatMessage(messages.curseforgeHint) }}
-				<a
-					href="https://www.curseforge.com/account/api-tokens"
-					target="_blank"
-					rel="noopener noreferrer"
-					class="font-semibold text-brand hover:underline"
-					>curseforge.com</a
-				>
-			</span>
-			<p class="m-0 leading-tight text-secondary">
-				{{
-					curseforgeAvailable
-						? formatMessage(messages.curseforgePresent)
-						: formatMessage(messages.curseforgeMissing)
-				}}
-			</p>
-		</div>
-
-		<div class="flex flex-col gap-2.5">
-			<h2 class="mt-0 m-0 text-lg font-semibold text-contrast">
 				{{ formatMessage(messages.skinServicesTitle) }}
 			</h2>
 			<p class="m-0 leading-tight text-secondary">
@@ -285,6 +251,40 @@ async function findLauncherDir() {
 					/>
 				</button>
 			</div>
+		</div>
+
+		<div class="flex flex-col gap-2.5">
+			<h2 class="mt-0 m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.curseforgeTitle) }}
+			</h2>
+			<Input
+				id="curseforge-api-key"
+				v-model="settings.curseforge_api_key"
+				:icon="KeyIcon"
+				type="password"
+				placeholder="••••••••••••••••"
+				wrapper-class="w-full"
+			/>
+			<p class="m-0 leading-tight text-secondary">
+				{{ formatMessage(messages.curseforgeDescription) }}
+			</p>
+			<span class="text-sm text-secondary">
+				{{ formatMessage(messages.curseforgeHint) }}
+				<a
+					href="https://www.curseforge.com/account/api-tokens"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="font-semibold text-brand hover:underline"
+					>curseforge.com</a
+				>
+			</span>
+			<p class="m-0 leading-tight text-secondary">
+				{{
+					curseforgeAvailable
+						? formatMessage(messages.curseforgePresent)
+						: formatMessage(messages.curseforgeMissing)
+				}}
+			</p>
 		</div>
 	</div>
 </template>
