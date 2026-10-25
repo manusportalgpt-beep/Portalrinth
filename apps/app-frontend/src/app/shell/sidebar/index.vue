@@ -9,7 +9,6 @@ import PrideFundraiserBanner from '@/features/campaigns/pride-fundraiser-banner.
 import FriendsList from '@/features/friends/friends-list/index.vue'
 import AccountsCard from '@/features/minecraft-accounts/accounts-card.vue'
 import type { MinecraftAccountsActions } from '@/features/minecraft-accounts/context'
-import NewsSidebar from '@/features/news/news-sidebar.vue'
 import OnboardingChecklist from '@/features/onboarding/checklist.vue'
 import type { ModrinthCredentials } from '@/helpers/mr_auth'
 import { SIDEBAR_MOTION_MS } from '@/helpers/portalrinth-sidebar-motion'
@@ -230,9 +229,6 @@ const messages = defineMessages({
 					</div>
 					<PrideFundraiserBanner
 						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
-					/>
-					<NewsSidebar
-						:style="showAd ? { paddingBottom: `calc(1rem + ${upgradeHeight}px)` } : undefined"
 					/>
 				</div>
 			</div>

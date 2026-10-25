@@ -555,7 +555,16 @@ pub async fn add_and_equip_custom_skin(
         .await?
         .ok_or(ErrorKind::NotLoggedIn)?;
     let cape_id = cape.map(|cape| cape.id);
-    let local_texture_key = local_skin_texture_key(&texture_blob);
+    // Unique per install: putting a skin on that is already in the list
+    // saves it as another entry instead of refreshing the first one.
+    let local_texture_key = Arc::from(format!(
+        "local-{:x}-{:x}",
+        sha2::Sha256::digest(&texture_blob),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|since| since.as_millis())
+            .unwrap_or_default()
+    ));
 
     CustomMinecraftSkin::add(
         selected_credentials.offline_profile.id,
@@ -651,6 +660,20 @@ async fn add_and_equip_custom_skin_now(
         CustomMinecraftSkinInsertPosition::Top
     };
 
+    // A skin put on from Discover keeps the entry it saved at the start:
+    // when its texture is already in the list the fresh entry stays as its
+    // own card, so installing a skin twice keeps both instead of replacing
+    // the first one.
+    let texture_already_saved = local_texture_key
+        != equipped_skin_texture_key.as_ref()
+        && CustomMinecraftSkin::get_by_texture(
+            profile.id,
+            &equipped_skin_texture_key,
+            &state.pool,
+        )
+        .await?
+        .is_some();
+
     let persistence_result = if cape_id.is_none()
         && is_bundled_skin(&equipped_skin_texture_key, equipped_skin_variant)
     {
@@ -662,6 +685,8 @@ async fn add_and_equip_custom_skin_now(
         }
         .remove(profile.id, &state.pool)
         .await
+    } else if texture_already_saved {
+        Ok(())
     } else {
         CustomMinecraftSkin::add(
             profile.id,
@@ -680,7 +705,9 @@ async fn add_and_equip_custom_skin_now(
         return Err(error);
     }
 
-    if local_texture_key != equipped_skin_texture_key.as_ref() {
+    if local_texture_key != equipped_skin_texture_key.as_ref()
+        && !texture_already_saved
+    {
         CustomMinecraftSkin {
             texture_key: local_texture_key.to_string(),
             variant,

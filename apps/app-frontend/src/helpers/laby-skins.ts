@@ -76,6 +76,60 @@ export function pngDataUrl(png: Uint8Array) {
 	return `data:image/png;base64,${arrayBufferToBase64(png)}`
 }
 
+// ---- Local previews ------------------------------------------------------
+
+const previewCache = new Map<string, Promise<string>>()
+
+/**
+ * A front view of the skin, drawn on a canvas from its texture. The remote
+ * render services answer a texture hash they do not know with the default
+ * Steve, which is what filled the skin grid with copies of him.
+ */
+export function labySkinPreview(hash: string): Promise<string> {
+	let cached = previewCache.get(hash)
+	if (!cached) {
+		cached = drawSkinPreview(hash).catch((error) => {
+			previewCache.delete(hash)
+			throw error
+		})
+		previewCache.set(hash, cached)
+	}
+	return cached
+}
+
+/** Paints head, body, arms and legs of the texture, front on, 4x wide. */
+async function drawSkinPreview(hash: string): Promise<string> {
+	const texture = await labySkinTexture(hash)
+	const bitmap = await createImageBitmap(
+		new Blob([new Uint8Array(texture)], { type: 'image/png' }),
+	)
+	const scale = 4
+	const canvas = document.createElement('canvas')
+	canvas.width = 16 * scale
+	canvas.height = 32 * scale
+	const context = canvas.getContext('2d')
+	if (!context) {
+		bitmap.close()
+		throw new Error('Could not create a canvas context for a skin preview')
+	}
+	context.imageSmoothingEnabled = false
+	const draw = (sx: number, sy: number, w: number, h: number, dx: number, dy: number) =>
+		context.drawImage(bitmap, sx, sy, w, h, dx * scale, dy * scale, w * scale, h * scale)
+	draw(8, 8, 8, 8, 4, 0) // head
+	draw(40, 8, 8, 8, 4, 0) // hat layer
+	draw(20, 20, 8, 12, 4, 8) // body
+	draw(44, 20, 4, 12, 0, 8) // right arm, worn on the left too
+	draw(44, 20, 4, 12, 12, 8)
+	draw(44, 36, 4, 12, 0, 8) // arm layer
+	draw(44, 36, 4, 12, 12, 8)
+	draw(4, 20, 4, 12, 4, 20) // right leg, worn on the left too
+	draw(4, 20, 4, 12, 8, 20)
+	draw(4, 36, 4, 12, 4, 20) // leg layer
+	draw(4, 36, 4, 12, 8, 20)
+	bitmap.close()
+	return canvas.toDataURL('image/png')
+}
+
 /**
  * Set by the skin editor's "Similar skins" button: the texture to find
  * look-alikes of when Discover's skin tab opens.

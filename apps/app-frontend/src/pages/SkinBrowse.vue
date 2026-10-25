@@ -37,7 +37,7 @@ import {
 	LABY_PAGE_SIZE,
 	type LabySkin,
 	labySkinPageUrl,
-	labySkinRenderUrl,
+	labySkinPreview,
 	labySkinTags,
 	labySkinTexture,
 	labySkinVariant,
@@ -137,6 +137,22 @@ const hasMore = ref(true)
 /** Showing look-alikes of the skin on the account instead of a search. */
 const similarMode = ref(false)
 let requestId = 0
+
+/** Grid previews, drawn on a canvas from each skin's own texture. */
+const previews = ref<Record<string, string>>({})
+
+/** The preview of a skin, kicked off the first time the card asks for it. */
+function previewSrc(hash: string) {
+	let preview = previews.value[hash]
+	if (!preview) {
+		labySkinPreview(hash)
+			.then((url) => {
+				previews.value = { ...previews.value, [hash]: url }
+			})
+			.catch(() => {})
+	}
+	return preview
+}
 
 async function load(reset: boolean) {
 	const id = ++requestId
@@ -371,7 +387,7 @@ const usesFormatter = new Intl.NumberFormat()
 			<SkinButton
 				v-for="skin in skins"
 				:key="skin.image_hash"
-				:forward-image-src="labySkinRenderUrl(skin.image_hash, 200, 380)"
+				:forward-image-src="previewSrc(skin.image_hash)"
 				:selected="false"
 				:tooltip="tagsOf(skin) || undefined"
 				@select="open(skin)"
@@ -480,7 +496,7 @@ const usesFormatter = new Intl.NumberFormat()
 						<SkinButton
 							v-for="skin in similar"
 							:key="skin.image_hash"
-							:forward-image-src="labySkinRenderUrl(skin.image_hash, 100, 190)"
+							:forward-image-src="previewSrc(skin.image_hash)"
 							:selected="false"
 							:tooltip="tagsOf(skin) || undefined"
 							@select="select(skin)"
