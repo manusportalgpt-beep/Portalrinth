@@ -212,7 +212,7 @@ const router = useRouter()
 const route = useRoute()
 
 const TITLE_SHEEN_CLASS = 'portalrinth-title-sheen'
-let titleSheenTimer: ReturnType<typeof setTimeout> | null = null
+let titleSheenTimer = null
 
 function playTitleSheen() {
 	if (typeof window === 'undefined') return
@@ -220,7 +220,7 @@ function playTitleSheen() {
 	if (titleSheenTimer) clearTimeout(titleSheenTimer)
 	titleSheenTimer = setTimeout(() => {
 		titleSheenTimer = null
-		const title = document.querySelector<HTMLElement>('.app-viewport h1')
+		const title = document.querySelector('.app-viewport h1')
 		if (!title || !title.textContent?.trim()) return
 		title.classList.remove(TITLE_SHEEN_CLASS)
 		void title.offsetWidth
