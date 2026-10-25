@@ -14,6 +14,7 @@ import {
 	RefreshCwIcon,
 	SettingsIcon,
 	ShirtIcon,
+	SparklesIcon,
 	SpinnerIcon,
 	ToggleRightIcon,
 	UserIcon,
@@ -66,6 +67,7 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useRouteLoading } from '@/app/runtime/use-route-loading'
 import AppSidebar from '@/app/shell/sidebar/index.vue'
 import AppTitleBar from '@/app/shell/title-bar/index.vue'
+import PortalrinthMascot from '@/components/ui/ai/PortalrinthMascot.vue'
 import CurseforgePendingFilesModal from '@/components/ui/curseforge/CurseforgePendingFilesModal.vue'
 import ErrorModal from '@/components/ui/ErrorModal.vue'
 import HostingUpdateRequired from '@/components/ui/HostingUpdateRequired.vue'
@@ -110,6 +112,7 @@ import {
 	should_show_ads_consent_popup,
 	take_ads_window_hold,
 } from '@/helpers/ads.js'
+import { mascotCelebrate, registerAiToolHandler } from '@/helpers/ai-assistant'
 import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { refreshBedrockProfiles } from '@/helpers/bedrock'
@@ -138,6 +141,7 @@ import {
 } from '@/helpers/mr_auth.ts'
 import { loadBackground } from '@/helpers/portalrinth-background'
 import { prefetchRouteChunks, startProjectHoverPrefetch } from '@/helpers/portalrinth-prefetch'
+import { installSoundEffects } from '@/helpers/portalrinth-sfx'
 import { markSidebarMoving } from '@/helpers/portalrinth-sidebar-motion'
 import { cacheSplashCubeChoice } from '@/helpers/portalrinth-splash-cube'
 import { markThemeSettled, revealMainWindow } from '@/helpers/portalrinth-window-reveal'
@@ -189,7 +193,6 @@ import {
 	openAppUpdateChangelog,
 	setAppUpdateActions,
 } from '@/providers/app-update.ts'
-import { installSoundEffects } from '@/helpers/portalrinth-sfx'
 import { createContentInstall, provideContentInstall } from '@/providers/content-install'
 import {
 	provideAppUpdateDownloadProgress,
@@ -705,6 +708,10 @@ const messages = defineMessages({
 	home: {
 		id: 'app.nav.home',
 		defaultMessage: 'Home',
+	},
+	ai: {
+		id: 'app.nav.ai',
+		defaultMessage: 'AI assistant',
 	},
 	lan: {
 		id: 'app.nav.lan',
@@ -1585,6 +1592,32 @@ onMounted(() => {
 	setServerAddServerToInstanceModal(addServerToInstanceModal.value)
 	setServerInstallToPlayModal(installToPlayModal.value)
 	setServerUpdateToPlayModal(updateToPlayModal.value)
+
+	// The AI assistant's hands: the tools that need the app itself.
+	registerAiToolHandler((tool, args) => {
+		if (tool === 'navigate') {
+			if (!args || !args.startsWith('/')) return 'Нужен путь внутри лаунчера'
+			void router.push(args)
+			return `Открыл ${args}`
+		}
+		if (tool === 'open_creation_modal') {
+			void installationModal.value?.show()
+			return 'Открыл окно создания сборки'
+		}
+		if (tool === 'open_instance') {
+			if (!args) return 'Нужен id сборки'
+			void router.push(`/instance/${args}`)
+			return 'Открыл сборку'
+		}
+		if (tool === 'get_page') {
+			return `Открыт экран: ${route.fullPath}`
+		}
+		if (tool === 'celebrate') {
+			mascotCelebrate()
+			return 'Радуюсь!'
+		}
+		return null
+	})
 })
 
 const accountProviderModal = ref(null)
@@ -2412,8 +2445,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				:is-primary="(route) => route.path === '/'"
 				:is-subpage="
 					() =>
-						(route.path.startsWith('/project') ||
-							route.path.startsWith('/curseforge')) &&
+						(route.path.startsWith('/project') || route.path.startsWith('/curseforge')) &&
 						route.query.i
 				"
 			>
@@ -2445,6 +2477,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				to="/screenshots"
 			>
 				<ImageIcon />
+			</NavButton>
+			<NavButton
+				v-tooltip.right="formatMessage(messages.ai)"
+				to="/ai"
+				:is-primary="(r) => r.path === '/ai'"
+			>
+				<SparklesIcon />
 			</NavButton>
 			<NavButton
 				v-tooltip.right="formatMessage(messages.lan)"
@@ -2554,6 +2593,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	>
 		<div class="app-viewport flex-grow router-view">
 			<SurveyPopup />
+			<PortalrinthMascot />
 			<div
 				class="loading-indicator-container h-8 fixed z-50 pointer-events-none"
 				:style="{

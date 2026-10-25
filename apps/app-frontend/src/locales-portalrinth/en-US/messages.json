@@ -1531,5 +1531,149 @@
 	},
 	"app.settings.resource-management.skin-services.mcskin": {
 		"message": "Renders players by name or UUID and has no render for a bare texture hash, so previews are drawn by the launcher itself."
+	},
+	"app.nav.ai": {
+		"message": "AI assistant"
+	},
+	"app.ai.heading": {
+		"message": "AI assistant"
+	},
+	"app.ai.description": {
+		"message": "The launcher's own agent: builds modpacks, finds mods, explains errors and can open the right screens by itself."
+	},
+	"app.ai.input.placeholder": {
+		"message": "Ask anything… e.g. \"build me a 1.21 pack with JEI\""
+	},
+	"app.ai.send": {
+		"message": "Send"
+	},
+	"app.ai.clear": {
+		"message": "Clear history"
+	},
+	"app.ai.empty.title": {
+		"message": "How can I help?"
+	},
+	"app.ai.empty.hint": {
+		"message": "Ask about mods, modpacks, skins or errors — replies come from the chosen model, and the agent performs its actions right in the launcher."
+	},
+	"app.ai.suggestion.build": {
+		"message": "Build me an optimised 1.21.1 modpack"
+	},
+	"app.ai.suggestion.mods": {
+		"message": "Find a minimap mod for Forge 1.20.1"
+	},
+	"app.ai.suggestion.crash": {
+		"message": "Why won't my instance start? What do I look for in the logs?"
+	},
+	"app.ai.suggestion.skins": {
+		"message": "How do I change a player skin in the launcher?"
+	},
+	"app.ai.thinking": {
+		"message": "Thinking…"
+	},
+	"app.ai.tab.section": {
+		"message": "Model"
+	},
+	"app.ai.settings.provider": {
+		"message": "Provider"
+	},
+	"app.ai.settings.model": {
+		"message": "Model"
+	},
+	"app.ai.settings.key": {
+		"message": "API key"
+	},
+	"app.ai.settings.key.placeholder": {
+		"message": "Paste the API key for this provider"
+	},
+	"app.ai.settings.getkey": {
+		"message": "Get a key"
+	},
+	"app.ai.settings.custombase": {
+		"message": "Endpoint (OpenAI-compatible)"
+	},
+	"app.ai.settings.custommodel": {
+		"message": "Model name"
+	},
+	"app.ai.settings.note.free": {
+		"message": "Free, no key needed. If the model is busy, the launcher falls back to a spare provider by itself."
+	},
+	"app.ai.settings.fallback": {
+		"message": "If the main provider runs out of limits, the answer still arrives from a keyless spare provider."
+	},
+	"app.ai.mascot.placeholder": {
+		"message": "Tell the mascot…"
+	},
+	"app.ai.mascot.hide": {
+		"message": "Hide replies"
+	},
+	"app.ai.mascot.show": {
+		"message": "Show replies"
+	},
+	"app.ai.mascot.yes": {
+		"message": "Yes"
+	},
+	"app.ai.mascot.no": {
+		"message": "No"
+	},
+	"app.ai.mascot.replies": {
+		"message": "Recent replies"
+	},
+	"app.settings.tabs.ai-assistant": {
+		"message": "AI assistant"
+	},
+	"app.settings.ai-assistant.mascot.title": {
+		"message": "Mascot"
+	},
+	"app.settings.ai-assistant.mascot.description": {
+		"message": "A little friend with a skin who lives in the interface: walks around the launcher, offers help, answers in a bubble and can carry out commands. Pet it with Alt + left click. Everything it knows stays local."
+	},
+	"app.settings.ai-assistant.enable": {
+		"message": "Show the mascot"
+	},
+	"app.settings.ai-assistant.effects": {
+		"message": "Chat effects (typewriter text)"
+	},
+	"app.settings.ai-assistant.name": {
+		"message": "Mascot name"
+	},
+	"app.settings.ai-assistant.name-hint": {
+		"message": "The mascot responds to this name in conversation."
+	},
+	"app.settings.ai-assistant.skin.title": {
+		"message": "Mascot skin"
+	},
+	"app.settings.ai-assistant.skin.account": {
+		"message": "Same as my account"
+	},
+	"app.settings.ai-assistant.skin.hash": {
+		"message": "Skin from the library (laby.net hash)"
+	},
+	"app.settings.ai-assistant.skin.hash-hint": {
+		"message": "Take the hash from the address of any skin in Discover — the skin page opens when you click it."
+	},
+	"app.settings.ai-assistant.skin.mascot-section": {
+		"message": "Mascot"
+	},
+	"app.settings.ai-assistant.skin.mascot-section-description": {
+		"message": "A skin for the little friend from the AI assistant tab. It walks around the launcher, helps out, and you can chat with it from any screen."
+	},
+	"app.settings.ai-assistant.skin.open-settings": {
+		"message": "Configure the mascot"
+	},
+	"app.settings.ai-assistant.brain.title": {
+		"message": "Brain"
+	},
+	"app.settings.ai-assistant.brain.description": {
+		"message": "One model for everything: the AI assistant tab and the mascot. Providers marked \"RF\" work from Russia without a VPN."
+	},
+	"app.settings.ai-assistant.affection": {
+		"message": "Mascot affection"
+	},
+	"app.settings.ai-assistant.affection-hint": {
+		"message": "Grows when you pet the mascot (Alt + click). It shapes the mascot's character."
+	},
+	"app.settings.ai-assistant.reset-affection": {
+		"message": "Reset"
 	}
 }

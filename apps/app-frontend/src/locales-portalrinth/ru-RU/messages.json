@@ -3151,5 +3151,149 @@
 	},
 	"app.settings.resource-management.skin-services.mcskin": {
 		"message": "Рисует игроков по нику или UUID и не умеет рендерить по хэшу текстуры — превью скинов рисует сам лаунчер."
+	},
+	"app.nav.ai": {
+		"message": "ИИ-Помощник"
+	},
+	"app.ai.heading": {
+		"message": "ИИ-Помощник"
+	},
+	"app.ai.description": {
+		"message": "Локальный агент лаунчера: собирает сборки, ищет моды, объясняет ошибки и умеет открывать нужные экраны сам."
+	},
+	"app.ai.input.placeholder": {
+		"message": "Спросите что-нибудь… например, «собери сборку на 1.21 с JEI»"
+	},
+	"app.ai.send": {
+		"message": "Отправить"
+	},
+	"app.ai.clear": {
+		"message": "Очистить историю"
+	},
+	"app.ai.empty.title": {
+		"message": "Чем помочь?"
+	},
+	"app.ai.empty.hint": {
+		"message": "Спросите про моды, сборки, скины или ошибки — ответы приходят от выбранной модели, а действия агент выполняет прямо в лаунчере."
+	},
+	"app.ai.suggestion.build": {
+		"message": "Собери сборку на 1.21.1 с оптимизацией"
+	},
+	"app.ai.suggestion.mods": {
+		"message": "Найди мод на карты для Forge 1.20.1"
+	},
+	"app.ai.suggestion.crash": {
+		"message": "Почему сборка не запускается? Что посмотреть в логах?"
+	},
+	"app.ai.suggestion.skins": {
+		"message": "Как поменять скин игрока в лаунчере?"
+	},
+	"app.ai.thinking": {
+		"message": "Думает…"
+	},
+	"app.ai.tab.section": {
+		"message": "Модель"
+	},
+	"app.ai.settings.provider": {
+		"message": "Провайдер"
+	},
+	"app.ai.settings.model": {
+		"message": "Модель"
+	},
+	"app.ai.settings.key": {
+		"message": "API-ключ"
+	},
+	"app.ai.settings.key.placeholder": {
+		"message": "Вставьте API-ключ этого провайдера"
+	},
+	"app.ai.settings.getkey": {
+		"message": "Получить ключ"
+	},
+	"app.ai.settings.custombase": {
+		"message": "Адрес (OpenAI-совместимый)"
+	},
+	"app.ai.settings.custommodel": {
+		"message": "Имя модели"
+	},
+	"app.ai.settings.note.free": {
+		"message": "Ключ не нужен. Если модель занята, лаунчер сам подхватит запасного провайдера."
+	},
+	"app.ai.settings.fallback": {
+		"message": "Если у основного кончатся лимиты, ответ придёт от запасного провайдера без ключа."
+	},
+	"app.ai.mascot.placeholder": {
+		"message": "Скажите маскоту…"
+	},
+	"app.ai.mascot.hide": {
+		"message": "Скрыть ответы"
+	},
+	"app.ai.mascot.show": {
+		"message": "Показать ответы"
+	},
+	"app.ai.mascot.yes": {
+		"message": "Да"
+	},
+	"app.ai.mascot.no": {
+		"message": "Нет"
+	},
+	"app.ai.mascot.replies": {
+		"message": "Последние ответы"
+	},
+	"app.settings.tabs.ai-assistant": {
+		"message": "ИИ-Помощник"
+	},
+	"app.settings.ai-assistant.mascot.title": {
+		"message": "Маскот"
+	},
+	"app.settings.ai-assistant.mascot.description": {
+		"message": "Маленький друг со скином, который живёт в интерфейсе: ходит по лаунчеру, подсказывает, отвечает в пузыре и умеет выполнять команды. Погладить — Alt + левая кнопка мыши. Всё, что он знает, хранится локально."
+	},
+	"app.settings.ai-assistant.enable": {
+		"message": "Показывать маскота"
+	},
+	"app.settings.ai-assistant.effects": {
+		"message": "Эффекты чата (печатающийся текст)"
+	},
+	"app.settings.ai-assistant.name": {
+		"message": "Имя маскота"
+	},
+	"app.settings.ai-assistant.name-hint": {
+		"message": "Маскот отзывается на это имя в разговоре."
+	},
+	"app.settings.ai-assistant.skin.title": {
+		"message": "Скин маскота"
+	},
+	"app.settings.ai-assistant.skin.account": {
+		"message": "Как у моего аккаунта"
+	},
+	"app.settings.ai-assistant.skin.hash": {
+		"message": "Скин из библиотеки (хэш laby.net)"
+	},
+	"app.settings.ai-assistant.skin.hash-hint": {
+		"message": "Хэш можно взять из адреса любого скина в «Обзоре» — страница скина открывается по клику на него."
+	},
+	"app.settings.ai-assistant.skin.mascot-section": {
+		"message": "Маскот"
+	},
+	"app.settings.ai-assistant.skin.mascot-section-description": {
+		"message": "Свой скин для маленького друга из вкладки «ИИ-Помощник». Он ходит по лаунчеру, помогает и с ним можно переписываться из любого экрана."
+	},
+	"app.settings.ai-assistant.skin.open-settings": {
+		"message": "Настроить маскота"
+	},
+	"app.settings.ai-assistant.brain.title": {
+		"message": "Мозг"
+	},
+	"app.settings.ai-assistant.brain.description": {
+		"message": "Одна модель на всё: вкладку «ИИ-Помощник» и маскота. Провайдеров с пометкой «РФ» можно использовать из России без VPN."
+	},
+	"app.settings.ai-assistant.affection": {
+		"message": "Расположение маскота"
+	},
+	"app.settings.ai-assistant.affection-hint": {
+		"message": "Растёт, когда маскота гладят (Alt + ЛКМ). Влияет на его характер."
+	},
+	"app.settings.ai-assistant.reset-affection": {
+		"message": "Сбросить"
 	}
 }

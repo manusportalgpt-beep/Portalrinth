@@ -12,6 +12,7 @@ import {
 	PaintbrushIcon,
 	RefreshCwIcon,
 	Settings2Icon,
+	SparklesIcon,
 	ToggleRightIcon,
 	UserIcon,
 	Volume2Icon,
@@ -49,6 +50,7 @@ import LaunchHooksSettings from '@/features/settings/instance-defaults/launch-ho
 import WindowSettings from '@/features/settings/instance-defaults/window-settings.vue'
 import type { InstanceDefaultsTab } from '@/features/settings/settings-actions'
 import SyncingSettings from '@/features/settings/syncing/syncing-settings.vue'
+import AiAssistantSettings from '@/features/settings/system/ai-assistant-settings.vue'
 import CurseforgeSettings from '@/features/settings/system/CurseforgeSettings.vue'
 import ResourceManagementSettings from '@/features/settings/system/resource-management-settings/index.vue'
 import TroubleshootingSettings from '@/features/settings/system/troubleshooting-settings.vue'
@@ -227,6 +229,15 @@ const tabs = [
 		category: tabCategories.system,
 		icon: CurseForgeIcon,
 		content: CurseforgeSettings,
+	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.ai-assistant',
+			defaultMessage: 'AI assistant',
+		}),
+		category: tabCategories.system,
+		icon: SparklesIcon,
+		content: AiAssistantSettings,
 	},
 ]
 

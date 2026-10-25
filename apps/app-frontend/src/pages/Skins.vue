@@ -31,6 +31,7 @@ import { computedAsync } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 
 import EarsModIcon from '@/assets/skins/ears-mod.png'
+import MascotSkinSection from '@/components/ui/ai/MascotSkinSection.vue'
 import EditSkinModal from '@/components/ui/skin/EditSkinModal.vue'
 import PortalrinthElySkinModal from '@/components/ui/skin/PortalrinthElySkinModal.vue'
 import VirtualSkinSectionList from '@/components/ui/skin/VirtualSkinSectionList.vue'
@@ -54,8 +55,8 @@ import {
 	uploadElySkin,
 	wearElySkin,
 } from '@/helpers/ely_skins'
-import { playSoundEffect } from '@/helpers/portalrinth-sfx'
 import { offline_player_cape, type PlayerCapeSource } from '@/helpers/offline_auth'
+import { playSoundEffect } from '@/helpers/portalrinth-sfx'
 import { cleanupUnusedPreviews } from '@/helpers/rendering/skin-previews'
 import type { Cape, Skin, SkinModel, SkinTextureUrl } from '@/helpers/skins.ts'
 import {
@@ -2131,6 +2132,7 @@ async function checkUserChanges() {
 					@add-skin-drop="onElyDrop"
 				/>
 			</section>
+			<MascotSkinSection />
 		</div>
 	</div>
 

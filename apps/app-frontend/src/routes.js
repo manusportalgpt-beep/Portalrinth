@@ -17,6 +17,11 @@ export default new createRouter({
 			},
 		},
 		{
+			path: '/ai',
+			name: 'AI',
+			component: () => import('@/pages/Ai.vue'),
+		},
+		{
 			path: '/lan',
 			name: 'LAN',
 			component: () => import('@/pages/Lan.vue'),
