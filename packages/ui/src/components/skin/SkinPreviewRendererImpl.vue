@@ -142,6 +142,7 @@ import {
 	useSkinPreviewFit,
 	useSkinPreviewLoading,
 	useSkinPreviewLook,
+	useSkinPreviewPose,
 	useSkinPreviewScene,
 } from '#ui/composables/skin-rendering'
 
@@ -180,6 +181,9 @@ const props = withDefaults(
 		initialRotation?: number
 		animationConfig?: SkinPreviewAnimationConfig
 		earsEnabled?: boolean
+		crouch?: boolean
+		walk?: boolean
+		hideLayers?: boolean
 	}>(),
 	{
 		variant: 'CLASSIC',
@@ -192,6 +196,9 @@ const props = withDefaults(
 		framing: 'page',
 		fitZoom: 1,
 		earsEnabled: true,
+		crouch: false,
+		walk: false,
+		hideLayers: false,
 		animationConfig: () => ({
 			baseAnimation: 'idle',
 			randomAnimations: ['idle_sub_1', 'idle_sub_2', 'idle_sub_3'],
@@ -325,6 +332,12 @@ const {
 })
 
 useSkinPreviewLook({ scene, container: skinPreviewContainer, modelRotation })
+useSkinPreviewPose({
+	scene,
+	crouch: toRef(props, 'crouch'),
+	walk: toRef(props, 'walk'),
+	hideLayers: toRef(props, 'hideLayers'),
+})
 
 function syncDamageFlashShaderMaterials() {
 	syncDamageFlashShader(scene.value, damageFlashIntensity.value)

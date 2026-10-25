@@ -59,6 +59,11 @@ export default new createRouter({
 			],
 		},
 		{
+			path: '/browse/skin',
+			name: 'Discover skins',
+			component: () => import('@/pages/SkinBrowse.vue'),
+		},
+		{
 			path: '/browse/:projectType',
 			name: 'Discover content',
 			component: () => import('@/pages/Browse.vue'),
@@ -174,6 +179,11 @@ export default new createRouter({
 					component: () => import('@/pages/project/Gallery.vue'),
 				},
 			],
+		},
+		{
+			path: '/bedrock/:id',
+			name: 'Bedrock build',
+			component: () => import('@/pages/Bedrock.vue'),
 		},
 		{
 			path: '/instance/:id',

@@ -1,5 +1,12 @@
 <script setup>
-import { EyeIcon, FolderOpenIcon, PlayIcon, SpinnerIcon, StopCircleIcon } from '@modrinth/assets'
+import {
+	EyeIcon,
+	FolderOpenIcon,
+	PlayIcon,
+	SpinnerIcon,
+	StopCircleIcon,
+	TagLoaderBedrockIcon,
+} from '@modrinth/assets'
 import {
 	Avatar,
 	commonMessages,
@@ -21,6 +28,12 @@ import {
 	useQuickInstanceLimit,
 } from '@/composables/use-quick-instance-limit.ts'
 import { trackEvent } from '@/helpers/analytics'
+import {
+	bedrockIconUrl,
+	bedrockProfiles,
+	bedrockVisible,
+	refreshBedrockProfiles,
+} from '@/helpers/bedrock'
 import { getInstanceIconUrl, kill, run } from '@/helpers/instance'
 import { get_all } from '@/helpers/process'
 import { showInstanceInFolder } from '@/helpers/utils'
@@ -183,6 +196,7 @@ onMounted(() => {
 	resizeObserver.observe(footer.value)
 	updateMaxAuto()
 	checkProcesses()
+	void refreshBedrockProfiles()
 })
 
 onUnmounted(() => {
@@ -324,6 +338,29 @@ function openContextMenu(event, instance) {
 					</div>
 				</NavButton>
 			</TransitionGroup>
+			<div
+				v-if="bedrockVisible && bedrockProfiles.length"
+				class="flex shrink-0 flex-col items-center"
+			>
+				<NavButton
+					v-for="profile in bedrockProfiles"
+					:key="`bedrock-${profile.id}`"
+					v-tooltip.right="`${profile.name} (Bedrock)`"
+					class="quick-instance-item relative"
+					:to="`/bedrock/${encodeURIComponent(profile.id)}`"
+				>
+					<Avatar
+						:src="bedrockIconUrl(profile)"
+						size="28px"
+						:tint-by="profile.id"
+						class="transition-all group-hover:brightness-75"
+						pad-transparent-corners
+					/>
+					<TagLoaderBedrockIcon
+						class="pointer-events-none absolute bottom-1.5 right-1.5 size-3.5 rounded-sm bg-bg-raised p-px text-brand"
+					/>
+				</NavButton>
+			</div>
 		</div>
 		<ContextMenu ref="instanceOptions" :label="formatMessage(messages.instanceActions)" />
 		<div

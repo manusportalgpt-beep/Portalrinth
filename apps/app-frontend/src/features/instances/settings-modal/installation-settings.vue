@@ -63,11 +63,18 @@ debug('metadata load: start', {
 	installStage: instance.value.install_stage,
 })
 
+const MODPACK_LOADER_ORDER = ['vanilla', 'fabric', 'neoforge', 'forge', 'quilt']
+
+function loaderRank(name: string) {
+	const index = MODPACK_LOADER_ORDER.indexOf(name)
+	return index === -1 ? MODPACK_LOADER_ORDER.length : index
+}
+
 function getSupportedModpackLoaders() {
 	return get_loaders().then((value: PlatformTag[]) =>
 		value
 			.filter((item) => item.supported_project_types.includes('modpack') || item.name === 'vanilla')
-			.sort((a, b) => (a.name === 'vanilla' ? -1 : b.name === 'vanilla' ? 1 : 0)),
+			.sort((a, b) => loaderRank(a.name) - loaderRank(b.name)),
 	)
 }
 

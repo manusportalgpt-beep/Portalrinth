@@ -112,6 +112,7 @@ import {
 } from '@/helpers/ads.js'
 import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
+import { refreshBedrockProfiles } from '@/helpers/bedrock'
 import { get_user, get_user_many, get_version } from '@/helpers/cache.js'
 import { applyCurseforgeSettings } from '@/helpers/curseforge-settings'
 import { gameSettingsQueryOptions } from '@/helpers/game-options'
@@ -220,7 +221,7 @@ function playTitleSheen() {
 	if (titleSheenTimer) clearTimeout(titleSheenTimer)
 	titleSheenTimer = setTimeout(() => {
 		titleSheenTimer = null
-		const title = document.querySelector('.app-viewport h1')
+		const title = document.querySelector('.portalrinth-logo__name')
 		if (!title || !title.textContent?.trim()) return
 		title.classList.remove(TITLE_SHEEN_CLASS)
 		void title.offsetWidth
@@ -431,6 +432,9 @@ const {
 	setModpackAlreadyInstalledModal,
 	handleModpackDuplicateCreateAnyway,
 	handleModpackDuplicateGoToInstance,
+	bedrockAvailable,
+	refreshBedrockAvailable,
+	handleCreateBedrock,
 	onboardingChecklist,
 	tags,
 } = setupProviders(
@@ -533,6 +537,16 @@ const minecraftAccounts = computed(() => sidebar.value?.minecraftAccounts ?? nul
 // What the banner warns about is signing in and playing with a Microsoft
 // account. With an Ely.by or offline account selected nothing rides on it, so
 // it is not asked every thirty seconds and not shown.
+// Bedrock is offered only to a licensed account, so it is checked again
+// whenever the selected account changes.
+watch(
+	() => minecraftAccounts.value?.selectedAccount,
+	() => {
+		void refreshBedrockAvailable()
+		void refreshBedrockProfiles()
+	},
+)
+
 const microsoftAccountSelected = computed(() => {
 	const selected = minecraftAccounts.value?.selectedAccount
 	return !selected || !('auth_provider' in selected)
@@ -2370,6 +2384,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			:get-loader-manifest="getLoaderManifest"
 			:randomize-instance-icon="randomizeCreationIcon"
 			:customize-instance-icon="customizeCreationIcon"
+			:bedrock-available="bedrockAvailable"
+			:create-bedrock-instance="handleCreateBedrock"
 			@create="handleCreate"
 			@browse-modpacks="handleBrowseModpacks"
 		/>

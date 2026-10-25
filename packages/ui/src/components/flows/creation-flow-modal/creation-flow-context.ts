@@ -246,6 +246,10 @@ export interface CreationFlowContextValue {
 	searchProjects: (query: string, limit?: number) => Promise<ProjectSearchResult>
 	getProjectVersions: (projectId: string) => Promise<{ id: string }[]>
 	getLoaderManifest: LoaderManifestResolver | null
+
+	// Bedrock Edition: a separate core, not a Java loader
+	bedrockAvailable: ComputedRef<boolean>
+	isBedrock: ComputedRef<boolean>
 }
 
 export const [injectCreationFlowContext, provideCreationFlowContext] =
@@ -275,6 +279,14 @@ export interface CreationFlowOptions {
 	customizeInstanceIcon?: () => void
 	finishDisabled?: ComputedRef<boolean>
 	finishDisabledTooltip?: ComputedRef<string | undefined>
+	/** Offers Bedrock Edition next to the Java loaders (licensed accounts only). */
+	bedrockAvailable?: ComputedRef<boolean>
+	createBedrockInstance?: (data: BedrockInstanceCreateData) => Promise<void>
+}
+
+export interface BedrockInstanceCreateData {
+	name: string
+	iconPath: string | null
 }
 
 export function createCreationFlowContext(
@@ -307,6 +319,8 @@ export function createCreationFlowContext(
 	const getLoaderManifest = options.getLoaderManifest ?? null
 	const finishDisabled = options.finishDisabled ?? computed(() => false)
 	const finishDisabledTooltip = options.finishDisabledTooltip ?? computed(() => undefined)
+	const bedrockAvailable = options.bedrockAvailable ?? computed(() => false)
+	const createBedrockInstance = options.createBedrockInstance
 
 	const setupType = ref<SetupType | null>(null)
 	const isImportMode = ref(false)
@@ -339,6 +353,9 @@ export function createCreationFlowContext(
 	const loaderVersionType = ref<LoaderVersionType>('stable')
 	const selectedLoaderVersion = ref<string | null>(null)
 	const showSnapshots = ref(false)
+	const isBedrock = computed(
+		() => flowType === 'instance' && selectedLoader.value === 'bedrock' && bedrockAvailable.value,
+	)
 	const loaderVersionsCache = ref<Record<string, LoaderManifest>>({})
 	const paperSupportedVersions = ref<Set<string> | null>(null)
 	const purpurSupportedVersions = ref<Set<string> | null>(null)
@@ -346,10 +363,10 @@ export function createCreationFlowContext(
 	const autoInstanceName = computed(() => {
 		const loader = selectedLoader.value
 		const version = selectedGameVersion.value
-		if (!version) return ''
+		if (!isBedrock.value && !version) return ''
 
 		const loaderName = loader ? formatLoaderLabel(loader) : 'Vanilla'
-		const baseName = `${loaderName} ${version}`
+		const baseName = isBedrock.value ? loaderName : `${loaderName} ${version}`
 
 		const names = new Set(existingInstanceNames.value)
 		if (!names.has(baseName)) return baseName
@@ -390,6 +407,7 @@ export function createCreationFlowContext(
 		() =>
 			setupType.value === 'vanilla' ||
 			selectedLoader.value === 'vanilla' ||
+			isBedrock.value ||
 			projectInstall.value !== null,
 	)
 
@@ -450,7 +468,7 @@ export function createCreationFlowContext(
 	}
 
 	async function fetchLoaderMetadata(loader?: string | null) {
-		if (!loader || loader === 'vanilla') return
+		if (!loader || loader === 'vanilla' || loader === 'bedrock') return
 		if (loader === 'paper') {
 			await fetchPaperSupportedVersions()
 			return
@@ -595,6 +613,18 @@ export function createCreationFlowContext(
 			hasModpackFile: !!modpackFile.value,
 		})
 		loading.value = true
+		if (isBedrock.value && createBedrockInstance) {
+			modal.value?.hide()
+			void createBedrockInstance({
+				name: instanceName.value.trim() || autoInstanceName.value || 'Bedrock',
+				iconPath: instanceIconPath.value,
+			})
+				.catch(handleError)
+				.finally(() => {
+					loading.value = false
+				})
+			return
+		}
 		if (
 			projectInstall.value &&
 			createProjectInstall &&
@@ -706,6 +736,8 @@ export function createCreationFlowContext(
 		searchProjects,
 		getProjectVersions,
 		getLoaderManifest,
+		bedrockAvailable,
+		isBedrock,
 	}
 
 	return contextValue

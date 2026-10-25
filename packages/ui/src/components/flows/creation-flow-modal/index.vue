@@ -15,6 +15,7 @@ import type { ComponentExposed } from 'vue-component-type-helpers'
 
 import MultiStageModal from '../../base/MultiStageModal.vue'
 import {
+	type BedrockInstanceCreateData,
 	createCreationFlowContext,
 	type CreationFlowContextValue,
 	type FlowType,
@@ -49,6 +50,8 @@ const props = withDefaults(
 		customizeInstanceIcon?: () => void
 		finishDisabled?: boolean
 		finishDisabledTooltip?: string
+		bedrockAvailable?: boolean
+		createBedrockInstance?: (data: BedrockInstanceCreateData) => Promise<void>
 	}>(),
 	{
 		type: 'world',
@@ -97,6 +100,8 @@ const ctx = createCreationFlowContext(
 		customizeInstanceIcon: props.customizeInstanceIcon,
 		finishDisabled: computed(() => props.finishDisabled ?? false),
 		finishDisabledTooltip: computed(() => props.finishDisabledTooltip),
+		bedrockAvailable: computed(() => props.bedrockAvailable ?? false),
+		createBedrockInstance: props.createBedrockInstance,
 	},
 )
 provideCreationFlowContext(ctx)

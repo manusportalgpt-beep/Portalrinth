@@ -51,6 +51,7 @@
 						:key="category"
 						:action="() => emit('category', category)"
 					>
+						<component :is="getTagIcon(category)" v-if="getTagIcon(category)" />
 						<FormattedTag :tag="category" />
 					</TagItem>
 				</PageHeaderMetadataTagsItem>
@@ -67,7 +68,7 @@
 
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
-import { DownloadIcon, HeartIcon } from '@modrinth/assets'
+import { DownloadIcon, getTagIcon, HeartIcon } from '@modrinth/assets'
 
 import { defineMessages, useFormatNumber, useVIntl } from '../../composables'
 import Avatar from '../base/Avatar.vue'

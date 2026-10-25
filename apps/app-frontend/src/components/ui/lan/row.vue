@@ -9,11 +9,10 @@ import {
 	WorldIcon,
 } from '@modrinth/assets'
 import { Avatar, Button, defineMessages, useVIntl } from '@modrinth/ui'
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { get_user } from '@/helpers/cache.js'
-import type { LanRelayInfo } from '@/helpers/lan'
+import type { LanGameMode, LanRelayInfo } from '@/helpers/lan'
 
 import { lanAddress } from './use-lan-relay'
 
@@ -92,30 +91,24 @@ function headOf(player: string) {
 	return `https://mc-heads.net/avatar/${encodeURIComponent(player)}/64`
 }
 
-/** Steve's head, for a player who has no picture of their own on Modrinth. */
-const STEVE_HEAD_URL = 'https://launcher-files.modrinth.com/assets/steve_head.png'
-
 /**
- * The picture of whoever opened the world: the one on their Modrinth profile
- * when they have one, Steve otherwise.
+ * The face of whoever opened the world: their Minecraft head, the same as for
+ * everybody who comes in.
  */
-const ownerAvatar = ref(STEVE_HEAD_URL)
-watch(
-	() => props.relay.account_name,
-	async (name) => {
-		ownerAvatar.value = STEVE_HEAD_URL
-		if (!name) return
-		try {
-			const user = await get_user(name)
-			if (props.relay.account_name === name && user?.avatar_url) {
-				ownerAvatar.value = user.avatar_url
-			}
-		} catch {
-			// Not on Modrinth: Steve stays.
-		}
-	},
-	{ immediate: true },
-)
+const ownerAvatar = computed(() => headOf(props.relay.account_name || 'MHF_Steve'))
+
+/** The game mode a player is in, as far as the game has said. */
+function modeOf(player: string): LanGameMode | null {
+	return props.relay.player_modes?.[player] ?? props.relay.world_mode ?? null
+}
+
+const gameModeMessages = defineMessages({
+	survival: { id: 'app.lan.mode.survival', defaultMessage: 'Survival' },
+	creative: { id: 'app.lan.mode.creative', defaultMessage: 'Creative' },
+	adventure: { id: 'app.lan.mode.adventure', defaultMessage: 'Adventure' },
+	spectator: { id: 'app.lan.mode.spectator', defaultMessage: 'Spectator' },
+	hardcore: { id: 'app.lan.mode.hardcore', defaultMessage: 'Hardcore' },
+})
 
 /** The profile a name belongs to. */
 function openProfile(username: string) {
@@ -237,6 +230,9 @@ function copyAddress() {
 				>
 					<Avatar :src="headOf(player)" alt="" size="1.5rem" circle no-shadow />
 					{{ player }}
+					<span v-if="modeOf(player)" class="text-xs text-secondary">
+						{{ formatMessage(gameModeMessages[modeOf(player)!]) }}
+					</span>
 				</span>
 			</div>
 			<span v-else class="text-sm text-secondary">

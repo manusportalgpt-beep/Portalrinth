@@ -150,6 +150,92 @@ pub fn players_in_lines<'a>(
     players
 }
 
+/// Game modes, by the words the game uses for them in English and Russian.
+const GAME_MODE_WORDS: &[(&str, &str)] = &[
+    ("creative", "creative"),
+    ("\u{442}\u{432}\u{43e}\u{440}\u{447}", "creative"),
+    ("survival", "survival"),
+    ("\u{432}\u{44b}\u{436}\u{438}\u{432}", "survival"),
+    ("adventure", "adventure"),
+    (
+        "\u{43f}\u{440}\u{438}\u{43a}\u{43b}\u{44e}\u{447}",
+        "adventure",
+    ),
+    ("spectator", "spectator"),
+    ("\u{43d}\u{430}\u{431}\u{43b}\u{44e}\u{434}", "spectator"),
+];
+
+/// Who changed to which game mode, from the line a `/gamemode` leaves in the
+/// log: `[Steve: Set own game mode to Creative Mode]`,
+/// `[Steve: Set Alex's game mode to Survival Mode]`, or the Russian
+/// `[Steve: \u{412}\u{430}\u{448} \u{440}\u{435}\u{436}\u{438}\u{43c} \u{438}\u{433}\u{440}\u{44b} ...]` and `... \u{438}\u{433}\u{440}\u{43e}\u{43a}\u{430} Alex ...`.
+pub fn game_mode_change_in_line(line: &str) -> Option<(String, &'static str)> {
+    let lower = line.to_lowercase();
+    if !(lower.contains("game mode")
+        || lower.contains("gamemode")
+        || lower.contains(
+            "\u{440}\u{435}\u{436}\u{438}\u{43c} \u{438}\u{433}\u{440}\u{44b}",
+        ))
+    {
+        return None;
+    }
+    let mode = GAME_MODE_WORDS
+        .iter()
+        .filter_map(|(word, mode)| lower.rfind(word).map(|at| (at, *mode)))
+        .max_by_key(|(at, _)| *at)
+        .map(|(_, mode)| mode)?;
+
+    let is_name = |word: &str| {
+        !word.is_empty()
+            && word.len() <= 16
+            && word.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+    };
+
+    // Somebody else's: the English possessive, or the Russian "player X".
+    let words: Vec<&str> = line.split_whitespace().collect();
+    for (index, word) in words.iter().enumerate() {
+        if let Some(name) = word
+            .strip_suffix("'s")
+            .or_else(|| word.strip_suffix("\u{2019}s"))
+            && is_name(name)
+            && words
+                .get(index + 1)
+                .is_some_and(|next| next.starts_with("game"))
+        {
+            return Some((name.to_string(), mode));
+        }
+        if word.to_lowercase() == "\u{438}\u{433}\u{440}\u{43e}\u{43a}\u{430}"
+            && let Some(name) = words.get(index + 1)
+            && is_name(name)
+        {
+            return Some((name.to_string(), mode));
+        }
+    }
+
+    // Their own: the name of whoever ran it, inside the brackets.
+    let open = line.rfind('[')?;
+    let rest = &line[open + 1..];
+    let name = rest.split(':').next()?.trim();
+    is_name(name).then(|| (name.to_string(), mode))
+}
+
+/// Who is in the world and which game mode each is known to be in, read in
+/// the order the game wrote it. A player nobody has changed the mode of has
+/// none here, and is in the world's own.
+pub fn player_modes_in_lines<'a>(
+    lines: impl Iterator<Item = &'a str>,
+) -> std::collections::HashMap<String, &'static str> {
+    let mut modes = std::collections::HashMap::new();
+    for line in lines {
+        // The game keeps a player's mode for them across leaving and coming
+        // back, so the last change stands.
+        if let Some((name, mode)) = game_mode_change_in_line(line) {
+            modes.insert(name, mode);
+        }
+    }
+    modes
+}
+
 /// The name in front of a phrase, which is how the game writes it: the name,
 /// then what it did.
 ///
@@ -162,7 +248,12 @@ fn name_before_marker_in_line(line: &str, markers: &[&str]) -> Option<String> {
         let Some(at) = lower.find(marker) else {
             continue;
         };
-        let before = &line[..at];
+        // The name is followed by a space before what it did, so the space
+        // is stepped over first - otherwise nothing is ever read as a name.
+        let Some(before) = line.get(..at) else {
+            continue;
+        };
+        let before = before.trim_end();
         let name: String = before
             .chars()
             .rev()

@@ -110,8 +110,8 @@
 			/>
 		</div>
 
-		<!-- Game version -->
-		<div class="flex flex-col gap-2">
+		<!-- Game version (Bedrock follows the Microsoft Store build, nothing to pick) -->
+		<div v-if="!ctx.isBedrock.value" class="flex flex-col gap-2">
 			<span class="font-semibold text-contrast">{{
 				formatMessage(commonMessages.gameVersionLabel)
 			}}</span>
@@ -353,7 +353,8 @@ const effectiveLoaders = computed(() => {
 		return ctx.projectInstall.value.compatibleLoaders
 	}
 	if (ctx.flowType === 'instance') {
-		return ['vanilla', ...ctx.availableLoaders.filter((l) => l !== 'vanilla')]
+		const loaders = ['vanilla', ...ctx.availableLoaders.filter((l) => l !== 'vanilla')]
+		return ctx.bedrockAvailable.value ? [...loaders, 'bedrock'] : loaders
 	}
 	if (ctx.flowType === 'server-onboarding' || ctx.flowType === 'reset-server') {
 		return ctx.availableLoaders.filter((l) => l !== 'vanilla')
@@ -641,7 +642,7 @@ watch(
 		selectedLoaderVersion.value = null
 
 		if (ctx.projectInstall.value) return
-		if (!loader || !gameVersion || loader === 'vanilla') return
+		if (!loader || !gameVersion || loader === 'vanilla' || loader === 'bedrock') return
 
 		loaderVersionsLoading.value = true
 

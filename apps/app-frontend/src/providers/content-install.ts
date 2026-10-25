@@ -76,7 +76,7 @@ type InstallingProjectDisplay = {
 	organization?: string | null
 	team?: string
 }
-const LOADER_ORDER = ['vanilla', 'fabric', 'quilt', 'neoforge', 'forge']
+const LOADER_ORDER = ['vanilla', 'fabric', 'neoforge', 'forge', 'quilt']
 const SUPPORTED_LOADERS: Set<string> = new Set(['vanilla', 'forge', 'fabric', 'quilt', 'neoforge'])
 const VANILLA_COMPATIBLE_LOADERS: Set<string> = new Set(['minecraft', 'datapack'])
 const noCompatibleVersionsMessage = defineMessage({

@@ -666,6 +666,7 @@ const messages = defineMessages({
 		defaultMessage: 'Data Packs',
 	},
 	shadersProjectType: { id: 'app.browse.project-type.shaders', defaultMessage: 'Shaders' },
+	skinsProjectType: { id: 'app.browse.project-type.skins', defaultMessage: 'Skins' },
 	serversProjectType: { id: 'app.browse.project-type.servers', defaultMessage: 'Servers' },
 	providedByInstance: {
 		id: 'search.filter.locked.instance',
@@ -884,6 +885,11 @@ const selectableProjectTypes = computed(() => {
 			label: formatMessage(messages.serversProjectType),
 			href: `/browse/server${suffix}`,
 			shown: !instance.value,
+		},
+		{
+			label: formatMessage(messages.skinsProjectType),
+			href: '/browse/skin',
+			shown: !instance.value && !suffix,
 		},
 	]
 })

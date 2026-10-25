@@ -168,11 +168,21 @@ watchEffect(() => {
 :root.portalrinth-backdrop-active .browse-install-header {
 	background-color: color-mix(
 		in srgb,
-		var(--color-bg) var(--portalrinth-header-shade, 75%),
+		var(--color-bg) var(--portalrinth-header-shade, 60%),
 		transparent
 	);
 	backdrop-filter: blur(24px) saturate(1.3);
 	-webkit-backdrop-filter: blur(24px) saturate(1.3);
+}
+
+/* A blurred layer is not cut by the rounded page it sits in, so it is given
+   the page's arcs itself - otherwise its square corner shows past them. */
+:root.portalrinth-backdrop-active .browse-install-header {
+	border-top-left-radius: var(--radius-xl);
+}
+
+:root.portalrinth-backdrop-active .sidebar-enabled .browse-install-header {
+	border-top-right-radius: var(--radius-xl);
 }
 
 /* Menus and tooltips too, a touch more solid: they are small and read fast. */

@@ -35,6 +35,12 @@
 					"url": "https://api.mclo.gs/*"
 				},
 				{
+					"url": "https://laby.net/*"
+				},
+				{
+					"url": "https://texture.laby.net/*"
+				},
+				{
 					"url": "https://everelsu.github.io/Portalrinth/*"
 				},
 				{
@@ -128,6 +134,7 @@
 		"portalrinth-crash:default",
 		"portalrinth-recovery:default",
 		"portalrinth-curseforge:default",
-		"portalrinth-lan:default"
+		"portalrinth-lan:default",
+		"portalrinth-bedrock:default"
 	]
 }

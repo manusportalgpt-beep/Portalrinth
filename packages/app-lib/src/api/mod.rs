@@ -1,4 +1,5 @@
 //! API for interacting with Theseus
+pub mod bedrock;
 pub mod cache;
 pub mod crash_analysis;
 pub mod crash_culprits;

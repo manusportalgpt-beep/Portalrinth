@@ -325,7 +325,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 						isItemSelected(item.id)
 							? 'bg-surface-2.5'
 							: (visibleRange.start + idx) % 2 === 1
-								? 'bg-surface-1.5'
+								? 'bg-[color-mix(in_srgb,var(--surface-1-5)_50%,transparent)]'
 								: 'bg-surface-2',
 						'border-0 border-t border-solid border-surface-4',
 						item.id === highlightedItemId
@@ -399,7 +399,7 @@ function handleSort(column: ContentCardTableSortColumn) {
 					isItemSelected(item.id)
 						? 'bg-surface-2.5'
 						: index % 2 === 1
-							? 'bg-surface-1.5'
+							? 'bg-[color-mix(in_srgb,var(--surface-1-5)_50%,transparent)]'
 							: 'bg-surface-2',
 					'border-0 border-t border-solid border-surface-4',
 					item.id === highlightedItemId ? 'outline outline-2 -outline-offset-2 outline-brand' : '',

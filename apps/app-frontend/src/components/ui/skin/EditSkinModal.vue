@@ -110,6 +110,15 @@
 
 		<template #actions>
 			<div class="flex gap-2 justify-end">
+				<Button
+					v-if="previewSkin"
+					type="outlined"
+					class="mr-auto"
+					:disabled="isSaving"
+					@click="findSimilarSkins"
+				>
+					<SparklesIcon />{{ formatMessage(messages.similarSkinsButton) }}
+				</Button>
 				<Button type="outlined" :disabled="isSaving" @click="hide">
 					<XIcon />{{ formatMessage(commonMessages.cancelButton) }}
 				</Button>
@@ -131,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import { CheckIcon, SaveIcon, SpinnerIcon, UploadIcon, XIcon } from '@modrinth/assets'
+import { CheckIcon, SaveIcon, SparklesIcon, SpinnerIcon, UploadIcon, XIcon } from '@modrinth/assets'
 import {
 	Button,
 	CapeButton,
@@ -147,7 +156,9 @@ import {
 } from '@modrinth/ui'
 import { arrayBufferToBase64 } from '@modrinth/utils'
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
+import { similarSkinReference } from '@/helpers/laby-skins'
 import {
 	type Cape,
 	determineModelType,
@@ -162,6 +173,10 @@ import {
 
 const CAPE_LIST_MAX_HEIGHT = 334
 const messages = defineMessages({
+	similarSkinsButton: {
+		id: 'app.skins.modal.similar-skins',
+		defaultMessage: 'Similar skins',
+	},
 	editSkinTitle: {
 		id: 'app.skins.modal.edit-title',
 		defaultMessage: 'Editing skin',
@@ -395,6 +410,16 @@ async function setUploadedTexture(skinTextureUrl: SkinTextureUrl) {
 
 function hide() {
 	modal.value?.hide()
+}
+
+const router = useRouter()
+
+/** Portalrinth's own: look for laby.net skins resembling this one. */
+function findSimilarSkins() {
+	if (!previewSkin.value) return
+	similarSkinReference.value = { texture: previewSkin.value, variant: variant.value }
+	hide()
+	router.push({ path: '/browse/skin', query: { similar: String(Date.now()) } })
 }
 
 function selectCape(cape: Cape | undefined) {

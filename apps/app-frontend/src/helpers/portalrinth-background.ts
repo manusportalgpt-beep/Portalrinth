@@ -159,12 +159,13 @@ export function saveHeaderShade(shade: number): void {
 }
 
 /**
- * The opacity the bar is painted at. Eased so the middle of the slider is
- * already well covered (50 is 75%), while 100 is still fully solid.
+ * The opacity the bar is painted at, over a page that is shaded already.
+ * Eased so the middle of the slider is only a little darker than the page
+ * (50 is 60%), while 100 is still fully solid.
  */
 export function headerShadeOpacity(shade: number): number {
-	const rest = 100 - Math.min(100, Math.max(0, shade))
-	return Math.round(100 - (rest * rest) / 100)
+	const value = Math.min(100, Math.max(0, shade))
+	return Math.min(100, Math.round(1.4 * value - 0.004 * value * value))
 }
 
 export async function saveBackgroundDim(dim: number): Promise<void> {

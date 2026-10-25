@@ -78,6 +78,13 @@ pub struct LanRelayInfo {
     pub error: Option<String>,
     /// Who is in the world right now, as the game has said.
     pub players: Vec<String>,
+    /// The game mode of each player in `players` whose mode the log has
+    /// shown being set with `/gamemode`: `survival`, `creative`,
+    /// `adventure` or `spectator`.
+    pub player_modes: std::collections::HashMap<String, String>,
+    /// The mode of the world that is open, for players nobody has changed:
+    /// one of the above, or `hardcore`.
+    pub world_mode: Option<String>,
 }
 
 struct ActiveRelay {
@@ -199,6 +206,8 @@ async fn describe(
         public_port: None,
         error: None,
         players: Vec::new(),
+        player_modes: std::collections::HashMap::new(),
+        world_mode: None,
     };
 
     let published = RELAYS.get(&process_uuid).map(|relay| {
@@ -217,8 +226,7 @@ async fn describe(
             info.local_port = Some(local_port);
             info.public_host = Some(public_host);
             info.public_port = Some(public_port);
-            info.players =
-                players_in_world(state, &process.instance_path).await;
+            fill_players(state, &process.instance_path, &mut info).await;
             return info;
         }
         info.state = LanRelayState::Lost;
@@ -240,7 +248,7 @@ async fn describe(
         detach_process(process_uuid);
     }
 
-    info.players = players_in_world(state, &process.instance_path).await;
+    fill_players(state, &process.instance_path, &mut info).await;
     info.local_port = local_port(state, process).await;
     if info.local_port.is_some() && info.state == LanRelayState::Closed {
         info.state = LanRelayState::Ready;
@@ -286,36 +294,107 @@ async fn local_port(
     None
 }
 
-/// Who is in the world right now, read out of the game's own log.
-///
-/// The log is the only place the game says it. It is read a little at a time,
-/// from the end, and only the lines about people are looked at.
-async fn players_in_world(
+/// Who is in the world right now, and in which game mode, read out of the
+/// game's own log and the open world's `level.dat`.
+async fn fill_players(
     state: &crate::State,
     instance_path: &str,
-) -> Vec<String> {
-    let Some(length) = log_length(state, instance_path).await else {
-        return Vec::new();
+    info: &mut LanRelayInfo,
+) {
+    let Some(tail) = game_log_tail(state, instance_path).await else {
+        return;
     };
-    let Ok(mut file) =
-        tokio::fs::File::open(game_log(state, instance_path)).await
-    else {
-        return Vec::new();
-    };
-    if file
-        .seek(std::io::SeekFrom::Start(
-            length.saturating_sub(MAX_LOG_TAIL),
-        ))
+    info.players = crate::state::lan::players_in_lines(tail.lines());
+    let modes = crate::state::lan::player_modes_in_lines(tail.lines());
+    info.player_modes = info
+        .players
+        .iter()
+        .filter_map(|player| {
+            modes
+                .get(player)
+                .map(|mode| (player.clone(), (*mode).to_string()))
+        })
+        .collect();
+    if !info.players.is_empty() {
+        info.world_mode = open_world_mode(state, instance_path).await;
+    }
+}
+
+/// The end of the game's own log, read a little at a time from the end.
+///
+/// Read as bytes and decoded leniently: the place it starts from is a byte
+/// count, and in a log with Russian in it that is as likely as not the middle
+/// of a letter - read as text, the whole tail was thrown away for it, and
+/// nobody was ever seen coming in.
+async fn game_log_tail(
+    state: &crate::State,
+    instance_path: &str,
+) -> Option<String> {
+    let length = log_length(state, instance_path).await?;
+    let mut file = tokio::fs::File::open(game_log(state, instance_path))
         .await
-        .is_err()
-    {
-        return Vec::new();
+        .ok()?;
+    file.seek(std::io::SeekFrom::Start(
+        length.saturating_sub(MAX_LOG_TAIL),
+    ))
+    .await
+    .ok()?;
+    let mut tail = Vec::new();
+    file.read_to_end(&mut tail).await.ok()?;
+    Some(String::from_utf8_lossy(&tail).into_owned())
+}
+
+/// The game mode of the world open right now: the one whose `session.lock`
+/// was touched last, which the game does as it opens a world.
+async fn open_world_mode(
+    state: &crate::State,
+    instance_path: &str,
+) -> Option<String> {
+    let saves = state
+        .directories
+        .instances_dir()
+        .join(instance_path)
+        .join("saves");
+    let mut entries = tokio::fs::read_dir(&saves).await.ok()?;
+    let mut newest: Option<(std::time::SystemTime, std::path::PathBuf)> = None;
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let Ok(modified) =
+            tokio::fs::metadata(entry.path().join("session.lock"))
+                .await
+                .and_then(|meta| meta.modified())
+        else {
+            continue;
+        };
+        if newest.as_ref().is_none_or(|(at, _)| modified > *at) {
+            newest = Some((modified, entry.path()));
+        }
     }
-    let mut tail = String::new();
-    if file.read_to_string(&mut tail).await.is_err() {
-        return Vec::new();
+    let (_, world) = newest?;
+    let raw = tokio::fs::read(world.join("level.dat")).await.ok()?;
+    let (root, _) = quartz_nbt::io::read_nbt(
+        &mut std::io::Cursor::new(raw),
+        quartz_nbt::io::Flavor::GzCompressed,
+    )
+    .ok()?;
+    let data = root.get::<_, &quartz_nbt::NbtCompound>("Data").ok()?;
+    let hardcore = data
+        .get::<_, &quartz_nbt::NbtCompound>("difficulty_settings")
+        .and_then(|settings| settings.get::<_, i8>("hardcore"))
+        .or_else(|_| data.get::<_, i8>("hardcore"))
+        .unwrap_or(0)
+        != 0;
+    if hardcore {
+        return Some("hardcore".to_string());
     }
-    crate::state::lan::players_in_lines(tail.lines())
+    Some(
+        match data.get::<_, i32>("GameType").unwrap_or(0) {
+            1 => "creative",
+            2 => "adventure",
+            3 => "spectator",
+            _ => "survival",
+        }
+        .to_string(),
+    )
 }
 
 async fn is_serving(port: u16) -> bool {
@@ -550,6 +629,8 @@ async fn publish(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
         // The world is being published, and the game is still the one that
         // says who is in it.
         players: Vec::new(),
+        player_modes: std::collections::HashMap::new(),
+        world_mode: None,
     })
 }
 

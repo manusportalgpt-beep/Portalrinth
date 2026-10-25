@@ -2310,7 +2310,7 @@
 		"message": "Ретранслятор"
 	},
 	"app.lan.flow.node.friends": {
-		"message": "Друзья"
+		"message": "Активация"
 	},
 	"app.lan.flow.explain": {
 		"message": "Мир остаётся на вашем компьютере. Ретранслятор только передаёт соединение, поэтому друзья заходят откуда угодно, а открывать порты не нужно."
@@ -2710,5 +2710,239 @@
 	},
 	"portalrinth.settings.background.header-shade.description": {
 		"message": "Плашка сверху при добавлении контента в сборку, чтобы список под ней не просвечивал сквозь текст: 0 — прозрачная, 100 — полностью тёмная."
+	},
+	"app.lan.mode.survival": {
+		"message": "Выживание"
+	},
+	"app.lan.mode.creative": {
+		"message": "Творческий"
+	},
+	"app.lan.mode.adventure": {
+		"message": "Приключение"
+	},
+	"app.lan.mode.spectator": {
+		"message": "Наблюдатель"
+	},
+	"app.lan.mode.hardcore": {
+		"message": "Хардкор"
+	},
+	"app.browse.project-type.skins": {
+		"message": "Скины"
+	},
+	"app.browse.discover-skins": {
+		"message": "Поиск скинов"
+	},
+	"app.skin-browse.search": {
+		"message": "Поиск скинов..."
+	},
+	"app.skin-browse.popular": {
+		"message": "Популярные скины"
+	},
+	"app.skin-browse.results": {
+		"message": "Результаты по запросу «{query}»"
+	},
+	"app.skin-browse.similar-to-yours": {
+		"message": "Скины, похожие на ваш"
+	},
+	"app.skin-browse.back-to-all": {
+		"message": "Все скины"
+	},
+	"app.skin-browse.nothing-found": {
+		"message": "Скины не найдены"
+	},
+	"app.skin-browse.load-error": {
+		"message": "Не удалось подключиться к laby.net. Проверьте соединение и попробуйте ещё раз."
+	},
+	"app.skin-browse.retry": {
+		"message": "Повторить"
+	},
+	"app.skin-browse.load-more": {
+		"message": "Загрузить ещё"
+	},
+	"app.skin-browse.powered-by": {
+		"message": "Скины с laby.net"
+	},
+	"app.skin-browse.modal-title": {
+		"message": "Скин"
+	},
+	"app.skin-browse.uses": {
+		"message": "Игроков: {count}"
+	},
+	"app.skin-browse.crouch": {
+		"message": "Присесть"
+	},
+	"app.skin-browse.stand": {
+		"message": "Встать"
+	},
+	"app.skin-browse.hide-layer": {
+		"message": "Скрыть слой"
+	},
+	"app.skin-browse.show-layer": {
+		"message": "Показать слой"
+	},
+	"app.skin-browse.add-cape": {
+		"message": "Добавить плащ"
+	},
+	"app.skin-browse.no-capes": {
+		"message": "На этом аккаунте нет плащей"
+	},
+	"app.skin-browse.no-cape": {
+		"message": "Нет"
+	},
+	"app.skin-browse.cape-fallback": {
+		"message": "Плащ"
+	},
+	"app.skin-browse.start-walking": {
+		"message": "Включить анимацию"
+	},
+	"app.skin-browse.stop-walking": {
+		"message": "Выключить анимацию"
+	},
+	"app.skin-browse.install": {
+		"message": "Установить скин"
+	},
+	"app.skin-browse.installed": {
+		"message": "Скин установлен"
+	},
+	"app.skin-browse.installed-text": {
+		"message": "Скин добавлен в ваши скины и надет."
+	},
+	"app.skin-browse.open-on-laby": {
+		"message": "Открыть на laby.net"
+	},
+	"app.skin-browse.similar": {
+		"message": "Похожие скины"
+	},
+	"app.skin-browse.similar-empty": {
+		"message": "Похожие скины не найдены"
+	},
+	"app.skins.modal.similar-skins": {
+		"message": "Похожие скины"
+	},
+	"app.bedrock.edition": {
+		"message": "Bedrock Edition"
+	},
+	"app.bedrock.play": {
+		"message": "Играть"
+	},
+	"app.bedrock.get-from-store": {
+		"message": "Установить из Microsoft Store"
+	},
+	"app.bedrock.not-installed": {
+		"message": "Minecraft for Windows не установлен на этом ПК. Установите его из Microsoft Store и вернитесь сюда."
+	},
+	"app.bedrock.recheck": {
+		"message": "Проверить снова"
+	},
+	"app.bedrock.launched": {
+		"message": "Minecraft for Windows запускается"
+	},
+	"app.bedrock.tab.installed": {
+		"message": "Контент"
+	},
+	"app.bedrock.tab.browse": {
+		"message": "Добавить контент"
+	},
+	"app.bedrock.nothing-installed": {
+		"message": "В этой сборке пока ничего не установлено."
+	},
+	"app.bedrock.remove": {
+		"message": "Удалить"
+	},
+	"app.bedrock.delete-build": {
+		"message": "Удалить сборку"
+	},
+	"app.bedrock.delete-title": {
+		"message": "Удалить эту сборку Bedrock?"
+	},
+	"app.bedrock.delete-body": {
+		"message": "Сборка будет убрана из лаунчера. Установленные ею паки и миры можно удалить и из игры."
+	},
+	"app.bedrock.delete-keep": {
+		"message": "Оставить паки в игре"
+	},
+	"app.bedrock.delete-all": {
+		"message": "Удалить и паки"
+	},
+	"app.bedrock.cancel": {
+		"message": "Отмена"
+	},
+	"app.bedrock.rename": {
+		"message": "Переименовать"
+	},
+	"app.bedrock.save": {
+		"message": "Сохранить"
+	},
+	"app.bedrock.change-icon": {
+		"message": "Изменить иконку"
+	},
+	"app.bedrock.remove-icon": {
+		"message": "Убрать иконку"
+	},
+	"app.bedrock.search": {
+		"message": "Поиск контента для Bedrock..."
+	},
+	"app.bedrock.all-categories": {
+		"message": "Все категории"
+	},
+	"app.bedrock.sort.popularity": {
+		"message": "Популярность"
+	},
+	"app.bedrock.sort.downloads": {
+		"message": "Загрузки"
+	},
+	"app.bedrock.sort.updated": {
+		"message": "Недавно обновлённые"
+	},
+	"app.bedrock.sort.name": {
+		"message": "Название"
+	},
+	"app.bedrock.install": {
+		"message": "Установить"
+	},
+	"app.bedrock.installed": {
+		"message": "Установлено"
+	},
+	"app.bedrock.installed-toast": {
+		"message": "{name} установлен"
+	},
+	"app.bedrock.choose-file": {
+		"message": "Выберите файл"
+	},
+	"app.bedrock.no-files": {
+		"message": "У этого проекта нет файлов для установки."
+	},
+	"app.bedrock.open-curseforge": {
+		"message": "Открыть на CurseForge"
+	},
+	"app.bedrock.nothing-found": {
+		"message": "Ничего не найдено"
+	},
+	"app.bedrock.load-more": {
+		"message": "Загрузить ещё"
+	},
+	"app.bedrock.downloads": {
+		"message": "{count} загрузок"
+	},
+	"app.bedrock.by-author": {
+		"message": "от {author}"
+	},
+	"app.bedrock.no-key": {
+		"message": "Добавьте ключ API CurseForge в настройках, чтобы искать контент для Bedrock."
+	},
+	"app.bedrock.kind.resource": {
+		"message": "Набор ресурсов"
+	},
+	"app.bedrock.kind.behavior": {
+		"message": "Набор поведения"
+	},
+	"app.bedrock.kind.skin": {
+		"message": "Набор скинов"
+	},
+	"app.bedrock.kind.world": {
+		"message": "Мир"
+	},
+	"app.bedrock.kind.world-template": {
+		"message": "Шаблон мира"
 	}
 }

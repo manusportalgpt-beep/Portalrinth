@@ -527,8 +527,25 @@ impl ProcessManager {
             );
         }
 
+        let pid = self
+            .processes
+            .get(&id)
+            .and_then(|process| process.child.id());
+
+        // The game is not always the process that was started: a wrapper
+        // command, or a Java that hands off to a child of its own, leaves the
+        // window open when only the first one is ended. The whole tree goes.
+        if let Some(pid) = pid {
+            kill_process_tree(pid).await;
+        }
+
         if let Some(mut process) = self.processes.get_mut(&id) {
-            process.child.start_kill()?;
+            // Already gone with the tree is fine; anything else is not.
+            if let Err(error) = process.child.start_kill()
+                && error.kind() != std::io::ErrorKind::InvalidInput
+            {
+                tracing::warn!("Could not stop process {id}: {error}");
+            }
         }
 
         Ok(())
@@ -541,6 +558,41 @@ impl ProcessManager {
         // was on and anything published from it.
         crate::state::lan::forget_process(&id.to_string());
         crate::api::lan::detach_process(id);
+    }
+}
+
+/// Ends a process and everything it started.
+async fn kill_process_tree(pid: u32) {
+    #[cfg(windows)]
+    {
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let _ = Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .await;
+    }
+    #[cfg(unix)]
+    {
+        // Children first, so none is left behind re-parented to init.
+        if let Ok(output) = Command::new("pgrep")
+            .args(["-P", &pid.to_string()])
+            .output()
+            .await
+        {
+            for child in String::from_utf8_lossy(&output.stdout)
+                .split_whitespace()
+                .filter_map(|child| child.parse::<u32>().ok())
+            {
+                Box::pin(kill_process_tree(child)).await;
+            }
+        }
+        let _ = Command::new("kill")
+            .args(["-9", &pid.to_string()])
+            .status()
+            .await;
     }
 }
 
@@ -786,10 +838,14 @@ impl Process {
                                     // The same line the plain output gives:
                                     // this is where a world opened to the
                                     // network is noticed, in either shape the
-									// game's output arrives in.
+                                    // game's output arrives in.
                                     crate::state::lan::note_log_line(
                                         process_uuid,
-                                        current_event.message.as_deref().unwrap_or("").trim(),
+                                        current_event
+                                            .message
+                                            .as_deref()
+                                            .unwrap_or("")
+                                            .trim(),
                                     );
 
                                     Self::emit_log4j_event(
@@ -870,7 +926,10 @@ impl Process {
                     // Without it, the port was only ever found by reading the
                     // log file afterwards, and a world that was opened while
                     // the launcher was not looking was never seen at all.
-                    crate::state::lan::note_log_line(process_uuid, line.trim_ascii_end());
+                    crate::state::lan::note_log_line(
+                        process_uuid,
+                        line.trim_ascii_end(),
+                    );
                 }
 
                 line.clear();

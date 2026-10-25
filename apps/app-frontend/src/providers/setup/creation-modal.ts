@@ -3,7 +3,7 @@ import type {
 	CreationFlowContextValue,
 	CreationFlowModal,
 } from '@modrinth/ui'
-import { provide, ref, useTemplateRef } from 'vue'
+import { onMounted, provide, ref, useTemplateRef } from 'vue'
 import type { ComponentExposed } from 'vue-component-type-helpers'
 import { useRouter } from 'vue-router'
 
@@ -11,6 +11,7 @@ import type UnknownPackWarningModal from '@/components/ui/install_flow/UnknownPa
 import type ModpackAlreadyInstalledModal from '@/components/ui/modal/ModpackAlreadyInstalledModal.vue'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { trackEvent } from '@/helpers/analytics'
+import { bedrockOffered, createBedrock, refreshBedrockProfiles } from '@/helpers/bedrock'
 import { get_project, get_search_results } from '@/helpers/cache.js'
 import { import_instance, remove_source_instance } from '@/helpers/import.js'
 import {
@@ -45,12 +46,31 @@ export function setupCreationModal(
 		modpackAlreadyInstalledModal.value = modal
 	}
 
+	// Bedrock is a separate core: it is offered only with a licensed (Microsoft)
+	// account on Windows, and checked again every time the modal opens because
+	// an account may have been added since.
+	const bedrockAvailable = ref(false)
+	async function refreshBedrockAvailable() {
+		bedrockAvailable.value = await bedrockOffered()
+	}
+	onMounted(() => {
+		void refreshBedrockAvailable()
+	})
+
+	async function handleCreateBedrock(data: { name: string; iconPath: string | null }) {
+		const profile = await createBedrock(data.name, data.iconPath)
+		trackEvent('InstanceCreate', { source: 'CreationModalBedrock' })
+		await refreshBedrockProfiles()
+		await router.push(`/bedrock/${encodeURIComponent(profile.id)}`)
+	}
+
 	async function fetchExistingInstanceNames(): Promise<string[]> {
 		const instances = await list().catch(handleError)
 		return instances?.map((i) => i.name) ?? []
 	}
 
 	provide('showCreationModal', async (options?: { importMode?: boolean }) => {
+		void refreshBedrockAvailable()
 		await installationModal.value?.show()
 		if (!options?.importMode) return
 
@@ -255,5 +275,8 @@ export function setupCreationModal(
 		setModpackAlreadyInstalledModal,
 		handleModpackDuplicateCreateAnyway,
 		handleModpackDuplicateGoToInstance,
+		bedrockAvailable,
+		refreshBedrockAvailable,
+		handleCreateBedrock,
 	}
 }

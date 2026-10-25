@@ -418,6 +418,7 @@ import _TagCategoryWifiOffIcon from './icons/tags/categories/wifi-off.svg?compon
 import _TagCategoryWorldgenIcon from './icons/tags/categories/worldgen.svg?component'
 import _TagCategoryZapIcon from './icons/tags/categories/zap.svg?component'
 import _TagLoaderBabricIcon from './icons/tags/loaders/babric.svg?component'
+import _TagLoaderBedrockIcon from './icons/tags/loaders/bedrock.svg?component'
 import _TagLoaderBtaBabricIcon from './icons/tags/loaders/bta-babric.svg?component'
 import _TagLoaderBukkitIcon from './icons/tags/loaders/bukkit.svg?component'
 import _TagLoaderBungeecordIcon from './icons/tags/loaders/bungeecord.svg?component'
@@ -904,6 +905,7 @@ export const TagCategoryWifiOffIcon = _TagCategoryWifiOffIcon
 export const TagCategoryWorldgenIcon = _TagCategoryWorldgenIcon
 export const TagCategoryZapIcon = _TagCategoryZapIcon
 export const TagLoaderBabricIcon = _TagLoaderBabricIcon
+export const TagLoaderBedrockIcon = _TagLoaderBedrockIcon
 export const TagLoaderBtaBabricIcon = _TagLoaderBtaBabricIcon
 export const TagLoaderBukkitIcon = _TagLoaderBukkitIcon
 export const TagLoaderBungeecordIcon = _TagLoaderBungeecordIcon
@@ -1084,6 +1086,7 @@ export const categoryIconMap: Record<string, IconComponent> = {
 
 export const loaderIconMap: Record<string, IconComponent> = {
 	babric: TagLoaderBabricIcon,
+	bedrock: TagLoaderBedrockIcon,
 	'bta-babric': TagLoaderBtaBabricIcon,
 	bukkit: TagLoaderBukkitIcon,
 	bungeecord: TagLoaderBungeecordIcon,

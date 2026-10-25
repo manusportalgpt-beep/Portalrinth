@@ -657,6 +657,32 @@ fn main() {
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),
+            )
+            .plugin(
+                "portalrinth-bedrock",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "bedrock_status",
+                        "bedrock_list",
+                        "bedrock_get",
+                        "bedrock_create",
+                        "bedrock_rename",
+                        "bedrock_set_icon",
+                        "bedrock_remove",
+                        "bedrock_launch",
+                        "bedrock_available",
+                        "bedrock_classes",
+                        "bedrock_categories",
+                        "bedrock_search",
+                        "bedrock_project",
+                        "bedrock_description",
+                        "bedrock_files",
+                        "bedrock_install",
+                        "bedrock_uninstall",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
             ),
     )
     .expect("Failed to run tauri-build");

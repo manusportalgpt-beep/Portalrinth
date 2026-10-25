@@ -30,7 +30,13 @@ export interface LanRelayInfo {
 	error: string | null
 	/** Who is in the world right now, as the game has said. */
 	players: string[]
+	/** Players whose game mode the log has shown being set with `/gamemode`. */
+	player_modes: Record<string, LanGameMode>
+	/** The mode of the open world, for everybody not in `player_modes`. */
+	world_mode: LanGameMode | null
 }
+
+export type LanGameMode = 'survival' | 'creative' | 'adventure' | 'spectator' | 'hardcore'
 
 /** Every copy of an instance that is running, with the state of its world. */
 export async function list_lan_relays(): Promise<LanRelayInfo[]> {
