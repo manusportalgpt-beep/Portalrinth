@@ -194,12 +194,11 @@ export function useAppServerBrowse(options: UseAppServerBrowseOptions) {
 			return {
 				name: project_name,
 				icon: project_icon ?? undefined,
-				onclick:
-					project_id !== project.project_id
-						? () => {
-								options.router.push(`/project/${project_id}`)
-							}
-						: undefined,
+				// A server's own modpack lives on the server's page, so that is
+				// where a click on it goes.
+				onclick: () => {
+					options.router.push(`/project/${project_id ?? project.project_id}`)
+				},
 				showCustomModpackTooltip: project_id === project.project_id,
 			}
 		}

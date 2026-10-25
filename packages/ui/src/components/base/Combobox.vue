@@ -105,7 +105,11 @@
 						props.dropdownClass,
 						openDirection === 'up' ? 'shadow-[0_-25px_50px_-12px_rgb(0,0,0,0.25)]' : 'shadow-2xl',
 					]"
-					:style="[dropdownStyle, { transformOrigin: dropdownTransformOrigin }]"
+					:style="[
+						dropdownStyle,
+						{ transformOrigin: dropdownTransformOrigin },
+						dropdownPositioned ? null : { visibility: 'hidden' },
+					]"
 					:role="listbox ? 'listbox' : 'menu'"
 					@pointerdown.stop
 					@mousedown.stop
@@ -359,6 +363,11 @@ const emit = defineEmits<{
 const slots = useSlots()
 
 const isOpen = ref(false)
+/**
+ * The list stays hidden until it has been measured and put in its place, so
+ * it does not show up at a guessed spot first and then jump.
+ */
+const dropdownPositioned = ref(false)
 const searchQuery = ref('')
 const userHasTyped = ref(false)
 const focusedIndex = ref(-1)
@@ -784,15 +793,19 @@ async function openDropdown() {
 	dropdownDocument.value = containerRef.value?.ownerDocument ?? document
 	dismissTooltip()
 	previewOpenDirection()
+	dropdownPositioned.value = false
 	isOpen.value = true
 	emit('open')
+	// Listen for outside presses straight away: the press that opened the
+	// list is still in progress, and its click must not count as outside.
+	startPositionTracking()
 
 	await nextTick()
 	await initializeOptionsOverlayScrollbars()
 	if (!isOpen.value) return
 	await updateDropdownPosition()
 	if (!isOpen.value) return
-	startPositionTracking()
+	dropdownPositioned.value = true
 	setInitialFocus()
 }
 
@@ -1096,10 +1109,28 @@ function startPositionTracking() {
 	listenerWindow.addEventListener('beforeunload', handleWindowClose)
 	listenerWindow.visualViewport?.addEventListener('scroll', handleViewportChange)
 	listenerWindow.visualViewport?.addEventListener('resize', handleViewportChange)
-	stopOutsideClick = onClickOutside(dropdownRef, () => closeDropdown(false), {
-		window: listenerWindow,
-		ignore: outsideClickIgnoreTargets,
-	})
+	stopOutsideClick = onClickOutside(
+		dropdownRef,
+		(event) => {
+			// The click of a press on the field itself is not outside, even
+			// when the press began before this listener was set up.
+			if (isInsideIgnoredTarget(event)) return
+			closeDropdown(false)
+		},
+		{
+			window: listenerWindow,
+			ignore: outsideClickIgnoreTargets,
+		},
+	)
+}
+
+function isInsideIgnoredTarget(event: Event): boolean {
+	const path = event.composedPath()
+	const elements: (Element | null | undefined)[] = [effectiveTriggerEl.value, containerRef.value]
+	for (const selector of props.outsideClickIgnore) {
+		elements.push(...Array.from(getDropdownWindow().document.querySelectorAll(selector)))
+	}
+	return elements.some((element) => !!element && path.includes(element))
 }
 
 function stopPositionTracking() {

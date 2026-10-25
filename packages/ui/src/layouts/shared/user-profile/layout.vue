@@ -507,7 +507,7 @@ import {
 	catalogProjectTypes,
 	commonMessages,
 	filterProjectsByType,
-	getProjectTypeTitleMessage,
+	getProjectTypeCategoryMessage,
 	parseProjectTypeRouteParam,
 	sortProjectTypes,
 } from '#ui/utils'
@@ -900,7 +900,7 @@ const navLinks = computed(() => {
 			label:
 				projectType === 'collection'
 					? formatMessage(messages.collectionsLabel)
-					: formatMessage(getProjectTypeTitleMessage(projectType), { count: 2 }),
+					: formatMessage(getProjectTypeCategoryMessage(projectType)),
 			href: `${profilePath}/${projectType}s`,
 		})),
 	]

@@ -221,8 +221,6 @@
 								class="size-6 cursor-pointer rounded-full border-0 p-0"
 								:style="{ background: color }"
 								:aria-label="`${customColorsLabel}: ${color}`"
-								@mouseenter="emit('preview', color)"
-								@mouseleave="emit('preview', picked)"
 								@click="pickColor(color)"
 							/>
 							<!--
@@ -640,6 +638,8 @@ const triggerSizeClass = computed(() => (props.size === 'sm' ? 'size-8' : 'size-
 function handlePanelKeydown(event: KeyboardEvent) {
 	if (event.key !== 'Escape') return
 	event.preventDefault()
+	// Escape is the one way out that means "never mind".
+	discardOnClose = true
 	closePicker(true)
 }
 
@@ -659,8 +659,22 @@ function toggle() {
 	else openPicker()
 }
 
+/**
+ * Whether the picker is being closed to throw away what was looked at.
+ *
+ * Only Escape does that. Clicking anywhere outside the panel counts as the
+ * check mark: a colour picked and then left behind is a colour chosen, and the
+ * settings that own it ask whether to save it like they would after the mark.
+ */
+let discardOnClose = false
+
 watch(isOpen, (openState, previousOpenState) => {
 	if (!openState && previousOpenState) {
+		const discard = discardOnClose
+		discardOnClose = false
+		if (!discard && picked.value && picked.value.toLowerCase() !== model.value.toLowerCase()) {
+			model.value = picked.value
+		}
 		emit('preview', null)
 		emit('change', model.value)
 	}

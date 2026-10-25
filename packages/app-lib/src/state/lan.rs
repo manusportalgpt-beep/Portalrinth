@@ -23,6 +23,9 @@ use std::sync::LazyLock;
 /// something is listening on it.
 const HOSTING_MARKERS: &[&str] = &[
     "local game hosted on port",
+    // What the integrated server itself logs, in English whatever the
+    // language of the game, the moment a world is opened to the network.
+    "started serving on",
     "integrated minecraft server on",
     "serving minecraft server on port",
     "publishing lan on port",
@@ -80,11 +83,12 @@ fn words_of(line: &str) -> Vec<String> {
 /// The port a line says a world is being served on, if it says one at all.
 pub fn port_in_line(line: &str) -> Option<u16> {
     let words = words_of(line);
-    port_after_marker(&words, HOSTING_MARKERS).or_else(|| port_after_port_word(&words))
+    port_after_marker(&words, HOSTING_MARKERS)
+        .or_else(|| port_after_port_word(&words))
 }
 
 /// The words that mean a port, in the languages the game is played in.
-const PORT_WORDS: &[&str] = &["port", "\u{43f}\u{440}\u{442}"];
+const PORT_WORDS: &[&str] = &["port", "\u{43f}\u{43e}\u{440}\u{442}"];
 
 /// The number after a word that means a port, in whatever form that word takes.
 ///
@@ -92,9 +96,9 @@ const PORT_WORDS: &[&str] = &["port", "\u{43f}\u{440}\u{442}"];
 /// "ports", "\u{43f}\u{43e}\u{440}\u{442}\u{443}", "\u{43f}\u{43e}\u{440}\u{442}\u{430}\u{445}" - so the word is
 /// matched by its beginning and the number has to be the one straight after it.
 fn port_after_port_word(words: &[String]) -> Option<u16> {
-    let at = words
-        .iter()
-        .position(|word| PORT_WORDS.iter().any(|starter| word.starts_with(starter)))?;
+    let at = words.iter().position(|word| {
+        PORT_WORDS.iter().any(|starter| word.starts_with(starter))
+    })?;
     words
         .get(at + 1)?
         .parse::<u16>()
@@ -122,7 +126,9 @@ const LEAVE_MARKERS: &[&str] = &[
 /// The game writes a line when somebody comes in and one when they go, so the
 /// list is what is left after reading the lines in order. A name that appears
 /// twice has come back, and is only in the list once.
-pub fn players_in_lines<'a>(lines: impl Iterator<Item = &'a str>) -> Vec<String> {
+pub fn players_in_lines<'a>(
+    lines: impl Iterator<Item = &'a str>,
+) -> Vec<String> {
     let mut players: Vec<String> = Vec::new();
     for line in lines {
         if let Some(name) = name_before_marker_in_line(line, JOIN_MARKERS) {
@@ -135,7 +141,8 @@ pub fn players_in_lines<'a>(lines: impl Iterator<Item = &'a str>) -> Vec<String>
             // Not a let chain: the borrow of the list would then be held for
             // the whole of the body, and the list is what is being changed
             // in it.
-            if let Some(at) = players.iter().position(|player| *player == name) {
+            if let Some(at) = players.iter().position(|player| *player == name)
+            {
                 players.remove(at);
             }
         }
@@ -159,7 +166,9 @@ fn name_before_marker_in_line(line: &str, markers: &[&str]) -> Option<String> {
         let name: String = before
             .chars()
             .rev()
-            .take_while(|character| character.is_alphanumeric() || *character == '_')
+            .take_while(|character| {
+                character.is_alphanumeric() || *character == '_'
+            })
             .collect::<Vec<char>>()
             .into_iter()
             .rev()
@@ -188,14 +197,13 @@ fn port_after_marker(words: &[String], markers: &[&str]) -> Option<u16> {
 fn after_any_marker(words: &[String], markers: &[&str]) -> Option<usize> {
     markers.iter().find_map(|marker| {
         let marker_words: Vec<&str> = marker.split(' ').collect();
-        let marker_at = words.windows(marker_words.len()).position(
-            |window| {
+        let marker_at =
+            words.windows(marker_words.len()).position(|window| {
                 window
                     .iter()
                     .map(String::as_str)
                     .eq(marker_words.iter().copied())
-            },
-        )?;
+            })?;
         Some(marker_at + marker_words.len())
     })
 }
@@ -249,6 +257,29 @@ mod tests {
     use super::*;
 
     #[test]
+    fn reads_the_port_the_integrated_server_logs() {
+        assert_eq!(
+            port_in_line(
+                "[10:37:47] [Server thread/INFO]: Started serving on 61234"
+            ),
+            Some(61234)
+        );
+    }
+
+    #[test]
+    fn reads_the_port_in_the_russian_chat_line() {
+        assert_eq!(
+            port_in_line(
+                "[10:37:47] [Render thread/INFO]: [System] [CHAT] \
+                 \u{41b}\u{43e}\u{43a}\u{430}\u{43b}\u{44c}\u{43d}\u{430}\u{44f} \
+                 \u{438}\u{433}\u{440}\u{430} \u{437}\u{430}\u{43f}\u{443}\u{449}\u{435}\u{43d}\u{430} \
+                 \u{43d}\u{430} \u{43f}\u{43e}\u{440}\u{442}\u{435} 52123"
+            ),
+            Some(52123)
+        );
+    }
+
+    #[test]
     fn reads_the_port_vanilla_prints() {
         assert_eq!(
             port_in_line(
@@ -275,7 +306,9 @@ mod tests {
             Some(52123)
         );
         assert_eq!(
-            port_in_line("[12:34:56 [Сервер]: INFO]: Локальная игра запущена на порту 52123"),
+            port_in_line(
+                "[12:34:56 [Сервер]: INFO]: Локальная игра запущена на порту 52123"
+            ),
             Some(52123)
         );
     }
@@ -295,7 +328,9 @@ mod tests {
     fn ignores_lines_that_only_mention_a_port() {
         assert_eq!(port_in_line("Connecting to 127.0.0.1:25565"), None);
         assert_eq!(
-            port_in_line("[12:34:56 INFO]: Environment variable PORT set to 8080"),
+            port_in_line(
+                "[12:34:56 INFO]: Environment variable PORT set to 8080"
+            ),
             None
         );
         assert_eq!(port_in_line(""), None);
@@ -303,8 +338,14 @@ mod tests {
 
     #[test]
     fn reads_a_port_written_without_a_space() {
-        assert_eq!(port_in_line("Local game hosted on port:52123"), Some(52123));
-        assert_eq!(port_in_line("Локальная игра запущена на порту:52123"), Some(52123));
+        assert_eq!(
+            port_in_line("Local game hosted on port:52123"),
+            Some(52123)
+        );
+        assert_eq!(
+            port_in_line("Локальная игра запущена на порту:52123"),
+            Some(52123)
+        );
     }
 
     #[test]

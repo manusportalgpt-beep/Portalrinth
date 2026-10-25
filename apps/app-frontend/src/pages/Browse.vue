@@ -180,7 +180,10 @@ const {
 	markServerProjectInstalled,
 } = serverInstallContent
 
-const initialInstanceId = computed(() => String(route.query.i ?? ''))
+// Taken from the browse route on show, not the current one: when a project
+// or an author is opened from here, the instance in the trail above keeps
+// its name and icon instead of turning back into "Loading...".
+const initialInstanceId = computed(() => String(displayedBrowseRoute.value.query.i ?? ''))
 const instanceQuery = useQuery(
 	computed(() => ({
 		...instanceDetailQueryOptions(initialInstanceId.value),

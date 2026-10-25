@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PlusIcon } from '@modrinth/assets'
+import { PlusIcon, XIcon } from '@modrinth/assets'
 import {
 	AppearanceSettingsLayout,
 	ColorPicker,
@@ -67,6 +67,14 @@ function endAccentPreview(): void {
 		current.value.accentTintBackground,
 		current.value.accentColor,
 	)
+}
+
+/**
+ * Lets a kept colour go straight from the row, without opening the picker.
+ * The accent itself is stored apart from the row, so it is left as it is.
+ */
+function removeKeptColour(color: string): void {
+	removeCustomAccentColor(color)
 }
 
 function onPickerPreview(color: string | null): void {
@@ -379,8 +387,6 @@ provideAppearanceSettings({
 					current.accentPreset === preset.id ? 'border-contrast scale-110' : 'border-transparent'
 				"
 				:style="{ background: accentColorFor(preset, theme.active) }"
-				@mouseenter="previewAccent(preset.id)"
-				@mouseleave="endAccentPreview"
 				@click="current.accentPreset = preset.id"
 			/>
 		</div>
@@ -424,23 +430,35 @@ provideAppearanceSettings({
 					</span>
 				</template>
 			</ColorPicker>
-			<button
+			<div
 				v-for="color in accent.customColors.value"
 				:key="color"
-				type="button"
-				class="h-8 w-8 cursor-pointer rounded-full border-2 p-0 transition-transform hover:scale-110"
-				:class="
-					current.accentPreset === CUSTOM_ACCENT_ID && current.accentColor === color
-						? 'border-contrast scale-110'
-						: 'border-transparent'
-				"
-				:style="{ background: color }"
-				:aria-label="formatMessage(messages.accentUseColour, { color })"
-				:aria-pressed="current.accentPreset === CUSTOM_ACCENT_ID && current.accentColor === color"
-				@mouseenter="previewAccent(CUSTOM_ACCENT_ID, color)"
-				@mouseleave="endAccentPreview"
-				@click="onColourPicked(color)"
-			/>
+				class="custom-accent group relative h-8 w-8"
+			>
+				<button
+					type="button"
+					class="h-8 w-8 cursor-pointer rounded-full border-2 p-0 transition-transform hover:scale-110"
+					:class="
+						current.accentPreset === CUSTOM_ACCENT_ID && current.accentColor === color
+							? 'border-contrast scale-110'
+							: 'border-transparent'
+					"
+					:style="{ background: color }"
+					:aria-label="formatMessage(messages.accentUseColour, { color })"
+					:aria-pressed="current.accentPreset === CUSTOM_ACCENT_ID && current.accentColor === color"
+					@click="onColourPicked(color)"
+					@contextmenu.prevent="removeKeptColour(color)"
+				/>
+				<button
+					type="button"
+					class="custom-accent__remove absolute -right-1 -top-1 grid size-4 cursor-pointer place-items-center rounded-full border-none bg-surface-4 p-0 text-secondary opacity-0 shadow transition-opacity hover:text-contrast focus-visible:opacity-100 group-hover:opacity-100"
+					:title="formatMessage(messages.accentRemoveColour)"
+					:aria-label="formatMessage(messages.accentRemoveColour)"
+					@click.stop="removeKeptColour(color)"
+				>
+					<XIcon class="size-3" />
+				</button>
+			</div>
 		</div>
 
 		<div class="mt-3 flex items-center justify-between gap-4">

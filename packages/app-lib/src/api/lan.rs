@@ -319,12 +319,20 @@ async fn players_in_world(
 }
 
 async fn is_serving(port: u16) -> bool {
-    tokio::time::timeout(
-        std::time::Duration::from_millis(1500),
-        TcpStream::connect(("127.0.0.1", port)),
-    )
-    .await
-    .is_ok_and(|connected| connected.is_ok())
+    // The game may be listening on IPv4 or on IPv6 only, depending on the
+    // Java it runs on and how the system is set up, so both are asked.
+    for host in ["127.0.0.1", "::1"] {
+        let connected = tokio::time::timeout(
+            std::time::Duration::from_millis(1500),
+            TcpStream::connect((host, port)),
+        )
+        .await
+        .is_ok_and(|connected| connected.is_ok());
+        if connected {
+            return true;
+        }
+    }
+    false
 }
 
 /// How much of the game's own log there is, which is nothing at all until the

@@ -2434,5 +2434,20 @@
 	},
 	"app.project.more-from-creator.view-all": {
 		"message": "Все проекты ({count})"
+	},
+	"project.card.author.by": {
+		"message": "от"
+	},
+	"profile.button.edit-user": {
+		"message": "Редактировать пользователя"
+	},
+	"profile.label.restricted": {
+		"message": "Ограничен"
+	},
+	"profile.button.restrict": {
+		"message": "Ограничить пользователя"
+	},
+	"profile.button.edit-restrictions": {
+		"message": "Изменить ограничения"
 	}
 }

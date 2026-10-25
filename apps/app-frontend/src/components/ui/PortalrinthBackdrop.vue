@@ -152,6 +152,18 @@ watchEffect(() => {
 	backdrop-filter: blur(24px) saturate(1.3);
 }
 
+/* The bar over the search while adding content to an instance takes after
+   the page: see-through, with the picture blurred under it. */
+:root.portalrinth-backdrop-active .browse-install-header {
+	background-color: color-mix(
+		in srgb,
+		var(--color-bg) var(--portalrinth-page-shade, 50%),
+		transparent
+	);
+	backdrop-filter: blur(24px) saturate(1.3);
+	-webkit-backdrop-filter: blur(24px) saturate(1.3);
+}
+
 /* Menus and tooltips too, a touch more solid: they are small and read fast. */
 :root.portalrinth-backdrop-active [role='menu'],
 :root.portalrinth-backdrop-active .v-popper--theme-dropdown .v-popper__inner,

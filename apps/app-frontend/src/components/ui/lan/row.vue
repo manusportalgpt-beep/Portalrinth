@@ -2,7 +2,6 @@
 import {
 	CopyIcon,
 	InfoIcon,
-	MoreVerticalIcon,
 	PowerIcon,
 	RadioTowerIcon,
 	TriangleAlertIcon,
@@ -10,12 +9,12 @@ import {
 	WorldIcon,
 } from '@modrinth/assets'
 import { Avatar, Button, defineMessages, useVIntl } from '@modrinth/ui'
-import { computed, useTemplateRef } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { get_user } from '@/helpers/cache.js'
 import type { LanRelayInfo } from '@/helpers/lan'
 
-import LanDetailsModal from './details-modal.vue'
 import { lanAddress } from './use-lan-relay'
 
 const props = defineProps<{
@@ -71,12 +70,10 @@ const messages = defineMessages({
 		defaultMessage: 'Nobody is in the world yet',
 	},
 	copyAddress: { id: 'app.lan.action.copy', defaultMessage: 'Copy the address' },
-	more: { id: 'app.lan.action.more', defaultMessage: 'More' },
 	unpublish: { id: 'app.lan.action.unpublish', defaultMessage: 'Stop' },
 })
 
 const address = computed(() => lanAddress(props.relay))
-const detailsModal = useTemplateRef<InstanceType<typeof LanDetailsModal>>('detailsModal')
 
 const state = computed(() => props.relay.state)
 const stateLabel = computed(() =>
@@ -94,6 +91,31 @@ const stateLabel = computed(() =>
 function headOf(player: string) {
 	return `https://mc-heads.net/avatar/${encodeURIComponent(player)}/64`
 }
+
+/** Steve's head, for a player who has no picture of their own on Modrinth. */
+const STEVE_HEAD_URL = 'https://launcher-files.modrinth.com/assets/steve_head.png'
+
+/**
+ * The picture of whoever opened the world: the one on their Modrinth profile
+ * when they have one, Steve otherwise.
+ */
+const ownerAvatar = ref(STEVE_HEAD_URL)
+watch(
+	() => props.relay.account_name,
+	async (name) => {
+		ownerAvatar.value = STEVE_HEAD_URL
+		if (!name) return
+		try {
+			const user = await get_user(name)
+			if (props.relay.account_name === name && user?.avatar_url) {
+				ownerAvatar.value = user.avatar_url
+			}
+		} catch {
+			// Not on Modrinth: Steve stays.
+		}
+	},
+	{ immediate: true },
+)
 
 /** The profile a name belongs to. */
 function openProfile(username: string) {
@@ -118,7 +140,7 @@ function copyAddress() {
 					:aria-label="relay.account_name"
 					@click="openProfile(relay.account_name)"
 				>
-					<Avatar :src="headOf(relay.account_name)" alt="" size="1.25rem" circle no-shadow />
+					<Avatar :src="ownerAvatar" alt="" size="1.25rem" circle no-shadow />
 					<span class="truncate text-sm text-secondary hover:underline">
 						{{ relay.account_name }}
 					</span>
@@ -129,14 +151,6 @@ function copyAddress() {
 					<span class="lan-card-dot" />
 					{{ stateLabel }}
 				</span>
-				<Button
-					size="sm"
-					type="quiet"
-					:aria-label="formatMessage(messages.more)"
-					@click="detailsModal?.show()"
-				>
-					<MoreVerticalIcon />
-				</Button>
 			</div>
 		</div>
 
@@ -229,8 +243,6 @@ function copyAddress() {
 				{{ formatMessage(messages.playersNone) }}
 			</span>
 		</div>
-
-		<LanDetailsModal ref="detailsModal" :relay="relay" :address="address" />
 	</div>
 </template>
 

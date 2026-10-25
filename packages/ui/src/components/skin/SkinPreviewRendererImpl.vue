@@ -30,7 +30,7 @@
 			v-if="$slots.subtitle"
 			data-skin-preview-debug="subtitle"
 			class="absolute left-0 right-0 z-10 flex items-center justify-center pointer-events-none"
-			:style="subtitlePositionStyle"
+			:style="boundedSubtitlePositionStyle"
 		>
 			<div ref="subtitleElement" class="w-full pointer-events-auto" @click="ignoreControlClick">
 				<slot name="subtitle" />
@@ -114,6 +114,7 @@
 <script setup lang="ts">
 import { ChevronsUpDownIcon, ClassicPlayerModel, MoveIcon, SlimPlayerModel } from '@modrinth/assets'
 import { TresCanvas } from '@tresjs/core'
+import { useElementSize } from '@vueuse/core'
 import * as THREE from 'three'
 import {
 	computed,
@@ -210,6 +211,7 @@ const nametagText = computed(() => props.nametag)
 const hasSubtitle = computed(() => Boolean(slots.subtitle))
 const hasNametagBadge = computed(() => Boolean(slots['nametag-badge']))
 const isSubtitleWrapped = ref(false)
+const { height: subtitleHeight } = useElementSize(subtitleElement, undefined, { box: 'border-box' })
 const selectedModelSrc = computed(() =>
 	props.variant === 'SLIM' ? SlimPlayerModel : ClassicPlayerModel,
 )
@@ -355,6 +357,18 @@ const {
 	scene,
 	visibleBounds,
 	isModelLoaded,
+})
+
+// The controls under the feet follow the model, which moves a little when a
+// cape is put on or taken off; they must not slip past the bottom of the
+// preview, or the whole page would get a scrollbar for a moment.
+const boundedSubtitlePositionStyle = computed(() => {
+	const style = subtitlePositionStyle.value
+	const top =
+		typeof style.top === 'string' && style.top.endsWith('px') ? parseFloat(style.top) : NaN
+	const limit = containerSize.value.height - subtitleHeight.value - 4
+	if (!Number.isFinite(top) || subtitleHeight.value <= 0 || limit <= 0) return style
+	return { ...style, top: `${Math.min(top, limit)}px` }
 })
 
 const rendererDpr: [number, number] = [1, 1.5]

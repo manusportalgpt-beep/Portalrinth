@@ -180,16 +180,6 @@ function loadingBarGradient(accent: string, active: string): string {
 	return `linear-gradient(to right, rgb(${accent}) 0%, ${far} 100%)`
 }
 
-const GRADIENT_VARIABLES = [
-	'--brand-gradient-bg',
-	'--brand-gradient-strong-bg',
-	'--brand-gradient-border',
-	'--brand-gradient-fade-out-color',
-	'--modal-overlay-standard',
-	'--loading-bar-gradient',
-	'--splash-wash',
-] as const
-
 /**
  * A run of colours chosen as the accent, written the way CSS draws it:
  * `linear-gradient(<angle>deg, #hex, #hex, ...)`, evenly spaced, two to ten.
@@ -245,18 +235,71 @@ export function accentBaseColor(value: string): string {
  */
 const GRADIENT_STYLE_ID = 'portalrinth-accent-gradient'
 const GRADIENT_CLASS = 'portalrinth-accent-gradient'
+const G = `html.${GRADIENT_CLASS}`
+const BRAND = '[style*="var(--color-brand)"]'
 const GRADIENT_STYLESHEET = `
-html.${GRADIENT_CLASS} .bg-brand,
-html.${GRADIENT_CLASS} .button-frame--colored[style*="var(--color-brand)"] {
-	background-image: var(--portalrinth-accent-gradient);
+/* Filled with the accent: filled with the run. */
+${G} .bg-brand,
+${G} .\\!bg-brand,
+${G} .btn.btn-primary:not(.btn-outline):not(.btn-transparent),
+${G} .button-frame--colored${BRAND},
+${G}.light-mode .bg-button-bgSelected {
+	background-image: var(--portalrinth-accent-gradient) !important;
+}
+
+/* Washed with the accent - a selected chip, the current page, a tab - washed with the run. */
+${G} .bg-brand-highlight,
+${G} .\\!bg-brand-highlight,
+${G} .chips .selected,
+${G} .btn.btn-secondary,
+${G}:not(.light-mode) .bg-button-bgSelected,
+${G} .button-frame--colored-text${BRAND},
+${G} .button-frame--outlined${BRAND} {
+	background-color: transparent !important;
+	background-image: var(--portalrinth-accent-gradient-soft) !important;
+}
+
+/* Outlined in the accent: outlined in the run. */
+${G} .chips .selected,
+${G} .button-frame--outlined${BRAND} {
+	border-color: transparent !important;
+	box-shadow: none !important;
+}
+${G} .chips .selected {
+	position: relative;
+}
+${G} .chips .selected::after,
+${G} .button-frame--outlined${BRAND}::after {
+	position: absolute;
+	inset: 0;
+	padding: 1px;
+	pointer-events: none;
+	content: '';
+	border-radius: inherit;
+	background: var(--portalrinth-accent-gradient);
+	-webkit-mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+	mask-composite: exclude;
 }
 `
+
+/** The run at the strength a highlight is drawn at, for washes under content. */
+function softGradientCss({ angle, stops }: AccentGradient): string {
+	const soft = stops.map((stop) => {
+		const rgb = parseHex(stop)
+		return rgb ? `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]} / 0.25)` : stop
+	})
+	return `linear-gradient(${angle}deg, ${soft.join(', ')})`
+}
 
 function setGradient(gradient: AccentGradient | null): void {
 	const html = document.documentElement
 	if (!gradient) {
 		html.classList.remove(GRADIENT_CLASS)
 		html.style.removeProperty('--portalrinth-accent-gradient')
+		html.style.removeProperty('--portalrinth-accent-gradient-soft')
 		return
 	}
 	if (!document.getElementById(GRADIENT_STYLE_ID)) {
@@ -266,6 +309,7 @@ function setGradient(gradient: AccentGradient | null): void {
 		document.head.appendChild(style)
 	}
 	html.style.setProperty('--portalrinth-accent-gradient', gradientCss(gradient))
+	html.style.setProperty('--portalrinth-accent-gradient-soft', softGradientCss(gradient))
 	html.classList.add(GRADIENT_CLASS)
 }
 
@@ -459,39 +503,62 @@ export function accentColorFor(preset: AccentPreset, active: string = theme.acti
 	return active === 'light' ? preset.light : preset.dark
 }
 
-function apply(id: string, tint: boolean): void {
+/**
+ * What the theme on screen defines for the variables the accent repaints.
+ *
+ * Reading them means taking the overrides off and asking the browser for the
+ * computed style, which makes it restyle the whole window there and then. That
+ * used to happen on every change of accent - twice, since the new values went
+ * straight back on - and is most of what made switching colours stutter. The
+ * theme's own values only change with the theme, so they are read once per
+ * theme and kept.
+ */
+const THEME_VARIABLES = [
+	...ACCENT_VARIABLES,
+	...SURFACE_VARIABLES,
+	'--brand-gradient-border',
+] as const
+let themeBase: { theme: string; values: Map<string, string> } | null = null
+
+/** What this last wrote onto the document, so only what changed is written again. */
+const written = new Map<string, string>()
+
+function themeValues(): Map<string, string> {
+	if (themeBase?.theme === theme.active) return themeBase.values
 	const html = document.documentElement
+	for (const variable of written.keys()) html.style.removeProperty(variable)
+	written.clear()
+	const styles = getComputedStyle(html)
+	const values = new Map<string, string>()
+	for (const variable of THEME_VARIABLES) values.set(variable, styles.getPropertyValue(variable))
+	themeBase = { theme: theme.active, values }
+	return values
+}
 
-	// Cleared first, so what is read back is the theme's own colour and not the
-	// last thing this wrote. Also the whole of the work for `theme`.
-	for (const variable of [...ACCENT_VARIABLES, ...SURFACE_VARIABLES, ...GRADIENT_VARIABLES]) {
-		html.style.removeProperty(variable)
-	}
-	const gradient = id === CUSTOM_ACCENT_ID ? parseAccentGradient(customColor.value) : null
-	setGradient(gradient)
-
-	// A colour of someone's own is not a preset; it is drawn from where the wheel
-	// left it, and everything below works on it exactly as on one.
-	const hex = id === CUSTOM_ACCENT_ID ? accentBaseColor(customColor.value) : null
+/** The overrides an accent comes to, before any of it touches the document. */
+function overridesFor(id: string, tint: boolean): Map<string, string> {
+	const next = new Map<string, string>()
 
 	// Only `theme` is a request to leave the interface as the theme drew it.
 	// Every other id, the default one included, is a colour to paint: the default
 	// being crimson means crimson is what has to appear, not a reason to do
 	// nothing and let the theme's purple show through underneath.
-	if (id === THEME_ACCENT_ID) return
+	if (id === THEME_ACCENT_ID) return next
 
+	// A colour of someone's own is not a preset; it is drawn from where the wheel
+	// left it, and everything below works on it exactly as on one.
+	const hex = id === CUSTOM_ACCENT_ID ? accentBaseColor(customColor.value) : null
 	const preset = findAccentPreset(id)
-	if (!preset && !hex) return
+	if (!preset && !hex) return next
 
 	const rgb = parseHex(hex ?? accentColorFor(preset as AccentPreset))
-	if (!rgb) return
+	if (!rgb) return next
 
+	const base = themeValues()
 	const [red, green, blue] = rgb
-	const styles = getComputedStyle(html)
-
 	for (const variable of ACCENT_VARIABLES) {
-		const alpha = alphaOf(styles.getPropertyValue(variable))
-		html.style.setProperty(
+		const alpha = alphaOf(base.get(variable) ?? '')
+		next.set(
 			variable,
 			alpha >= 1 ? `rgb(${red} ${green} ${blue})` : `rgb(${red} ${green} ${blue} / ${alpha})`,
 		)
@@ -502,35 +569,82 @@ function apply(id: string, tint: boolean): void {
 	// preset whether or not the greys do. It was the brand's before; it is the
 	// brand's now.
 	const accent = `${red} ${green} ${blue}`
-	const borderAlpha = alphaOf(styles.getPropertyValue('--brand-gradient-border'))
+	const borderAlpha = alphaOf(base.get('--brand-gradient-border') ?? '')
 	for (const [variable, value] of Object.entries(brandGradients(accent, borderAlpha))) {
-		html.style.setProperty(variable, value)
+		next.set(variable, value)
 	}
-	html.style.setProperty(
+	const gradient = id === CUSTOM_ACCENT_ID ? parseAccentGradient(customColor.value) : null
+	next.set(
 		'--loading-bar-gradient',
 		gradient ? gradientCss(gradient, 'to right') : loadingBarGradient(accent, theme.active),
 	)
 
-	if (!tint) return
+	if (!tint) return next
 
 	// The surfaces keep their lightness — that is the theme's depth and its
 	// contrast — and are given the preset's hue at a fraction of its strength.
 	const hue = round(hueOf(rgb), 2)
 	for (const variable of SURFACE_VARIABLES) {
-		const surface = parseHex(styles.getPropertyValue(variable))
+		const surface = parseHex(base.get(variable) ?? '')
 		if (!surface) continue
-
-		const lightness = lightnessOf(surface)
-		html.style.setProperty(variable, `oklch(${round(lightness, 4)} ${SURFACE_TINT} ${hue})`)
+		next.set(variable, `oklch(${round(lightnessOf(surface), 4)} ${SURFACE_TINT} ${hue})`)
 	}
+	return next
 }
 
-// Each theme carries its own alphas, and a preset is drawn differently on light
-// than on dark, so the override is recomputed rather than kept.
-watch(
-	[presetId, tintBackground, customColor, () => theme.active],
-	([id, tint]) => {
-		apply(id, tint)
+function apply(id: string, tint: boolean): void {
+	const html = document.documentElement
+	// Read before anything is written, so the theme's values are its own.
+	if (id !== THEME_ACCENT_ID) themeValues()
+
+	const next = overridesFor(id, tint)
+	for (const variable of [...written.keys()]) {
+		if (next.has(variable)) continue
+		html.style.removeProperty(variable)
+		written.delete(variable)
+	}
+	for (const [variable, value] of next) {
+		if (written.get(variable) === value) continue
+		html.style.setProperty(variable, value)
+		written.set(variable, value)
+	}
+	setGradient(id === CUSTOM_ACCENT_ID ? parseAccentGradient(customColor.value) : null)
+}
+
+/**
+ * Changes of accent arrive faster than the window can draw them - a drag across
+ * the wheel is a change per pointer event - so they are folded into one per
+ * frame. The very first one is applied at once, so the window never opens in
+ * the wrong colour.
+ */
+let frame: number | null = null
+let pending: { id: string; tint: boolean; themeChanged: boolean } | null = null
+
+function scheduleApply(id: string, tint: boolean, themeChanged: boolean): void {
+	pending = { id, tint, themeChanged: themeChanged || (pending?.themeChanged ?? false) }
+	if (frame !== null) return
+	frame = requestAnimationFrame(() => {
+		frame = null
+		const next = pending
+		pending = null
+		if (!next) return
+		// A new theme's class is on the document by now, so its colours can be read.
+		if (next.themeChanged) themeBase = null
+		apply(next.id, next.tint)
+	})
+}
+
+/**
+ * The cache and the window's icon follow the accent, but nothing has to wait
+ * for them - the icon in particular is redrawn and handed to the window, which
+ * is far too much to do for every colour passed on the way to the one chosen.
+ */
+let settleTimer: ReturnType<typeof setTimeout> | null = null
+
+function settle(id: string): void {
+	if (settleTimer) clearTimeout(settleTimer)
+	settleTimer = setTimeout(() => {
+		settleTimer = null
 		writeCache()
 
 		// The window's own icon is the last purple thing left when the app is not
@@ -551,6 +665,22 @@ watch(
 				),
 			)
 		}
+	}, 400)
+}
+
+// Each theme carries its own alphas, and a preset is drawn differently on light
+// than on dark, so the override is recomputed rather than kept.
+let firstApply = true
+watch(
+	[presetId, tintBackground, customColor, () => theme.active],
+	([id, tint, , active], previous) => {
+		if (firstApply) {
+			firstApply = false
+			apply(id, tint)
+		} else {
+			scheduleApply(id, tint, previous?.[3] !== active)
+		}
+		settle(id)
 	},
 	{ immediate: true },
 )

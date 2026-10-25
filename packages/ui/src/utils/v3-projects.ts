@@ -58,10 +58,7 @@ export function getServerModpackContent(
 	return {
 		name: project_name,
 		icon: project_icon,
-		onclick:
-			project_id && project_id !== project.id && onNavigate
-				? () => onNavigate(project_id)
-				: undefined,
+		onclick: onNavigate ? () => onNavigate(project_id || project.id) : undefined,
 		showCustomModpackTooltip: project_id === project.id,
 	}
 }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ExternalIcon } from '@modrinth/assets'
 
+import { defineMessages, useVIntl } from '../../../composables'
 import { AutoLink, Avatar } from '../../base'
 
 export type ProjectCardAuthorDetails = {
@@ -15,6 +16,15 @@ export type ProjectCardAuthorDetails = {
 defineProps<{
 	author: ProjectCardAuthorDetails
 }>()
+
+const { formatMessage } = useVIntl()
+
+const messages = defineMessages({
+	by: {
+		id: 'project.card.author.by',
+		defaultMessage: 'by',
+	},
+})
 </script>
 
 <template>
@@ -23,7 +33,7 @@ defineProps<{
 	<span
 		class="line-clamp-1 break-all text-secondary font-normal max-w-fit w-full pb-[2px] mb-[-2px]"
 	>
-		by
+		{{ formatMessage(messages.by) }}
 		<AutoLink
 			:to="author.link"
 			:class="

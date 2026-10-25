@@ -172,7 +172,7 @@ import {
 	defineMessages,
 	EmptyState,
 	filterProjectsByType,
-	getProjectTypeTitleMessage,
+	getProjectTypeCategoryMessage,
 	injectNotificationManager,
 	NavTabs,
 	NormalPage,
@@ -290,7 +290,7 @@ const navLinks = computed(() => {
 			href: basePath,
 		},
 		...sortProjectTypes(catalogProjectTypes(projects.value)).map((projectType) => ({
-			label: formatMessage(getProjectTypeTitleMessage(projectType), { count: 2 }),
+			label: formatMessage(getProjectTypeCategoryMessage(projectType)),
 			href: `${basePath}/${projectType}s`,
 		})),
 	]
