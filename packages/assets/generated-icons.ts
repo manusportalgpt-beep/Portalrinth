@@ -242,6 +242,7 @@ import _PackageOpenIcon from './icons/package-open.svg?component'
 import _PackagePlusIcon from './icons/package-plus.svg?component'
 import _PackageSearchIcon from './icons/package-search.svg?component'
 import _PageRoundIcon from './icons/page-round.svg?component'
+import _PaintBucketIcon from './icons/paint-bucket.svg?component'
 import _PaintbrushIcon from './icons/paintbrush.svg?component'
 import _PaletteIcon from './icons/palette.svg?component'
 import _PanelLeftCloseIcon from './icons/panel-left-close.svg?component'
@@ -727,6 +728,7 @@ export const PackageOpenIcon = _PackageOpenIcon
 export const PackagePlusIcon = _PackagePlusIcon
 export const PackageSearchIcon = _PackageSearchIcon
 export const PageRoundIcon = _PageRoundIcon
+export const PaintBucketIcon = _PaintBucketIcon
 export const PaintbrushIcon = _PaintbrushIcon
 export const PaletteIcon = _PaletteIcon
 export const PanelLeftCloseIcon = _PanelLeftCloseIcon

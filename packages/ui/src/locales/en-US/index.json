@@ -2225,6 +2225,9 @@
   "image-viewer.editor.tool.eraser": {
     "defaultMessage": "Eraser"
   },
+  "image-viewer.editor.tool.fill": {
+    "defaultMessage": "Fill"
+  },
   "image-viewer.editor.tool.highlight": {
     "defaultMessage": "Highlight"
   },

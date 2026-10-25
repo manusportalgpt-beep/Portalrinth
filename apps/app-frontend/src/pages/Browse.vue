@@ -64,6 +64,7 @@ import {
 	curseforgeSearch,
 	isCurseforgeId,
 } from '@/helpers/curseforge'
+import { curseforgeCategoryIcon, curseforgeCategoryMessage } from '@/helpers/curseforge-categories'
 import { curseforgeKeyAvailable, curseforgeSettings } from '@/helpers/curseforge-settings'
 import {
 	get as getInstance,
@@ -744,13 +745,20 @@ const browseTags: Ref<Tags> = computed(() =>
 	isCurseforge.value
 		? {
 				...tags.value,
-				categories: curseforgeCategories.value.map((category) => ({
-					icon: '',
-					icon_url: category.iconUrl,
-					name: category.name,
-					project_type: projectType.value,
-					header: 'categories',
-				})),
+				// Drawn like Modrinth's: a monochrome icon and a name in the app's
+				// language, not CurseForge's coloured picture and English name.
+				categories: curseforgeCategories.value.map((category) => {
+					const message = curseforgeCategoryMessage(category.name)
+					return {
+						icon: '',
+						icon_url: null,
+						icon_component: curseforgeCategoryIcon(category.name),
+						display_name: message ? formatMessage(message) : category.name,
+						name: category.name,
+						project_type: projectType.value,
+						header: 'categories',
+					}
+				}),
 			}
 		: tags.value,
 )

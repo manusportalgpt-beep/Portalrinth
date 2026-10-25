@@ -457,8 +457,18 @@ export function useSearch(
 		id: 'search.filter_type.included_content',
 		defaultMessage: 'Included content',
 	})
+	// A category may bring its own name and icon, already in the app's language
+	// and style - CurseForge's do - instead of being looked up as Modrinth's.
+	const ownCategoryNames = computed(() => {
+		const names = new Map<string, string>()
+		for (const category of tags.value.categories) {
+			const name = (category as { display_name?: string }).display_name
+			if (name) names.set(category.name, name)
+		}
+		return names
+	})
 	const formatCategoryName = (categoryName: string) => {
-		return formatCategory(formatMessage, categoryName)
+		return ownCategoryNames.value.get(categoryName) ?? formatCategory(formatMessage, categoryName)
 	}
 
 	const filters = computed(() => {
@@ -482,8 +492,11 @@ export function useSearch(
 			}
 			categoryFilters[filterTypeId].options.push({
 				id: category.name,
-				formatted_name: formatCategory(formatMessage, category.name),
-				icon: categoryImageIcon(category) ?? getCategoryIcon(category.name),
+				formatted_name: formatCategoryName(category.name),
+				icon:
+					(category as { icon_component?: Component }).icon_component ??
+					categoryImageIcon(category) ??
+					getCategoryIcon(category.name),
 				value: `categories:${category.name}`,
 				method: category.header === 'resolutions' ? 'or' : 'and',
 			})

@@ -7,6 +7,7 @@ import {
 	HighlighterIcon,
 	MousePointer2Icon,
 	MoveUpRightIcon,
+	PaintBucketIcon,
 	PencilIcon,
 	SquareIcon,
 	TypeIcon,
@@ -37,6 +38,7 @@ const toolGroups = [
 		{ id: 'pen', message: messages.pen, icon: PencilIcon, shortcut: 'P' },
 		{ id: 'highlight', message: messages.highlight, icon: HighlighterIcon, shortcut: 'H' },
 		{ id: 'eraser', message: messages.eraser, icon: EraserIcon, shortcut: 'E' },
+		{ id: 'fill', message: messages.fill, icon: PaintBucketIcon, shortcut: 'F' },
 	],
 	[
 		{ id: 'arrow', message: messages.arrow, icon: MoveUpRightIcon, shortcut: 'A' },

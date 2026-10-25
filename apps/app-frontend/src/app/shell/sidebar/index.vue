@@ -5,7 +5,6 @@ import { OverlayScrollbars } from 'overlayscrollbars'
 import { computed, onMounted, onScopeDispose, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { useTheme } from '@/composables/use-theme'
 import PrideFundraiserBanner from '@/features/campaigns/pride-fundraiser-banner.vue'
 import FriendsList from '@/features/friends/friends-list/index.vue'
 import AccountsCard from '@/features/minecraft-accounts/accounts-card.vue'
@@ -55,7 +54,6 @@ const emit = defineEmits<{
 }>()
 
 const { formatMessage } = useVIntl()
-const appTheme = useTheme()
 const { hasLoggedIntoMinecraft, hasLoggedIntoModrinth, showChecklist } = injectOnboardingChecklist()
 const showFriendsList = computed(() => !showChecklist.value || hasLoggedIntoModrinth.value)
 const accounts = ref<InstanceType<typeof AccountsCard> | null>(null)
@@ -191,10 +189,7 @@ const messages = defineMessages({
 			not merely shifted left.
 		-->
 	<div
-		class="app-sidebar mt-px relative flex h-[calc(100vh-var(--top-bar-height))] w-full shrink-0 flex-col overflow-visible border-0 border-l-[1px] border-solid border-[--brand-gradient-border] before:pointer-events-none before:absolute before:inset-y-0 before:-left-8 before:w-8 before:content-[''] rounded-tl-[var(--radius-xl)]"
-		:class="{
-			'before:shadow-[-15px_0_15px_-15px_rgba(0,0,0,0.1)_inset]': appTheme.advancedRendering,
-		}"
+		class="app-sidebar relative flex h-[calc(100vh-var(--top-bar-height))] w-full shrink-0 flex-col overflow-visible"
 	>
 		<div v-show="open" class="relative flex min-h-0 grow shrink flex-col">
 			<div
@@ -365,13 +360,9 @@ const messages = defineMessages({
 	   it. The faint tint is kept so the panel still reads as a panel. */
 	/* The accent's own wash. It was the green of the theme this came from,
 	   which is why the panel was green while everything else was red. */
-	background: linear-gradient(
-		0deg,
-		color-mix(in srgb, var(--color-brand) 6%, transparent) 0%,
-		color-mix(in srgb, var(--color-brand) 2%, transparent) 100%
-	);
-	backdrop-filter: blur(24px);
-	-webkit-backdrop-filter: blur(24px);
+	/* Now part of the window's frame, like the bar on the left: the page meets
+	   it with an arc drawn by the page, so the panel itself is left plain. */
+	background: transparent;
 	--color-button-bg: var(--brand-gradient-button);
 	--surface-4: var(--brand-gradient-button);
 	--color-button-bg-hover: var(--brand-gradient-border);

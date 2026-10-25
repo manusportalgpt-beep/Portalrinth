@@ -120,14 +120,16 @@ watchEffect(() => {
 	--portalrinth-solid-surface-4: var(--surface-4);
 }
 
-:root.portalrinth-backdrop-active .app-contents {
+:root.portalrinth-backdrop-active .app-viewport {
 	/* How much darker than the frame the page is: a setting, 50% unless set. */
 	background-color: color-mix(
 		in srgb,
 		var(--color-bg) var(--portalrinth-page-shade, 50%),
 		transparent
 	);
+}
 
+:root.portalrinth-backdrop-active .app-contents {
 	/* The cards on a page let the picture through too, a little. */
 	--surface-2: color-mix(in srgb, var(--portalrinth-solid-surface-2) 72%, transparent);
 	--surface-3: color-mix(in srgb, var(--portalrinth-solid-surface-3) 72%, transparent);
@@ -179,12 +181,7 @@ watchEffect(() => {
 }
 
 :root.portalrinth-backdrop-active .app-sidebar {
-	/* The accent's own wash, which is see-through already, over a light veil. */
-	background:
-		var(--brand-gradient-bg),
-		linear-gradient(
-			color-mix(in srgb, var(--portalrinth-solid-surface-3) 45%, transparent),
-			color-mix(in srgb, var(--portalrinth-solid-surface-3) 45%, transparent)
-		);
+	/* Part of the frame, like the bar on the left: the frame's veil shows through. */
+	background: transparent;
 }
 </style>

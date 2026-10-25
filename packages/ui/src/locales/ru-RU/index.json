@@ -2081,6 +2081,9 @@
   "image-viewer.editor.tool.eraser": {
     "defaultMessage": "Ластик"
   },
+  "image-viewer.editor.tool.fill": {
+    "defaultMessage": "Заливка"
+  },
   "image-viewer.editor.tool.highlight": {
     "defaultMessage": "Маркер"
   },

@@ -2449,5 +2449,260 @@
 	},
 	"profile.button.edit-restrictions": {
 		"message": "Изменить ограничения"
+	},
+	"curseforge.category.addons": {
+		"message": "Дополнения"
+	},
+	"curseforge.category.applied-energistics-2": {
+		"message": "Applied Energistics 2"
+	},
+	"curseforge.category.blood-magic": {
+		"message": "Blood Magic"
+	},
+	"curseforge.category.buildcraft": {
+		"message": "Buildcraft"
+	},
+	"curseforge.category.crafttweaker": {
+		"message": "CraftTweaker"
+	},
+	"curseforge.category.create": {
+		"message": "Create"
+	},
+	"curseforge.category.forestry": {
+		"message": "Forestry"
+	},
+	"curseforge.category.galacticraft": {
+		"message": "Galacticraft"
+	},
+	"curseforge.category.industrial-craft": {
+		"message": "Industrial Craft"
+	},
+	"curseforge.category.integrated-dynamics": {
+		"message": "Integrated Dynamics"
+	},
+	"curseforge.category.kubejs": {
+		"message": "KubeJS"
+	},
+	"curseforge.category.skyblock": {
+		"message": "Скайблок"
+	},
+	"curseforge.category.thaumcraft": {
+		"message": "Thaumcraft"
+	},
+	"curseforge.category.thermal-expansion": {
+		"message": "Thermal Expansion"
+	},
+	"curseforge.category.tinker-s-construct": {
+		"message": "Tinker's Construct"
+	},
+	"curseforge.category.twilight-forest": {
+		"message": "Twilight Forest"
+	},
+	"curseforge.category.refined-storage": {
+		"message": "Refined Storage"
+	},
+	"curseforge.category.adventure-and-rpg": {
+		"message": "Приключения и RPG"
+	},
+	"curseforge.category.api-and-library": {
+		"message": "API и библиотеки"
+	},
+	"curseforge.category.armor-tools-and-weapons": {
+		"message": "Броня, инструменты и оружие"
+	},
+	"curseforge.category.bug-fixes": {
+		"message": "Исправления ошибок"
+	},
+	"curseforge.category.cosmetic": {
+		"message": "Косметика"
+	},
+	"curseforge.category.education": {
+		"message": "Обучение"
+	},
+	"curseforge.category.food": {
+		"message": "Еда"
+	},
+	"curseforge.category.magic": {
+		"message": "Магия"
+	},
+	"curseforge.category.map-and-information": {
+		"message": "Карты и информация"
+	},
+	"curseforge.category.mcreator": {
+		"message": "MCreator"
+	},
+	"curseforge.category.miscellaneous": {
+		"message": "Разное"
+	},
+	"curseforge.category.performance": {
+		"message": "Производительность"
+	},
+	"curseforge.category.redstone": {
+		"message": "Редстоун"
+	},
+	"curseforge.category.server-utility": {
+		"message": "Серверные утилиты"
+	},
+	"curseforge.category.storage": {
+		"message": "Хранение"
+	},
+	"curseforge.category.technology": {
+		"message": "Технологии"
+	},
+	"curseforge.category.automation": {
+		"message": "Автоматизация"
+	},
+	"curseforge.category.energy": {
+		"message": "Энергия"
+	},
+	"curseforge.category.energy-fluid-and-item-transport": {
+		"message": "Передача энергии, жидкостей и предметов"
+	},
+	"curseforge.category.farming": {
+		"message": "Фермерство"
+	},
+	"curseforge.category.genetics": {
+		"message": "Генетика"
+	},
+	"curseforge.category.player-transport": {
+		"message": "Передвижение игрока"
+	},
+	"curseforge.category.processing": {
+		"message": "Переработка"
+	},
+	"curseforge.category.twitch-integration": {
+		"message": "Интеграция с Twitch"
+	},
+	"curseforge.category.utility-qol": {
+		"message": "Утилиты и удобство"
+	},
+	"curseforge.category.world-gen": {
+		"message": "Генерация мира"
+	},
+	"curseforge.category.biomes": {
+		"message": "Биомы"
+	},
+	"curseforge.category.dimensions": {
+		"message": "Измерения"
+	},
+	"curseforge.category.mobs": {
+		"message": "Мобы"
+	},
+	"curseforge.category.ores-and-resources": {
+		"message": "Руды и ресурсы"
+	},
+	"curseforge.category.structures": {
+		"message": "Строения"
+	},
+	"curseforge.category.combat-pvp": {
+		"message": "Бой / PvP"
+	},
+	"curseforge.category.exploration": {
+		"message": "Исследование"
+	},
+	"curseforge.category.extra-large": {
+		"message": "Очень большие"
+	},
+	"curseforge.category.ftb-official-pack": {
+		"message": "Официальные сборки FTB"
+	},
+	"curseforge.category.hardcore": {
+		"message": "Хардкор"
+	},
+	"curseforge.category.horror": {
+		"message": "Хоррор"
+	},
+	"curseforge.category.map-based": {
+		"message": "На основе карты"
+	},
+	"curseforge.category.mini-game": {
+		"message": "Мини-игры"
+	},
+	"curseforge.category.multiplayer": {
+		"message": "Мультиплеер"
+	},
+	"curseforge.category.quests": {
+		"message": "Квесты"
+	},
+	"curseforge.category.sci-fi": {
+		"message": "Научная фантастика"
+	},
+	"curseforge.category.small-light": {
+		"message": "Маленькие / лёгкие"
+	},
+	"curseforge.category.tech": {
+		"message": "Технологии"
+	},
+	"curseforge.category.vanilla-plus": {
+		"message": "Ванилла+"
+	},
+	"curseforge.category.expert": {
+		"message": "Экспертные"
+	},
+	"curseforge.category.space": {
+		"message": "Космос"
+	},
+	"curseforge.category.16x": {
+		"message": "16x"
+	},
+	"curseforge.category.32x": {
+		"message": "32x"
+	},
+	"curseforge.category.64x": {
+		"message": "64x"
+	},
+	"curseforge.category.128x": {
+		"message": "128x"
+	},
+	"curseforge.category.256x": {
+		"message": "256x"
+	},
+	"curseforge.category.512x-and-higher": {
+		"message": "512x и выше"
+	},
+	"curseforge.category.animated": {
+		"message": "Анимированные"
+	},
+	"curseforge.category.data-packs": {
+		"message": "Наборы данных"
+	},
+	"curseforge.category.font-packs": {
+		"message": "Шрифты"
+	},
+	"curseforge.category.medieval": {
+		"message": "Средневековье"
+	},
+	"curseforge.category.mod-support": {
+		"message": "Поддержка модов"
+	},
+	"curseforge.category.modern": {
+		"message": "Современные"
+	},
+	"curseforge.category.photo-realistic": {
+		"message": "Фотореалистичные"
+	},
+	"curseforge.category.steampunk": {
+		"message": "Стимпанк"
+	},
+	"curseforge.category.traditional": {
+		"message": "Традиционные"
+	},
+	"curseforge.category.fantasy": {
+		"message": "Фэнтези"
+	},
+	"curseforge.category.realistic": {
+		"message": "Реалистичные"
+	},
+	"curseforge.category.vanilla": {
+		"message": "Ванильные"
+	},
+	"curseforge.category.adventure": {
+		"message": "Приключения"
+	},
+	"curseforge.category.library": {
+		"message": "Библиотеки"
+	},
+	"curseforge.category.utility": {
+		"message": "Утилиты"
 	}
 }

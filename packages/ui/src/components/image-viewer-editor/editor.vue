@@ -56,6 +56,17 @@ const fitBounds = ref<HTMLElement>()
 const exporting = ref(false)
 const discarding = ref(false)
 const loadingEditorData = ref(true)
+/** What was shown before the current item, kept on screen until the new one is ready. */
+const previousSrc = ref<string | null>(null)
+const incomingImageReady = ref(false)
+watch(
+	() => props.item.src,
+	(next, previous) => {
+		if (next === previous) return
+		previousSrc.value = previous ?? null
+		incomingImageReady.value = false
+	},
+)
 const imageMetadata = ref<ImageViewerEditorMetadata>()
 const spacePressed = ref(false)
 const panning = ref<{
@@ -394,7 +405,7 @@ defineExpose({ markSaved })
 <template>
 	<div
 		ref="viewport"
-		class="editor-viewport absolute inset-0 flex min-h-0 min-w-0 select-none overflow-auto px-6 pb-[5.75rem] pt-[4.75rem] max-[900px]:px-4 max-[900px]:pb-[8.5rem] max-[900px]:pt-[4.5rem]"
+		class="editor-viewport absolute inset-0 flex min-h-0 min-w-0 select-none overflow-auto px-6 pb-[5.75rem] pt-[var(--viewer-top-inset,4.75rem)] max-[900px]:px-4 max-[900px]:pb-[8.5rem] max-[900px]:pt-[var(--viewer-top-inset,4.5rem)]"
 		:class="{
 			'is-view': mode === 'view',
 			'is-pixelated': mode === 'view' && pixelated,
@@ -408,12 +419,31 @@ defineExpose({ markSaved })
 		@pointercancel="panning = undefined"
 		@wheel="handleWheel"
 	>
+		<!--
+			The picture that was on screen stays under the next one until that one
+			has been decoded, and the next one fades in over it - otherwise the
+			switch shows a frame of nothing, which on a black backdrop is a flash.
+		-->
+		<img
+			v-if="mode === 'view' && loadingEditorData && previousSrc && previousSrc !== item.src"
+			:key="`previous-${previousSrc}`"
+			:src="previousSrc"
+			alt=""
+			aria-hidden="true"
+			class="viewer-previous-image pointer-events-none absolute z-[1] object-contain"
+			:class="{ 'is-pixelated': pixelated }"
+			draggable="false"
+		/>
 		<img
 			v-if="mode === 'view' && loadingEditorData && !nativeImageView"
+			:key="item.src"
 			:src="item.src"
 			:alt="item.alt"
-			class="pointer-events-none relative z-[2] m-auto block h-full w-full shrink-0 object-contain"
+			class="pointer-events-none relative z-[2] m-auto block h-full w-full shrink-0 object-contain transition-opacity duration-200 ease-out motion-reduce:transition-none"
+			:class="incomingImageReady ? 'opacity-100' : 'opacity-0'"
 			draggable="false"
+			@load="incomingImageReady = true"
+			@error="incomingImageReady = true"
 		/>
 		<div
 			v-show="nativeImageView || !loadingEditorData"
@@ -455,7 +485,7 @@ defineExpose({ markSaved })
 	</div>
 	<div
 		ref="fitBounds"
-		class="pointer-events-none absolute inset-x-6 bottom-[5.75rem] top-[4.75rem] z-[3] flex items-center justify-center max-[900px]:inset-x-4 max-[900px]:bottom-[8.5rem] max-[900px]:top-[4.5rem]"
+		class="pointer-events-none absolute inset-x-6 bottom-[5.75rem] top-[var(--viewer-top-inset,4.75rem)] z-[3] flex items-center justify-center max-[900px]:inset-x-4 max-[900px]:bottom-[8.5rem] max-[900px]:top-[var(--viewer-top-inset,4.5rem)]"
 		aria-hidden="true"
 	/>
 
@@ -533,6 +563,24 @@ defineExpose({ markSaved })
 </template>
 
 <style scoped>
+.viewer-previous-image {
+	inset: var(--viewer-top-inset, 4.75rem) 1.5rem 5.75rem;
+	width: calc(100% - 3rem);
+	height: calc(100% - var(--viewer-top-inset, 4.75rem) - 5.75rem);
+}
+
+.viewer-previous-image.is-pixelated {
+	image-rendering: pixelated;
+}
+
+@media (max-width: 900px) {
+	.viewer-previous-image {
+		inset: var(--viewer-top-inset, 4.5rem) 1rem 8.5rem;
+		width: calc(100% - 2rem);
+		height: calc(100% - var(--viewer-top-inset, 4.5rem) - 8.5rem);
+	}
+}
+
 .editor-viewport.is-pixelated img {
 	image-rendering: pixelated;
 }

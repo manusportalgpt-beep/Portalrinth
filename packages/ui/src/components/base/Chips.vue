@@ -20,6 +20,7 @@
 				class="!text-brand"
 				aria-hidden="true"
 			/>
+			<component :is="formatIcon(item)" v-if="formatIcon?.(item)" aria-hidden="true" />
 			<span>{{ formatLabel(item) }}</span>
 		</Button>
 	</div>
@@ -27,6 +28,7 @@
 
 <script setup lang="ts" generic="T">
 import { CheckIcon } from '@modrinth/assets'
+import type { Component } from 'vue'
 
 import Button from './buttons/Button.vue'
 
@@ -34,6 +36,8 @@ const props = withDefaults(
 	defineProps<{
 		items: T[]
 		formatLabel?: (item: T) => string
+		/** An icon drawn before an item's label, in the label's own colour. */
+		formatIcon?: (item: T) => Component | undefined
 		neverEmpty?: boolean
 		capitalize?: boolean
 		size?: 'standard' | 'small'

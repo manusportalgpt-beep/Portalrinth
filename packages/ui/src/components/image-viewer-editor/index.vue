@@ -257,6 +257,7 @@ defineExpose({ show, edit, hide, next, previous, markSavedAndView })
 		<div
 			v-if="activeItem"
 			class="fixed inset-0 z-[110] overflow-hidden bg-black/95 text-white"
+			:class="{ 'has-viewer-heading': activeItem.title || activeItem.description }"
 			role="dialog"
 			aria-modal="true"
 			:aria-label="activeItem.title || activeItem.alt"
@@ -315,6 +316,14 @@ defineExpose({ show, edit, hide, next, previous, markSavedAndView })
 </template>
 
 <style scoped>
+/*
+ * The caption sits above the picture rather than over it: the space the image
+ * is fitted into starts below the caption's two lines.
+ */
+.has-viewer-heading {
+	--viewer-top-inset: calc(var(--top-bar-height, 3rem) + 4.75rem);
+}
+
 .viewer-heading-text {
 	filter: drop-shadow(0 2px 3px rgb(0 0 0 / 90%));
 }

@@ -38,6 +38,8 @@ type FabricPointerEvent = {
 }
 
 const MIN_ZOOM = 0.25
+/** How far a pixel's colour may be from the one clicked and still be filled, per channel. */
+const FILL_TOLERANCE = 32
 const MAX_ZOOM = 4
 const CONTROL_SIZE = 14
 const CONTROL_TOUCH_SIZE = 24
@@ -74,6 +76,7 @@ const TOOL_SHORTCUTS: Partial<Record<string, ScreenshotEditorTool>> = {
 	a: 'arrow',
 	c: 'censor',
 	e: 'eraser',
+	f: 'fill',
 	h: 'highlight',
 	k: 'crop',
 	o: 'ellipse',
@@ -131,7 +134,7 @@ export function useImageEditor() {
 			kind === 'rectangle' ||
 			kind === 'ellipse' ||
 			kind === 'text' ||
-			(kind === 'censor' && selectionCount.value === 0)
+			((kind === 'censor' || kind === 'fill') && selectionCount.value === 0)
 		)
 	})
 	const showEraserMode = computed(() => selectionCount.value === 0 && tool.value === 'eraser')
@@ -918,6 +921,10 @@ export function useImageEditor() {
 			beginErasing(point)
 			return
 		}
+		if (tool.value === 'fill') {
+			fillAtPoint(point)
+			return
+		}
 
 		if (tool.value === 'text') {
 			constructingObject = true
@@ -984,6 +991,87 @@ export function useImageEditor() {
 			styleObjectControls(drawingObject)
 			editorCanvas.add(drawingObject)
 		}
+	}
+
+	/**
+	 * Fills the area under the pointer with the chosen colour, the way a paint
+	 * bucket does: every pixel connected to the one clicked that looks like it,
+	 * as the picture is drawn now - screenshot and annotations together.
+	 *
+	 * The result is an annotation of its own, a picture of just the filled
+	 * area, so it can be undone, erased and saved like anything else drawn.
+	 */
+	function fillAtPoint(point: FabricPoint) {
+		const editorCanvas = canvas.value
+		if (!editorCanvas || !fabric) return
+		const width = originalWidth.value
+		const height = originalHeight.value
+		const startX = Math.floor(point.x)
+		const startY = Math.floor(point.y)
+		const crop = cropRect.value
+		if (
+			startX < Math.max(0, crop.left) ||
+			startY < Math.max(0, crop.top) ||
+			startX >= Math.min(width, crop.left + crop.width) ||
+			startY >= Math.min(height, crop.top + crop.height)
+		)
+			return
+
+		const displayViewportTransform = editorCanvas.viewportTransform
+		let scene: HTMLCanvasElement
+		editorCanvas.setViewportTransform([1, 0, 0, 1, 0, 0])
+		try {
+			scene = editorCanvas.toCanvasElement(1, {
+				left: 0,
+				top: 0,
+				width,
+				height,
+				filter: (object) => isAnnotationObject(object) || object === background,
+			})
+		} finally {
+			editorCanvas.setViewportTransform(displayViewportTransform)
+		}
+		const sceneContext = scene.getContext('2d', { willReadFrequently: true })
+		if (!sceneContext) return
+		const pixels = sceneContext.getImageData(0, 0, width, height).data
+		const region = floodFillRegion(pixels, width, height, startX, startY, FILL_TOLERANCE)
+		if (!region) return
+
+		const { mask, left, top, right, bottom } = region
+		const fillWidth = right - left + 1
+		const fillHeight = bottom - top + 1
+		const output = document.createElement('canvas')
+		output.width = fillWidth
+		output.height = fillHeight
+		const outputContext = output.getContext('2d')
+		if (!outputContext) return
+		const [red, green, blue] = hexToRgb(color.value)
+		const image = outputContext.createImageData(fillWidth, fillHeight)
+		for (let y = top; y <= bottom; y++) {
+			for (let x = left; x <= right; x++) {
+				if (!mask[y * width + x]) continue
+				const offset = ((y - top) * fillWidth + (x - left)) * 4
+				image.data[offset] = red
+				image.data[offset + 1] = green
+				image.data[offset + 2] = blue
+				image.data[offset + 3] = 255
+			}
+		}
+		outputContext.putImageData(image, 0, 0)
+
+		const fill = new fabric.FabricImage(output, {
+			left,
+			top,
+			originX: 'left',
+			originY: 'top',
+			selectable: false,
+			evented: false,
+		}) as EditorFabricObject
+		setEditorMetadata(fill, 'fill')
+		styleObjectControls(fill)
+		editorCanvas.add(fill)
+		keepCropUiOnTop()
+		editorCanvas.requestRenderAll()
 	}
 
 	function isPointNearCropBorder(point: FabricPoint) {
@@ -1657,6 +1745,94 @@ function loadImage(url: string) {
 		image.onerror = () => reject(new Error('Could not load screenshot image'))
 		image.src = url
 	})
+}
+
+/**
+ * The pixels connected to a starting one that are close to its colour.
+ *
+ * Grown one pixel past its edge, so a filled area meets an anti-aliased
+ * outline instead of leaving a pale seam inside it.
+ */
+function floodFillRegion(
+	pixels: Uint8ClampedArray,
+	width: number,
+	height: number,
+	startX: number,
+	startY: number,
+	tolerance: number,
+) {
+	const start = (startY * width + startX) * 4
+	const target = [pixels[start], pixels[start + 1], pixels[start + 2], pixels[start + 3]]
+	const matches = (index: number) => {
+		const offset = index * 4
+		return (
+			Math.abs(pixels[offset] - target[0]) <= tolerance &&
+			Math.abs(pixels[offset + 1] - target[1]) <= tolerance &&
+			Math.abs(pixels[offset + 2] - target[2]) <= tolerance &&
+			Math.abs(pixels[offset + 3] - target[3]) <= tolerance
+		)
+	}
+	const filled = new Uint8Array(width * height)
+	const stack = [startY * width + startX]
+	let left = startX
+	let right = startX
+	let top = startY
+	let bottom = startY
+	while (stack.length) {
+		const index = stack.pop() as number
+		const y = Math.floor(index / width)
+		let x = index - y * width
+		while (x > 0 && !filled[y * width + x - 1] && matches(y * width + x - 1)) x--
+		let spanAbove = false
+		let spanBelow = false
+		for (; x < width; x++) {
+			const current = y * width + x
+			if (filled[current] || !matches(current)) break
+			filled[current] = 1
+			if (x < left) left = x
+			if (x > right) right = x
+			if (y > 0) {
+				const above = current - width
+				const open = !filled[above] && matches(above)
+				if (open && !spanAbove) stack.push(above)
+				spanAbove = open
+			}
+			if (y < height - 1) {
+				const below = current + width
+				const open = !filled[below] && matches(below)
+				if (open && !spanBelow) stack.push(below)
+				spanBelow = open
+			}
+		}
+		if (y < top) top = y
+		if (y > bottom) bottom = y
+	}
+
+	left = Math.max(0, left - 1)
+	right = Math.min(width - 1, right + 1)
+	top = Math.max(0, top - 1)
+	bottom = Math.min(height - 1, bottom + 1)
+	const mask = new Uint8Array(width * height)
+	for (let y = top; y <= bottom; y++) {
+		for (let x = left; x <= right; x++) {
+			const index = y * width + x
+			if (
+				filled[index] ||
+				(x > 0 && filled[index - 1]) ||
+				(x < width - 1 && filled[index + 1]) ||
+				(y > 0 && filled[index - width]) ||
+				(y < height - 1 && filled[index + width])
+			)
+				mask[index] = 1
+		}
+	}
+	return { mask, left, top, right, bottom }
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+	const value = Number.parseInt(hex.replace('#', '').slice(0, 6), 16)
+	if (!Number.isFinite(value)) return [255, 255, 255]
+	return [(value >> 16) & 255, (value >> 8) & 255, value & 255]
 }
 
 function hexToRgba(hex: string, alpha: number) {

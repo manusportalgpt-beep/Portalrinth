@@ -16,6 +16,7 @@ export const imageViewerEditorMessages = defineMessages({
 	pen: { id: 'image-viewer.editor.tool.pen', defaultMessage: 'Pen' },
 	highlight: { id: 'image-viewer.editor.tool.highlight', defaultMessage: 'Highlight' },
 	eraser: { id: 'image-viewer.editor.tool.eraser', defaultMessage: 'Eraser' },
+	fill: { id: 'image-viewer.editor.tool.fill', defaultMessage: 'Fill' },
 	crop: { id: 'image-viewer.editor.tool.crop', defaultMessage: 'Crop' },
 	text: { id: 'image-viewer.editor.tool.text', defaultMessage: 'Text' },
 	arrow: { id: 'image-viewer.editor.tool.arrow', defaultMessage: 'Arrow' },

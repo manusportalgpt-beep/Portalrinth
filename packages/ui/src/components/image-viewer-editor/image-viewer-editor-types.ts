@@ -5,6 +5,7 @@ export type ScreenshotEditorTool =
 	| 'pen'
 	| 'highlight'
 	| 'eraser'
+	| 'fill'
 	| 'crop'
 	| 'text'
 	| 'arrow'
@@ -20,6 +21,7 @@ export type ScreenshotEditorObjectKind =
 	| 'background'
 	| 'censor'
 	| 'ellipse'
+	| 'fill'
 	| 'highlight'
 	| 'pen'
 	| 'rectangle'
@@ -27,7 +29,7 @@ export type ScreenshotEditorObjectKind =
 
 export type ScreenshotEditorPropertyKind = Exclude<
 	ScreenshotEditorObjectKind,
-	'annotation' | 'background'
+	'annotation' | 'background' | 'fill'
 >
 
 export type ScreenshotEditorSourceRect = {

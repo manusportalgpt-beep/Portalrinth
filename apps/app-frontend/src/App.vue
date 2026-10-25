@@ -210,6 +210,32 @@ const appTheme = useTheme()
 const quickInstances = useQuickInstanceLimit()
 const router = useRouter()
 const route = useRoute()
+
+const TITLE_SHEEN_CLASS = 'portalrinth-title-sheen'
+let titleSheenTimer: ReturnType<typeof setTimeout> | null = null
+
+function playTitleSheen() {
+	if (typeof window === 'undefined') return
+	if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+	if (titleSheenTimer) clearTimeout(titleSheenTimer)
+	titleSheenTimer = setTimeout(() => {
+		titleSheenTimer = null
+		const title = document.querySelector<HTMLElement>('.app-viewport h1')
+		if (!title || !title.textContent?.trim()) return
+		title.classList.remove(TITLE_SHEEN_CLASS)
+		void title.offsetWidth
+		title.classList.add(TITLE_SHEEN_CLASS)
+		title.addEventListener('animationend', () => title.classList.remove(TITLE_SHEEN_CLASS), {
+			once: true,
+		})
+	}, 180)
+}
+
+watch(
+	() => route.path,
+	() => nextTick(playTitleSheen),
+	{ immediate: true },
+)
 const { channel: appEventChannel, events: appEvents } = setupAppEventsProvider()
 useInstanceMetadataRefresh(appEvents)
 const breadcrumbManager = createBreadcrumbManager()
@@ -2689,8 +2715,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	right: 0;
 	bottom: 0;
 	height: calc(100vh - var(--top-bar-height));
-	background-color: var(--color-bg);
+	/*
+	 * The page's colour is the page's, not the whole area's: the right-hand
+	 * panel's column shows the window's frame through, the way the left one does,
+	 * and the page meets both with the same arc.
+	 */
+	background-color: transparent;
 	border-top-left-radius: var(--radius-xl);
+	/* Where the frame drawn around the page ends on the right. */
+	--sidebar-column: calc(-1 * var(--left-bar-width));
 
 	display: grid;
 	grid-template-columns: 1fr 0px;
@@ -2701,6 +2734,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 	&.sidebar-enabled {
 		grid-template-columns: 1fr 300px;
+		--sidebar-column: 300px;
+
+		.app-viewport {
+			border-top-right-radius: var(--radius-xl);
+		}
 
 		.app-sidebar {
 			opacity: 1;
@@ -2716,6 +2754,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	 */
 	&.sidebar-collapsed {
 		grid-template-columns: 1fr var(--left-bar-width);
+		--sidebar-column: var(--left-bar-width);
 	}
 
 	@media (prefers-reduced-motion) {
@@ -2752,6 +2791,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 .app-viewport {
 	flex-grow: 1;
 	height: 100%;
+	background-color: var(--color-bg);
+	/* Rounded and clipping, so a header pinned to the top of a page - an
+	   instance's, a project's, the install bar - follows both arcs too. */
+	border-top-left-radius: var(--radius-xl);
+	transition: border-top-right-radius 0.42s var(--nm-sheet);
 	overflow: auto;
 	overflow-x: hidden;
 	scrollbar-gutter: stable;
@@ -2763,9 +2807,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	position: fixed;
 	left: var(--left-bar-width);
 	top: var(--top-bar-height);
-	right: calc(-1 * var(--left-bar-width));
+	right: var(--sidebar-column);
 	bottom: calc(-1 * var(--left-bar-width));
 	border-radius: var(--radius-xl);
+	transition: right 0.42s var(--nm-sheet);
 	box-shadow: 1px 1px 15px rgba(0, 0, 0, 0.1) inset;
 	border-color: var(--surface-5);
 	border-width: 1px;
@@ -2829,6 +2874,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 }
 </style>
 <style>
+.portalrinth-title-sheen {
+	background-image: linear-gradient(
+		100deg,
+		currentColor 0%,
+		currentColor 38%,
+		var(--color-brand) 47%,
+		color-mix(in srgb, var(--color-brand) 55%, white) 50%,
+		var(--color-brand) 53%,
+		currentColor 62%,
+		currentColor 100%
+	);
+	background-size: 300% 100%;
+	background-repeat: no-repeat;
+	background-position: 100% 0;
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: portalrinth-title-sheen 1.3s cubic-bezier(0.4, 0, 0.2, 1) 1;
+}
+
+@keyframes portalrinth-title-sheen {
+	from {
+		background-position: 100% 0;
+	}
+	to {
+		background-position: 0% 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.portalrinth-title-sheen {
+		animation: none;
+		-webkit-text-fill-color: currentColor;
+		background-image: none;
+	}
+}
 .os-theme-dark,
 .os-theme-light {
 	--os-handle-bg: var(--color-scrollbar) !important;

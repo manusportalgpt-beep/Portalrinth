@@ -105,6 +105,7 @@
 				v-model="selectedLoader"
 				:items="effectiveLoaders"
 				:format-label="formatLoaderLabel"
+				:format-icon="getLoaderIcon"
 				:never-empty="false"
 			/>
 		</div>
@@ -218,6 +219,7 @@ import type { Paper } from '@modrinth/api-client'
 import {
 	EyeIcon,
 	EyeOffIcon,
+	getLoaderIcon,
 	PaletteIcon,
 	RefreshCwIcon,
 	SpinnerIcon,
