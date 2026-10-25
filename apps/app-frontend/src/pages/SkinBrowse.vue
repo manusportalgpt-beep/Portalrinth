@@ -77,7 +77,6 @@ const messages = defineMessages({
 	},
 	retry: { id: 'app.skin-browse.retry', defaultMessage: 'Try again' },
 	loadMore: { id: 'app.skin-browse.load-more', defaultMessage: 'Load more' },
-	poweredBy: { id: 'app.skin-browse.powered-by', defaultMessage: 'Skins from laby.net' },
 	modalTitle: { id: 'app.skin-browse.modal-title', defaultMessage: 'Skin' },
 	uses: { id: 'app.skin-browse.uses', defaultMessage: '{count} players' },
 	crouch: { id: 'app.skin-browse.crouch', defaultMessage: 'Crouch' },
@@ -358,7 +357,6 @@ const usesFormatter = new Intl.NumberFormat()
 				<Button v-if="similarMode" type="outlined" @click="showAll">
 					<XIcon /> {{ formatMessage(messages.backToAll) }}
 				</Button>
-				<span class="text-sm text-secondary">{{ formatMessage(messages.poweredBy) }}</span>
 			</div>
 		</div>
 

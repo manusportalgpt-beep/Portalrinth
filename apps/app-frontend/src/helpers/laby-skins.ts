@@ -26,17 +26,10 @@ export const LABY_PAGE_SIZE = 42
 const SEARCH_URL = 'https://laby.net/api/texture/search'
 
 export function labySkinTextureUrl(hash: string) {
-	return `https://texture.laby.net/${hash}.png`
-}
-
-/**
- * The preview render of a skin, by its texture hash. The render itself comes
- * from crafty.gg's skin service: laby.net's own render endpoint turns more
- * requests away than it serves, which is what left Discover's skin grid with
- * broken icons.
- */
-export function labySkinRenderUrl(hash: string, width = 135, height = 257) {
-	return `https://render.crafty.gg/3d/full/${hash}?width=${width}&height=${height}`
+	// The texture CDN (texture.laby.net) resets connections on some networks;
+	// the same files are served by laby.net itself, whose API the skin
+	// library already runs on.
+	return `https://laby.net/texture/${hash}.png`
 }
 
 export function labySkinPageUrl(hash: string) {
@@ -69,7 +62,12 @@ export async function searchLabySkins(query: string, page = 1): Promise<LabySkin
 /** The skin as a 64×64 PNG, older 64×32 ones filled out the way the game does. */
 export async function labySkinTexture(hash: string): Promise<Uint8Array> {
 	// Comes back over IPC as a plain list of bytes, not a typed array.
-	return new Uint8Array(await normalize_skin_texture(labySkinTextureUrl(hash)))
+	try {
+		return new Uint8Array(await normalize_skin_texture(labySkinTextureUrl(hash)))
+	} catch {
+		// If laby.net itself refuses too, the old texture CDN is the second try.
+		return new Uint8Array(await normalize_skin_texture(`https://texture.laby.net/${hash}.png`))
+	}
 }
 
 export function pngDataUrl(png: Uint8Array) {
@@ -257,7 +255,7 @@ export async function findSimilarLabySkins(
 
 	const pool = [...candidates.values()].sort((a, b) => b.use_count - a.use_count).slice(0, 96)
 	const scored = await inBatches(pool, 8, async (skin) => {
-		const candidatePixels = await pixelsOf(labySkinTextureUrl(skin.image_hash))
+		const candidatePixels = await pixelsOf(await labySkinTexture(skin.image_hash))
 		return {
 			skin,
 			score: candidatePixels ? likeness(own.histogram, fingerprint(candidatePixels).histogram) : -1,

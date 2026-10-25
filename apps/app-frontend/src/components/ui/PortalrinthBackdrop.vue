@@ -199,6 +199,13 @@ watchEffect(() => {
 	border-top-right-radius: var(--radius-xl);
 }
 
+/* The scrollbar runs down the page's right edge, past the pinned bar; its
+   track keeps the bar's own dark, so the bar's rounded tip is not cut off by
+   a lighter strip. */
+:root.portalrinth-backdrop-active .app-viewport::-webkit-scrollbar-track {
+	background: color-mix(in srgb, var(--color-bg) var(--portalrinth-header-shade, 60%), transparent);
+}
+
 /* Menus and tooltips too, a touch more solid: they are small and read fast. */
 :root.portalrinth-backdrop-active [role='menu'],
 :root.portalrinth-backdrop-active .v-popper--theme-dropdown .v-popper__inner,

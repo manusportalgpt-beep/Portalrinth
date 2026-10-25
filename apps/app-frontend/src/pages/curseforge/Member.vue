@@ -7,12 +7,6 @@
 						<Avatar :src="avatarUrl" :alt="memberName" size="96px" :tint-by="memberName" circle />
 					</template>
 
-					<template #badges>
-						<PageHeaderBadgeItem :icon="CurseForgeIcon">
-							{{ formatMessage(messages.curseforgeMember) }}
-						</PageHeaderBadgeItem>
-					</template>
-
 					<template #metadata>
 						<PageHeaderMetadata>
 							<PageHeaderMetadataNumberItem
@@ -122,7 +116,6 @@
 <script setup lang="ts">
 import {
 	BoxIcon,
-	CurseForgeIcon,
 	DownloadIcon,
 	ExternalIcon,
 	PlusIcon,
@@ -140,7 +133,6 @@ import {
 	NormalPage,
 	PageHeader,
 	PageHeaderActions,
-	PageHeaderBadgeItem,
 	PageHeaderMetadata,
 	PageHeaderMetadataNumberItem,
 	ProjectCard,
@@ -166,10 +158,6 @@ const { handleError } = injectNotificationManager()
 const { install: installVersion } = injectContentInstall()
 
 const messages = defineMessages({
-	curseforgeMember: {
-		id: 'app.curseforge-member.label',
-		defaultMessage: 'CurseForge author',
-	},
 	summary: {
 		id: 'app.curseforge-member.summary',
 		defaultMessage: 'Projects this author or team published on CurseForge.',

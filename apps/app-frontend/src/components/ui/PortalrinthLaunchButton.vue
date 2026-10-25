@@ -51,6 +51,7 @@
 				:animate="{
 					x: againVisible ? mainWidth + GAP : mainWidth - HEIGHT,
 					scale: againVisible ? 1 : 0.55,
+					opacity: againVisible ? 1 : 0,
 					backgroundColor: colors.again,
 				}"
 				:transition="liquidSpring"
