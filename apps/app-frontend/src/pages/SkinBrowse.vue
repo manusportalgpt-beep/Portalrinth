@@ -38,6 +38,7 @@ import {
 	type LabySkin,
 	labySkinPageUrl,
 	labySkinPreview,
+	labySkinRenderUrl,
 	labySkinTags,
 	labySkinTexture,
 	labySkinVariant,
@@ -46,6 +47,7 @@ import {
 	similarSkinReference,
 } from '@/helpers/laby-skins'
 import { add_and_equip_custom_skin, type Cape, get_available_capes } from '@/helpers/skins'
+import { playSoundEffect } from '@/helpers/portalrinth-sfx'
 import { type BreadcrumbDefinition, injectBreadcrumbManager } from '@/shared/breadcrumbs'
 
 const { formatMessage } = useVIntl()
@@ -140,17 +142,28 @@ let requestId = 0
 /** Grid previews, drawn on a canvas from each skin's own texture. */
 const previews = ref<Record<string, string>>({})
 
-/** The preview of a skin, kicked off the first time the card asks for it. */
+/**
+ * The preview of a skin: the 3D render laby.net itself draws, straight from
+ * the host the skin list came from. Nothing has to be downloaded or drawn
+ * here, so a page of skins fills in as fast as the pictures arrive, and the
+ * webview's own cache keeps the ones it has already shown.
+ */
 function previewSrc(hash: string) {
-	let preview = previews.value[hash]
-	if (!preview) {
-		labySkinPreview(hash)
-			.then((url) => {
-				previews.value = { ...previews.value, [hash]: url }
-			})
-			.catch(() => {})
-	}
-	return preview
+	return previews.value[hash] ?? labySkinRenderUrl(hash)
+}
+
+/**
+ * The render did not come through - some networks drop part of their requests
+ * to laby.net. The skin is then drawn here on a canvas from its texture, the
+ * way the grid used to, and what that fails to load too is left as it was.
+ */
+function onPreviewError(hash: string) {
+	if (previews.value[hash]) return
+	labySkinPreview(hash)
+		.then((url) => {
+			previews.value = { ...previews.value, [hash]: url }
+		})
+		.catch(() => {})
 }
 
 async function load(reset: boolean) {
@@ -240,6 +253,8 @@ watch(
 const modal = useTemplateRef('modal')
 const current = ref<LabySkin | null>(null)
 const currentTexture = ref('')
+/** The render of the open skin, shown when its texture will not come. */
+const currentRender = ref('')
 const crouching = ref(false)
 const layersHidden = ref(false)
 const walking = ref(false)
@@ -266,13 +281,16 @@ async function select(skin: LabySkin) {
 	const id = ++viewerRequest
 	current.value = skin
 	currentTexture.value = ''
+	currentRender.value = labySkinRenderUrl(skin.image_hash, 400, 640)
 	similar.value = []
 	try {
 		const texture = await labySkinTexture(skin.image_hash)
 		if (id !== viewerRequest) return
 		currentTexture.value = pngDataUrl(texture)
-	} catch (error) {
-		if (id === viewerRequest) handleError(error as Error)
+	} catch {
+		// The texture would not come. The render above stands in for the model
+		// instead of a spinner that never ends; installing stays disabled, as
+		// it needs the texture itself.
 	}
 	loadSimilar(skin, id)
 }
@@ -320,6 +338,7 @@ async function install() {
 			title: formatMessage(messages.installed),
 			text: formatMessage(messages.installedText),
 		})
+		playSoundEffect('success')
 		modal.value?.hide()
 	} catch (error) {
 		handleError(error as Error)
@@ -388,6 +407,7 @@ const usesFormatter = new Intl.NumberFormat()
 				:forward-image-src="previewSrc(skin.image_hash)"
 				:selected="false"
 				:tooltip="tagsOf(skin) || undefined"
+				@error="onPreviewError(skin.image_hash)"
 				@select="open(skin)"
 			/>
 		</div>
@@ -421,6 +441,16 @@ const usesFormatter = new Intl.NumberFormat()
 					:initial-rotation="Math.PI / 8"
 					class="h-full w-full"
 				/>
+				<div
+					v-else-if="currentRender"
+					class="flex h-full w-full items-center justify-center"
+				>
+					<img
+						:src="currentRender"
+						alt=""
+						class="max-h-full max-w-full object-contain"
+					/>
+				</div>
 				<div v-else class="flex h-full w-full items-center justify-center">
 					<SpinnerIcon class="size-6 animate-spin text-secondary" />
 				</div>
@@ -497,6 +527,7 @@ const usesFormatter = new Intl.NumberFormat()
 							:forward-image-src="previewSrc(skin.image_hash)"
 							:selected="false"
 							:tooltip="tagsOf(skin) || undefined"
+							@error="onPreviewError(skin.image_hash)"
 							@select="select(skin)"
 						/>
 					</div>

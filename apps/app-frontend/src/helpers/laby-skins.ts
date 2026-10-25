@@ -70,6 +70,17 @@ export function labySkinTextureSources(hash: string): string[] {
 	return [main, cdn, through(main), through(cdn)]
 }
 
+/**
+ * The preview render of a skin, by its texture hash: laby.net draws its own
+ * library in 3D on the same host the skin library runs on, so what the grid
+ * asks for is what the library already serves. The previous stand-in,
+ * crafty.gg, only knows Mojang's own texture hashes and answered every
+ * laby.net skin with the same Steve.
+ */
+export function labySkinRenderUrl(hash: string, width = 270, height = 514) {
+	return `https://laby.net/api/v3/render/skin/${hash}.png?width=${width}&height=${height}`
+}
+
 /** Reads a texture with the webview's own network stack. Both laby.net hosts
  * answer with open CORS, and to Cloudflare a browser is a known face where
  * the app's client is not. */

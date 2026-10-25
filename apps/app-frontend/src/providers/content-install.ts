@@ -14,6 +14,7 @@ import { nextTick, type Ref, ref } from 'vue'
 import type { Router } from 'vue-router'
 
 import { useAppSettings } from '@/composables/use-app-settings.ts'
+import { playSoundEffect } from '@/helpers/portalrinth-sfx'
 import { trackEvent } from '@/helpers/analytics'
 import {
 	get_organization,
@@ -515,6 +516,7 @@ export function createContentInstall(opts: {
 
 	opts.appEvents.on('instance', (event) => {
 		if (event.event === 'content_install_finished') {
+			playSoundEffect('success')
 			markInstanceContentChanged(event.instance_id)
 			removeInstallingItems(event.instance_id, event.project_ids)
 			settleContentInstall(event.instance_id, event.project_ids, true)

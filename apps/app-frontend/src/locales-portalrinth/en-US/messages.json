@@ -1501,5 +1501,20 @@
 	},
 	"friends.find.description": {
 		"message": "Search Modrinth by username and send them a request."
+	},
+	"app.appearance-settings.accent.gradient-shimmer.title": {
+		"message": "Shimmering gradient"
+	},
+	"app.appearance-settings.accent.gradient-shimmer.description": {
+		"message": "The colours of a gradient accent slowly move across what they fill."
+	},
+	"app.settings.sound.effects": {
+		"message": "Launcher sounds"
+	},
+	"app.settings.sound.effects-description": {
+		"message": "A tick on a press, and a chime when a mod, a skin or Java has finished installing."
+	},
+	"app.settings.sound.effects-volume": {
+		"message": "Effects volume"
 	}
 }

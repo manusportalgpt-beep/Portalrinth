@@ -12,6 +12,7 @@ import { Avatar, Button, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed } from 'vue'
 
 import type { LanGameMode, LanRelayInfo } from '@/helpers/lan'
+import { playerHead, resolvePlayerHead } from '@/helpers/lan-player-heads'
 
 import { lanAddress } from './use-lan-relay'
 
@@ -84,9 +85,14 @@ const stateLabel = computed(() =>
 	),
 )
 
-/** The head of a player, drawn from their name. */
+/**
+ * The head of a player: the face of the skin their own account wears, told
+ * apart between Microsoft, Ely.by and the ones with no account behind them.
+ * Worked out once per name; the classic Steve until it is known.
+ */
 function headOf(player: string) {
-	return `https://mc-heads.net/avatar/${encodeURIComponent(player)}/64`
+	resolvePlayerHead(player, props.relay.account_name)
+	return playerHead(player)
 }
 
 /** The game mode a player is in, as far as the game has said. */
@@ -188,8 +194,11 @@ function copyAddress() {
 			</div>
 		</Transition>
 
-		<!-- Who is in the world, as the game says. -->
-		<div v-if="state === 'live' || relay.players.length > 0" class="flex flex-col gap-1.5">
+		<!--
+			Who is in the world, as the game says - and only while the world is open
+			to the network. A world kept to oneself does not tell who is in it.
+		-->
+		<div v-if="relay.local_port !== null" class="flex flex-col gap-1.5">
 			<span class="flex items-center gap-1.5 text-sm font-medium text-secondary">
 				<UsersIcon class="shrink-0" />
 				{{ formatMessage(messages.players) }}

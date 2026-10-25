@@ -104,6 +104,7 @@ import { ref, watch } from 'vue'
 
 import JavaDetectionModal from '@/components/ui/JavaDetectionModal.vue'
 import useJavaTest from '@/composables/useJavaTest'
+import { playSoundEffect } from '@/helpers/portalrinth-sfx'
 import { trackEvent } from '@/helpers/analytics'
 import { auto_install_java, find_filtered_jres, get_jre } from '@/helpers/jre.js'
 
@@ -261,6 +262,7 @@ async function reinstallJava() {
 	})
 
 	emit('update:modelValue', result)
+	playSoundEffect('success')
 	installingJava.value = false
 	runTest(result.path)
 }

@@ -3121,5 +3121,20 @@
 	},
 	"portalrinth.settings.themes.saved": {
 		"message": "Тема сохранена"
+	},
+	"app.appearance-settings.accent.gradient-shimmer.title": {
+		"message": "Переливающийся градиент"
+	},
+	"app.appearance-settings.accent.gradient-shimmer.description": {
+		"message": "Цвета градиентного акцента медленно переливаются в кнопках и элементах интерфейса."
+	},
+	"app.settings.sound.effects": {
+		"message": "Звуки лаунчера"
+	},
+	"app.settings.sound.effects-description": {
+		"message": "Клик при нажатии кнопок и звонок, когда мод, скин или Java успешно установлены."
+	},
+	"app.settings.sound.effects-volume": {
+		"message": "Громкость звуков"
 	}
 }

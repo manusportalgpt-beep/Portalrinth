@@ -36,6 +36,12 @@ export interface MusicTrack {
 
 export interface AudioSettings {
 	musicEnabled: boolean
+	/** The little sounds the launcher itself makes; off, it keeps quiet. */
+	effectsEnabled: boolean
+	effectsVolume: number
+	/** The little sounds the launcher itself makes; off, it keeps quiet. */
+	effectsEnabled: boolean
+	effectsVolume: number
 	/** Whether the bars that move with the beat are drawn. */
 	visualizer: boolean
 	musicVolume: number
@@ -54,6 +60,10 @@ const TRACKS_KEY = 'portalrinth.audio.tracks'
 
 const DEFAULT_SETTINGS: AudioSettings = {
 	musicEnabled: false,
+	effectsEnabled: false,
+	effectsVolume: 50,
+	effectsEnabled: false,
+	effectsVolume: 50,
 	visualizer: true,
 	musicVolume: 60,
 	videoSound: false,

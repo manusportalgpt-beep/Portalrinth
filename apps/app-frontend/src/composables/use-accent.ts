@@ -235,36 +235,47 @@ export function accentBaseColor(value: string): string {
  */
 const GRADIENT_STYLE_ID = 'portalrinth-accent-gradient'
 const GRADIENT_CLASS = 'portalrinth-accent-gradient'
+/** The class that sets the run moving, when that is asked for. */
+const ANIMATED_CLASS = 'portalrinth-accent-gradient-animated'
 const G = `html.${GRADIENT_CLASS}`
+/** Where a rule for the moving run anchors: both classes on the html. */
+const GA = `html.${GRADIENT_CLASS}.${ANIMATED_CLASS}`
 const BRAND = '[style*="var(--color-brand)"]'
+
+/** Everything painted outright with the run, under a scope of its own. */
+const filledSelectors = (scope: string) => `${scope} .bg-brand,
+${scope} .\\!bg-brand,
+${scope} .btn.btn-primary:not(.btn-outline):not(.btn-transparent),
+${scope} .button-frame--colored${BRAND},
+${scope}.light-mode .bg-button-bgSelected,
+${scope}.light-mode .nav-button.router-link-active::before,
+${scope} .selected-option,
+${scope} .portalrinth-gradient-fill`
+
+/** Everything washed with the run, under a scope of its own. */
+const softSelectors = (scope: string) => `${scope} .bg-brand-highlight,
+${scope} .\\!bg-brand-highlight,
+${scope} .chips .selected,
+${scope} .btn.btn-secondary,
+${scope}:not(.light-mode) .bg-button-bgSelected,
+${scope} .button-frame--colored-text${BRAND},
+${scope} .button-frame--outlined${BRAND},
+${scope}:not(.light-mode) .nav-button.router-link-active::before,
+${scope} [class*='bg-[color-mix(in_srgb,var(--color-brand)'],
+${scope} .bg-brand\\/8,
+${scope} .bg-brand\\/10,
+${scope} .bg-brand\\/20,
+${scope} .btn.featured,
+${scope} .indicator[data-tone='green']`
+
 const GRADIENT_STYLESHEET = `
 /* Filled with the accent: filled with the run. */
-${G} .bg-brand,
-${G} .\\!bg-brand,
-${G} .btn.btn-primary:not(.btn-outline):not(.btn-transparent),
-${G} .button-frame--colored${BRAND},
-${G}.light-mode .bg-button-bgSelected,
-${G}.light-mode .nav-button.router-link-active::before,
-${G} .selected-option,
-${G} .portalrinth-gradient-fill {
+${filledSelectors(G)} {
 	background-image: var(--portalrinth-accent-gradient) !important;
 }
 
 /* Washed with the accent - a selected chip, the current page, a tab - washed with the run. */
-${G} .bg-brand-highlight,
-${G} .\\!bg-brand-highlight,
-${G} .chips .selected,
-${G} .btn.btn-secondary,
-${G}:not(.light-mode) .bg-button-bgSelected,
-${G} .button-frame--colored-text${BRAND},
-${G} .button-frame--outlined${BRAND},
-${G}:not(.light-mode) .nav-button.router-link-active::before,
-${G} [class*='bg-[color-mix(in_srgb,var(--color-brand)'],
-${G} .bg-brand\\/8,
-${G} .bg-brand\\/10,
-${G} .bg-brand\\/20,
-${G} .btn.featured,
-${G} .indicator[data-tone='green'] {
+${softSelectors(G)} {
 	background-color: transparent !important;
 	background-image: var(--portalrinth-accent-gradient-soft) !important;
 }
@@ -293,6 +304,26 @@ ${G} .button-frame--outlined${BRAND}::after {
 	-webkit-mask-composite: xor;
 	mask-composite: exclude;
 }
+
+/* The run set moving: drawn twice as wide and walked across what it fills.
+   Only where that is asked for, and never for those who turn motion away. */
+@media (prefers-reduced-motion: no-preference) {
+${filledSelectors(GA)},
+${softSelectors(GA)} {
+	background-size: 280% 280% !important;
+	animation: portalrinth-accent-shimmer 9s ease-in-out infinite;
+}
+}
+
+@keyframes portalrinth-accent-shimmer {
+	0%,
+	100% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+}
 `
 
 /** The run at the strength a highlight is drawn at, for washes under content. */
@@ -306,6 +337,7 @@ function softGradientCss({ angle, stops }: AccentGradient): string {
 
 function setGradient(gradient: AccentGradient | null): void {
 	const html = document.documentElement
+	html.classList.toggle(ANIMATED_CLASS, gradient !== null && accentGradientAnimated.value)
 	if (!gradient) {
 		html.classList.remove(GRADIENT_CLASS)
 		html.style.removeProperty('--portalrinth-accent-gradient')
@@ -499,6 +531,34 @@ const customColor = ref(cached.color ?? DEFAULT_CUSTOM_ACCENT)
 const customColors = ref<string[]>(cached.customColors)
 const theme = useTheme()
 
+/**
+ * Whether the run of colours, once chosen, slowly moves across what it
+ * fills. A setting of its own, off until it is switched on, kept beside the
+ * accent's own choice rather than in the database - it changes nothing the
+ * rest of the launcher needs to know about.
+ */
+const ANIMATED_KEY = 'portalrinth-accent-gradient-animated'
+
+function readAnimated(): boolean {
+	try {
+		return localStorage.getItem(ANIMATED_KEY) === 'true'
+	} catch {
+		return false
+	}
+}
+
+export const accentGradientAnimated = ref(readAnimated())
+
+/** Sets the run moving, or stills it, and keeps the choice. */
+export function setAccentGradientAnimated(animated: boolean): void {
+	accentGradientAnimated.value = animated
+	try {
+		localStorage.setItem(ANIMATED_KEY, animated ? 'true' : 'false')
+	} catch {
+		// Not kept, but still in effect until the window is closed.
+	}
+}
+
 /** The colour a preset is drawn in under the theme currently on screen. */
 /**
  * The accent of a theme that is not purple, which is what "the theme's own"
@@ -682,13 +742,13 @@ function settle(id: string): void {
 // than on dark, so the override is recomputed rather than kept.
 let firstApply = true
 watch(
-	[presetId, tintBackground, customColor, () => theme.active],
-	([id, tint, , active], previous) => {
+	[presetId, tintBackground, customColor, accentGradientAnimated, () => theme.active],
+	([id, tint, , , active], previous) => {
 		if (firstApply) {
 			firstApply = false
 			apply(id, tint)
 		} else {
-			scheduleApply(id, tint, previous?.[3] !== active)
+			scheduleApply(id, tint, previous?.[4] !== active)
 		}
 		settle(id)
 	},

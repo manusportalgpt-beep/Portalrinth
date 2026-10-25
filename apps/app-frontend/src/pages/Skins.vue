@@ -54,6 +54,7 @@ import {
 	uploadElySkin,
 	wearElySkin,
 } from '@/helpers/ely_skins'
+import { playSoundEffect } from '@/helpers/portalrinth-sfx'
 import { offline_player_cape, type PlayerCapeSource } from '@/helpers/offline_auth'
 import { cleanupUnusedPreviews } from '@/helpers/rendering/skin-previews'
 import type { Cape, Skin, SkinModel, SkinTextureUrl } from '@/helpers/skins.ts'
@@ -808,6 +809,7 @@ async function applyElySkin(skin: Skin) {
 		if (await waitForElySkin(target)) {
 			elyPendingSkin.value = null
 			refreshElySkin()
+			playSoundEffect('success')
 		} else {
 			reportElySignInNeeded()
 		}
@@ -1458,6 +1460,7 @@ async function applySelectedSkin() {
 		await equip_skin(skinToApply)
 		setLocallyEquippedSkin(skinToApply)
 		schedulePendingSkinRefresh()
+		playSoundEffect('success')
 	} catch (error) {
 		if (isMinecraftSkinRateLimitError(error)) {
 			notifications.addNotification({

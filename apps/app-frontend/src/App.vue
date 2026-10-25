@@ -189,6 +189,7 @@ import {
 	openAppUpdateChangelog,
 	setAppUpdateActions,
 } from '@/providers/app-update.ts'
+import { installSoundEffects } from '@/helpers/portalrinth-sfx'
 import { createContentInstall, provideContentInstall } from '@/providers/content-install'
 import {
 	provideAppUpdateDownloadProgress,
@@ -1051,6 +1052,7 @@ const contentInstall = createContentInstall({
 	warn: (title, text) => addNotification({ title, text, type: 'warning' }),
 })
 provideContentInstall(contentInstall)
+installSoundEffects()
 const {
 	instances: contentInstallInstances,
 	compatibleLoaders: contentInstallLoaders,

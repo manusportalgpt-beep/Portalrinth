@@ -23,7 +23,9 @@ import {
 	findAccentPreset,
 	MAX_ACCENT_GRADIENT_STOPS,
 	MAX_CUSTOM_ACCENT_COLORS,
+	accentGradientAnimated,
 	removeCustomAccentColor,
+	setAccentGradientAnimated,
 	showAccent,
 	useAccentPreset,
 } from '@/composables/use-accent.ts'
@@ -99,6 +101,12 @@ const settingsModal = injectAppSettingsModal()
 const os = platform()
 const accent = useAccentPreset()
 
+/** The run of accent colours set moving, switched on and kept at once. */
+const gradientAnimated = computed({
+	get: () => accentGradientAnimated.value,
+	set: setAccentGradientAnimated,
+})
+
 // The accent lives in a store of its own that the picker repaints as you move
 // through it, so what was saved has to be kept apart from it ╨а╨Ж╨атАЪ╨▓╨В╤Ь otherwise the
 // preview would read back as the saved value and nothing would count as a
@@ -166,6 +174,15 @@ const messages = defineMessages({
 	accentTintTitle: {
 		id: 'app.appearance-settings.accent-tint.title',
 		defaultMessage: 'Tint the background too',
+	},
+	accentShimmerTitle: {
+		id: 'app.appearance-settings.accent.gradient-shimmer.title',
+		defaultMessage: 'Shimmering gradient',
+	},
+	accentShimmerDescription: {
+		id: 'app.appearance-settings.accent.gradient-shimmer.description',
+		defaultMessage:
+			'The colours of a gradient accent slowly move across what they fill.',
 	},
 	accentTintDescription: {
 		id: 'app.appearance-settings.accent-tint.description',
@@ -484,6 +501,29 @@ provideAppearanceSettings({
 				v-model="current.accentTintBackground"
 				aria-labelledby="accent-tint-label"
 				:disabled="current.accentPreset === DEFAULT_ACCENT_PRESET"
+			/>
+		</div>
+		<!--
+			And whether the run of colours moves once it is on. It takes effect as
+			soon as it is switched, like the background's own settings do; the run
+			itself is still the picker's to choose.
+		-->
+		<div class="mt-3 flex items-center justify-between gap-4">
+			<div class="min-w-0">
+				<h3
+					id="accent-gradient-shimmer-label"
+					class="m-0 text-lg font-semibold text-contrast"
+				>
+					{{ formatMessage(messages.accentShimmerTitle) }}
+				</h3>
+				<p class="m-0 mt-1 text-secondary">
+					{{ formatMessage(messages.accentShimmerDescription) }}
+				</p>
+			</div>
+			<Toggle
+				id="accent-gradient-shimmer"
+				v-model="gradientAnimated"
+				aria-labelledby="accent-gradient-shimmer-label"
 			/>
 		</div>
 	</div>

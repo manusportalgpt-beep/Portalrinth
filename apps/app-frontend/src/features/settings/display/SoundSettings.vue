@@ -77,6 +77,66 @@
 			</div>
 		</section>
 
+		<section class="flex flex-col gap-6 border-0 border-t border-solid border-divider pt-6">
+			<div class="flex items-center justify-between gap-4">
+				<div class="min-w-0">
+					<h2 id="sound-effects-label" class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.effectsTitle) }}
+					</h2>
+					<p class="m-0 mt-1 text-secondary">{{ formatMessage(messages.effectsDescription) }}</p>
+				</div>
+				<Toggle
+					id="sound-effects"
+					v-model="audioSettings.effectsEnabled"
+					aria-labelledby="sound-effects-label"
+				/>
+			</div>
+			<div v-if="audioSettings.effectsEnabled" class="flex flex-col gap-2.5">
+				<h3 class="m-0 text-lg font-semibold text-contrast">
+					{{ formatMessage(messages.effectsVolume) }}
+				</h3>
+				<Slider
+					id="sound-effects-volume"
+					v-model="audioSettings.effectsVolume"
+					:aria-label="formatMessage(messages.effectsVolume)"
+					:min="0"
+					:max="100"
+					:step="1"
+					unit="%"
+				/>
+			</div>
+		</section>
+
+		<section class="flex flex-col gap-6 border-0 border-t border-solid border-divider pt-6">
+			<div class="flex items-center justify-between gap-4">
+				<div class="min-w-0">
+					<h2 id="sound-effects-label" class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.effectsTitle) }}
+					</h2>
+					<p class="m-0 mt-1 text-secondary">{{ formatMessage(messages.effectsDescription) }}</p>
+				</div>
+				<Toggle
+					id="sound-effects"
+					v-model="audioSettings.effectsEnabled"
+					aria-labelledby="sound-effects-label"
+				/>
+			</div>
+			<div v-if="audioSettings.effectsEnabled" class="flex flex-col gap-2.5">
+				<h3 class="m-0 text-lg font-semibold text-contrast">
+					{{ formatMessage(messages.effectsVolume) }}
+				</h3>
+				<Slider
+					id="sound-effects-volume"
+					v-model="audioSettings.effectsVolume"
+					:aria-label="formatMessage(messages.effectsVolume)"
+					:min="0"
+					:max="100"
+					:step="1"
+					unit="%"
+				/>
+			</div>
+		</section>
+
 		<section class="flex flex-col gap-4 border-0 border-t border-solid border-divider pt-6">
 			<div class="flex flex-wrap items-start justify-between gap-4">
 				<div class="min-w-0">
@@ -241,6 +301,20 @@ const { handleError } = injectNotificationManager()
 
 const messages = defineMessages({
 	musicTitle: { id: 'app.settings.sound.music', defaultMessage: 'Music' },
+	effectsTitle: { id: 'app.settings.sound.effects', defaultMessage: 'Launcher sounds' },
+	effectsDescription: {
+		id: 'app.settings.sound.effects-description',
+		defaultMessage:
+			'A tick on a press, and a chime when a mod, a skin or Java has finished installing.',
+	},
+	effectsVolume: { id: 'app.settings.sound.effects-volume', defaultMessage: 'Effects volume' },
+	effectsTitle: { id: 'app.settings.sound.effects', defaultMessage: 'Launcher sounds' },
+	effectsDescription: {
+		id: 'app.settings.sound.effects-description',
+		defaultMessage:
+			'A tick on a press, and a chime when a mod, a skin or Java has finished installing.',
+	},
+	effectsVolume: { id: 'app.settings.sound.effects-volume', defaultMessage: 'Effects volume' },
 	musicDescription: {
 		id: 'app.settings.sound.music-description',
 		defaultMessage:

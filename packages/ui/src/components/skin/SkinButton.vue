@@ -13,6 +13,7 @@ const messages = defineMessages({
 const emit = defineEmits<{
 	(e: 'select'): void
 	(e: 'edit', event: MouseEvent): void
+	(e: 'error'): void
 }>()
 
 const props = withDefaults(
@@ -112,6 +113,7 @@ watch(
 				class="skin-button__image-facing col-start-1 row-start-1 h-full w-full object-contain"
 				height="504"
 				@load="onImageLoad"
+				@error="emit('error')"
 			/>
 		</span>
 
