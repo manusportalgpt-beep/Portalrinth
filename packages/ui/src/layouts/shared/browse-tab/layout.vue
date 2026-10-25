@@ -127,6 +127,18 @@ function cardActionClass(action: CardAction) {
 	}[action.color]
 }
 
+/**
+ * A CurseForge author is not a Modrinth user, so their name leads to their
+ * CurseForge member page in the launcher rather than to `/user/<name>`.
+ */
+function curseforgeMemberLink(result: Labrinth.Search.v3.ResultSearchProject) {
+	const memberId = (result as { curseforge_author_id?: string | null }).curseforge_author_id
+	const query = new URLSearchParams({ name: result.author })
+	const avatar = ctx.getAuthorAvatar?.(result)
+	if (avatar) query.set('avatar', avatar)
+	return `/curseforge/member/${encodeURIComponent(memberId ?? result.author)}?${query}`
+}
+
 function getLoaderFieldValues(
 	result: Labrinth.Search.v3.ResultSearchProject,
 	field: string,
@@ -396,8 +408,9 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 					:icon-url="result.icon_url ?? undefined"
 					:author="{
 						name: result.organization == null ? result.author : result.organization,
-						link:
-							result.organization_id == null
+						link: result.project_id.startsWith('cf-')
+							? curseforgeMemberLink(result)
+							: result.organization_id == null
 								? `/user/${encodeURIComponent(result.author_id ?? result.author)}`
 								: `/organization/${result.organization_id}`,
 						avatar: ctx.getAuthorAvatar?.(result),

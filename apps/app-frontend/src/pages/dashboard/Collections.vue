@@ -72,8 +72,10 @@ const messages = defineMessages({
 		id: 'collections.followed-projects-desc',
 		defaultMessage: "Auto-generated collection of all the projects you're following.",
 	},
-	projectsCountOne: { id: 'collections.projects-count.one', defaultMessage: 'project' },
-	projectsCountOther: { id: 'collections.projects-count.other', defaultMessage: 'projects' },
+	projectsCount: {
+		id: 'collections.projects-count',
+		defaultMessage: '{count, plural, one {project} other {projects}}',
+	},
 	statusPrivate: { id: 'collections.status.private', defaultMessage: 'Private' },
 	statusPublic: { id: 'collections.status.public', defaultMessage: 'Public' },
 	statusUnlisted: { id: 'collections.status.unlisted', defaultMessage: 'Unlisted' },
@@ -211,11 +213,7 @@ function onCreated(collection: Collection) {
 						<div class="stats">
 							<BoxIcon aria-hidden="true" />
 							{{ formatCompactNumber(followsCount) }}
-							{{
-								formatMessage(
-									followsCount === 1 ? messages.projectsCountOne : messages.projectsCountOther,
-								)
-							}}
+							{{ formatMessage(messages.projectsCount, { count: followsCount }) }}
 						</div>
 						<div class="stats">
 							<LockIcon aria-hidden="true" />
@@ -241,11 +239,7 @@ function onCreated(collection: Collection) {
 							<BoxIcon aria-hidden="true" />
 							{{ formatCompactNumber(collection.projects?.length || 0) }}
 							{{
-								formatMessage(
-									(collection.projects?.length || 0) === 1
-										? messages.projectsCountOne
-										: messages.projectsCountOther,
-								)
+								formatMessage(messages.projectsCount, { count: collection.projects?.length || 0 })
 							}}
 						</div>
 						<div class="stats">

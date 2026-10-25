@@ -52,6 +52,7 @@ import {
 	curseforgeFilesIn,
 	curseforgeIdOf,
 	curseforgeKeys,
+	curseforgeMemberPath,
 	curseforgeProjectQueryOptions,
 	type CurseforgeSearchHit,
 	useCurseforgeFavorites,
@@ -263,7 +264,7 @@ const creators = computed(() =>
 )
 function authorLink(username: string) {
 	const author = project.value?.authors.find((a) => a.name === username)
-	return author?.url ?? project.value?.website_url ?? ''
+	return author ? curseforgeMemberPath(author) : (project.value?.website_url ?? '')
 }
 
 const createdAt = computed(() => project.value?.date_created ?? null)
@@ -408,7 +409,7 @@ async function install(fileId: string | null = null) {
 				:org-link="() => ''"
 				:user-link="authorLink"
 				link-target="_blank"
-				user-link-target="_blank"
+				:user-link-target="null"
 				class="project-sidebar-section"
 			/>
 			<div v-if="createdAt || updatedAt" class="project-sidebar-section flex flex-col gap-3">

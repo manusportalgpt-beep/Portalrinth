@@ -3,8 +3,9 @@
  * The background picture, behind the whole window. While there is one, the
  * window's frame lets it through, and the cards on a page a little of it.
  */
-import { computed, watchEffect } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 
+import { audioSettings } from '@/helpers/portalrinth-audio'
 import {
 	backgroundBlur,
 	backgroundDim,
@@ -14,6 +15,17 @@ import {
 	headerShadeOpacity,
 	pageShade,
 } from '@/helpers/portalrinth-background'
+
+/*
+ * A background video plays silent unless its sound is turned on in
+ * Settings → Sound; then at the volume set there or under the title bar's
+ * sound button.
+ */
+const video = ref<HTMLVideoElement | null>(null)
+function applyVideoVolume() {
+	if (video.value) video.value.volume = Math.min(1, Math.max(0, audioSettings.videoVolume / 100))
+}
+watchEffect(applyVideoVolume)
 
 /** The darkening is a veil painted over the picture, in the same layer. */
 const backgroundImage = computed(() => {
@@ -54,13 +66,15 @@ watchEffect(() => {
 		<video
 			v-if="backgroundUrl && backgroundIsVideo"
 			:key="backgroundUrl"
+			ref="video"
 			class="portalrinth-backdrop"
 			:class="{ 'portalrinth-backdrop--blur': backgroundBlur }"
 			:src="backgroundUrl"
 			autoplay
 			loop
-			muted
+			:muted="!audioSettings.videoSound"
 			playsinline
+			@loadedmetadata="applyVideoVolume"
 		/>
 	</Transition>
 </template>

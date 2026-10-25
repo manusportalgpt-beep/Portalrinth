@@ -39,13 +39,14 @@
 			<Motion
 				as="div"
 				class="absolute inset-y-0 left-0 rounded-2xl"
+				:class="{ 'portalrinth-gradient-fill': !stopping }"
 				:initial="false"
 				:animate="{ width: mainWidth, backgroundColor: colors.main }"
 				:transition="mainSpring"
 			/>
 			<Motion
 				as="div"
-				class="absolute left-0 top-0 size-12 rounded-full"
+				class="absolute left-0 top-0 size-12 rounded-full portalrinth-gradient-fill"
 				:initial="false"
 				:animate="{
 					x: againVisible ? mainWidth + GAP : mainWidth - HEIGHT,
@@ -153,6 +154,9 @@ const label = computed(() => props.labels[props.state])
 const busy = computed(
 	() => props.state === 'starting' || props.state === 'installing' || props.state === 'stopping',
 )
+
+/** Stop is drawn in red; everything else in the accent (or its gradient). */
+const stopping = computed(() => props.state === 'stop' || props.state === 'stopping')
 
 const measure = useTemplateRef<HTMLSpanElement>('measure')
 const mainWidth = ref(140)

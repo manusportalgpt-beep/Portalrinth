@@ -56,15 +56,71 @@ const fitBounds = ref<HTMLElement>()
 const exporting = ref(false)
 const discarding = ref(false)
 const loadingEditorData = ref(true)
-/** What was shown before the current item, kept on screen until the new one is ready. */
-const previousSrc = ref<string | null>(null)
 const incomingImageReady = ref(false)
+/*
+ * What was on screen before a switch, copied into a canvas of its own the moment
+ * the item changes - while the old canvas is still drawn - and kept under the next
+ * picture until that one is ready, then faded out. A copy that already holds the
+ * pixels cannot come up empty for a frame the way a re-requested <img> can, so the
+ * switch never shows the black backdrop between two screenshots.
+ */
+const ghostCanvas = ref<HTMLCanvasElement>()
+const ghost = ref<{ left: number; top: number; width: number; height: number } | null>(null)
+const ghostFading = ref(false)
+let ghostTimer: ReturnType<typeof setTimeout> | undefined
+
+function dropGhost() {
+	clearTimeout(ghostTimer)
+	ghostTimer = undefined
+	ghost.value = null
+	ghostFading.value = false
+}
+
+function captureGhost() {
+	if (props.mode !== 'view') return dropGhost()
+	const native = viewport.value?.querySelector<HTMLImageElement>('.editor-canvas > img')
+	const source: HTMLCanvasElement | HTMLImageElement | undefined =
+		nativeImageView.value && native ? native : canvasElement.value
+	if (!source) return dropGhost()
+	const rect = (nativeImageView.value && native ? native : source).getBoundingClientRect()
+	const sourceWidth = source instanceof HTMLImageElement ? source.naturalWidth : source.width
+	const sourceHeight = source instanceof HTMLImageElement ? source.naturalHeight : source.height
+	if (!rect.width || !rect.height || !sourceWidth || !sourceHeight) return dropGhost()
+	const target = ghostCanvas.value ?? document.createElement('canvas')
+	const ratio = window.devicePixelRatio || 1
+	target.width = Math.round(rect.width * ratio)
+	target.height = Math.round(rect.height * ratio)
+	const context = target.getContext('2d')
+	if (!context) return dropGhost()
+	// object-fit: contain, as the picture itself is laid out
+	const scale = Math.min(target.width / sourceWidth, target.height / sourceHeight)
+	const drawWidth = sourceWidth * scale
+	const drawHeight = sourceHeight * scale
+	context.imageSmoothingEnabled = !props.pixelated
+	try {
+		context.clearRect(0, 0, target.width, target.height)
+		context.drawImage(
+			source,
+			(target.width - drawWidth) / 2,
+			(target.height - drawHeight) / 2,
+			drawWidth,
+			drawHeight,
+		)
+	} catch {
+		return dropGhost()
+	}
+	clearTimeout(ghostTimer)
+	ghostTimer = undefined
+	ghostFading.value = false
+	ghost.value = { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
+}
+
 watch(
 	() => props.item.src,
 	(next, previous) => {
 		if (next === previous) return
-		previousSrc.value = previous ?? null
 		incomingImageReady.value = false
+		captureGhost()
 	},
 )
 const imageMetadata = ref<ImageViewerEditorMetadata>()
@@ -389,7 +445,23 @@ onMounted(async () => {
 	queueInitialization()
 })
 
+watch(loadingEditorData, (loading) => {
+	if (loading || !ghost.value) return
+	// the next picture is drawn: let the copy of the last one fade out under it
+	ghostFading.value = true
+	clearTimeout(ghostTimer)
+	ghostTimer = setTimeout(dropGhost, 260)
+})
+
+watch(
+	() => props.mode,
+	(mode) => {
+		if (mode !== 'view') dropGhost()
+	},
+)
+
 onBeforeUnmount(() => {
+	clearTimeout(ghostTimer)
 	initializationGeneration++
 	document.removeEventListener('keydown', handleKeydown)
 	document.removeEventListener('keyup', handleKeyup)
@@ -419,21 +491,6 @@ defineExpose({ markSaved })
 		@pointercancel="panning = undefined"
 		@wheel="handleWheel"
 	>
-		<!--
-			The picture that was on screen stays under the next one until that one
-			has been decoded, and the next one fades in over it - otherwise the
-			switch shows a frame of nothing, which on a black backdrop is a flash.
-		-->
-		<img
-			v-if="mode === 'view' && loadingEditorData && previousSrc && previousSrc !== item.src"
-			:key="`previous-${previousSrc}`"
-			:src="previousSrc"
-			alt=""
-			aria-hidden="true"
-			class="viewer-previous-image pointer-events-none absolute z-[1] object-contain"
-			:class="{ 'is-pixelated': pixelated }"
-			draggable="false"
-		/>
 		<img
 			v-if="mode === 'view' && loadingEditorData && !nativeImageView"
 			:key="item.src"
@@ -483,6 +540,23 @@ defineExpose({ markSaved })
 			</div>
 		</div>
 	</div>
+	<canvas
+		v-show="ghost"
+		ref="ghostCanvas"
+		aria-hidden="true"
+		class="viewer-ghost pointer-events-none fixed z-[1]"
+		:class="{ 'is-fading': ghostFading }"
+		:style="
+			ghost
+				? {
+						left: `${ghost.left}px`,
+						top: `${ghost.top}px`,
+						width: `${ghost.width}px`,
+						height: `${ghost.height}px`,
+					}
+				: undefined
+		"
+	/>
 	<div
 		ref="fitBounds"
 		class="pointer-events-none absolute inset-x-6 bottom-[5.75rem] top-[var(--viewer-top-inset,4.75rem)] z-[3] flex items-center justify-center max-[900px]:inset-x-4 max-[900px]:bottom-[8.5rem] max-[900px]:top-[var(--viewer-top-inset,4.5rem)]"
@@ -563,21 +637,18 @@ defineExpose({ markSaved })
 </template>
 
 <style scoped>
-.viewer-previous-image {
-	inset: var(--viewer-top-inset, 4.75rem) 1.5rem 5.75rem;
-	width: calc(100% - 3rem);
-	height: calc(100% - var(--viewer-top-inset, 4.75rem) - 5.75rem);
+.viewer-ghost {
+	opacity: 1;
+	transition: opacity 220ms ease-out;
 }
 
-.viewer-previous-image.is-pixelated {
-	image-rendering: pixelated;
+.viewer-ghost.is-fading {
+	opacity: 0;
 }
 
-@media (max-width: 900px) {
-	.viewer-previous-image {
-		inset: var(--viewer-top-inset, 4.5rem) 1rem 8.5rem;
-		width: calc(100% - 2rem);
-		height: calc(100% - var(--viewer-top-inset, 4.5rem) - 8.5rem);
+@media (prefers-reduced-motion: reduce) {
+	.viewer-ghost {
+		transition: none;
 	}
 }
 

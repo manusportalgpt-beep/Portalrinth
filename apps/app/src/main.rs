@@ -481,6 +481,7 @@ fn main() {
         .plugin(api::instance::init())
         .plugin(api::logs::init())
         .plugin(api::portalrinth_background::init())
+        .plugin(api::portalrinth_music::init())
         .plugin(api::portalrinth_clipboard::init())
         .plugin(api::portalrinth_crash::init())
         .plugin(api::portalrinth_curseforge::init())

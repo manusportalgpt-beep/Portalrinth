@@ -31,6 +31,7 @@ import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { type ColorTheme, isDarkTheme, useTheme } from '@/composables/use-theme.ts'
 import { injectAppSettingsModal } from '@/features/settings/app-settings-modal/context'
 import PortalrinthBackgroundSettings from '@/features/settings/display/PortalrinthBackgroundSettings.vue'
+import type { ThemeAccent } from '@/helpers/portalrinth-themes'
 import { type AppSettings, get, set } from '@/helpers/settings.ts'
 
 const theme = useTheme()
@@ -300,6 +301,14 @@ watch(
 	{ immediate: true },
 )
 
+/** A saved theme's accent, put back and kept at once, as its background is. */
+async function applyThemeAccent(accent: ThemeAccent): Promise<void> {
+	current.value.accentPreset = accent.preset
+	current.value.accentTintBackground = accent.tint
+	current.value.accentColor = accent.color
+	await saveAppearanceSettings()
+}
+
 async function saveAppearanceSettings(): Promise<void> {
 	try {
 		await save()
@@ -479,7 +488,14 @@ provideAppearanceSettings({
 		</div>
 	</div>
 
-	<PortalrinthBackgroundSettings />
+	<PortalrinthBackgroundSettings
+		:accent="{
+			preset: current.accentPreset,
+			tint: current.accentTintBackground,
+			color: current.accentColor,
+		}"
+		@apply-accent="applyThemeAccent"
+	/>
 </template>
 
 <style scoped>

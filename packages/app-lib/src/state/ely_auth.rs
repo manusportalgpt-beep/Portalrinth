@@ -248,6 +248,42 @@ impl ElyCredentials {
         Ok(ElyRefresh::Refreshed)
     }
 
+    /// Tokens worth offering a service that checks this account with Ely.by
+    /// itself (the LAN relay's messenger), freshest first.
+    ///
+    /// The stored token may be a day old: an OAuth access token runs out long
+    /// before its refresh token does, and nothing renews it until the next
+    /// launch. A renewal that works is written back, so the game and the next
+    /// ask get it too. A password-flow token is only renewed when Ely.by says
+    /// it is dead — renewing it retires the old one, and the running game is
+    /// still using that.
+    pub async fn service_tokens(
+        &mut self,
+        exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
+    ) -> Vec<String> {
+        let current = self.access_token.clone();
+        let renew = self.refresh_token.is_some()
+            || matches!(self.validate().await, ElyTokenCheck::Invalid);
+
+        let mut tokens = Vec::new();
+        if renew
+            && matches!(self.refresh().await, Ok(ElyRefresh::Refreshed))
+            && self.access_token != current
+        {
+            self.upsert(exec).await.ok();
+            RECENTLY_VALIDATED.insert(self.uuid, Instant::now());
+            tokens.push(self.access_token.clone());
+        }
+        tokens.push(current);
+        tokens
+    }
+
+    /// Whether this account was signed in on Ely.by's own page, rather than
+    /// with a password through the old authserver.
+    pub fn is_oauth(&self) -> bool {
+        self.refresh_token.is_some()
+    }
+
     pub async fn get_active(
         exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
     ) -> crate::Result<Option<Self>> {

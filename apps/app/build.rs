@@ -577,6 +577,24 @@ fn main() {
                         "background_get",
                         "background_kind",
                         "background_clear",
+                        "background_theme_store",
+                        "background_theme_apply",
+                        "background_theme_remove",
+                        "background_read_icon",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
+                "portalrinth-music",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "music_add",
+                        "music_get",
+                        "music_remove",
+                        "music_usage",
+                        "music_list",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,

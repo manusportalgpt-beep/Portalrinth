@@ -2944,5 +2944,182 @@
 	},
 	"app.bedrock.kind.world-template": {
 		"message": "Шаблон мира"
+	},
+	"collection.projects-count": {
+		"message": "{count, plural, one {проект} few {проекта} many {проектов} other {проекта}}"
+	},
+	"collections.projects-count": {
+		"message": "{count, plural, one {проект} few {проекта} many {проектов} other {проекта}}"
+	},
+	"app.curseforge-member.label": {
+		"message": "Автор CurseForge"
+	},
+	"app.curseforge-member.summary": {
+		"message": "Проекты, которые этот автор или команда опубликовали на CurseForge."
+	},
+	"app.curseforge-member.open-on-curseforge": {
+		"message": "Открыть на CurseForge"
+	},
+	"app.curseforge-member.no-projects": {
+		"message": "У этого автора не найдено проектов"
+	},
+	"app.curseforge-member.load-error": {
+		"message": "Не удалось загрузить проекты"
+	},
+	"app.curseforge-member.load-error-description": {
+		"message": "Проверьте подключение и ключ API CurseForge, затем попробуйте снова."
+	},
+	"app.settings.tabs.sound": {
+		"message": "Звук"
+	},
+	"app.settings.sound.music": {
+		"message": "Музыка"
+	},
+	"app.settings.sound.music-description": {
+		"message": "Играет ваш плейлист в лаунчере. Громкость и плеер — под кнопкой звука в заголовке окна."
+	},
+	"app.settings.sound.visualizer": {
+		"message": "Отрисовывать бит"
+	},
+	"app.settings.sound.visualizer-description": {
+		"message": "Полоски в плеере, которые двигаются под музыку."
+	},
+	"app.settings.sound.music-volume": {
+		"message": "Громкость музыки"
+	},
+	"app.settings.sound.video": {
+		"message": "Звук фонового видео"
+	},
+	"app.settings.sound.video-description": {
+		"message": "Воспроизводит звук видео, установленного фоном. Если выключено, видео идёт без звука."
+	},
+	"app.settings.sound.video-volume": {
+		"message": "Громкость видео"
+	},
+	"app.settings.sound.playlist": {
+		"message": "Плейлист"
+	},
+	"app.settings.sound.playlist-usage": {
+		"message": "Треки копируются в лаунчер и остаются даже после удаления оригинала. Занято {used} из {limit}."
+	},
+	"app.settings.sound.add": {
+		"message": "Добавить музыку"
+	},
+	"app.settings.sound.sort": {
+		"message": "Порядок"
+	},
+	"app.settings.sound.sort-added": {
+		"message": "По дате добавления"
+	},
+	"app.settings.sound.sort-duration": {
+		"message": "По длительности, сначала самые долгие"
+	},
+	"app.settings.sound.sort-alpha": {
+		"message": "По буквам"
+	},
+	"app.settings.sound.sort-random": {
+		"message": "Случайно"
+	},
+	"app.settings.sound.sort-custom": {
+		"message": "По расстановке"
+	},
+	"app.settings.sound.empty": {
+		"message": "Музыки пока нет. Добавьте свои файлы, чтобы собрать плейлист."
+	},
+	"app.settings.sound.drag": {
+		"message": "Зажмите и перетащите"
+	},
+	"app.settings.sound.play-track": {
+		"message": "Играть"
+	},
+	"app.settings.sound.remove": {
+		"message": "Убрать из плейлиста"
+	},
+	"app.settings.sound.gigabytes": {
+		"message": "{value} ГБ"
+	},
+	"app.settings.sound.megabytes": {
+		"message": "{value} МБ"
+	},
+	"app.sound.button": {
+		"message": "Звук"
+	},
+	"app.sound.music-volume": {
+		"message": "Громкость музыки"
+	},
+	"app.sound.video-volume": {
+		"message": "Громкость фонового видео"
+	},
+	"app.sound.next": {
+		"message": "Следующий"
+	},
+	"app.sound.previous": {
+		"message": "Предыдущий"
+	},
+	"app.sound.nothing-playing": {
+		"message": "Ничего не играет"
+	},
+	"app.sound.unknown-artist": {
+		"message": "Неизвестный исполнитель"
+	},
+	"app.sound.pause": {
+		"message": "Пауза"
+	},
+	"app.sound.play": {
+		"message": "Играть"
+	},
+	"app.sound.repeat-off": {
+		"message": "Повтор выключен"
+	},
+	"app.sound.repeat-all": {
+		"message": "Повтор плейлиста"
+	},
+	"app.sound.repeat-one": {
+		"message": "Повтор трека"
+	},
+	"app.sound.seek": {
+		"message": "Позиция в треке"
+	},
+	"portalrinth.settings.themes.title": {
+		"message": "Темы"
+	},
+	"portalrinth.settings.themes.description": {
+		"message": "Сохраните текущие обои и акцент под именем и возвращайте их одним нажатием. До {max} тем."
+	},
+	"portalrinth.settings.themes.save": {
+		"message": "Сохранить тему"
+	},
+	"portalrinth.settings.themes.replace": {
+		"message": "Заменить"
+	},
+	"portalrinth.settings.themes.apply": {
+		"message": "Применить тему {name}"
+	},
+	"portalrinth.settings.themes.remove": {
+		"message": "Удалить тему"
+	},
+	"portalrinth.settings.themes.modal-header": {
+		"message": "Сохранить тему"
+	},
+	"portalrinth.settings.themes.name": {
+		"message": "Название"
+	},
+	"portalrinth.settings.themes.name-placeholder": {
+		"message": "Например, Ночной город"
+	},
+	"portalrinth.settings.themes.icon": {
+		"message": "Иконка"
+	},
+	"portalrinth.settings.themes.own-icon": {
+		"message": "Своя картинка"
+	},
+	"portalrinth.settings.themes.full-title": {
+		"message": "Уже сохранено {max} тем"
+	},
+	"portalrinth.settings.themes.full-description": {
+		"message": "Больше хранить нельзя. Выберите тему, которую заменит новая."
+	},
+	"portalrinth.settings.themes.saved": {
+		"message": "Тема сохранена"
 	}
 }

@@ -14,6 +14,7 @@ import {
 	Settings2Icon,
 	ToggleRightIcon,
 	UserIcon,
+	Volume2Icon,
 	WindowIcon,
 	WrenchIcon,
 } from '@modrinth/assets'
@@ -42,6 +43,7 @@ import BehaviorSettings from '@/features/settings/display/behavior-settings.vue'
 import FeatureFlagSettings from '@/features/settings/display/feature-flag-settings.vue'
 import FeaturesSettings from '@/features/settings/display/features-settings.vue'
 import LanguageSettings from '@/features/settings/display/language-settings.vue'
+import SoundSettings from '@/features/settings/display/SoundSettings.vue'
 import JavaAndMemorySettings from '@/features/settings/instance-defaults/java-and-memory-settings/index.vue'
 import LaunchHooksSettings from '@/features/settings/instance-defaults/launch-hooks-settings.vue'
 import WindowSettings from '@/features/settings/instance-defaults/window-settings.vue'
@@ -97,6 +99,15 @@ const tabs = [
 		category: tabCategories.display,
 		icon: PaintbrushIcon,
 		content: AppearanceSettings,
+	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.sound',
+			defaultMessage: 'Sound',
+		}),
+		category: tabCategories.display,
+		icon: Volume2Icon,
+		content: SoundSettings,
 	},
 	{
 		name: defineMessage({

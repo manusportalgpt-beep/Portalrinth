@@ -69,8 +69,10 @@ const messages = defineMessages({
 	statusPublic: { id: 'collection.status.public', defaultMessage: 'Public' },
 	statusUnlisted: { id: 'collection.status.unlisted', defaultMessage: 'Unlisted' },
 	statusRejected: { id: 'collection.status.rejected', defaultMessage: 'Rejected' },
-	projectsCountOne: { id: 'collection.projects-count.one', defaultMessage: 'project' },
-	projectsCountOther: { id: 'collection.projects-count.other', defaultMessage: 'projects' },
+	projectsCount: {
+		id: 'collection.projects-count',
+		defaultMessage: '{count, plural, one {project} other {projects}}',
+	},
 	updatedAgo: { id: 'collection.updated-ago', defaultMessage: 'Updated {time}' },
 	edit: { id: 'collection.edit', defaultMessage: 'Edit' },
 	delete: { id: 'collection.delete', defaultMessage: 'Delete' },
@@ -436,45 +438,43 @@ watch(
 					{{ collection.description }}
 				</template>
 				<template #metadata>
-					<div class="flex items-center gap-2 font-medium">
-						<BoxIcon class="size-4" aria-hidden="true" />
-						{{ formatCompactNumber(projects.length) }}
-						{{
-							formatMessage(
-								projects.length === 1 ? messages.projectsCountOne : messages.projectsCountOther,
-							)
-						}}
-					</div>
-
-					<div class="w-1.5 h-1.5 rounded-full bg-surface-5"></div>
-
-					<div class="flex items-center gap-2 capitalize font-medium">
-						<template v-if="isFollowing || collection.status === 'private'">
-							<LockIcon class="size-4" aria-hidden="true" />
-							<span>{{ formatMessage(messages.statusPrivate) }}</span>
-						</template>
-						<template v-else-if="collection.status === 'listed'">
-							<GlobeIcon class="size-4" aria-hidden="true" />
-							<span>{{ formatMessage(messages.statusPublic) }}</span>
-						</template>
-						<template v-else-if="collection.status === 'unlisted'">
-							<LinkIcon class="size-4" aria-hidden="true" />
-							<span>{{ formatMessage(messages.statusUnlisted) }}</span>
-						</template>
-						<template v-else-if="collection.status === 'rejected'">
-							<XIcon class="size-4" aria-hidden="true" />
-							<span>{{ formatMessage(messages.statusRejected) }}</span>
-						</template>
-					</div>
-
-					<template v-if="collection.updated">
-						<div class="w-1.5 h-1.5 rounded-full bg-surface-5"></div>
+					<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
 						<div class="flex items-center gap-2 font-medium">
-							{{
-								formatMessage(messages.updatedAgo, { time: dayjs(collection.updated).fromNow() })
-							}}
+							<BoxIcon class="size-4" aria-hidden="true" />
+							{{ formatCompactNumber(projects.length) }}
+							{{ formatMessage(messages.projectsCount, { count: projects.length }) }}
 						</div>
-					</template>
+
+						<div class="w-1.5 h-1.5 rounded-full bg-surface-5"></div>
+
+						<div class="flex items-center gap-2 capitalize font-medium">
+							<template v-if="isFollowing || collection.status === 'private'">
+								<LockIcon class="size-4" aria-hidden="true" />
+								<span>{{ formatMessage(messages.statusPrivate) }}</span>
+							</template>
+							<template v-else-if="collection.status === 'listed'">
+								<GlobeIcon class="size-4" aria-hidden="true" />
+								<span>{{ formatMessage(messages.statusPublic) }}</span>
+							</template>
+							<template v-else-if="collection.status === 'unlisted'">
+								<LinkIcon class="size-4" aria-hidden="true" />
+								<span>{{ formatMessage(messages.statusUnlisted) }}</span>
+							</template>
+							<template v-else-if="collection.status === 'rejected'">
+								<XIcon class="size-4" aria-hidden="true" />
+								<span>{{ formatMessage(messages.statusRejected) }}</span>
+							</template>
+						</div>
+
+						<template v-if="collection.updated">
+							<div class="w-1.5 h-1.5 rounded-full bg-surface-5"></div>
+							<div class="flex items-center gap-2 font-medium">
+								{{
+									formatMessage(messages.updatedAgo, { time: dayjs(collection.updated).fromNow() })
+								}}
+							</div>
+						</template>
+					</div>
 				</template>
 				<template #actions>
 					<PageHeaderActions>

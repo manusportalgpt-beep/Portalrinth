@@ -153,6 +153,11 @@ export default new createRouter({
 		// Noctrinth's own: a CurseForge project, drawn with the same pieces as a
 		// Modrinth one. Description and gallery are the very same tabs.
 		{
+			path: '/curseforge/member/:id/:projectType?',
+			name: 'CurseforgeMember',
+			component: () => import('@/pages/curseforge/Member.vue'),
+		},
+		{
 			path: '/curseforge/:id',
 			name: 'CurseforgeProject',
 			component: () => import('@/pages/curseforge/Index.vue'),

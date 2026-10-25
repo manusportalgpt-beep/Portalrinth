@@ -28,6 +28,12 @@ import {
 	savePageShade,
 	setBackgroundFromPath,
 } from '@/helpers/portalrinth-background'
+import type { ThemeAccent } from '@/helpers/portalrinth-themes'
+
+import PortalrinthThemes from './PortalrinthThemes.vue'
+
+defineProps<{ accent: ThemeAccent }>()
+const emit = defineEmits<{ applyAccent: [accent: ThemeAccent] }>()
 
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
@@ -206,6 +212,7 @@ onUnmounted(() => {
 					@update:model-value="(value: boolean) => run(() => saveBackgroundBlur(value))"
 				/>
 			</div>
+			<PortalrinthThemes :accent="accent" @apply-accent="emit('applyAccent', $event)" />
 			<div class="flex flex-col gap-2.5">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
@@ -263,5 +270,6 @@ onUnmounted(() => {
 				/>
 			</div>
 		</template>
+		<PortalrinthThemes v-else :accent="accent" @apply-accent="emit('applyAccent', $event)" />
 	</div>
 </template>

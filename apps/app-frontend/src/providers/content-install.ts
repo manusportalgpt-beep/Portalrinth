@@ -632,6 +632,17 @@ export function createContentInstall(opts: {
 			if (SUPPORTED_LOADERS.has(l)) mappedLoaders.add(l)
 			else if (VANILLA_COMPATIBLE_LOADERS.has(l)) mappedLoaders.add('vanilla')
 		}
+		// Content that runs on any loader (resource packs, shaders, data packs,
+		// worlds, or a file naming no loader we know) fits a new instance of
+		// any core, so every core is offered instead of only Vanilla.
+		const loaderBound = ['mod', 'plugin', 'modpack'].includes(project.project_type ?? '')
+		if (
+			!loaderBound ||
+			mappedLoaders.size === 0 ||
+			[...mappedLoaders].every((l) => l === 'vanilla')
+		) {
+			for (const loader of LOADER_ORDER) mappedLoaders.add(loader)
+		}
 		compatibleLoaders.value = sortLoaders([...mappedLoaders])
 		gameVersions.value = [...gameVersionSet]
 		releaseGameVersions.value = new Set(gameVersionSet)
@@ -926,7 +937,9 @@ export function createContentInstall(opts: {
 				(v) =>
 					v.game_versions.includes(data.gameVersion) &&
 					loaderCandidates.some((l) => v.loaders.includes(l)),
-			) ?? currentVersions[0]
+			) ??
+			currentVersions.find((v) => v.game_versions.includes(data.gameVersion)) ??
+			currentVersions[0]
 
 		let createdInstanceId: string | null = null
 		try {

@@ -30,7 +30,10 @@
 					<span class="truncate text-left w-full">{{
 						selectedAccount ? selectedAccount.profile.name : formatMessage(messages.selectAccount)
 					}}</span>
-					<span class="text-secondary text-xs">{{ selectedAccountTypeLabel }}</span>
+					<span class="flex items-center gap-1 text-secondary text-xs">
+						<AccountProviderIcon v-if="selectedAccount" :provider="providerOf(selectedAccount)" />
+						{{ selectedAccountTypeLabel }}
+					</span>
 				</div>
 			</div>
 		</template>
@@ -58,7 +61,7 @@
 							{{ account.profile.name }}
 						</p>
 						<span
-							class="ml-1 shrink-0 rounded px-1.5 py-0.5 text-xs font-medium"
+							class="ml-1 flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"
 							:class="
 								isElyAccount(account)
 									? 'bg-brand-highlight text-brand'
@@ -66,6 +69,7 @@
 							"
 							:title="accountProviderLabel(account)"
 						>
+							<AccountProviderIcon :provider="providerOf(account)" />
 							{{ accountProviderLabel(account) }}
 						</span>
 					</button>
@@ -125,6 +129,7 @@ import ElyLoginModal from '@/components/ui/modal/ElyLoginModal.vue'
 import OfflineAccountModal from '@/components/ui/modal/OfflineAccountModal.vue'
 import { useAppEvent } from '@/composables/use-app-event'
 import { handleSevereError } from '@/composables/use-error.js'
+import AccountProviderIcon from '@/features/minecraft-accounts/AccountProviderIcon.vue'
 import { trackEvent } from '@/helpers/analytics'
 import {
 	get_default_user,

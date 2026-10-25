@@ -84,6 +84,8 @@ export interface CurseforgeSearchQuery {
 	sort: string
 	offset: number
 	limit: number
+	/** Only this CurseForge member's projects (an author or a team). */
+	author_id?: number | null
 }
 
 export interface CurseforgeCategory {
@@ -96,6 +98,23 @@ export interface CurseforgeCategory {
 
 export type CurseforgeSearchHit = Labrinth.Search.v3.ResultSearchProject & {
 	website_url: string | null
+	curseforge_author_id: string | null
+}
+
+/** A CurseForge member's (author's or team's) page in the launcher. */
+export function curseforgeMemberPath(author: {
+	id: string | null
+	name: string
+	avatar_url?: string | null
+}): string {
+	const query = new URLSearchParams({ name: author.name })
+	if (author.avatar_url) query.set('avatar', author.avatar_url)
+	return `/curseforge/member/${encodeURIComponent(author.id ?? author.name)}?${query}`
+}
+
+/** The member's own projects page on CurseForge, addressed by name. */
+export function curseforgeMemberWebUrl(name: string): string {
+	return `https://www.curseforge.com/members/${encodeURIComponent(name.trim().toLowerCase())}/projects`
 }
 
 export interface CurseforgeSearchResults {

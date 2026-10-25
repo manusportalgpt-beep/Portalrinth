@@ -687,8 +687,14 @@ enum RelayIdentity {
     Online {
         provider: &'static str,
         username: String,
-        access_token: String,
+        /// Freshest first. The messenger is offered each in turn: a renewed
+        /// Ely.by token is preferred, and the stored one is kept behind it in
+        /// case the renewal is the thing it refuses.
+        access_tokens: Vec<String>,
         uuid: Uuid,
+        /// An Ely.by account signed in with a password, whose token the
+        /// messenger may not take; said so when it is refused.
+        password_flow: bool,
     },
     /// An account that is only a name. The relay takes such an identity at its
     /// word, which is the whole of what a world opened to LAN ever needed.
@@ -699,7 +705,9 @@ impl RelayIdentity {
     fn matches(&self, username: &str) -> bool {
         match self {
             Self::Online { username: own, .. }
-            | Self::Nickname { username: own, .. } => own == username,
+            | Self::Nickname { username: own, .. } => {
+                own.eq_ignore_ascii_case(username)
+            }
         }
     }
 }
@@ -756,27 +764,18 @@ async fn identities(state: &crate::State) -> crate::Result<Vec<RelayIdentity>> {
         });
     }
 
-    for credentials in
+    for mut credentials in
         crate::state::ElyCredentials::get_all(&state.pool).await?
     {
-        // Ely.by neither expires nor rotates a refresh token, so the newest
-        // access token can be asked for again next time rather than written
-        // back on the way past.
-        let access_token = match &credentials.refresh_token {
-            Some(refresh_token) => {
-                crate::state::ely_oauth::refresh(refresh_token)
-                    .await
-                    .map_or_else(
-                        |_| credentials.access_token.clone(),
-                        |tokens| tokens.access_token,
-                    )
-            }
-            None => credentials.access_token.clone(),
-        };
+        // The stored access token is often a day old by the time a world is
+        // opened, and the messenger asks Ely.by about it directly, so it is
+        // renewed (and written back) first.
+        let access_tokens = credentials.service_tokens(&state.pool).await;
         found.push(RelayIdentity::Online {
             provider: "ely",
+            password_flow: !credentials.is_oauth(),
             username: credentials.username,
-            access_token,
+            access_tokens,
             uuid: credentials.uuid,
         });
     }
@@ -790,8 +789,9 @@ async fn identities(state: &crate::State) -> crate::Result<Vec<RelayIdentity>> {
         found.push(RelayIdentity::Online {
             provider: "msa",
             username,
-            access_token,
+            access_tokens: vec![access_token],
             uuid,
+            password_flow: false,
         });
     }
 
@@ -825,7 +825,8 @@ async fn relay_bearer(
 ) -> crate::Result<String> {
     let RelayIdentity::Online {
         provider,
-        access_token,
+        access_tokens,
+        password_flow,
         ..
     } = identity
     else {
@@ -840,11 +841,27 @@ async fn relay_bearer(
         )));
     };
 
-    messenger_token(state, provider, access_token).await.map_err(|error| {
-        anyhow::anyhow!(format!(
-            "the account could not be used to open the world to the network: {error}"
-        ))
-    })
+    let mut last_error = None;
+    for access_token in access_tokens {
+        match messenger_token(state, provider, access_token).await {
+            Ok(bearer) => return Ok(bearer),
+            Err(error) => last_error = Some(error),
+        }
+    }
+
+    let error = last_error.map_or_else(
+        || "no access token is stored for the account".to_string(),
+        |error| error.to_string(),
+    );
+    let hint = if *password_flow {
+        " - this Ely.by account was added with a password; sign it out and \
+         sign in again through the Ely.by page, whose token the relay accepts"
+    } else {
+        ""
+    };
+    Err(anyhow::anyhow!(format!(
+        "the account could not be used to open the world to the network: {error}{hint}"
+    )))
 }
 
 /// Trades an account's own token for the relay's bearer token.

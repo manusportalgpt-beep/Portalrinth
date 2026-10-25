@@ -229,6 +229,7 @@ import _MoreVerticalIcon from './icons/more-vertical.svg?component'
 import _MousePointer2Icon from './icons/mouse-pointer-2.svg?component'
 import _MoveIcon from './icons/move.svg?component'
 import _MoveUpRightIcon from './icons/move-up-right.svg?component'
+import _MusicIcon from './icons/music.svg?component'
 import _NewspaperIcon from './icons/newspaper.svg?component'
 import _NoSignalIcon from './icons/no-signal.svg?component'
 import _NotepadTextIcon from './icons/notepad-text.svg?component'
@@ -267,6 +268,8 @@ import _RadioTowerIcon from './icons/radio-tower.svg?component'
 import _ReceiptTextIcon from './icons/receipt-text.svg?component'
 import _RedoIcon from './icons/redo.svg?component'
 import _RefreshCwIcon from './icons/refresh-cw.svg?component'
+import _RepeatIcon from './icons/repeat.svg?component'
+import _Repeat1Icon from './icons/repeat-1.svg?component'
 import _ReplyIcon from './icons/reply.svg?component'
 import _ReportIcon from './icons/report.svg?component'
 import _RestoreIcon from './icons/restore.svg?component'
@@ -294,6 +297,8 @@ import _ShirtIcon from './icons/shirt.svg?component'
 import _ShredderIcon from './icons/shredder.svg?component'
 import _SignalIcon from './icons/signal.svg?component'
 import _SignatureIcon from './icons/signature.svg?component'
+import _SkipBackIcon from './icons/skip-back.svg?component'
+import _SkipForwardIcon from './icons/skip-forward.svg?component'
 import _SkullIcon from './icons/skull.svg?component'
 import _SlashIcon from './icons/slash.svg?component'
 import _SmartphoneIcon from './icons/smartphone.svg?component'
@@ -482,6 +487,9 @@ import _UserXIcon from './icons/user-x.svg?component'
 import _UsersIcon from './icons/users.svg?component'
 import _VersionIcon from './icons/version.svg?component'
 import _VideoIcon from './icons/video.svg?component'
+import _Volume1Icon from './icons/volume-1.svg?component'
+import _Volume2Icon from './icons/volume-2.svg?component'
+import _VolumeXIcon from './icons/volume-x.svg?component'
 import _WikiIcon from './icons/wiki.svg?component'
 import _WindowIcon from './icons/window.svg?component'
 import _WorldIcon from './icons/world.svg?component'
@@ -716,6 +724,7 @@ export const MoreVerticalIcon = _MoreVerticalIcon
 export const MousePointer2Icon = _MousePointer2Icon
 export const MoveIcon = _MoveIcon
 export const MoveUpRightIcon = _MoveUpRightIcon
+export const MusicIcon = _MusicIcon
 export const NewspaperIcon = _NewspaperIcon
 export const NoSignalIcon = _NoSignalIcon
 export const NotepadTextIcon = _NotepadTextIcon
@@ -754,6 +763,8 @@ export const RadioTowerIcon = _RadioTowerIcon
 export const ReceiptTextIcon = _ReceiptTextIcon
 export const RedoIcon = _RedoIcon
 export const RefreshCwIcon = _RefreshCwIcon
+export const RepeatIcon = _RepeatIcon
+export const Repeat1Icon = _Repeat1Icon
 export const ReplyIcon = _ReplyIcon
 export const ReportIcon = _ReportIcon
 export const RestoreIcon = _RestoreIcon
@@ -781,6 +792,8 @@ export const ShirtIcon = _ShirtIcon
 export const ShredderIcon = _ShredderIcon
 export const SignalIcon = _SignalIcon
 export const SignatureIcon = _SignatureIcon
+export const SkipBackIcon = _SkipBackIcon
+export const SkipForwardIcon = _SkipForwardIcon
 export const SkullIcon = _SkullIcon
 export const SlashIcon = _SlashIcon
 export const SmartphoneIcon = _SmartphoneIcon
@@ -969,6 +982,9 @@ export const UserXIcon = _UserXIcon
 export const UsersIcon = _UsersIcon
 export const VersionIcon = _VersionIcon
 export const VideoIcon = _VideoIcon
+export const Volume1Icon = _Volume1Icon
+export const Volume2Icon = _Volume2Icon
+export const VolumeXIcon = _VolumeXIcon
 export const WikiIcon = _WikiIcon
 export const WindowIcon = _WindowIcon
 export const WorldIcon = _WorldIcon

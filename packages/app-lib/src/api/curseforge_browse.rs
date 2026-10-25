@@ -457,6 +457,10 @@ pub struct SearchQuery {
     pub offset: u32,
     #[serde(default)]
     pub limit: u32,
+    /// Only projects this CurseForge member (an author or a team) worked on,
+    /// for their page in the launcher.
+    #[serde(default)]
+    pub author_id: Option<i64>,
 }
 
 /// CurseForge filters on at most this many game versions, loaders and
@@ -494,6 +498,10 @@ pub struct SearchHit {
     pub disclosure_types: Vec<String>,
     /// Not part of Labrinth's shape; where the project lives on CurseForge.
     pub website_url: Option<String>,
+    /// Not part of Labrinth's shape either: the first author's CurseForge
+    /// member id, which their page in the launcher lists projects by. Kept
+    /// apart from `author_id`, which names a Modrinth user.
+    pub curseforge_author_id: Option<String>,
 }
 
 #[derive(Serialize, Debug)]
@@ -538,6 +546,9 @@ fn search_url(query: &SearchQuery) -> crate::Result<String> {
         if let Some(text) = text {
             params.append_pair("searchFilter", text);
         }
+        if let Some(author) = query.author_id {
+            params.append_pair("authorId", &author.to_string());
+        }
         let versions = query
             .game_versions
             .iter()
@@ -576,6 +587,16 @@ fn search_url(query: &SearchQuery) -> crate::Result<String> {
         }
     }
     Ok(url.to_string())
+}
+
+/// A member's projects page on CurseForge. The API hands out the old
+/// `/members/<id>-<name>?username=` form, which no longer opens; the site's own
+/// address for an author or a team is by name.
+pub fn member_url(name: &str) -> String {
+    let name = name.trim().to_lowercase();
+    let encoded: String =
+        url::form_urlencoded::byte_serialize(name.as_bytes()).collect();
+    format!("https://www.curseforge.com/members/{encoded}/projects")
 }
 
 pub async fn search(query: SearchQuery) -> crate::Result<SearchResults> {
@@ -668,6 +689,11 @@ fn search_hit(project: ApiMod, project_type: &str) -> SearchHit {
             .map(|author| author.name.clone())
             .unwrap_or_default(),
         author_id: None,
+        curseforge_author_id: project
+            .authors
+            .first()
+            .and_then(|author| author.id)
+            .map(|id| id.to_string()),
         author_avatar_url: project
             .authors
             .first()
@@ -783,8 +809,10 @@ pub async fn get_project(id: &str) -> crate::Result<Project> {
             .into_iter()
             .map(|author| ProjectAuthor {
                 id: author.id.map(|id| id.to_string()),
+                url: Some(member_url(&author.name))
+                    .filter(|_| !author.name.trim().is_empty())
+                    .or_else(|| https_only(author.url)),
                 name: author.name,
-                url: https_only(author.url),
                 avatar_url: https_only(author.avatar_url),
             })
             .collect(),
@@ -1559,6 +1587,7 @@ mod tests {
             sort: "downloads".to_string(),
             offset: 40,
             limit: 20,
+            author_id: None,
         }
     }
 
