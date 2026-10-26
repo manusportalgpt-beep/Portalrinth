@@ -25,6 +25,7 @@ import {
 	attachFromPaths,
 	type AttachedFile,
 	formatSize,
+	inboxSave,
 	readLatestSession,
 } from '@/helpers/ai-sandbox'
 
@@ -35,7 +36,7 @@ const messages = {
 	description: {
 		id: 'app.ai.description',
 		defaultMessage:
-			'Локальный агент лаунчера: собирает сборки, ищет моды, объясняет ошибки, работает с файлами и открывает нужные экраны сам.',
+			'Portalus — агент лаунчера: создаёт моды, шейдеры и ресурс-паки, ищет в интернете, собирает сборки, разбирает ваши файлы и помнит прошлые разговоры.',
 	},
 	placeholder: {
 		id: 'app.ai.input.placeholder',
@@ -176,6 +177,10 @@ function actionName(tool: string) {
 		sandbox_read: 'прочитал файл',
 		sandbox_write: 'записал файл',
 		sandbox_delete: 'удалил файл',
+		sandbox_pack: 'упаковал архив',
+		sandbox_unpack: 'распаковал архив',
+		memory_read: 'перечитал заметки',
+		memory_write: 'записал заметку',
 		session_list: 'перечитал прошлые сессии',
 		session_read: 'перечитал сессию',
 		ask_user: 'спросил вас',
@@ -191,6 +196,19 @@ async function send(text?: string) {
 	input.value = ''
 	const files = attachments.value
 	attachments.value = []
+	// A copy lands in the sandbox's inbox, so Portalus can return to
+	// these files on any later turn - read, unpack, rework, delete.
+	let inboxNote = ''
+	if (files.length > 0) {
+		try {
+			const saved = await inboxSave(files)
+			if (saved.length > 0) {
+				inboxNote = `\n\n[файлы сохранены в песочницу: ${saved.join(', ')}]`
+			}
+		} catch {
+			/* the chat copy below still carries text and previews */
+		}
+	}
 	const attachmentNote = files
 		.map((file) =>
 			file.kind === 'text' && file.text
@@ -200,7 +218,7 @@ async function send(text?: string) {
 		.join('')
 	pushAiMessage({
 		role: 'user',
-		content: message + attachmentNote,
+		content: message + attachmentNote + inboxNote,
 		ts: Date.now(),
 		attachments: files.length > 0 ? files : undefined,
 	})

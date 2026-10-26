@@ -19,8 +19,10 @@ import {
 	type AttachedFile,
 	sandboxDelete,
 	sandboxList,
+	sandboxPack,
 	sandboxRead,
 	sandboxStatsSnapshot,
+	sandboxUnpack,
 	sandboxWrite,
 	sandboxWriteBinary,
 	saveSession,
@@ -28,6 +30,7 @@ import {
 	startNewSession,
 	resetSandboxStats,
 } from './ai-sandbox'
+import { get_default_user, users } from './auth'
 import { addCustomAccentColor, setCustomAccentColor } from '../composables/use-accent'
 import { setBackgroundFromPath } from './portalrinth-background'
 import { searchCurseforge } from './curseforge-api'
@@ -222,7 +225,7 @@ const DEFAULT_SETTINGS: AiSettings = {
 	customBaseUrl: '',
 	customModel: '',
 	mascotEnabled: true,
-	mascotName: 'Крафт',
+	mascotName: 'Portalus',
 	mascotSkin: 'steve',
 	chatEffects: true,
 	affection: 20,
@@ -232,7 +235,13 @@ function readSettings(): AiSettings {
 	try {
 		const raw = localStorage.getItem(SETTINGS_KEY)
 		if (!raw) return { ...DEFAULT_SETTINGS }
-		return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+		const settings = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+		// The agent got its true name: anyone still carrying the old
+		// placeholder is moved over once, without touching a custom name.
+		if (settings.mascotName === 'Крафт') {
+			settings.mascotName = 'Portalus'
+		}
+		return settings
 	} catch {
 		return { ...DEFAULT_SETTINGS }
 	}
@@ -389,35 +398,84 @@ export const AI_NAVIGATION_HINT = [
 	'- /project/<id> — страница проекта',
 	'- /instance/<id> — сборка (экраны: /instance/<id>/worlds, /files, /logs, /screenshots)',
 	'- /skins — скины игрока, /browse/skin — библиотека скинов',
+	'- /screenshots — скриншоты игрока из сборок',
 	'- /lan — локальная игра по сети',
 ].join('\n')
 
 export const AI_TOOLS_HINT = [
 	'Ты можешь выполнять действия, добавляя в ответ команды вида <<инструмент|аргумент>> (аргумент одной строкой, без кавычек). Пользователь видит каждую выполненную команду.',
-	'Экраны лаунчера:',
+	'Свои интернет-инструменты (поиск и чтение страниц — через них изучай всё, что вне лаунчера):',
+	'- <<web_search|запрос>> — поиск в интернете',
+	'- <<web_fetch|url>> — скачать страницу (вернёт очищенный текст)',
+	'Экраны лаунчера (команды касаются только лаунчера):',
 	'- <<navigate|путь>> — открыть экран, например <<navigate|/browse/mod?q=jei>>; если спрашивают «покажи/расскажи, как это», открой нужный экран и коротко объясни',
 	'- <<open_creation_modal|>> — открыть окно создания сборки (можно с подсказкой: <<open_creation_modal|сборка на 1.21.1 с JEI>>)',
 	'- <<open_instance|id>> — открыть сборку по id',
 	'- <<list_instances|>> — получить список сборок игрока',
 	'- <<get_page|>> — узнать, какой экран сейчас открыт',
-	'- <<launcher_search_mods|запрос>> — найти мод/сборку сразу в Modrinth и CurseForge, вернёт топ результатов',
+	'- <<launcher_search_mods|запрос>> — найти мод/сборку сразу в Modrinth и CurseForge, вернёт топ результатов (иконка, автор, версия и описание — на странице проекта: открой её через <<navigate|/project/<id>>)',
 	'- <<launcher_set_accent|цвет>> — сменить цвет акцента лаунчера, цвет в hex (например <<launcher_set_accent|#22c55e>>)',
 	'- <<launcher_set_background|url>> — поставить фон окна лаунчера по прямой ссылке на картинку',
-	'- <<web_fetch|url>> — скачать страницу (вернёт очищенный текст)',
-	'- <<web_search|запрос>> — поиск в интернете',
 	'Песочница — твоя личная папка на диске (пути относительные, выходить за неё нельзя):',
 	'- <<sandbox_list|путь>> — список файлов (пусто — корень песочницы)',
 	'- <<sandbox_read|файл>> — прочитать текстовый файл',
 	'- <<sandbox_write|файл::текст>> — создать или изменить файл (многострочный текст разрешён); «.exe» и другие исполняемые файлы создать нельзя',
 	'- <<sandbox_delete|путь>> — удалить файл или папку (только с явного согласия)',
-	'Память — твои прошлые разговоры лежат в папке сессий:',
+	'Встроенный архиватор (7-zip):',
+	'- <<sandbox_pack|архив.zip::путь1::путь2>> — упаковать файлы/папки песочницы в .zip, .jar или .7z; .jar собирается как zip — так ты отдаёшь готовый мод',
+	'- <<sandbox_unpack|архив.zip::папка>> — распаковать архив (в том числе присланный игроком) в папку песочницы',
+	'Файлы, которые игрок скинул в чат, сохраняются в папку inbox/ твоей песочницы — они остаются там: читай их, распаковывай, переделывай, удаляй по просьбе.',
+	'Память — твои заметки и прошлые разговоры не пропадают:',
+	'- <<memory_read|>> — перечитать свои заметки (memory.md)',
+	'- <<memory_write|текст>> — дописать заметку на будущее (привычки игрока, договорённости, что сделал)',
 	'- <<session_list|>> — обзор прошлых сессий',
 	'- <<session_read|номер>> — перечитать сессию по номеру из обзора (1 — последняя)',
 	'Если для продолжения тебе не хватает решения пользователя, задай вопрос: <<ask_user|Вопрос?::вариант 1;;вариант 2>> — у пользователя появятся кнопки и поле для своего ответа.',
-	'Правила: команды выполняются, только если они правда нужны; удалять или менять что-либо без явного согласия запрещено; отвечай коротко — 1-4 предложения, если не просят подробно.',
+	'Правила: интернет — через web_search/web_fetch; команды лаунчера — только для лаунчера; удалять или менять что-либо без явного согласия запрещено; отвечай коротко — 1-4 предложения, если не просят подробно.',
+].join('\n')
+
+export const AI_SKILLS_HINT = [
+	'Ты умеешь создавать контент для Minecraft и писать код — делай это файлами в песочнице, а результат отдавай архивом:',
+	'- Ресурс-пак: pack.mcmeta (поле pack_format зависит от версии — если не уверен, уточни через web_search), assets/minecraft/textures/..., модели, звуки (sounds.json). Собери файлы и упакуй в .zip.',
+	'- Шейдеры (OptiFine/Iris): папка shaders/ с вершинными и фрагментными программами (*.vsh, *.fsh, GLSL), composite/final проходы, shaders.properties. Собери и упакуй в .zip.',
+	'- Моды: Fabric — fabric.mod.json (id, version, entrypoints main/client), код на Java или Kotlin, mixins; Forge — mods.toml; NeoForge — neoforge.mods.toml. Готовый мод — .jar (собирается как zip).',
+	'- Датапаки: pack.mcmeta в корне + data/<namespace>/function/*.mcfunction и прочее.',
+	'- Код на других языках (Python, JavaScript/TypeScript, Lua, C#, GLSL и т.д.) — тоже сохраняй файлами в песочницу.',
+	'Порядок работы над артефактом: папка проекта в песочнице → файлы по одному через sandbox_write → sandbox_pack в архив → скажи игроку путь к архиву (например inbox/ или папка проекта).',
 ].join('\n')
 
 // ---- Personality ---------------------------------------------------------
+
+/**
+ * The name of the player behind the selected account. Asked once per
+ * launcher run and reused: Portalus addresses the player by that name.
+ */
+let playerNameCache = ''
+export async function playerName(): Promise<string> {
+	if (playerNameCache) return playerNameCache
+	try {
+		const id = await get_default_user()
+		if (id) {
+			const all = await users()
+			const me = all.find((user) => user.id === id)
+			if (me?.username) playerNameCache = me.username
+		}
+	} catch {
+		/* an offline launcher still gets an assistant */
+	}
+	return playerNameCache
+}
+
+const MEMORY_FILE = 'memory.md'
+
+/** The agent's notebook, read quietly - an empty notebook is not an error. */
+async function readMemory(): Promise<string> {
+	try {
+		return await sandboxRead(MEMORY_FILE)
+	} catch {
+		return ''
+	}
+}
 
 /**
  * The system prompt. Short on purpose: free models start hallucinating tools
@@ -426,7 +484,7 @@ export const AI_TOOLS_HINT = [
  */
 export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): string {
 	const settings = aiSettings.value
-	const name = settings.mascotName || 'Помощник'
+	const name = settings.mascotName || 'Portalus'
 	const affection = Math.max(0, Math.min(100, settings.affection))
 	const warmth =
 		affection > 70
@@ -435,14 +493,16 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 				? 'Ты дружелюбен к игроку.'
 				: 'Ты держишься сдержанно, но честно.'
 	const lines = [
-		`Ты — ${name}, встроенный ИИ-помощник лаунчера Portalrinth (форк Modrinth App) для Minecraft.`,
+		`Ты — ${name}, ИИ-агент лаунчера Portalrinth (форк Modrinth App) для Minecraft. Твоё имя — Portalus, и игрок обращается к тебе по нему.`,
 		warmth,
+		'Общайся как живой игровой приятель: обращайся к игроку по имени его аккаунта, уместный игровой сленг разрешён, канцелярит — нет, грубость и мат — нет.',
 		'У тебя есть своё мнение: если пользователь просит вредного или сомнительного, ты вежливо споришь и предлагаешь лучше.',
 		'Отвечай на языке пользователя. Без воды: коротко, по делу, шагами где уместно.',
-		'Ты помогаешь со сборками, модами, скинами, настройкой, ошибками запуска и всем, что есть в лаунчере.',
-		'У тебя есть своя песочница (папка на диске) и папка сессий: там лежат твои прошлые разговоры — перечитывай их, чтобы не забывать. Если пользователь скинул файл, ты можешь работать с его содержимым.',
+		'Ты знаешь лаунчер целиком: Discover (поиск по Modrinth и CurseForge), создание сборок, установку модов/ресурс-паков/шейдеров (иконка, автор, версия, описание — всё как у человека), скины, скриншоты, внешний вид лаунчера, запуск и ошибки. Помогаешь со всем этим и сам делаешь это руками, когда просят.',
+		'У тебя есть своя песочница (папка на диске) и папка сессий: там лежат твои заметки и прошлые разговоры — перечитывай их, чтобы ничего не забывать. Файлы, которые игрок скинул в чат, попадают в песочницу (inbox/), картинки ты видишь.',
 		AI_NAVIGATION_HINT,
 		AI_TOOLS_HINT,
+		AI_SKILLS_HINT,
 	]
 	if (kind === 'mascot') {
 		lines.push(
@@ -452,6 +512,26 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 		lines.push('Структурируй ответ: списки и короткие абзацы.')
 	}
 	if (extra) lines.push(extra)
+	return lines.join('\n')
+}
+
+/**
+ * The part of the prompt that changes every few turns: who is playing and
+ * what the notebook remembers. Kept separate so the static half above stays
+ * cheap for providers that bill the system message as regular tokens.
+ */
+async function buildLiveContext(): Promise<string> {
+	const lines: string[] = []
+	const who = await playerName()
+	if (who) {
+		lines.push(
+			`Имя игрока: ${who}. Обращайся к нему по имени — в приветствии и иногда по ходу дела, без фанатизма.`,
+		)
+	}
+	const memory = await readMemory()
+	if (memory) {
+		lines.push(`Твои заметки (memory.md):\n${memory.slice(0, 2000)}`)
+	}
 	return lines.join('\n')
 }
 
@@ -600,7 +680,10 @@ function withoutImages(messages: ChatMessagePayload[]): ChatMessagePayload[] {
  */
 export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	const settings = aiSettings.value
-	const system = buildSystemPrompt(request.kind, request.systemExtra)
+	const live = await buildLiveContext()
+	const system =
+		buildSystemPrompt(request.kind, request.systemExtra) +
+		(live ? `\n${live}` : '')
 	const base: ChatMessagePayload[] = [
 		{ role: 'system', content: system },
 		...(request.messages ?? []),
@@ -754,6 +837,43 @@ registerAiToolHandler(async (tool, args) => {
 	if (tool === 'sandbox_delete') {
 		if (!args.trim()) return 'Укажите путь'
 		return sandboxDelete(args.trim())
+	}
+	if (tool === 'sandbox_pack') {
+		const parts = args.split('::').map((part) => part.trim()).filter(Boolean)
+		if (parts.length < 2) {
+			return 'Формат: <<sandbox_pack|архив.zip::путь1::путь2>>'
+		}
+		const [archive, ...sources] = parts
+		return sandboxPack(sources, archive)
+	}
+	if (tool === 'sandbox_unpack') {
+		const parts = args.split('::').map((part) => part.trim())
+		if (!parts[0]) return 'Формат: <<sandbox_unpack|архив.zip::папка>>'
+		return sandboxUnpack(parts[0], parts[1] ?? '')
+	}
+	if (tool === 'memory_read') {
+		try {
+			const memory = await sandboxRead(MEMORY_FILE)
+			return memory || 'Заметок пока нет - записывай важное через <<memory_write|текст>>'
+		} catch {
+			return 'Заметок пока нет - записывай важное через <<memory_write|текст>>'
+		}
+	}
+	if (tool === 'memory_write') {
+		const note = args.trim()
+		if (!note) return 'Пустую заметку не записываю'
+		let previous = ''
+		try {
+			previous = await sandboxRead(MEMORY_FILE)
+		} catch {
+			previous = ''
+		}
+		const appended = `${previous}${previous && !previous.endsWith('\n') ? '\n' : ''}- ${note}\n`
+		const trimmed =
+			appended.length > 4000
+				? `…(старое обрезано)\n${appended.slice(-4000)}`
+				: appended
+		return sandboxWrite(MEMORY_FILE, trimmed)
 	}
 	if (tool === 'session_list') return readSessionsOverview()
 	if (tool === 'session_read') {

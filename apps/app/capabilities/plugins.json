@@ -129,7 +129,6 @@
 		"fs:allow-remove",
 		"fs:allow-rename",
 		"fs:allow-copy-file",
-		"fs:allow-read-link",
 		{
 			"identifier": "fs:scope",
 			"allow": [
@@ -221,6 +220,7 @@
 		"portalrinth-recovery:default",
 		"portalrinth-curseforge:default",
 		"portalrinth-lan:default",
-		"portalrinth-bedrock:default"
+		"portalrinth-bedrock:default",
+		"portalrinth-archive:default"
 	]
 }

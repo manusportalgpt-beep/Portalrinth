@@ -9,6 +9,7 @@
  * way to spell a path outside them.
  */
 import * as fs from '@tauri-apps/plugin-fs'
+import { invoke } from '@tauri-apps/api/core'
 import { appDataDir } from '@tauri-apps/api/path'
 import { ref } from 'vue'
 
@@ -201,6 +202,109 @@ export async function sandboxDelete(rel: string): Promise<string> {
 	return `удалено: ${rel}`
 }
 
+// ---- The built-in archiver -------------------------------------------------
+
+const ARCHIVE_EXTENSIONS = /\.(zip|jar|7z)$/i
+
+/**
+ * Packs files or folders of the sandbox into an archive. The format follows
+ * the destination's extension - .zip, .jar (a zip by another name, so the
+ * assistant can ship a working mod) or .7z, handled by the built-in 7-zip.
+ */
+export async function sandboxPack(sources: string[], archiveRel: string): Promise<string> {
+	countCommand()
+	const trimmed = sources.map((source) => source.trim()).filter(Boolean)
+	if (!archiveRel.trim() || !ARCHIVE_EXTENSIONS.test(archiveRel.trim())) {
+		return 'Имя архива должно заканчиваться на .zip, .jar или .7z'
+	}
+	if (trimmed.length === 0) return 'Укажите, что упаковать'
+	const archivePath = await resolveIn(archiveRel, root())
+	const absolute: string[] = []
+	for (const source of trimmed) {
+		absolute.push(await resolveIn(source, root()))
+	}
+	try {
+		return await invoke('plugin:portalrinth-archiver|archiver_pack', {
+			sources: absolute,
+			dest: archivePath,
+		})
+	} catch (error) {
+		return `Архив не получился: ${String(error).slice(0, 300)}`
+	}
+}
+
+/** Unpacks an archive of the sandbox into a folder of the sandbox. */
+export async function sandboxUnpack(archiveRel: string, destRel: string): Promise<string> {
+	countCommand()
+	const archive = archiveRel.trim()
+	if (!archive) return 'Укажите архив'
+	if (!ARCHIVE_EXTENSIONS.test(archive)) {
+		return 'Умею распаковывать только .zip, .jar и .7z'
+	}
+	const dest = destRel.trim() || archive.replace(ARCHIVE_EXTENSIONS, '')
+	const archivePath = await resolveIn(archive, root())
+	const destPath = await resolveIn(dest, root())
+	try {
+		return await invoke('plugin:portalrinth-archiver|archiver_unpack', {
+			archive: archivePath,
+			destDir: destPath,
+		})
+	} catch (error) {
+		return `Распаковка не удалась: ${String(error).slice(0, 300)}`
+	}
+}
+
+// ---- The inbox -------------------------------------------------------------
+
+const FORBIDDEN_ATTACHMENTS = /\.(exe|msi|bat|cmd|com|scr|sh|dll|so|apk|app|ps1|vbs|jar\.exe)$/i
+
+/**
+ * Copies the files the player attached into the sandbox's inbox folder, so
+ * the assistant can read, unpack and rework them on every later turn - not
+ * just the moment they arrived. Executables stay out, as everywhere else.
+ */
+export async function inboxSave(files: AttachedFile[]): Promise<string[]> {
+	const saved: string[] = []
+	const skipped: string[] = []
+	for (const file of files) {
+		if (!file.path) continue
+		if (FORBIDDEN_ATTACHMENTS.test(file.name)) {
+			skipped.push(file.name)
+			continue
+		}
+		const base = file.name.replace(/[^\p{L}\p{N}._ -]/gu, '_').replace(/\s+/g, ' ').trim()
+		if (!base) continue
+		const dot = base.lastIndexOf('.')
+		const stem = dot > 0 ? base.slice(0, dot) : base
+		const extension = dot > 0 ? base.slice(dot) : ''
+		let rel = `inbox/${base}`
+		let counter = 2
+		while (await pathExists(rel)) {
+			rel = `inbox/${stem} (${counter})${extension}`
+			counter++
+		}
+		try {
+			const bytes = await fs.readFile(file.path)
+			await sandboxWriteBinary(rel, bytes)
+			saved.push(rel)
+		} catch {
+			/* outside the file scope or unreadable - the chat copy is still there */
+		}
+	}
+	if (skipped.length > 0) {
+		saved.push(`(пропущены исполняемые файлы: ${skipped.join(', ')})`)
+	}
+	return saved
+}
+
+async function pathExists(rel: string): Promise<boolean> {
+	try {
+		return await fs.exists(await resolveIn(rel, root()))
+	} catch {
+		return false
+	}
+}
+
 // ---- Sessions --------------------------------------------------------------
 
 export interface StoredSession {
@@ -304,6 +408,8 @@ export interface AttachedFile {
 	kind: 'image' | 'text' | 'file'
 	dataUrl?: string
 	text?: string
+	/** Where the file came from, so the inbox can copy it into the sandbox. */
+	path?: string
 }
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']
@@ -326,6 +432,7 @@ export async function attachFromPaths(paths: string[]): Promise<AttachedFile[]> 
 					name,
 					size,
 					kind: 'image',
+					path,
 					dataUrl: `data:image/${extension === 'jpg' ? 'jpeg' : extension};base64,${bytesToBase64(bytes)}`,
 				})
 			} else if (TEXT_EXTENSIONS.includes(extension) || size < 200000) {
@@ -334,10 +441,11 @@ export async function attachFromPaths(paths: string[]): Promise<AttachedFile[]> 
 					name,
 					size,
 					kind: 'text',
+					path,
 					text: text.length > 12000 ? `${text.slice(0, 12000)}\n…` : text,
 				})
 			} else {
-				attached.push({ name, size, kind: 'file' })
+				attached.push({ name, size, kind: 'file', path })
 			}
 		} catch (error) {
 			attached.push({ name, size: 0, kind: 'file' })

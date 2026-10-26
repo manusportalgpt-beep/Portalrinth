@@ -1539,7 +1539,7 @@
 		"message": "AI assistant"
 	},
 	"app.ai.description": {
-		"message": "The launcher's own agent: builds modpacks, finds mods, explains errors and can open the right screens by itself."
+		"message": "Portalus — the launcher's agent: writes mods, shaders and resource packs, searches the web, builds modpacks, works with your files and remembers past conversations."
 	},
 	"app.ai.input.placeholder": {
 		"message": "Ask anything… e.g. \"build me a 1.21 pack with JEI\""

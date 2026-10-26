@@ -701,6 +701,17 @@ fn main() {
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),
+            )
+            .plugin(
+                "portalrinth-archiver",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "archiver_pack",
+                        "archiver_unpack",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
             ),
     )
     .expect("Failed to run tauri-build");
