@@ -4,6 +4,8 @@ import {
 	BotIcon,
 	ChevronDownIcon,
 	ChevronUpIcon,
+	ClipboardCopyIcon,
+	PlusIcon,
 	SparklesIcon,
 	TrashIcon,
 	WrenchIcon,
@@ -61,6 +63,13 @@ const messages = {
 	},
 	thinking: { id: 'app.ai.thinking', defaultMessage: 'Думает…' },
 	modelSection: { id: 'app.ai.tab.section', defaultMessage: 'Модель' },
+	plus: { id: 'app.ai.plus', defaultMessage: 'Меню чата' },
+	plusNewChat: { id: 'app.ai.plus.new-chat', defaultMessage: 'Новый чат' },
+	plusPaste: { id: 'app.ai.plus.paste', defaultMessage: 'Вставить из буфера' },
+	plusPasteEmpty: {
+		id: 'app.ai.plus.paste-empty',
+		defaultMessage: 'В буфере обмена нет текста.',
+	},
 }
 
 const suggestions = computed(() => [
@@ -75,6 +84,7 @@ const sending = ref(false)
 const streaming = ref('')
 const errorText = ref('')
 const showModelPanel = ref(false)
+const plusOpen = ref(false)
 const scrollBox = ref<HTMLElement | null>(null)
 let typeTimer: ReturnType<typeof setInterval> | undefined
 
@@ -178,6 +188,33 @@ function clearChat() {
 	stopTyping()
 	errorText.value = ''
 	clearAiHistory()
+}
+
+function togglePlus() {
+	plusOpen.value = !plusOpen.value
+}
+
+function plusNewChat() {
+	plusOpen.value = false
+	clearChat()
+}
+
+async function plusPaste() {
+	plusOpen.value = false
+	if (sending.value) return
+	let text = ''
+	try {
+		text = await navigator.clipboard.readText()
+	} catch {
+		text = ''
+	}
+	const trimmed = text.trim()
+	if (!trimmed) {
+		errorText.value = formatMessage(messages.plusPasteEmpty)
+		return
+	}
+	const clipped = trimmed.length > 12000 ? `${trimmed.slice(0, 12000)}\n…` : trimmed
+	await send(clipped)
 }
 
 onBeforeUnmount(stopTyping)
@@ -304,6 +341,34 @@ defineExpose({ send })
 			<div
 				class="ai-input-row flex items-end gap-2 rounded-3xl border border-solid border-surface-5 bg-surface-2 p-2"
 			>
+				<div class="relative shrink-0">
+					<IconButton
+						v-tooltip="formatMessage(messages.plus)"
+						:disabled="sending"
+						:label="formatMessage(messages.plus)"
+						@click="togglePlus"
+					>
+						<PlusIcon />
+					</IconButton>
+					<div
+						v-if="plusOpen"
+						class="fixed inset-0 z-10 cursor-default"
+						@click="plusOpen = false"
+					/>
+					<div
+						v-if="plusOpen"
+						class="ai-plus-menu absolute bottom-full left-0 z-20 mb-2 flex min-w-56 flex-col gap-1 rounded-xl border border-solid border-surface-5 bg-surface-2 p-1"
+					>
+						<button class="ai-plus-item" @click="plusNewChat">
+							<PlusIcon class="size-4" />
+							{{ formatMessage(messages.plusNewChat) }}
+						</button>
+						<button class="ai-plus-item" @click="plusPaste">
+							<ClipboardCopyIcon class="size-4" />
+							{{ formatMessage(messages.plusPaste) }}
+						</button>
+					</div>
+				</div>
 				<Input
 					v-model="input"
 					class="grow"
@@ -360,6 +425,28 @@ defineExpose({ send })
 
 .ai-input-row {
 	box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.ai-plus-menu {
+	box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.ai-plus-item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	border-radius: 0.5rem;
+	padding: 0.45rem 0.75rem;
+	font-size: 0.8125rem;
+	color: var(--color-primary);
+	text-align: left;
+	cursor: pointer;
+	background: transparent;
+	border: none;
+}
+
+.ai-plus-item:hover {
+	background: var(--color-button-bg);
 }
 
 .ai-typing {

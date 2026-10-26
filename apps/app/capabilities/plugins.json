@@ -62,6 +62,42 @@
 					"url": "https://api.purpurmc.org/*"
 				},
 				{
+					"url": "https://text.pollinations.ai/*"
+				},
+				{
+					"url": "https://openrouter.ai/*"
+				},
+				{
+					"url": "https://api.groq.com/*"
+				},
+				{
+					"url": "https://api.cerebras.ai/*"
+				},
+				{
+					"url": "https://api.mistral.ai/*"
+				},
+				{
+					"url": "https://generativelanguage.googleapis.com/*"
+				},
+				{
+					"url": "https://api.z.ai/*"
+				},
+				{
+					"url": "https://openai.api.yandex.net/*"
+				},
+				{
+					"url": "https://gigachat.devices.sberbank.ru/*"
+				},
+				{
+					"url": "https://api.deepseek.com/*"
+				},
+				{
+					"url": "http://localhost:*/*"
+				},
+				{
+					"url": "http://127.0.0.1:*/*"
+				},
+				{
 					"url": "http://localhost:8000/*"
 				},
 				{

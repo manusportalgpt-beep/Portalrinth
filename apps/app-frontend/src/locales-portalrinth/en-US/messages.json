@@ -1675,5 +1675,17 @@
 	},
 	"app.settings.ai-assistant.reset-affection": {
 		"message": "Reset"
+	},
+	"app.ai.plus": {
+		"message": "Chat menu"
+	},
+	"app.ai.plus.new-chat": {
+		"message": "New chat"
+	},
+	"app.ai.plus.paste": {
+		"message": "Paste from clipboard"
+	},
+	"app.ai.plus.paste-empty": {
+		"message": "Clipboard has no text."
 	}
 }
