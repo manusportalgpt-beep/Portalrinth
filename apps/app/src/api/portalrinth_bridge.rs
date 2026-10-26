@@ -22,8 +22,6 @@ use tokio::sync::broadcast;
 
 const BRIDGE_CHAT_EVENT: &str = "bridge-chat";
 
-type WsError = async_tungstenite::tungstenite::Error;
-
 struct BridgeState {
     port: u16,
     key: String,
@@ -252,7 +250,8 @@ async fn serve_socket<R: tauri::Runtime>(
         tokio::select! {
             incoming = source.next() => {
                 match incoming {
-                    Ok(Message::Text(text)) => {
+                    None => break,
+                    Some(Ok(Message::Text(text))) => {
                         match serde_json::from_str::<BridgeClientMessage>(text.as_str()) {
                             Ok(message) if message.kind == "chat" && !message.text.trim().is_empty() => {
                                 let _ = app.emit(BRIDGE_CHAT_EVENT, message.text.trim().to_string());
@@ -260,9 +259,8 @@ async fn serve_socket<R: tauri::Runtime>(
                             _ => {}
                         }
                     }
-                    Ok(Message::Close(_)) | Err(WsError::ConnectionClosed) | Err(WsError::AlreadyClosed) | None => break,
-                    Ok(_) => {}
-                    Err(_) => break,
+                    Some(Ok(_)) => {}
+                    Some(Err(_)) => break,
                 }
             }
             outgoing = replies.recv() => {
