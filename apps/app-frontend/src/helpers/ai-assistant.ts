@@ -76,7 +76,7 @@ export const AI_PROVIDERS: AiProvider[] = [
 		label: 'Pollinations',
 		baseUrl: 'https://text.pollinations.ai/openai',
 		needsKey: false,
-		models: [{ id: 'openai', label: 'OpenAI GPT (бесплатно)' }],
+		models: [{ id: 'openai', label: 'OpenAI GPT' }],
 		note: 'Ключ не нужен. Иногда отвечает медленно - это цена бесплатности.',
 		fromRussia: true,
 	},
@@ -87,13 +87,13 @@ export const AI_PROVIDERS: AiProvider[] = [
 		needsKey: true,
 		keyUrl: 'https://openrouter.ai/keys',
 		models: [
-			{ id: 'deepseek/deepseek-chat-v3.1:free', label: 'DeepSeek V3.1 (free)' },
-			{ id: 'qwen/qwen3-coder:free', label: 'Qwen3 Coder (free)' },
-			{ id: 'z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air (free)' },
-			{ id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B (free)' },
-			{ id: 'mistralai/mistral-small-3.2-24b-instruct:free', label: 'Mistral Small 3.2 (free)' },
-			{ id: 'google/gemma-3-27b-it:free', label: 'Gemma 3 27B (free)' },
-			{ id: 'moonshotai/kimi-k2:free', label: 'Kimi K2 (free)' },
+			{ id: 'deepseek/deepseek-chat-v3.1:free', label: 'DeepSeek V3.1' },
+			{ id: 'qwen/qwen3-coder:free', label: 'Qwen3 Coder' },
+			{ id: 'z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air' },
+			{ id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B' },
+			{ id: 'mistralai/mistral-small-3.2-24b-instruct:free', label: 'Mistral Small 3.2' },
+			{ id: 'google/gemma-3-27b-it:free', label: 'Gemma 3 27B' },
+			{ id: 'moonshotai/kimi-k2:free', label: 'Kimi K2' },
 		],
 		note: 'Много бесплатных моделей под одним ключом. Обычно доступен из России.',
 		fromRussia: true,
@@ -106,7 +106,7 @@ export const AI_PROVIDERS: AiProvider[] = [
 		keyUrl: 'https://console.groq.com/keys',
 		models: [
 			{ id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
-			{ id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B (быстрая)' },
+			{ id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B' },
 			{ id: 'qwen/qwen3-32b', label: 'Qwen3 32B' },
 			{ id: 'gemma2-9b-it', label: 'Gemma2 9B' },
 		],
@@ -156,7 +156,7 @@ export const AI_PROVIDERS: AiProvider[] = [
 		needsKey: true,
 		keyUrl: 'https://z.ai/model-api',
 		models: [
-			{ id: 'glm-4.5-flash', label: 'GLM 4.5 Flash (бесплатно)' },
+			{ id: 'glm-4.5-flash', label: 'GLM 4.5 Flash' },
 			{ id: 'glm-4.5-air', label: 'GLM 4.5 Air' },
 		],
 		note: 'GLM 4.5 Flash бесплатен, доступен из России и очень добротный.',
@@ -214,6 +214,10 @@ export interface AiSettings {
 	keys: Record<string, string>
 	customBaseUrl: string
 	customModel: string
+	/** Which service gen_image draws from. */
+	imageProvider: string
+	/** Keys for image providers, same shape as text keys. */
+	imageKeys: Record<string, string>
 	mascotEnabled: boolean
 	mascotName: string
 	/** 'steve' | 'alex' | 'account' | a laby.net texture hash. */
@@ -232,6 +236,8 @@ const DEFAULT_SETTINGS: AiSettings = {
 	keys: {},
 	customBaseUrl: '',
 	customModel: '',
+	imageProvider: 'pollinations',
+	imageKeys: {},
 	mascotEnabled: true,
 	mascotName: 'Portalus',
 	mascotSkin: 'steve',
@@ -261,6 +267,39 @@ export const aiSettings = ref<AiSettings>(readSettings())
 export function saveAiSettings(patch?: Partial<AiSettings>) {
 	if (patch) aiSettings.value = { ...aiSettings.value, ...patch }
 	localStorage.setItem(SETTINGS_KEY, JSON.stringify(aiSettings.value))
+}
+
+/** Providers for gen_image: draw pictures. Kept separate from the chat
+ * catalogue on purpose - the player picks a talker and a painter apart. */
+export interface AiImageProvider {
+	id: string
+	label: string
+	needsKey: boolean
+	keyUrl?: string
+	note?: string
+	fromRussia?: boolean
+}
+
+export const AI_IMAGE_PROVIDERS: AiImageProvider[] = [
+	{
+		id: 'pollinations',
+		label: 'Pollinations',
+		needsKey: false,
+		note: 'Бесплатно и без ключа.',
+		fromRussia: true,
+	},
+	{
+		id: 'zai',
+		label: 'Z.AI CogView',
+		needsKey: true,
+		keyUrl: 'https://z.ai/model-api',
+		note: 'CogView-3-Flash — бесплатный; подходит тот же ключ Z.AI, что и для чата.',
+		fromRussia: true,
+	},
+]
+
+export function imageProviderById(id: string): AiImageProvider | undefined {
+	return AI_IMAGE_PROVIDERS.find((provider) => provider.id === id)
 }
 
 export function providerById(id: string): AiProvider | undefined {
@@ -568,6 +607,7 @@ export const AI_TOOLS_HINT = [
 	'- <<session_list|>> — обзор прошлых сессий',
 	'- <<session_read|номер>> — перечитать сессию по номеру из обзора (1 — последняя)',
 	'Если для продолжения тебе не хватает решения пользователя, задай вопрос: <<ask_user|Вопрос?::вариант 1;;вариант 2>> — у пользователя появятся кнопки и поле для своего ответа.',
+	'Прежде чем открыть игроку экран, папку или картинку без его просьбы — сначала спроси: «Хотите, чтобы я показал …?» (через ask_user или просто в тексте). Когда просят «покажи» — открывай сразу.',
 	'Правила: интернет — твоими инструментами web_search/web_fetch; команды лаунчера — только для лаунчера; удалять или менять что-либо без явного согласия запрещено; отвечай коротко — 1-4 предложения, если не просят подробно.',
 	'Важно: если игрок во время твоей работы сам перешёл на другой экран, тебе сообщат «игрок передумал» — тогда сразу остановись и не продолжай действия.',
 ].join('\n')
@@ -671,6 +711,12 @@ async function buildLiveContext(): Promise<string> {
 	const memory = await readMemory()
 	if (memory) {
 		lines.push(`Твои заметки (memory.md):\n${memory.slice(0, 2000)}`)
+	}
+	const sessions = await readSessionsOverview(6)
+	if (sessions && !sessions.includes('Прошлых сессий пока нет')) {
+		lines.push(
+			`Сводка прошлых чатов (свежие сверху; дословно помни только текущий чат, про старое ориентируйся по сводке и не притворяйся, что помнишь детали):\n${sessions.slice(0, 900)}`,
+		)
 	}
 	return lines.join('\n')
 }
@@ -1210,12 +1256,39 @@ registerAiToolHandler(async (tool, args) => {
 			const size = name.match(/(\d+)x(\d+)/i)
 			const width = Math.min(1024, Math.max(256, Number(size?.[1]) || 1024))
 			const height = Math.min(1024, Math.max(256, Number(size?.[2]) || 1024))
-			const response = await proxiedFetch(
-				`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true`,
-				{ signal: AbortSignal.timeout(90000) },
-			)
-			if (!response.ok) return `Картинка не сгенерировалась: HTTP ${response.status}`
-			const bytes = new Uint8Array(await response.arrayBuffer())
+			let bytes: Uint8Array
+			const imageProvider = aiSettings.value.imageProvider || 'pollinations'
+			const zaiKey = imageProvider === 'zai' ? (aiSettings.value.imageKeys.zai ?? aiSettings.value.keys.zai ?? '') : ''
+			if (imageProvider === 'zai' && zaiKey) {
+				const response = await proxiedFetch('https://api.z.ai/api/paas/v4/images/generations', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${zaiKey}` },
+					body: JSON.stringify({ model: 'cogview-3-flash', prompt, size: `${width}x${height}` }),
+					signal: AbortSignal.timeout(120000),
+				})
+				if (!response.ok) return `Картинка не сгенерировалась (CogView): HTTP ${response.status}`
+				const data = (await response.json()) as { data?: { b64_json?: string; url?: string }[] }
+				const b64 = data.data?.[0]?.b64_json
+				const remote = data.data?.[0]?.url
+				if (b64) {
+					bytes = Uint8Array.from(atob(b64), (char) => char.charCodeAt(0))
+				} else if (remote) {
+					const download = await proxiedFetch(remote, { signal: AbortSignal.timeout(60000) })
+					bytes = new Uint8Array(await download.arrayBuffer())
+				} else {
+					return 'CogView не вернул картинку'
+				}
+			} else {
+				if (imageProvider === 'zai' && !zaiKey) {
+					// no key for the chosen painter - the free one still gets the job done
+				}
+				const response = await proxiedFetch(
+					`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true`,
+					{ signal: AbortSignal.timeout(90000) },
+				)
+				if (!response.ok) return `Картинка не сгенерировалась: HTTP ${response.status}`
+				bytes = new Uint8Array(await response.arrayBuffer())
+			}
 			if (bytes.length < 1000) return 'Картинка не сгенерировалась (пустой ответ)'
 			const path = await sandboxWriteBinary(name, bytes)
 			return `сгенерирована картинка ${name} (${Math.round(bytes.length / 1024)} КБ), сохранена: ${path}`
@@ -1506,6 +1579,21 @@ export interface BridgeInfo {
 	url: string
 }
 
+/** Shared bridge state: the settings popup and any other face read these. */
+export const bridgeInfo = ref<BridgeInfo | null>(null)
+export const bridgeToggling = ref(false)
+
+/** The agent's message shown in the top-center notch after it moved the
+ * player to another screen: hover to read, answer without opening the chat. */
+export const agentNavNotice = ref<{ text: string; at: number } | null>(null)
+export function showAgentNavNotice(text: string): void {
+	if (!text.trim()) return
+	agentNavNotice.value = { text, at: Date.now() }
+}
+
+/** A message typed into the navigation notch rides in here to the chat. */
+export const queuedUserMessage = ref('')
+
 let bridgeUnlisten: (() => void) | undefined
 let bridgeBusy = false
 
@@ -1557,6 +1645,7 @@ async function handleBridgeTurn(text: string): Promise<void> {
 /** Opens the localhost bridge and starts listening for browser messages. */
 export async function startBridge(): Promise<BridgeInfo> {
 	const info = (await invoke('plugin:portalrinth-bridge|bridge_start')) as BridgeInfo
+	bridgeInfo.value = info
 	if (!bridgeUnlisten) {
 		bridgeUnlisten = await listen<string>('bridge-chat', (event) => {
 			void handleBridgeTurn(event.payload)
@@ -1568,12 +1657,15 @@ export async function startBridge(): Promise<BridgeInfo> {
 /** Closes the bridge door. */
 export async function stopBridge(): Promise<void> {
 	await invoke('plugin:portalrinth-bridge|bridge_stop')
+	bridgeInfo.value = null
 }
 
 /** Where the bridge listens right now, if at all. */
 export async function bridgeStatus(): Promise<BridgeInfo | null> {
 	try {
-		return (await invoke('plugin:portalrinth-bridge|bridge_info')) as BridgeInfo | null
+		const info = (await invoke('plugin:portalrinth-bridge|bridge_info')) as BridgeInfo | null
+		bridgeInfo.value = info
+		return info
 	} catch {
 		return null
 	}

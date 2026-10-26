@@ -1777,5 +1777,59 @@
 	},
 	"app.screenshots.set-as-background": {
 		"message": "Apply as background"
+	},
+	"app.ai.history": {
+		"message": "Chat history"
+	},
+	"app.ai.history.empty": {
+		"message": "Nothing here yet — start the first conversation"
+	},
+	"app.ai.history.new-chat": {
+		"message": "New chat"
+	},
+	"app.ai.history.messages": {
+		"message": "msg"
+	},
+	"app.ai.notice.send": {
+		"message": "Send"
+	},
+	"app.ai.settings.group.work": {
+		"message": "For chatting"
+	},
+	"app.ai.settings.group.image": {
+		"message": "For image generation"
+	},
+	"app.ai.settings.test": {
+		"message": "Test connection"
+	},
+	"app.ai.settings.test.running": {
+		"message": "Testing…"
+	},
+	"app.ai.settings.test.ok": {
+		"message": "Connected — the AI answers"
+	},
+	"app.ai.settings.test.fail": {
+		"message": "No answer"
+	},
+	"app.speed.title": {
+		"message": "Internet speed"
+	},
+	"app.speed.measure": {
+		"message": "Measure"
+	},
+	"app.speed.again": {
+		"message": "Measure again"
+	},
+	"app.speed.running": {
+		"message": "Measuring…"
+	},
+	"app.speed.down": {
+		"message": "Mbps download"
+	},
+	"app.speed.ping": {
+		"message": "ms ping"
+	},
+	"app.speed.fail": {
+		"message": "Could not measure"
 	}
 }

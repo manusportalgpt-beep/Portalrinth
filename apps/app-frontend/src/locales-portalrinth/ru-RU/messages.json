@@ -3397,5 +3397,59 @@
 	},
 	"app.screenshots.set-as-background": {
 		"message": "Сделать фоном лаунчера"
+	},
+	"app.ai.history": {
+		"message": "История чатов"
+	},
+	"app.ai.history.empty": {
+		"message": "Пока пусто — начните первый разговор"
+	},
+	"app.ai.history.new-chat": {
+		"message": "Новый чат"
+	},
+	"app.ai.history.messages": {
+		"message": "сообщ."
+	},
+	"app.ai.notice.send": {
+		"message": "Отправить"
+	},
+	"app.ai.settings.group.work": {
+		"message": "Для работы"
+	},
+	"app.ai.settings.group.image": {
+		"message": "Для генерации изображений"
+	},
+	"app.ai.settings.test": {
+		"message": "Проверить связь"
+	},
+	"app.ai.settings.test.running": {
+		"message": "Проверяю связь…"
+	},
+	"app.ai.settings.test.ok": {
+		"message": "Связь есть — ИИ отвечает"
+	},
+	"app.ai.settings.test.fail": {
+		"message": "Не отвечает"
+	},
+	"app.speed.title": {
+		"message": "Скорость интернета"
+	},
+	"app.speed.measure": {
+		"message": "Измерить"
+	},
+	"app.speed.again": {
+		"message": "Измерить снова"
+	},
+	"app.speed.running": {
+		"message": "Измеряю…"
+	},
+	"app.speed.down": {
+		"message": "Мбит/с загрузка"
+	},
+	"app.speed.ping": {
+		"message": "мс пинг"
+	},
+	"app.speed.fail": {
+		"message": "Не получилось измерить"
 	}
 }

@@ -86,6 +86,7 @@ import PortalrinthBackdrop from '@/components/ui/PortalrinthBackdrop.vue'
 import PortalrinthCrashModal from '@/components/ui/PortalrinthCrashModal.vue'
 import PortalrinthSwipeNavigation from '@/components/ui/PortalrinthSwipeNavigation.vue'
 import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
+import AgentNavNotice from '@/components/ui/ai/AgentNavNotice.vue'
 import SharedInstanceInviteHandler from '@/components/ui/shared-instances/shared-instance-invite-handler/index.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
 import SurveyPopup from '@/components/ui/SurveyPopup.vue'
@@ -2733,6 +2734,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                 @go-to-instance="handleContentInstallModpackDuplicateGoToInstance"
         />
         <SharedInstanceInviteHandler ref="sharedInstanceInviteHandler" />
+        <AgentNavNotice />
         <InstallToPlayModal ref="installToPlayModal" :show-external-warnings="false" />
         <UpdateToPlayModal ref="updateToPlayModal" :show-external-warnings="false" />
 </template>

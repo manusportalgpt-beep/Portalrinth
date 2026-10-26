@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { ExternalIcon, EyeIcon, EyeOffIcon, KeyIcon } from '@modrinth/assets'
 import { Button, DropdownSelect, Input, useVIntl } from '@modrinth/ui'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import {
+	AI_IMAGE_PROVIDERS,
 	AI_PROVIDERS,
 	type AiProvider,
 	aiSettings,
+	bridgeInfo,
+	bridgeStatus,
+	bridgeToggling,
 	chosenModel,
+	imageProviderById,
 	saveAiSettings,
+	startBridge,
+	stopBridge,
 	testProvider,
 } from '@/helpers/ai-assistant'
 
@@ -18,6 +25,11 @@ defineProps<{
 
 const { formatMessage } = useVIntl()
 const messages = {
+	workGroup: { id: 'app.ai.settings.group.work', defaultMessage: 'Для работы' },
+	imageGroup: {
+		id: 'app.ai.settings.group.image',
+		defaultMessage: 'Для генерации изображений',
+	},
 	provider: { id: 'app.ai.settings.provider', defaultMessage: 'Провайдер' },
 	model: { id: 'app.ai.settings.model', defaultMessage: 'Модель' },
 	key: { id: 'app.ai.settings.key', defaultMessage: 'API-ключ' },
@@ -54,12 +66,29 @@ const messages = {
 		id: 'app.ai.settings.test.fail',
 		defaultMessage: 'Не отвечает',
 	},
+	bridge: { id: 'app.ai.bridge', defaultMessage: 'Мост' },
+	bridgeHint: {
+		id: 'app.ai.bridge.hint',
+		defaultMessage:
+			'Мост поднимает локальную страницу: открой адрес в браузере на этом же компьютере, введи ключ — и общайся с Порталусом со страницы. Всё работает через лаунчер, без облака и бесплатно.',
+	},
+	bridgeStart: { id: 'app.ai.bridge.start', defaultMessage: 'Запустить' },
+	bridgeStop: { id: 'app.ai.bridge.stop', defaultMessage: 'Остановить' },
+	bridgeCopy: { id: 'app.ai.bridge.copy', defaultMessage: 'Скопировать адрес и ключ' },
+	bridgeCopied: { id: 'app.ai.bridge.copied', defaultMessage: 'Скопировано!' },
+	bridgeRunning: { id: 'app.ai.bridge.running', defaultMessage: 'Работает' },
+	bridgeIdle: { id: 'app.ai.bridge.idle', defaultMessage: 'Выключен' },
 }
 
 const showKey = ref(false)
+const showImageKey = ref(false)
 
 const provider = computed<AiProvider>(
 	() => AI_PROVIDERS.find((p) => p.id === aiSettings.value.provider) ?? AI_PROVIDERS[0],
+)
+
+const imageProvider = computed(
+	() => imageProviderById(aiSettings.value.imageProvider) ?? AI_IMAGE_PROVIDERS[0],
 )
 
 const modelOptions = computed(() => {
@@ -94,6 +123,17 @@ const keyValue = computed({
 	},
 })
 
+const imageKeyValue = computed({
+	get: () => aiSettings.value.imageKeys[imageProvider.value.id] ?? '',
+	set: (value: string) => {
+		aiSettings.value.imageKeys = {
+			...aiSettings.value.imageKeys,
+			[imageProvider.value.id]: value,
+		}
+		saveAiSettings()
+	},
+})
+
 const customBase = computed({
 	get: () => aiSettings.value.customBaseUrl,
 	set: (value: string) => {
@@ -110,9 +150,9 @@ const customModelName = computed({
 	},
 })
 
-function openKeyPage() {
-	if (provider.value.keyUrl) {
-		window.open(provider.value.keyUrl, '_blank')
+function openKeyPage(url?: string) {
+	if (url) {
+		window.open(url, '_blank')
 	}
 }
 
@@ -131,12 +171,50 @@ async function runConnectionTest() {
 		testState.value = 'fail'
 	}
 }
+
+// ---- The bridge -----------------------------------------------------------
+
+const bridgeCopied = ref(false)
+
+async function toggleBridge() {
+	if (bridgeToggling.value) return
+	bridgeToggling.value = true
+	try {
+		if (bridgeInfo.value) {
+			await stopBridge()
+		} else {
+			await startBridge()
+		}
+	} catch {
+		/* the status dot simply stays off */
+	} finally {
+		bridgeToggling.value = false
+	}
+}
+
+async function copyBridgeDetails() {
+	const info = bridgeInfo.value
+	if (!info) return
+	try {
+		await navigator.clipboard.writeText(`${info.url} — ключ: ${info.key}`)
+		bridgeCopied.value = true
+		setTimeout(() => {
+			bridgeCopied.value = false
+		}, 1500)
+	} catch {
+		/* the clipboard may refuse - the fields are visible anyway */
+	}
+}
+
+onMounted(() => {
+	void bridgeStatus().catch(() => {})
+})
 </script>
 
 <template>
 	<div class="flex flex-col" :class="compact ? 'gap-3' : 'gap-4'">
 		<div class="flex flex-col gap-1.5">
-			<span class="text-sm font-semibold text-primary">{{ formatMessage(messages.provider) }}</span>
+			<span class="text-sm font-semibold text-primary">{{ formatMessage(messages.workGroup) }}</span>
 			<div class="flex flex-wrap gap-2">
 				<button
 					v-for="p in AI_PROVIDERS"
@@ -190,7 +268,7 @@ async function runConnectionTest() {
 						v-if="provider.keyUrl"
 						v-tooltip="formatMessage(messages.getKey)"
 						icon-only
-						@click="openKeyPage"
+						@click="() => openKeyPage(provider.keyUrl)"
 					>
 						<ExternalIcon />
 					</Button>
@@ -223,6 +301,61 @@ async function runConnectionTest() {
 			{{ formatMessage(messages.noteFree) }}
 		</p>
 		<p v-else-if="provider.note" class="m-0 text-sm text-secondary">{{ provider.note }}</p>
+		<p class="m-0 flex items-center gap-1.5 text-sm text-secondary">
+			<KeyIcon class="size-4 shrink-0" />
+			{{ formatMessage(messages.fallback) }}
+		</p>
+
+		<div class="flex flex-col gap-1.5">
+			<span class="text-sm font-semibold text-primary">
+				{{ formatMessage(messages.imageGroup) }}
+			</span>
+			<div class="flex flex-wrap gap-2">
+				<button
+					v-for="p in AI_IMAGE_PROVIDERS"
+					:key="p.id"
+					type="button"
+					class="ai-provider-card"
+					:class="{ 'ai-provider-card-active': p.id === aiSettings.imageProvider }"
+					@click="
+						() => {
+							aiSettings.imageProvider = p.id
+							saveAiSettings()
+						}
+					"
+				>
+					<span class="flex items-center gap-1.5">
+						{{ p.label }}
+						<span v-if="p.fromRussia" class="ai-badge ai-badge-rf">РФ</span>
+						<span v-if="!p.needsKey" class="ai-badge ai-badge-free">free</span>
+					</span>
+				</button>
+			</div>
+			<div v-if="imageProvider.needsKey" class="flex gap-2">
+				<Input
+					v-model="imageKeyValue"
+					:type="showImageKey ? 'text' : 'password'"
+					autocomplete="off"
+					:placeholder="formatMessage(messages.keyPlaceholder)"
+				/>
+				<Button icon-only @click="() => (showImageKey = !showImageKey)">
+					<EyeIcon v-if="showImageKey" />
+					<EyeOffIcon v-else />
+				</Button>
+				<Button
+					v-if="imageProvider.keyUrl"
+					v-tooltip="formatMessage(messages.getKey)"
+					icon-only
+					@click="() => openKeyPage(imageProvider.keyUrl)"
+				>
+					<ExternalIcon />
+				</Button>
+			</div>
+			<p v-if="imageProvider.note" class="m-0 text-xs text-secondary">
+				{{ imageProvider.note }}
+			</p>
+		</div>
+
 		<div class="flex flex-col gap-1.5">
 			<div class="flex items-center gap-2">
 				<button
@@ -232,25 +365,54 @@ async function runConnectionTest() {
 					@click="runConnectionTest"
 				>
 					{{
-						testState === 'running'
-							? formatMessage(messages.testRunning)
-							: formatMessage(messages.test)
+						testState === 'running' ? formatMessage(messages.testRunning) : formatMessage(messages.test)
 					}}
 				</button>
-				<span
-					v-if="testState === 'ok'"
-					class="ai-test-dot ai-test-ok"
-				>{{ testResult }} — {{ formatMessage(messages.testOk) }}</span>
-				<span
-					v-else-if="testState === 'fail'"
-					class="ai-test-dot ai-test-fail"
-				>{{ formatMessage(messages.testFail) }}: {{ testResult }}</span>
+				<span v-if="testState === 'ok'" class="ai-test-dot ai-test-ok">
+					{{ testResult }} — {{ formatMessage(messages.testOk) }}
+				</span>
+				<span v-else-if="testState === 'fail'" class="ai-test-dot ai-test-fail">
+					{{ formatMessage(messages.testFail) }}: {{ testResult }}
+				</span>
 			</div>
 		</div>
-		<p class="m-0 flex items-center gap-1.5 text-sm text-secondary">
-			<KeyIcon class="size-4 shrink-0" />
-			{{ formatMessage(messages.fallback) }}
-		</p>
+
+		<div class="ai-bridge-section flex flex-col gap-1.5">
+			<div class="flex items-center justify-between gap-2">
+				<span class="flex items-center gap-1.5 text-sm font-semibold text-primary">
+					<span
+						class="size-2 rounded-full"
+						:style="{
+							background: bridgeInfo ? 'var(--color-green)' : 'var(--color-surface-5)',
+						}"
+					/>
+					{{ formatMessage(messages.bridge) }}
+					<span class="text-xs font-normal text-secondary">
+						{{ bridgeInfo ? formatMessage(messages.bridgeRunning) : formatMessage(messages.bridgeIdle) }}
+					</span>
+				</span>
+				<div class="flex gap-2">
+					<Button v-if="bridgeInfo" size="sm" @click="copyBridgeDetails">
+						{{ bridgeCopied ? formatMessage(messages.bridgeCopied) : formatMessage(messages.bridgeCopy) }}
+					</Button>
+					<Button
+						size="sm"
+						:color="bridgeInfo ? undefined : 'brand'"
+						:disabled="bridgeToggling"
+						@click="toggleBridge"
+					>
+						{{ bridgeInfo ? formatMessage(messages.bridgeStop) : formatMessage(messages.bridgeStart) }}
+					</Button>
+				</div>
+			</div>
+			<template v-if="bridgeInfo">
+				<Input :model-value="bridgeInfo.url" readonly class="mb-1" />
+				<Input :model-value="bridgeInfo.key" readonly />
+			</template>
+			<p class="m-0 text-xs leading-relaxed text-secondary">
+				{{ formatMessage(messages.bridgeHint) }}
+			</p>
+		</div>
 	</div>
 </template>
 
@@ -314,5 +476,10 @@ async function runConnectionTest() {
 
 .ai-test-fail {
 	color: var(--color-red);
+}
+
+.ai-bridge-section {
+	border-top: 1px solid var(--surface-5);
+	padding-top: 0.75rem;
 }
 </style>

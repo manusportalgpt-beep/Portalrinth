@@ -669,6 +669,61 @@ export function forgetSessions(): void {
 	startNewSession()
 }
 
+/** One row of the chat-history picker: newest first. */
+export interface SessionMeta {
+	id: string
+	updated: number
+	count: number
+	preview: string
+}
+
+/** Lists saved conversations for the history panel, newest first. */
+export async function listSessions(limit = 30): Promise<SessionMeta[]> {
+	try {
+		const dir = await sessionsRoot()
+		const entries = (await fs.readDir(dir))
+			.filter((entry) => entry.name?.endsWith('.json'))
+			.sort((a, b) => (b.name ?? '').localeCompare(a.name ?? ''))
+			.slice(0, limit)
+		const found: SessionMeta[] = []
+		for (const entry of entries) {
+			try {
+				const session = JSON.parse(
+					await fs.readTextFile(joinPath(dir, entry.name ?? '')),
+				) as StoredSession
+				const firstUser = session.messages?.find(
+					(message) =>
+						typeof message === 'object' &&
+						message !== null &&
+						(message as { role?: string }).role === 'user',
+				) as { content?: string } | undefined
+				found.push({
+					id: session.id,
+					updated: session.updated ?? session.started ?? 0,
+					count: session.messages?.length ?? 0,
+					preview: (firstUser?.content ?? '').replace(/\s+/g, ' ').slice(0, 90),
+				})
+			} catch {
+				/* a broken file simply does not get listed */
+			}
+		}
+		return found
+	} catch {
+		return []
+	}
+}
+
+/** Reads one saved conversation back by id. */
+export async function readSession(id: string): Promise<StoredSession | null> {
+	try {
+		const dir = await sessionsRoot()
+		const text = await fs.readTextFile(joinPath(dir, `${id}.json`))
+		return JSON.parse(text) as StoredSession
+	} catch {
+		return null
+	}
+}
+
 // ---- Attached files --------------------------------------------------------
 
 export interface AttachedFile {

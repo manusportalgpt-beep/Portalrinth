@@ -5,6 +5,7 @@ import {
 	ChevronDownIcon,
 	FileIcon,
 	FolderOpenIcon,
+	HistoryIcon,
 	PlusIcon,
 	SparklesIcon,
 	XIcon,
@@ -19,27 +20,28 @@ import {
 	type AiJarCard,
 	type AiMessage,
 	type AiModCard,
-	type BridgeInfo,
 	aiComplete,
 	aiHistory,
 	aiSettings,
-	bridgeStatus,
 	clearAiHistory,
 	extractCards,
 	providerById,
 	noteAgentNavigation,
 	pushAiMessage,
-	startBridge,
-	stopBridge,
+	queuedUserMessage,
+	showAgentNavNotice,
 } from '@/helpers/ai-assistant'
-import { sandboxAbsolutePath } from '@/helpers/ai-sandbox'
-import { add_project_from_path, list as listInstances } from '@/helpers/instance'
 import {
 	attachFromPaths,
 	type AttachedFile,
+	currentSessionId,
 	formatSize,
 	inboxSave,
+	listSessions,
+	type SessionMeta,
 	readLatestSession,
+	readSession,
+	sandboxAbsolutePath,
 	sandboxReadDataUrl,
 	sandboxReveal,
 } from '@/helpers/ai-sandbox'
@@ -123,18 +125,13 @@ const messages = {
 		id: 'app.ai.cards.no-instances',
 		defaultMessage: 'Сначала создай сборку — куда ставить .jar?',
 	},
-	bridge: { id: 'app.ai.bridge', defaultMessage: 'Мост' },
-	bridgeHint: {
-		id: 'app.ai.bridge.hint',
-		defaultMessage:
-			'Мост поднимает локальную страницу: открой адрес в браузере на этом же компьютере, введи ключ — и общайся с Порталусом со страницы. Всё работает через лаунчер, без облака и бесплатно.',
+	historyTitle: { id: 'app.ai.history', defaultMessage: 'История чатов' },
+	historyEmpty: {
+		id: 'app.ai.history.empty',
+		defaultMessage: 'Пока пусто — начните первый разговор',
 	},
-	bridgeStart: { id: 'app.ai.bridge.start', defaultMessage: 'Запустить' },
-	bridgeStop: { id: 'app.ai.bridge.stop', defaultMessage: 'Остановить' },
-	bridgeCopy: { id: 'app.ai.bridge.copy', defaultMessage: 'Скопировать адрес и ключ' },
-	bridgeCopied: { id: 'app.ai.bridge.copied', defaultMessage: 'Скопировано!' },
-	bridgeRunning: { id: 'app.ai.bridge.running', defaultMessage: 'Работает' },
-	bridgeIdle: { id: 'app.ai.bridge.idle', defaultMessage: 'Выключен' },
+	historyNewChat: { id: 'app.ai.history.new-chat', defaultMessage: 'Новый чат' },
+	historyMessages: { id: 'app.ai.history.messages', defaultMessage: 'сообщ.' },
 }
 
 const suggestions = computed(() => [
@@ -163,18 +160,13 @@ const collapsedCards = ref<Record<string, boolean>>({})
 const jarInstalled = ref<Record<string, boolean>>({})
 const instances = ref<Awaited<ReturnType<typeof listInstances>>>([])
 const chosenInstance = ref('')
-const bridgePanelOpen = ref(false)
-const bridgeInfoState = ref<BridgeInfo | null>(null)
-const bridgeWorking = ref(false)
-const bridgeCopied = ref(false)
+const historyOpen = ref(false)
+const sessionsList = ref<SessionMeta[]>([])
+const historyLoading = ref(false)
 let typeTimer: ReturnType<typeof setInterval> | undefined
 const router = useRouter()
 
 const visibleHistory = computed(() => aiHistory.value.filter((m) => m.role !== 'note'))
-
-const providerLabel = computed(
-	() => providerById(aiSettings.value.provider)?.label ?? aiSettings.value.provider,
-)
 
 const modelChipLabel = computed(() => {
 	const provider = providerById(aiSettings.value.provider)
@@ -182,9 +174,7 @@ const modelChipLabel = computed(() => {
 		return aiSettings.value.customModel || 'Своя модель'
 	}
 	const stored = aiSettings.value.models[provider?.id ?? ''] ?? provider?.models[0]?.id ?? ''
-	const label = provider?.models.find((m) => m.id === stored)?.label ?? stored
-	const hasKey = !provider?.needsKey || Boolean(aiSettings.value.keys[provider.id])
-	return `${providerLabel.value} · ${label}${hasKey ? '' : ' · без ключа'}`
+	return provider?.models.find((m) => m.id === stored)?.label ?? stored
 })
 
 const lastQuestion = computed(() => {
@@ -350,40 +340,45 @@ async function installJar(jar: AiJarCard) {
 	}
 }
 
-// ---- The bridge ------------------------------------------------------------
+// ---- Chat history (saved sessions) -----------------------------------------
 
-function toggleBridgePanel() {
-	bridgePanelOpen.value = !bridgePanelOpen.value
-}
-
-async function toggleBridge() {
-	bridgeWorking.value = true
-	try {
-		if (bridgeInfoState.value) {
-			await stopBridge()
-			bridgeInfoState.value = null
-		} else {
-			bridgeInfoState.value = await startBridge()
+async function toggleHistory() {
+	historyOpen.value = !historyOpen.value
+	if (historyOpen.value) {
+		historyLoading.value = true
+		try {
+			sessionsList.value = await listSessions(30)
+		} catch {
+			sessionsList.value = []
+		} finally {
+			historyLoading.value = false
 		}
-	} catch (error) {
-		errorText.value = String((error as Error)?.message ?? error)
-	} finally {
-		bridgeWorking.value = false
 	}
 }
 
-async function copyBridgeDetails() {
-	const info = bridgeInfoState.value
-	if (!info) return
-	try {
-		await navigator.clipboard.writeText(`${info.url} — ключ: ${info.key}`)
-		bridgeCopied.value = true
-		setTimeout(() => {
-			bridgeCopied.value = false
-		}, 1500)
-	} catch {
-		/* the clipboard may refuse - the fields are visible anyway */
+function sessionLabel(meta: SessionMeta): string {
+	const date = new Date(meta.updated || Date.now())
+	const stamp = Number.isNaN(date.getTime())
+		? ''
+		: date.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+	return `${stamp} · ${meta.count} ${formatMessage(messages.historyMessages)}`
+}
+
+async function openSession(meta: SessionMeta) {
+	if (sending.value) return
+	historyOpen.value = false
+	const session = await readSession(meta.id)
+	if (session?.messages?.length) {
+		stopTyping()
+		errorText.value = ''
+		currentSessionId.value = session.id
+		aiHistory.value = session.messages as AiMessage[]
 	}
+}
+
+function startFreshChat() {
+	historyOpen.value = false
+	plusNewChat()
 }
 
 async function send(text?: string) {
@@ -471,6 +466,14 @@ async function send(text?: string) {
 			}, 16)
 		} else {
 			pushAiMessage(done)
+		}
+		// Portalus moved the player somewhere: leave a small top-center
+		// notch with his words, so the answer is never lost off-screen.
+		if (
+			result.actions.some((action) => action === 'navigate' || action === 'open_instance') &&
+			router.currentRoute.value.path !== '/ai'
+		) {
+			showAgentNavNotice(result.content)
 		}
 	} catch (error) {
 		stopTyping()
@@ -564,11 +567,16 @@ onMounted(async () => {
 			chosenInstance.value = all[0]?.id ?? ''
 		})
 		.catch(() => {})
-	bridgeStatus()
-		.then((info) => {
-			bridgeInfoState.value = info
-		})
-		.catch(() => {})
+	watch(
+		queuedUserMessage,
+		(message) => {
+			if (message) {
+				queuedUserMessage.value = ''
+				void send(message)
+			}
+		},
+		{ immediate: true },
+	)
 })
 
 onBeforeUnmount(stopTyping)
@@ -589,42 +597,47 @@ defineExpose({ send })
 				</p>
 			</div>
 			<div class="relative shrink-0">
-				<button class="ai-model-chip" :disabled="bridgeWorking" @click="toggleBridgePanel">
-					<span
-						class="size-2 rounded-full"
-						:style="{ background: bridgeInfoState ? 'var(--color-green)' : 'var(--color-surface-5)' }"
-					/>
-					{{ formatMessage(messages.bridge) }}
-				</button>
-				<div v-if="bridgePanelOpen" class="fixed inset-0 z-10 cursor-default" @click="bridgePanelOpen = false" />
+				<IconButton
+					v-tooltip="formatMessage(messages.historyTitle)"
+					:label="formatMessage(messages.historyTitle)"
+					@click="toggleHistory"
+				>
+					<HistoryIcon />
+				</IconButton>
+				<div v-if="historyOpen" class="fixed inset-0 z-10 cursor-default" @click="historyOpen = false" />
 				<div
-					v-if="bridgePanelOpen"
-					class="ai-menu absolute right-0 top-full z-20 mt-2 w-[26rem] rounded-2xl border border-solid border-surface-5 bg-surface-2 p-4"
-					>
-						<div class="mb-2 flex items-center justify-between gap-2">
-							<p class="m-0 text-sm font-semibold text-primary">{{ formatMessage(messages.bridge) }}</p>
-							<span class="ai-bridge-status" :class="{ 'ai-bridge-on': bridgeInfoState }">
-								{{ bridgeInfoState ? formatMessage(messages.bridgeRunning) : formatMessage(messages.bridgeIdle) }}
-							</span>
-						</div>
-						<p class="m-0 mb-3 text-xs leading-relaxed text-secondary">
-							{{ formatMessage(messages.bridgeHint) }}
+					v-if="historyOpen"
+					class="ai-menu absolute right-0 top-full z-20 mt-2 flex max-h-[30rem] w-[24rem] flex-col rounded-2xl border border-solid border-surface-5 bg-surface-2 p-2"
+				>
+					<div class="mb-1 flex items-center justify-between gap-2 px-2">
+						<p class="m-0 text-sm font-semibold text-primary">
+							{{ formatMessage(messages.historyTitle) }}
 						</p>
-						<template v-if="bridgeInfoState">
-							<Input :model-value="bridgeInfoState.url" readonly class="mb-2" />
-							<Input :model-value="bridgeInfoState.key" readonly class="mb-2" />
-							<div class="flex gap-2">
-								<Button size="sm" @click="copyBridgeDetails">
-									{{ bridgeCopied ? formatMessage(messages.bridgeCopied) : formatMessage(messages.bridgeCopy) }}
-								</Button>
-								<Button size="sm" :disabled="bridgeWorking" @click="toggleBridge">
-									{{ formatMessage(messages.bridgeStop) }}
-								</Button>
-							</div>
-						</template>
-						<Button v-else color="brand" size="sm" :disabled="bridgeWorking" @click="toggleBridge">
-							{{ formatMessage(messages.bridgeStart) }}
+						<Button size="sm" @click="startFreshChat">
+							{{ formatMessage(messages.historyNewChat) }}
 						</Button>
+					</div>
+					<div class="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
+						<p
+							v-if="historyLoading"
+							class="m-0 px-2 py-3 text-sm text-secondary"
+						>…</p>
+						<p
+							v-else-if="sessionsList.length === 0"
+							class="m-0 px-2 py-3 text-sm text-secondary"
+						>
+							{{ formatMessage(messages.historyEmpty) }}
+						</p>
+						<button
+							v-for="meta in sessionsList"
+							:key="meta.id"
+							class="ai-history-item"
+							@click="() => openSession(meta)"
+						>
+							<span class="ai-history-meta">{{ sessionLabel(meta) }}</span>
+							<span class="ai-history-preview">{{ meta.preview || meta.id }}</span>
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -1315,18 +1328,33 @@ defineExpose({ send })
 	padding: 0.25rem 0.4rem;
 }
 
-.ai-bridge-status {
-	display: inline-flex;
-	align-items: center;
-	border-radius: 999px;
-	padding: 0.1rem 0.55rem;
+.ai-history-item {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+	border: none;
+	border-radius: 0.6rem;
+	background: transparent;
+	padding: 0.45rem 0.6rem;
+	text-align: left;
+	cursor: pointer;
+	font: inherit;
+}
+
+.ai-history-item:hover {
+	background: var(--color-button-bg);
+}
+
+.ai-history-meta {
 	font-size: 0.6875rem;
-	background: color-mix(in srgb, var(--color-secondary) 14%, transparent);
 	color: var(--color-secondary);
 }
 
-.ai-bridge-on {
-	background: color-mix(in srgb, var(--color-green) 16%, transparent);
-	color: var(--color-green);
+.ai-history-preview {
+	font-size: 0.8125rem;
+	color: var(--color-primary);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 </style>
