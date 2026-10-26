@@ -735,6 +735,69 @@ async function callProvider(
 	return content
 }
 
+/** A signal-aware sleep, used to pace requests so free tiers stay happy. */
+async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => {
+			signal?.removeEventListener('abort', onAbort)
+			resolve()
+		}, ms)
+		function onAbort() {
+			clearTimeout(timer)
+			reject(new DOMException('Aborted', 'AbortError'))
+		}
+		if (signal) {
+			if (signal.aborted) return onAbort()
+			signal.addEventListener('abort', onAbort, { once: true })
+		}
+	})
+}
+
+/**
+ * One provider call with patience: free anonymous tiers answer HTTP 429 when
+ * asked too often, and that clears in seconds - so retryable failures get up
+ * to two more tries with a growing pause, instead of killing the whole turn.
+ */
+async function callProviderWithRetry(
+	providerId: string,
+	payload: ChatMessagePayload[],
+	signal?: AbortSignal,
+): Promise<string> {
+	const pauses = [2500, 6000]
+	let lastError: unknown
+	for (let attempt = 0; attempt <= pauses.length; attempt++) {
+		if (attempt > 0) {
+			try {
+				await sleep(pauses[attempt - 1], signal)
+			} catch {
+				throw lastError
+			}
+		}
+		try {
+			return await callProvider(providerId, payload, signal)
+		} catch (error) {
+			lastError = error
+			if (signal?.aborted) throw error
+			if (!isRetryable(error) || attempt === pauses.length) throw error
+		}
+	}
+	throw lastError
+}
+
+/**
+ * A one-message ping the settings window uses: tells the player right away
+ * whether the assistant can reach its provider from this machine.
+ */
+export async function testProvider(): Promise<string> {
+	const started = Date.now()
+	await callProviderWithRetry(
+		aiSettings.value.provider,
+		[{ role: 'user', content: 'Ответь ровно одним словом: ОК' }],
+		AbortSignal.timeout(45000),
+	)
+	return `${providerById(aiSettings.value.provider)?.label ?? aiSettings.value.provider} · ${Date.now() - started} мс`
+}
+
 /** Providers the launcher can fall back to when the chosen one is out of
  * free minutes: first the keyless one, then any free-tier provider that has
  * a key saved. */
@@ -860,7 +923,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 					}
 					let raw: string
 					try {
-						raw = await callProvider(providerId, payload, request.signal)
+						raw = await callProviderWithRetry(providerId, payload, request.signal)
 					} catch (error) {
 						// A model without vision answers 400 to image parts: drop them
 						// once and answer from the text alone.
@@ -868,7 +931,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						if (hasImages && status === 400 && payload === rounds) {
 							rounds = withoutImages(base)
 							payload = rounds
-							raw = await callProvider(providerId, payload, request.signal)
+							raw = await callProviderWithRetry(providerId, payload, request.signal)
 						} else {
 							throw error
 						}
@@ -937,6 +1000,9 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						{ role: 'assistant', content: raw },
 						noteMessage,
 					]
+					// A breath between tool rounds keeps anonymous free tiers
+					// from answering 429 in the middle of a task.
+					await sleep(800, request.signal)
 				}
 			} catch (error) {
 				lastError = error
@@ -947,7 +1013,10 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	} finally {
 		endAgentRun()
 	}
-	throw lastError ?? new Error('Ни один провайдер не ответил')
+	const detail = lastError ? String((lastError as Error)?.message ?? lastError) : ''
+	throw new Error(
+		`${detail || 'Ни один провайдер не ответил'}. Порталус не дозвонился до ИИ: подожди минуту и напиши ещё раз, а надёжный вариант — бесплатный ключ OpenRouter или Z.AI в настройках провайдера.`,
+	)
 }
 
 // ---- Tool implementations ------------------------------------------------

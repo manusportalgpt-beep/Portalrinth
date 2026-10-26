@@ -9,6 +9,7 @@ import {
 	aiSettings,
 	chosenModel,
 	saveAiSettings,
+	testProvider,
 } from '@/helpers/ai-assistant'
 
 defineProps<{
@@ -39,6 +40,19 @@ const messages = {
 		id: 'app.ai.settings.fallback',
 		defaultMessage:
 			'Если у основного кончатся лимиты, ответ придёт от запасного провайдера без ключа.',
+	},
+	test: { id: 'app.ai.settings.test', defaultMessage: 'Проверить связь' },
+	testRunning: {
+		id: 'app.ai.settings.test.running',
+		defaultMessage: 'Проверяю связь…',
+	},
+	testOk: {
+		id: 'app.ai.settings.test.ok',
+		defaultMessage: 'Связь есть — ИИ отвечает',
+	},
+	testFail: {
+		id: 'app.ai.settings.test.fail',
+		defaultMessage: 'Не отвечает',
 	},
 }
 
@@ -99,6 +113,22 @@ const customModelName = computed({
 function openKeyPage() {
 	if (provider.value.keyUrl) {
 		window.open(provider.value.keyUrl, '_blank')
+	}
+}
+
+const testState = ref<'idle' | 'running' | 'ok' | 'fail'>('idle')
+const testResult = ref('')
+
+async function runConnectionTest() {
+	if (testState.value === 'running') return
+	testState.value = 'running'
+	testResult.value = ''
+	try {
+		testResult.value = await testProvider()
+		testState.value = 'ok'
+	} catch (error) {
+		testResult.value = String((error as Error)?.message ?? error).slice(0, 240)
+		testState.value = 'fail'
 	}
 }
 </script>
@@ -193,6 +223,30 @@ function openKeyPage() {
 			{{ formatMessage(messages.noteFree) }}
 		</p>
 		<p v-else-if="provider.note" class="m-0 text-sm text-secondary">{{ provider.note }}</p>
+		<div class="flex flex-col gap-1.5">
+			<div class="flex items-center gap-2">
+				<button
+					type="button"
+					class="ai-provider-card ai-test-button"
+					:disabled="testState === 'running'"
+					@click="runConnectionTest"
+				>
+					{{
+						testState === 'running'
+							? formatMessage(messages.testRunning)
+							: formatMessage(messages.test)
+					}}
+				</button>
+				<span
+					v-if="testState === 'ok'"
+					class="ai-test-dot ai-test-ok"
+				>{{ testResult }} — {{ formatMessage(messages.testOk) }}</span>
+				<span
+					v-else-if="testState === 'fail'"
+					class="ai-test-dot ai-test-fail"
+				>{{ formatMessage(messages.testFail) }}: {{ testResult }}</span>
+			</div>
+		</div>
 		<p class="m-0 flex items-center gap-1.5 text-sm text-secondary">
 			<KeyIcon class="size-4 shrink-0" />
 			{{ formatMessage(messages.fallback) }}
@@ -241,5 +295,24 @@ function openKeyPage() {
 .ai-badge-free {
 	background: color-mix(in srgb, var(--color-green) 22%, transparent);
 	color: var(--color-green);
+}
+
+.ai-test-button:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.ai-test-dot {
+	font-size: 0.75rem;
+	line-height: 1.35;
+	overflow-wrap: anywhere;
+}
+
+.ai-test-ok {
+	color: var(--color-green);
+}
+
+.ai-test-fail {
+	color: var(--color-red);
 }
 </style>
