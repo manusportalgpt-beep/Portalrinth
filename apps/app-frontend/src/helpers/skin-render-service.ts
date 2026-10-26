@@ -9,16 +9,17 @@
  */
 import { ref } from 'vue'
 
-import { labySkinRenderUrl } from './laby-skins'
+import { labySkinRenderUrl, minotarBodyUrl } from './laby-skins'
 
-export type SkinRenderService = 'laby' | 'crafty' | 'mcskin'
+export type SkinRenderService = 'laby' | 'crafty' | 'mcskin' | 'minotar'
 
 const STORAGE_KEY = 'portalrinth-skin-render-service'
 
 function storedService(): SkinRenderService {
 	try {
 		const value = localStorage.getItem(STORAGE_KEY)
-		if (value === 'laby' || value === 'crafty' || value === 'mcskin') return value
+		if (value === 'laby' || value === 'crafty' || value === 'mcskin' || value === 'minotar')
+			return value
 	} catch {
 		// Nowhere to read the choice from - the default stands.
 	}
@@ -57,5 +58,7 @@ export function skinRenderUrl(hash: string, width = 270, height = 514): string |
 			return `https://render.crafty.gg/3d/full/${hash}?width=${width}&height=${height}`
 		case 'mcskin':
 			return null
+		case 'minotar':
+			return minotarBodyUrl(hash, height)
 	}
 }

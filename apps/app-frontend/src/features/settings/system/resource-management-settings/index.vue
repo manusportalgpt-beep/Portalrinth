@@ -95,6 +95,11 @@ const messages = defineMessages({
 		defaultMessage:
 			'Renders players by name or UUID and has no render for a bare texture hash, so previews are drawn by the launcher itself.',
 	},
+	skinServicesMinotar: {
+		id: 'app.settings.resource-management.skin-services.minotar',
+		defaultMessage:
+			'Draws a flat full-body picture straight from the texture hash on its own host - a fallback that keeps working when laby.net is throttled.',
+	},
 })
 
 const skinService = useSkinRenderService()
@@ -103,6 +108,7 @@ const skinServiceOptions = [
 	{ id: 'laby', name: 'Laby.net', description: messages.skinServicesLaby },
 	{ id: 'crafty', name: 'Crafty.gg', description: messages.skinServicesCrafty },
 	{ id: 'mcskin', name: 'mcskin.me', description: messages.skinServicesMcskin },
+	{ id: 'minotar', name: 'Minotar', description: messages.skinServicesMinotar },
 ]
 
 watch(

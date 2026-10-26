@@ -67,7 +67,6 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useRouteLoading } from '@/app/runtime/use-route-loading'
 import AppSidebar from '@/app/shell/sidebar/index.vue'
 import AppTitleBar from '@/app/shell/title-bar/index.vue'
-import PortalrinthMascot from '@/components/ui/ai/PortalrinthMascot.vue'
 import CurseforgePendingFilesModal from '@/components/ui/curseforge/CurseforgePendingFilesModal.vue'
 import ErrorModal from '@/components/ui/ErrorModal.vue'
 import HostingUpdateRequired from '@/components/ui/HostingUpdateRequired.vue'
@@ -2593,7 +2592,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	>
 		<div class="app-viewport flex-grow router-view">
 			<SurveyPopup />
-			<PortalrinthMascot />
 			<div
 				class="loading-indicator-container h-8 fixed z-50 pointer-events-none"
 				:style="{

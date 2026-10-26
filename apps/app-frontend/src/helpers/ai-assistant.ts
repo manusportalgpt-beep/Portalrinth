@@ -15,6 +15,23 @@ import { ref } from 'vue'
 import { list } from './instance'
 import { proxiedFetch } from './proxy-fetch'
 
+import {
+	type AttachedFile,
+	sandboxDelete,
+	sandboxList,
+	sandboxRead,
+	sandboxStatsSnapshot,
+	sandboxWrite,
+	sandboxWriteBinary,
+	saveSession,
+	readSessionsOverview,
+	startNewSession,
+	resetSandboxStats,
+} from './ai-sandbox'
+import { addCustomAccentColor, setCustomAccentColor } from '../composables/use-accent'
+import { setBackgroundFromPath } from './portalrinth-background'
+import { searchCurseforge } from './curseforge-api'
+
 export interface AiModelOption {
 	id: string
 	label: string
@@ -243,6 +260,26 @@ export function chosenModel(settings: AiSettings, providerId: string): string {
 
 // ---- Conversation --------------------------------------------------------
 
+export interface AiFileChange {
+	path: string
+	added: number
+	removed: number
+}
+
+export interface AiActivity {
+	/** How many tool commands ran during this reply. */
+	commands: number
+	/** Files the sandbox created in this reply. */
+	filesCreated: string[]
+	/** Files it edited, with the line diff that made the change. */
+	filesChanged: AiFileChange[]
+}
+
+export interface AiQuestion {
+	text: string
+	options: string[]
+}
+
 export interface AiMessage {
 	role: 'user' | 'assistant' | 'note'
 	content: string
@@ -252,6 +289,12 @@ export interface AiMessage {
 	provider?: string
 	/** Names of the launcher actions the reply carried out. */
 	actions?: string[]
+	/** What the sandbox did while composing this reply. */
+	activity?: AiActivity
+	/** Files the user attached to this message. */
+	attachments?: AttachedFile[]
+	/** A question the assistant wants answered before it goes on. */
+	question?: AiQuestion
 }
 
 const HISTORY_KEY = 'portalrinth-ai-history'
@@ -281,11 +324,13 @@ export function pushAiMessage(message: AiMessage) {
 	} catch {
 		/* a full quota should never take the chat down with it */
 	}
+	saveSession(aiHistory.value)
 }
 
 export function clearAiHistory() {
 	aiHistory.value = []
 	localStorage.removeItem(HISTORY_KEY)
+	startNewSession()
 }
 
 // ---- Launcher actions ----------------------------------------------------
@@ -348,17 +393,28 @@ export const AI_NAVIGATION_HINT = [
 ].join('\n')
 
 export const AI_TOOLS_HINT = [
-	'Ты можешь выполнять действия в лаунчере, добавляя в ответ команды вида <<инструмент|аргумент>> (аргумент одной строкой, без кавычек).',
-	'Инструменты:',
-	'- <<navigate|путь>> — открыть экран, например <<navigate|/browse/mod?q=jei>>',
+	'Ты можешь выполнять действия, добавляя в ответ команды вида <<инструмент|аргумент>> (аргумент одной строкой, без кавычек). Пользователь видит каждую выполненную команду.',
+	'Экраны лаунчера:',
+	'- <<navigate|путь>> — открыть экран, например <<navigate|/browse/mod?q=jei>>; если спрашивают «покажи/расскажи, как это», открой нужный экран и коротко объясни',
 	'- <<open_creation_modal|>> — открыть окно создания сборки (можно с подсказкой: <<open_creation_modal|сборка на 1.21.1 с JEI>>)',
 	'- <<open_instance|id>> — открыть сборку по id',
 	'- <<list_instances|>> — получить список сборок игрока',
 	'- <<get_page|>> — узнать, какой экран сейчас открыт',
+	'- <<launcher_search_mods|запрос>> — найти мод/сборку сразу в Modrinth и CurseForge, вернёт топ результатов',
+	'- <<launcher_set_accent|цвет>> — сменить цвет акцента лаунчера, цвет в hex (например <<launcher_set_accent|#22c55e>>)',
+	'- <<launcher_set_background|url>> — поставить фон окна лаунчера по прямой ссылке на картинку',
 	'- <<web_fetch|url>> — скачать страницу (вернёт очищенный текст)',
 	'- <<web_search|запрос>> — поиск в интернете',
-	'- <<celebrate|>> — радостно отплясать',
-	'Команды выполняются, только если они правда нужны пользователю; удалять или менять что-либо без явного согласия запрещено.',
+	'Песочница — твоя личная папка на диске (пути относительные, выходить за неё нельзя):',
+	'- <<sandbox_list|путь>> — список файлов (пусто — корень песочницы)',
+	'- <<sandbox_read|файл>> — прочитать текстовый файл',
+	'- <<sandbox_write|файл::текст>> — создать или изменить файл (многострочный текст разрешён); «.exe» и другие исполняемые файлы создать нельзя',
+	'- <<sandbox_delete|путь>> — удалить файл или папку (только с явного согласия)',
+	'Память — твои прошлые разговоры лежат в папке сессий:',
+	'- <<session_list|>> — обзор прошлых сессий',
+	'- <<session_read|номер>> — перечитать сессию по номеру из обзора (1 — последняя)',
+	'Если для продолжения тебе не хватает решения пользователя, задай вопрос: <<ask_user|Вопрос?::вариант 1;;вариант 2>> — у пользователя появятся кнопки и поле для своего ответа.',
+	'Правила: команды выполняются, только если они правда нужны; удалять или менять что-либо без явного согласия запрещено; отвечай коротко — 1-4 предложения, если не просят подробно.',
 ].join('\n')
 
 // ---- Personality ---------------------------------------------------------
@@ -384,6 +440,7 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 		'У тебя есть своё мнение: если пользователь просит вредного или сомнительного, ты вежливо споришь и предлагаешь лучше.',
 		'Отвечай на языке пользователя. Без воды: коротко, по делу, шагами где уместно.',
 		'Ты помогаешь со сборками, модами, скинами, настройкой, ошибками запуска и всем, что есть в лаунчере.',
+		'У тебя есть своя песочница (папка на диске) и папка сессий: там лежат твои прошлые разговоры — перечитывай их, чтобы не забывать. Если пользователь скинул файл, ты можешь работать с его содержимым.',
 		AI_NAVIGATION_HINT,
 		AI_TOOLS_HINT,
 	]
@@ -402,7 +459,7 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 
 interface ChatMessagePayload {
 	role: 'system' | 'user' | 'assistant'
-	content: string
+	content: string | unknown[]
 }
 
 async function callProvider(
@@ -426,6 +483,7 @@ async function callProvider(
 		model: chosenModel(settings, providerId),
 		messages: payload,
 		temperature: 0.6,
+		max_tokens: 2048,
 	}
 	if (providerId === 'openrouter') {
 		headers['X-Title'] = 'Portalrinth Launcher'
@@ -443,7 +501,11 @@ async function callProvider(
 		} catch {
 			/* the body may already be gone */
 		}
-		throw new Error(`${provider.label}: HTTP ${response.status}${detail ? ` — ${detail}` : ''}`)
+		const error = new Error(
+			`${provider.label}: HTTP ${response.status}${detail ? ` — ${detail}` : ''}`,
+		) as Error & { status?: number }
+		error.status = response.status
+		throw error
 	}
 	const data = (await response.json()) as {
 		choices?: { message?: { content?: string } }[]
@@ -475,6 +537,8 @@ function isRetryable(error: unknown): boolean {
 
 export interface AiRequest {
 	kind: 'tab' | 'mascot'
+	/** Images attached to the newest user message, sent to vision models. */
+	images?: AttachedFile[]
 	/** The fresh user message, already pushed into the shared history. */
 	messages?: ChatMessagePayload[]
 	systemExtra?: string
@@ -487,6 +551,46 @@ export interface AiResult {
 	content: string
 	provider: string
 	actions: string[]
+	/** What the sandbox did while composing the reply. */
+	activity?: AiActivity
+	/** Set when the assistant asked the user a question instead of finishing. */
+	question?: AiQuestion
+}
+
+/** Builds the messages payload, attaching images to the newest user turn. */
+function withImages(
+	messages: ChatMessagePayload[],
+	images?: AttachedFile[],
+): ChatMessagePayload[] {
+	if (!images || images.length === 0) return messages
+	const withParts = messages.map((message, index) => {
+		if (index !== messages.length - 1 || message.role !== 'user') return message
+		const text = typeof message.content === 'string' ? message.content : ''
+		return {
+			...message,
+			content: [
+				{ type: 'text', text },
+				...images
+					.filter((file) => file.kind === 'image' && file.dataUrl)
+					.map((file) => ({
+						type: 'image_url',
+						image_url: { url: file.dataUrl },
+					})),
+			],
+		}
+	})
+	return withParts
+}
+
+function withoutImages(messages: ChatMessagePayload[]): ChatMessagePayload[] {
+	return messages.map((message) => {
+		if (message.role !== 'user' || typeof message.content === 'string') return message
+		const text = (message.content as { type?: string; text?: string }[])
+			.filter((part) => part.type === 'text')
+			.map((part) => part.text ?? '')
+			.join(' ')
+		return { ...message, content: `${text}\n(изображения не приложены: модель их не поняла)` }
+	})
 }
 
 /**
@@ -497,11 +601,14 @@ export interface AiResult {
 export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	const settings = aiSettings.value
 	const system = buildSystemPrompt(request.kind, request.systemExtra)
-	const rounds: ChatMessagePayload[] = [
+	const base: ChatMessagePayload[] = [
 		{ role: 'system', content: system },
 		...(request.messages ?? []),
 	]
+	let rounds = withImages(base, request.images)
+	const hasImages = rounds !== base
 
+	resetSandboxStats()
 	let providerTried = ''
 	let lastError: unknown
 	const doneActions: string[] = []
@@ -510,11 +617,47 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 		providerTried = providerId
 		let payload = rounds
 		try {
-			for (let round = 0; round < 3; round++) {
-				const raw = await callProvider(providerId, payload, request.signal)
+			for (let round = 0; round < 4; round++) {
+				let raw: string
+				try {
+					raw = await callProvider(providerId, payload, request.signal)
+				} catch (error) {
+					// A model without vision answers 400 to image parts: drop them
+					// once and answer from the text alone.
+					const status = (error as Error & { status?: number }).status
+					if (hasImages && status === 400 && payload === rounds) {
+						rounds = withoutImages(base)
+						payload = rounds
+						raw = await callProvider(providerId, payload, request.signal)
+					} else {
+						throw error
+					}
+				}
 				const parsed = parseActions(raw)
-				if (parsed.actions.length === 0 || round === 2) {
-					return { content: parsed.text || raw, provider: providerTried, actions: doneActions }
+				const askAction = parsed.actions.find((action) => action.tool === 'ask_user')
+				if (askAction) {
+					const [text, options] = askAction.args.split('::')
+					return {
+						content: parsed.text || raw,
+						provider: providerTried,
+						actions: doneActions,
+						activity: sandboxStatsSnapshot(),
+						question: {
+							text: (text ?? 'Как поступить?').trim(),
+							options: (options ?? '')
+								.split(';;')
+								.map((option) => option.trim())
+								.filter(Boolean),
+						},
+					}
+				}
+				if (parsed.actions.length === 0 || round === 3) {
+					return {
+						content: parsed.text || raw,
+						provider: providerTried,
+						actions: doneActions,
+						activity: sandboxStatsSnapshot(),
+					}
 				}
 				const notes: string[] = []
 				for (const action of parsed.actions.slice(0, 4)) {
@@ -592,8 +735,108 @@ registerAiToolHandler(async (tool, args) => {
 			)
 			.join('\n')
 	}
+	if (tool === 'sandbox_list') return sandboxList(args.trim())
+	if (tool === 'sandbox_read') {
+		if (!args.trim()) return 'Укажите файл'
+		return sandboxRead(args.trim())
+	}
+	if (tool === 'sandbox_write') {
+		const separator = args.indexOf('::')
+		if (separator < 0) return 'Формат: <<sandbox_write|файл::текст>>'
+		const path = args.slice(0, separator).trim()
+		const content = args.slice(separator + 2)
+		if (!path) return 'Укажите имя файла'
+		if (/\.(exe|msi|bat|cmd|com|scr|sh|dll|so|apk|app|ps1)$/i.test(path.trim())) {
+			return `Файл ${path.trim()} — исполняемый, его создать нельзя`
+		}
+		return sandboxWrite(path.trim(), content.replace(/\\n/g, '\n'))
+	}
+	if (tool === 'sandbox_delete') {
+		if (!args.trim()) return 'Укажите путь'
+		return sandboxDelete(args.trim())
+	}
+	if (tool === 'session_list') return readSessionsOverview()
+	if (tool === 'session_read') {
+		const index = Number.parseInt(args.trim(), 10) || 1
+		return readSessionByIndex(index)
+	}
+	if (tool === 'launcher_set_accent') {
+		const color = args.trim()
+		if (!/^#[0-9a-f]{6}$/i.test(color)) return 'Нужен цвет в hex, например #22c55e'
+		addCustomAccentColor(color)
+		setCustomAccentColor(color)
+		return `Цвет акцента лаунчера сменён на ${color}`
+	}
+	if (tool === 'launcher_set_background') {
+		const url = args.trim()
+		if (!/^https:\/\//.test(url)) return 'Нужна прямая https-ссылка на картинку'
+		try {
+			const response = await proxiedFetch(url)
+			if (!response.ok) return `Фон не скачался: HTTP ${response.status}`
+			const kind = (response.headers.get('content-type') ?? 'image/png').split('/')[1] ?? 'png'
+			const safeKind = /png|jpe?g|webp|gif|avif|bmp/.test(kind) ? kind.replace('jpeg', 'jpg') : 'png'
+			const bytes = new Uint8Array(await response.arrayBuffer())
+			if (bytes.length > 25 * 1024 * 1024) return 'Картинка больше 25 МБ'
+			const path = await writeSandboxBinary(`background.${safeKind}`, bytes)
+			await setBackgroundFromPath(path)
+			return 'Фон лаунчера обновлён'
+		} catch (error) {
+			return `Фон не получился: ${String(error).slice(0, 200)}`
+		}
+	}
+	if (tool === 'launcher_search_mods') {
+		const query = args.trim()
+		if (!query) return 'Пустой запрос'
+		const lines: string[] = []
+		try {
+			const response = await proxiedFetch(
+				`https://api.modrinth.com/v2/search?limit=5&query=${encodeURIComponent(query)}`,
+				{ headers: { Accept: 'application/json' } },
+			)
+			if (response.ok) {
+				const data = (await response.json()) as {
+					hits?: { title?: string; project_id?: string; downloads?: number; description?: string }[]
+				}
+				for (const hit of data.hits ?? []) {
+					lines.push(
+						`[Modrinth] ${hit.title ?? '?'} — ${hit.description?.slice(0, 100) ?? ''} (загрузок: ${hit.downloads ?? 0}; открыть: <<navigate|/project/${hit.project_id}>>)`,
+					)
+				}
+			}
+		} catch {
+			/* Modrinth is down - CurseForge still gets asked below */
+		}
+		try {
+			const page = await searchCurseforge({ filter: query, pageSize: 5 })
+			for (const hit of page.hits ?? []) {
+				lines.push(
+					`[CurseForge] ${hit.name} — ${hit.summary?.slice(0, 100) ?? ''} (загрузок: ${hit.download_count ?? 0})`,
+				)
+			}
+		} catch {
+			/* a missing key is the ordinary case */
+		}
+		return lines.length > 0 ? lines.join('\n') : 'Ничего не нашлось'
+	}
 	return null
 })
+
+/** The sessions folder, numbered the way the overview lists them. */
+async function readSessionByIndex(index: number): Promise<string> {
+	const overview = await readSessionsOverview(20)
+	const lines = overview.split('\n').filter((line) => line.includes(': '))
+	const line = lines[index - 1]
+	if (!line) return 'Нет такой сессии в обзоре - сначала <<session_list|>>'
+	return `Сессия №${index}: ${line}`
+}
+
+/**
+ * Drops a binary blob into the sandbox and returns its absolute path - the
+ * way a downloaded background reaches the launcher's own setter.
+ */
+async function writeSandboxBinary(name: string, bytes: Uint8Array): Promise<string> {
+	return sandboxWriteBinary(name, bytes)
+}
 
 // ---- The mascot's little bus ---------------------------------------------
 

@@ -65,9 +65,12 @@ export async function searchLabySkins(query: string, page = 1): Promise<LabySkin
 export function labySkinTextureSources(hash: string): string[] {
 	const main = labySkinTextureUrl(hash)
 	const cdn = `https://texture.laby.net/${hash}.png`
+	const minotar = `https://minotar.net/skin/${hash}`
 	const through = (url: string) =>
 		`https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=png`
-	return [main, cdn, through(main), through(cdn)]
+	const wsrv = (url: string) =>
+		`https://wsrv.nl/?url=${encodeURIComponent(url)}&output=png`
+	return [main, cdn, minotar, through(main), through(cdn), wsrv(main), wsrv(cdn)]
 }
 
 /**
@@ -79,6 +82,16 @@ export function labySkinTextureSources(hash: string): string[] {
  */
 export function labySkinRenderUrl(hash: string, width = 270, height = 514) {
 	return `https://laby.net/api/v3/render/skin/${hash}.png?width=${width}&height=${height}`
+}
+
+/**
+ * A flat full-body picture straight from the texture hash, drawn by minotar.
+ * Unlike every other hash-capable renderer it needs no Mojang indexing, and
+ * unlike laby.net's own render it sits on a separate host - when one is
+ * throttled or unreachable, the other usually answers.
+ */
+export function minotarBodyUrl(hash: string, height = 512) {
+	return `https://minotar.net/body/${hash}/${height}`
 }
 
 /** Reads a texture with the webview's own network stack. Both laby.net hosts

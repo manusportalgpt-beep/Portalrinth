@@ -31,7 +31,6 @@ import { computedAsync } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 
 import EarsModIcon from '@/assets/skins/ears-mod.png'
-import MascotSkinSection from '@/components/ui/ai/MascotSkinSection.vue'
 import EditSkinModal from '@/components/ui/skin/EditSkinModal.vue'
 import PortalrinthElySkinModal from '@/components/ui/skin/PortalrinthElySkinModal.vue'
 import VirtualSkinSectionList from '@/components/ui/skin/VirtualSkinSectionList.vue'
@@ -2132,7 +2131,6 @@ async function checkUserChanges() {
 					@add-skin-drop="onElyDrop"
 				/>
 			</section>
-			<MascotSkinSection />
 		</div>
 	</div>
 

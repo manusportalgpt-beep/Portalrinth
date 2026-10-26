@@ -37,6 +37,7 @@ import {
 	LABY_PAGE_SIZE,
 	type LabySkin,
 	labySkinPageUrl,
+	minotarBodyUrl,
 	labySkinPreview,
 	labySkinTags,
 	labySkinTexture,
@@ -158,6 +159,8 @@ function previewSrc(hash: string) {
 }
 
 const localPreviewsPending = new Set<string>()
+/** Hashes already handed the minotar stand-in after a failed render. */
+const minotarTried = new Set<string>()
 
 /** Draws a skin on the canvas from its texture, once, whoever asked. */
 function drawPreviewLocally(hash: string) {
@@ -175,11 +178,17 @@ function drawPreviewLocally(hash: string) {
 
 /**
  * The render did not come through - some networks drop part of their requests
- * to the render service. The skin is then drawn here on a canvas from its
- * texture, the way the grid used to, and what that fails to load too is left
+ * to the render service. Minotar draws a flat body from the bare hash on a
+ * host of its own and stands in first; when that fails too, the skin is drawn
+ * here on a canvas from its texture, and what even that fails to load is left
  * as it was.
  */
 function onPreviewError(hash: string) {
+	if (!minotarTried.has(hash)) {
+		minotarTried.add(hash)
+		previews.value = { ...previews.value, [hash]: minotarBodyUrl(hash, 512) }
+		return
+	}
 	drawPreviewLocally(hash)
 }
 
@@ -299,10 +308,10 @@ async function select(skin: LabySkin) {
 	current.value = skin
 	currentTexture.value = ''
 	const remoteRender = skinRenderUrl(skin.image_hash, 400, 640)
-	currentRender.value = remoteRender ?? ''
-	if (!remoteRender) {
-		// The chosen service cannot render a bare texture hash - the local
-		// canvas draw stands in until the texture itself arrives.
+	currentRender.value = remoteRender ?? minotarBodyUrl(skin.image_hash, 640)
+	if (!remoteRender || remoteRender.startsWith('https://minotar.net/')) {
+		// No hash render from the chosen service - the local canvas draw
+		// stands by until the texture itself arrives.
 		labySkinPreview(skin.image_hash)
 			.then((url) => {
 				if (id === viewerRequest && !currentTexture.value) currentRender.value = url
@@ -336,6 +345,21 @@ async function loadSimilar(skin: LabySkin, id: number) {
 	} finally {
 		if (id === viewerRequest) similarLoading.value = false
 	}
+}
+
+/** The render in the viewer failed as well: minotar first, then the canvas. */
+function onRenderError() {
+	const skin = current.value
+	if (!skin) return
+	if (!currentRender.value.startsWith('https://minotar.net/')) {
+		currentRender.value = minotarBodyUrl(skin.image_hash, 640)
+		return
+	}
+	labySkinPreview(skin.image_hash)
+		.then((url) => {
+			if (!currentTexture.value) currentRender.value = url
+		})
+		.catch(() => {})
 }
 
 function open(skin: LabySkin) {
@@ -476,6 +500,7 @@ const usesFormatter = new Intl.NumberFormat()
 						:src="currentRender"
 						alt=""
 						class="max-h-full max-w-full object-contain"
+						@error="onRenderError"
 					/>
 				</div>
 				<div v-else class="flex h-full w-full items-center justify-center">

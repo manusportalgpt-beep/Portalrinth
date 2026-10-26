@@ -1687,5 +1687,44 @@
 	},
 	"app.ai.plus.paste-empty": {
 		"message": "Clipboard has no text."
+	},
+	"app.ai.plus.attach": {
+		"message": "Attach a file"
+	},
+	"app.ai.attach-empty": {
+		"message": "No file chosen"
+	},
+	"app.ai.models": {
+		"message": "Model & key"
+	},
+	"app.ai.activity.commands": {
+		"message": "commands"
+	},
+	"app.ai.activity.created": {
+		"message": "generated file"
+	},
+	"app.ai.activity.changed": {
+		"message": "changed file"
+	},
+	"app.ai.question.title": {
+		"message": "The assistant awaits your decision"
+	},
+	"app.ai.question.own": {
+		"message": "Your own answer…"
+	},
+	"app.ai.question.send": {
+		"message": "Answer"
+	},
+	"app.ai.no-vision": {
+		"message": "This model cannot see images."
+	},
+	"app.settings.ai-assistant.assistant.title": {
+		"message": "Assistant"
+	},
+	"app.settings.ai-assistant.assistant.description": {
+		"message": "The AI tab: answers questions, searches the web, works with files in its own sandbox and drives the launcher. Everything it knows stays local."
+	},
+	"app.settings.resource-management.skin-services.minotar": {
+		"message": "Draws a flat full-body picture straight from the texture hash on its own host - a fallback that keeps working when laby.net is throttled."
 	}
 }

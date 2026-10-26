@@ -3307,5 +3307,44 @@
 	},
 	"app.ai.plus.paste-empty": {
 		"message": "В буфере обмена нет текста."
+	},
+	"app.ai.plus.attach": {
+		"message": "Прикрепить файл"
+	},
+	"app.ai.attach-empty": {
+		"message": "Файл не выбран"
+	},
+	"app.ai.models": {
+		"message": "Модель и ключ"
+	},
+	"app.ai.activity.commands": {
+		"message": "команд"
+	},
+	"app.ai.activity.created": {
+		"message": "сгенерирован файл"
+	},
+	"app.ai.activity.changed": {
+		"message": "изменён файл"
+	},
+	"app.ai.question.title": {
+		"message": "Помощник ждёт вашего решения"
+	},
+	"app.ai.question.own": {
+		"message": "Свой ответ…"
+	},
+	"app.ai.question.send": {
+		"message": "Ответить"
+	},
+	"app.ai.no-vision": {
+		"message": "Эта модель не видит изображения."
+	},
+	"app.settings.ai-assistant.assistant.title": {
+		"message": "Помощник"
+	},
+	"app.settings.ai-assistant.assistant.description": {
+		"message": "Вкладка «ИИ-Помощник»: отвечает на вопросы, ищет в интернете, работает с файлами в своей песочнице и управляет лаунчером. Всё, что он знает, хранится локально."
+	},
+	"app.settings.resource-management.skin-services.minotar": {
+		"message": "Рисует плоскую фигуру в полный рост прямо по хэшу текстуры на своём хосте — запасной вариант, который работает, даже когда laby.net тормозит."
 	}
 }
