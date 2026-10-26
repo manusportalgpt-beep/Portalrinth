@@ -13,6 +13,7 @@ import {
 	EditIcon,
 	FileArchiveIcon,
 	FolderOpenIcon,
+	ImageIcon,
 	MinusIcon,
 	SquarePlusIcon,
 	TrashIcon,
@@ -69,6 +70,7 @@ import {
 } from '@/helpers/instance'
 import { MAX_INSTANCE_GROUP_NAME_LENGTH } from '@/helpers/instance-groups'
 import { copyFilesToClipboard } from '@/helpers/portalrinth-clipboard'
+import { setBackgroundFromPath } from '@/helpers/portalrinth-background'
 import {
 	instanceListQueryOptions,
 	instanceScreenshotsQueryOptions,
@@ -276,6 +278,10 @@ const messages = defineMessages({
 	copied: { id: 'app.screenshots.copied', defaultMessage: 'Copied' },
 	edit: { id: 'app.screenshots.edit', defaultMessage: 'Edit screenshot' },
 	showInFolder: { id: 'app.screenshots.show-in-folder', defaultMessage: 'Show in folder' },
+	setAsBackground: {
+		id: 'app.screenshots.set-as-background',
+		defaultMessage: 'Apply as background',
+	},
 	goToInstance: { id: 'app.screenshots.go-to-instance', defaultMessage: 'Go to instance' },
 	deleteTitle: { id: 'app.screenshots.delete-title', defaultMessage: 'Delete screenshot' },
 	deleteDescription: {
@@ -1083,6 +1089,12 @@ function showScreenshotOptions(screenshot: InstanceScreenshot, event: MouseEvent
 			action: () => void openScreenshot(screenshot),
 		},
 		{
+			id: 'set-as-background',
+			label: formatMessage(messages.setAsBackground),
+			icon: ImageIcon,
+			action: () => void applyScreenshotAsBackground(screenshot),
+		},
+		{
 			id: 'go-to-instance',
 			label: formatMessage(messages.goToInstance),
 			action: () => void goToInstance(screenshot),
@@ -1101,6 +1113,30 @@ function showScreenshotOptions(screenshot: InstanceScreenshot, event: MouseEvent
 
 function goToInstance(screenshot: InstanceScreenshot) {
 	return router.push(`/instance/${encodeURIComponent(screenshot.instance_id)}`)
+}
+
+/** Apply-as-background for the image viewer, by the item's selection key. */
+function applyBackgroundBySelectionKey(selectionKey: string) {
+	const screenshot = screenshotBySelectionKey(selectionKey)
+	if (screenshot) void applyScreenshotAsBackground(screenshot)
+}
+
+/** Makes the screenshot the launcher's window background. */
+async function applyScreenshotAsBackground(screenshot: InstanceScreenshot) {
+	try {
+		await setBackgroundFromPath(screenshot.path)
+		addNotification({
+			title: formatMessage(messages.setAsBackground),
+			text: screenshot.file_name,
+			type: 'success',
+		})
+	} catch (error) {
+		addNotification({
+			title: formatMessage(messages.setAsBackground),
+			text: String(error).slice(0, 200),
+			type: 'error',
+		})
+	}
 }
 
 function screenshotBySelectionKey(selectionKey: string) {
@@ -1526,6 +1562,14 @@ onBeforeUnmount(() => {
 				@click="openScreenshotBySelectionKey(item.id)"
 			>
 				<FolderOpenIcon />
+			</IconButton>
+			<IconButton
+				v-tooltip="formatMessage(messages.setAsBackground)"
+				:label="formatMessage(messages.setAsBackground)"
+				type="quiet"
+				@click="applyBackgroundBySelectionKey(item.id)"
+			>
+				<ImageIcon />
 			</IconButton>
 			<IconButton
 				v-tooltip="formatMessage(commonMessages.deleteLabel)"

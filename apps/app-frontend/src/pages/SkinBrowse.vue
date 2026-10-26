@@ -37,6 +37,7 @@ import {
 	LABY_PAGE_SIZE,
 	type LabySkin,
 	labySkinPageUrl,
+	labySkinRenderSources,
 	minotarBodyUrl,
 	labySkinPreview,
 	labySkinTags,
@@ -159,8 +160,35 @@ function previewSrc(hash: string) {
 }
 
 const localPreviewsPending = new Set<string>()
-/** Hashes already handed the minotar stand-in after a failed render. */
-const minotarTried = new Set<string>()
+/**
+ * The render chain per hash: laby.net straight, then the same render through
+ * two image proxies (a lossy route to laby.net does not stop the picture),
+ * then minotar's flat body. `@error` walks the chain; the canvas is last.
+ */
+const renderChains = new Map<string, string[]>()
+const renderStep = new Map<string, number>()
+
+function renderChain(hash: string): string[] {
+	let chain = renderChains.get(hash)
+	if (!chain) {
+		const primary = skinRenderUrl(hash, 360, 684)
+		chain = [
+			...(primary ? [primary] : []),
+			...labySkinRenderSources(hash, 360, 684),
+			minotarBodyUrl(hash, 640),
+		]
+		renderChains.set(hash, chain)
+		renderStep.set(hash, 0)
+	}
+	return chain
+}
+
+function advanceRender(hash: string): string | null {
+	const chain = renderChain(hash)
+	const step = (renderStep.get(hash) ?? 0) + 1
+	renderStep.set(hash, step)
+	return step < chain.length ? chain[step] : null
+}
 
 /** Draws a skin on the canvas from its texture, once, whoever asked. */
 function drawPreviewLocally(hash: string) {
@@ -184,9 +212,9 @@ function drawPreviewLocally(hash: string) {
  * as it was.
  */
 function onPreviewError(hash: string) {
-	if (!minotarTried.has(hash)) {
-		minotarTried.add(hash)
-		previews.value = { ...previews.value, [hash]: minotarBodyUrl(hash, 512) }
+	const next = advanceRender(hash)
+	if (next) {
+		previews.value = { ...previews.value, [hash]: next }
 		return
 	}
 	drawPreviewLocally(hash)
@@ -307,17 +335,12 @@ async function select(skin: LabySkin) {
 	const id = ++viewerRequest
 	current.value = skin
 	currentTexture.value = ''
-	const remoteRender = skinRenderUrl(skin.image_hash, 400, 640)
-	currentRender.value = remoteRender ?? minotarBodyUrl(skin.image_hash, 640)
-	if (!remoteRender || remoteRender.startsWith('https://minotar.net/')) {
-		// No hash render from the chosen service - the local canvas draw
-		// stands by until the texture itself arrives.
-		labySkinPreview(skin.image_hash)
-			.then((url) => {
-				if (id === viewerRequest && !currentTexture.value) currentRender.value = url
-			})
-			.catch(() => {})
-	}
+	renderChains.set(
+		skin.image_hash,
+		[...labySkinRenderSources(skin.image_hash, 480, 868), minotarBodyUrl(skin.image_hash, 868)],
+	)
+	renderStep.set(skin.image_hash, 0)
+	currentRender.value = renderChain(skin.image_hash)[0]
 	similar.value = []
 	try {
 		const texture = await labySkinTexture(skin.image_hash)
@@ -347,12 +370,13 @@ async function loadSimilar(skin: LabySkin, id: number) {
 	}
 }
 
-/** The render in the viewer failed as well: minotar first, then the canvas. */
+/** The render in the viewer failed as well: walk the same chain, canvas last. */
 function onRenderError() {
 	const skin = current.value
 	if (!skin) return
-	if (!currentRender.value.startsWith('https://minotar.net/')) {
-		currentRender.value = minotarBodyUrl(skin.image_hash, 640)
+	const next = advanceRender(skin.image_hash)
+	if (next) {
+		currentRender.value = next
 		return
 	}
 	labySkinPreview(skin.image_hash)

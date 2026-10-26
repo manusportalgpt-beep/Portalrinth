@@ -708,6 +708,8 @@ fn main() {
                     .commands(&[
                         "archiver_pack",
                         "archiver_unpack",
+                        "archiver_reveal",
+                        "archiver_compile_java",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,

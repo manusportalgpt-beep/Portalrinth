@@ -85,6 +85,20 @@ export function labySkinRenderUrl(hash: string, width = 270, height = 514) {
 }
 
 /**
+ * Every way the render itself can arrive: straight from laby.net, then
+ * through two image proxies that fetch it on their own servers. When the
+ * route to laby.net is lossy (as it is on some Russian networks), the
+ * proxied copies still come through - same picture, different road.
+ */
+export function labySkinRenderSources(hash: string, width = 360, height = 684): string[] {
+	const direct = labySkinRenderUrl(hash, width, height)
+	const through = (url: string) =>
+		`https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=png`
+	const wsrv = (url: string) => `https://wsrv.nl/?url=${encodeURIComponent(url)}&output=png`
+	return [direct, wsrv(direct), through(direct)]
+}
+
+/**
  * A flat full-body picture straight from the texture hash, drawn by minotar.
  * Unlike every other hash-capable renderer it needs no Mojang indexing, and
  * unlike laby.net's own render it sits on a separate host - when one is

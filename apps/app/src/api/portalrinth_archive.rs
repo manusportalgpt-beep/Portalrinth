@@ -10,12 +10,15 @@
 use crate::api::Result;
 use std::path::{Path, PathBuf};
 use tauri::Manager;
+use tauri_plugin_opener::OpenerExt;
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
     tauri::plugin::Builder::new("portalrinth-archiver")
         .invoke_handler(tauri::generate_handler![
             archiver_pack,
             archiver_unpack,
+            archiver_reveal,
+            archiver_compile_java,
         ])
         .build()
 }
@@ -320,5 +323,198 @@ pub async fn archiver_unpack<R: tauri::Runtime>(
     Ok(format!(
         "распаковано файлов: {written} в {}",
         dest_path.display()
+    ))
+}
+
+/// `archiver_reveal`: shows a file or folder in the system file manager -
+/// the way the launcher reveals screenshots and instances. Portalus uses it
+/// to hand the player the folder its project lives in.
+#[tauri::command]
+pub async fn archiver_reveal<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    path: String,
+) -> Result<()> {
+    let roots = allowed_roots(&app);
+    let path = PathBuf::from(&path);
+    ensure_allowed(&roots, &path)?;
+    if !path.exists() {
+        return Err(error(format!("нет такого файла или папки: {path}")));
+    }
+    app.opener()
+        .reveal_item_in_dir(&path)
+        .map_err(|e| error(format!("не удалось открыть папку: {e}")))?;
+    Ok(())
+}
+
+/// Every .java file under a source folder, ready for the compiler.
+async fn collect_java_sources(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+    let mut entries = tokio::fs::read_dir(dir)
+        .await
+        .map_err(|e| error(format!("не удалось открыть папку {}: {e}", dir.display())))?;
+    while let Some(entry) = entries
+        .next_entry()
+        .await
+        .map_err(|e| error(format!("не удалось прочитать папку {}: {e}", dir.display())))?
+    {
+        let path = entry.path();
+        let kind = entry
+            .file_type()
+            .await
+            .map_err(|e| error(format!("не удалось понять тип {}: {e}", path.display())))?;
+        if kind.is_dir() {
+            collect_java_sources(&path, out).await?;
+        } else if kind.is_file() && path.extension().map(|ext| ext == "java").unwrap_or(false) {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+/// Archives a folder's contents into a zip/jar with the entries at the
+/// archive root - the layout a mod jar expects (com/..., fabric.mod.json...).
+async fn pack_flat_jar(dir: &Path, dest: &Path) -> Result<usize> {
+    let mut files = Vec::new();
+    let mut stack = vec![(dir.to_path_buf(), String::new())];
+    while let Some((current, prefix)) = stack.pop() {
+        let mut entries = tokio::fs::read_dir(&current)
+            .await
+            .map_err(|e| error(format!("не удалось открыть папку {}: {e}", current.display())))?;
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| error(format!("не удалось прочитать папку {}: {e}", current.display())))?
+        {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            let rel = if prefix.is_empty() {
+                name
+            } else {
+                format!("{prefix}/{name}")
+            };
+            let kind = entry
+                .file_type()
+                .await
+                .map_err(|e| error(format!("не удалось понять тип {}: {e}", path.display())))?;
+            if kind.is_dir() {
+                stack.push((path, rel));
+            } else if kind.is_file() {
+                files.push((rel, path));
+            }
+        }
+    }
+    files.sort_by(|a, b| a.0.cmp(&b.0));
+    let writer = tokio::fs::File::create(dest)
+        .await
+        .map_err(|e| error(format!("не удалось создать архив: {e}")))?;
+    let mut writer = async_zip::tokio::write::ZipFileWriter::with_tokio(writer);
+    for (name, path) in &files {
+        let bytes = tokio::fs::read(path)
+            .await
+            .map_err(|e| error(format!("не удалось прочитать {}: {e}", path.display())))?;
+        let builder = async_zip::ZipEntryBuilder::new(
+            name.clone().into(),
+            async_zip::Compression::Deflate,
+        );
+        writer
+            .write_entry_whole(builder, &bytes)
+            .await
+            .map_err(|e| error(format!("не удалось добавить {name} в архив: {e}")))?;
+    }
+    writer
+        .close()
+        .await
+        .map_err(|e| error(format!("не удалось закрыть архив: {e}")))?;
+    Ok(files.len())
+}
+
+/// Finds javac: first on PATH, then under JAVA_HOME.
+fn find_javac() -> Option<PathBuf> {
+    let name = if cfg!(windows) { "javac.exe" } else { "javac" };
+    if let Ok(home) = std::env::var("JAVA_HOME") {
+        let candidate = PathBuf::from(home).join("bin").join(name);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    for dir in std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()) {
+        let candidate = dir.join(name);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+/// `archiver_compile_java`: compiles every .java under a folder with the
+/// system javac and packs the classes into a .jar - a real compiled mod, not
+/// just a zipped source folder. The compiler is searched on PATH and under
+/// JAVA_HOME; without a JDK the launcher stays honest about it.
+#[tauri::command]
+pub async fn archiver_compile_java<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    source_dir: String,
+    output_jar: String,
+) -> Result<String> {
+    let roots = allowed_roots(&app);
+    let source = PathBuf::from(&source_dir);
+    ensure_allowed(&roots, &source)?;
+    if !source.is_dir() {
+        return Err(error(format!("это не папка: {source}")));
+    }
+    let jar_path = PathBuf::from(&output_jar);
+    ensure_allowed(&roots, &jar_path)?;
+    if jar_path
+        .extension()
+        .map(|ext| ext.to_string_lossy().to_lowercase() != "jar")
+        .unwrap_or(true)
+    {
+        return Err(error("результат должен быть .jar"));
+    }
+
+    let mut sources = Vec::new();
+    collect_java_sources(&source, &mut sources).await?;
+    if sources.is_empty() {
+        return Err(error("в папке нет .java файлов"));
+    }
+
+    let javac = find_javac().ok_or_else(|| {
+        error("javac не найден: нужен JDK (на коробке Java от Mojang его нет). Установи JDK или добавь его в JAVA_HOME")
+    })?;
+
+    let classes = source.parent().unwrap_or(&source).join(".javac-classes");
+    let _ = tokio::fs::remove_dir_all(&classes).await;
+    tokio::fs::create_dir_all(&classes)
+        .await
+        .map_err(|e| error(format!("не удалось создать папку классов: {e}")))?;
+
+    let mut command = tokio::process::Command::new(&javac);
+    command
+        .arg("-encoding")
+        .arg("UTF-8")
+        .arg("-nowarn")
+        .arg("-d")
+        .arg(&classes)
+        .args(&sources);
+    let output = command
+        .output()
+        .await
+        .map_err(|e| error(format!("компилятор не запустился: {e}")))?;
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    if !output.status.success() {
+        let _ = tokio::fs::remove_dir_all(&classes).await;
+        let tail: String = {
+            let lines: Vec<&str> = stderr.lines().collect();
+            let start = lines.len().saturating_sub(20);
+            lines[start..].join("\n")
+        };
+        return Err(error(format!("ошибки компиляции:\n{}", tail)));
+    }
+
+    let count = pack_flat_jar(&classes, &jar_path).await?;
+    let _ = tokio::fs::remove_dir_all(&classes).await;
+    Ok(format!(
+        "скопилировано {count} записей в {} (файлов .java: {})",
+        jar_path.display(),
+        sources.len()
     ))
 }

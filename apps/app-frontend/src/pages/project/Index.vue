@@ -53,7 +53,7 @@
 		<div class="flex flex-col gap-4 px-6 pb-6 pt-5">
 			<div
 				v-if="projectInstallContext"
-				class="browse-install-header sticky top-0 z-20 -mx-6 -mt-5 rounded-tl-[--radius-xl] rounded-tr-[--radius-xl] border-0 border-b border-solid bg-surface-1 px-3 py-4 border-surface-5"
+				class="browse-install-header sticky top-0 z-20 -mx-6 -mr-[0.825rem] -mt-5 rounded-tl-[--radius-xl] rounded-tr-[--radius-xl] border-0 border-b border-solid bg-surface-1 pl-3 pr-[1.825rem] py-4 border-surface-5"
 			>
 				<BrowseInstallHeader :install-context="projectInstallContext" />
 			</div>

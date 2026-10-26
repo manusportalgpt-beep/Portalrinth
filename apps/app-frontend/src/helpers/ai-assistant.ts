@@ -13,14 +13,18 @@
 import { ref } from 'vue'
 
 import { list } from './instance'
+import { add_project_from_version, type DownloadReason } from './instance'
 import { proxiedFetch } from './proxy-fetch'
 
 import {
 	type AttachedFile,
+	sandboxBash,
+	sandboxCompileJava,
 	sandboxDelete,
 	sandboxList,
 	sandboxPack,
 	sandboxRead,
+	sandboxReveal,
 	sandboxStatsSnapshot,
 	sandboxUnpack,
 	sandboxWrite,
@@ -34,6 +38,7 @@ import { get_default_user, users } from './auth'
 import { addCustomAccentColor, setCustomAccentColor } from '../composables/use-accent'
 import { setBackgroundFromPath } from './portalrinth-background'
 import { searchCurseforge } from './curseforge-api'
+import { useTheme } from '../composables/use-theme'
 
 export interface AiModelOption {
 	id: string
@@ -282,6 +287,10 @@ export interface AiActivity {
 	filesCreated: string[]
 	/** Files it edited, with the line diff that made the change. */
 	filesChanged: AiFileChange[]
+	/** Folders the agent revealed to the player, clickable in the chat. */
+	foldersOpened?: string[]
+	/** Generated pictures, as data URLs for inline previews. */
+	images?: string[]
 }
 
 export interface AiQuestion {
@@ -390,6 +399,50 @@ export function parseActions(text: string): ParsedReply {
 	return { text: cleaned.trim(), actions }
 }
 
+// ---- Walking the launcher alongside the player -----------------------------
+
+/**
+ * While Portalus works, the launcher belongs to both of them: the agent
+ * opens pages and the player may wander off. Every navigation the agent
+ * itself makes is stamped here; anything else that moves the route while a
+ * run is active reads as "the player changed their mind", and the run winds
+ * down instead of fighting them for the screen.
+ */
+const agentRun = {
+	active: false,
+	lastAgentNavAt: 0,
+	interrupted: false,
+}
+
+const AGENT_NAV_GRACE_MS = 1200
+
+export function beginAgentRun(): void {
+	agentRun.active = true
+	agentRun.interrupted = false
+	agentRun.lastAgentNavAt = 0
+}
+
+export function endAgentRun(): void {
+	agentRun.active = false
+}
+
+export function noteAgentNavigation(): void {
+	agentRun.lastAgentNavAt = Date.now()
+}
+
+/** True when the player moved somewhere the agent did not send them. */
+export function playerTookOver(): boolean {
+	if (!agentRun.active || !agentRun.interrupted) return false
+	return Date.now() - agentRun.lastAgentNavAt > AGENT_NAV_GRACE_MS
+}
+
+/** Called by the router listener: the route moved without the agent. */
+export function maybeMarkPlayerInterrupt(): void {
+	if (!agentRun.active) return
+	if (Date.now() - agentRun.lastAgentNavAt < AGENT_NAV_GRACE_MS) return
+	agentRun.interrupted = true
+}
+
 /** The pages and screens the agent may open, with the paths to reach them. */
 export const AI_NAVIGATION_HINT = [
 	'Доступные маршруты лаунчера:',
@@ -404,26 +457,30 @@ export const AI_NAVIGATION_HINT = [
 
 export const AI_TOOLS_HINT = [
 	'Ты можешь выполнять действия, добавляя в ответ команды вида <<инструмент|аргумент>> (аргумент одной строкой, без кавычек). Пользователь видит каждую выполненную команду.',
-	'Свои интернет-инструменты (поиск и чтение страниц — через них изучай всё, что вне лаунчера):',
-	'- <<web_search|запрос>> — поиск в интернете',
-	'- <<web_fetch|url>> — скачать страницу (вернёт очищенный текст)',
-	'Экраны лаунчера (команды касаются только лаунчера):',
-	'- <<navigate|путь>> — открыть экран, например <<navigate|/browse/mod?q=jei>>; если спрашивают «покажи/расскажи, как это», открой нужный экран и коротко объясни',
+	'Свои интернет-инструменты (это ТВОИ инструменты, как у настоящего агента — через них ищи и изучай всё, что вне лаунчера; по умолчанию DuckDuckGo):',
+	'- <<web_search|запрос>> — поиск в интернете (DuckDuckGo), вернёт ссылки и заголовки; всегда проверяй факты поиском, не выдумывай',
+	'- <<web_fetch|url>> — скачать страницу по ссылке (вернёт очищенный текст)',
+	'Экраны лаунчера (команды лаунчера касаются только лаунчера):',
+	'- <<navigate|путь>> — открыть экран, например <<navigate|/browse/mod?q=jei>>; если спрашивают «покажи/расскажи, как это», открой нужный экран и коротко объясни. Игрок видит тот же экран, что и ты: двигайся по лаунчеру вместе с ним',
+	'- <<get_page|>> — узнать, какой экран сейчас открыт (путь игрока и твой совпадают)',
 	'- <<open_creation_modal|>> — открыть окно создания сборки (можно с подсказкой: <<open_creation_modal|сборка на 1.21.1 с JEI>>)',
 	'- <<open_instance|id>> — открыть сборку по id',
 	'- <<list_instances|>> — получить список сборок игрока',
-	'- <<get_page|>> — узнать, какой экран сейчас открыт',
-	'- <<launcher_search_mods|запрос>> — найти мод/сборку сразу в Modrinth и CurseForge, вернёт топ результатов (иконка, автор, версия и описание — на странице проекта: открой её через <<navigate|/project/<id>>)',
-	'- <<launcher_set_accent|цвет>> — сменить цвет акцента лаунчера, цвет в hex (например <<launcher_set_accent|#22c55e>>)',
-	'- <<launcher_set_background|url>> — поставить фон окна лаунчера по прямой ссылке на картинку',
-	'Песочница — твоя личная папка на диске (пути относительные, выходить за неё нельзя):',
-	'- <<sandbox_list|путь>> — список файлов (пусто — корень песочницы)',
-	'- <<sandbox_read|файл>> — прочитать текстовый файл',
-	'- <<sandbox_write|файл::текст>> — создать или изменить файл (многострочный текст разрешён); «.exe» и другие исполняемые файлы создать нельзя',
+	'- <<launcher_search_mods|запрос>> — найти мод/сборку сразу в Modrinth и CurseForge (иконка, автор, версия, описание — на странице проекта: открой её через <<navigate|/project/<id>>)',
+	'- <<launcher_install|id проекта::тип::id сборки>> — установить контент (тип: mod, modpack, resourcepack, shader) в сборку',
+	'- <<launcher_set_accent|цвет>> — сменить цвет акцента лаунчера, hex (например <<launcher_set_accent|#22c55e>>)',
+	'- <<launcher_set_background|url>> — поставить фон окна по прямой ссылке на картинку',
+	'- <<launcher_set_theme|тема>> — тема оформления: dark, light, oled, retro или system',
+	'Песочница — твоя личная папка на диске (пути относительные, выходить за неё нельзя). Работай в ней как в настоящем терминале:',
+	'- <<sandbox_bash|команда>> — мини-shell: pwd, cd, ls [-l], cat, head, tail, wc, echo (с > и >> в файл), touch, mkdir, rm, cp, mv, find, tree, grep; цепочки через && (пример: <<sandbox_bash|mkdir proj && echo hi > proj/a.txt>>)',
+	'- <<sandbox_list|путь>>, <<sandbox_read|файл>>, <<sandbox_write|файл::текст>> — то же самое по шагам (многострочный текст разрешён); «.exe» и другие исполняемые файлы создать нельзя',
 	'- <<sandbox_delete|путь>> — удалить файл или папку (только с явного согласия)',
-	'Встроенный архиватор (7-zip):',
-	'- <<sandbox_pack|архив.zip::путь1::путь2>> — упаковать файлы/папки песочницы в .zip, .jar или .7z; .jar собирается как zip — так ты отдаёшь готовый мод',
-	'- <<sandbox_unpack|архив.zip::папка>> — распаковать архив (в том числе присланный игроком) в папку песочницы',
+	'- <<open_folder|путь>> — показать папку игроку в проводнике (карточка в чате) — делай это, когда отдал игроку готовый файл',
+	'Архиватор и компилятор (встроенные, как 7-zip и javac):',
+	'- <<sandbox_pack|архив.zip::путь1::путь2>> — упаковать файлы/папки в .zip, .7z или .jar (ресурс-пак, шейдерпак, датапак)',
+	'- <<sandbox_unpack|архив.zip::папка>> — распаковать архив (в том числе присланный игроком)',
+	'- <<launcher_compile_java|папка-с-кодом::мод.jar>> — скомпилировать .java настоящим javac и собрать .jar (нужен JDK в системе; без него отдавай исходники + .jar как zip через sandbox_pack)',
+	'Картинки: <<gen_image|описание::файл.png>> — сгенерировать изображение по описанию и сохранить в песочницу (годится и для текстур; для точных пиксель-арт текстур 16x16 лучше рисуй PNG вручную только если умеешь, иначе gen_image).',
 	'Файлы, которые игрок скинул в чат, сохраняются в папку inbox/ твоей песочницы — они остаются там: читай их, распаковывай, переделывай, удаляй по просьбе.',
 	'Память — твои заметки и прошлые разговоры не пропадают:',
 	'- <<memory_read|>> — перечитать свои заметки (memory.md)',
@@ -431,17 +488,19 @@ export const AI_TOOLS_HINT = [
 	'- <<session_list|>> — обзор прошлых сессий',
 	'- <<session_read|номер>> — перечитать сессию по номеру из обзора (1 — последняя)',
 	'Если для продолжения тебе не хватает решения пользователя, задай вопрос: <<ask_user|Вопрос?::вариант 1;;вариант 2>> — у пользователя появятся кнопки и поле для своего ответа.',
-	'Правила: интернет — через web_search/web_fetch; команды лаунчера — только для лаунчера; удалять или менять что-либо без явного согласия запрещено; отвечай коротко — 1-4 предложения, если не просят подробно.',
+	'Правила: интернет — твоими инструментами web_search/web_fetch; команды лаунчера — только для лаунчера; удалять или менять что-либо без явного согласия запрещено; отвечай коротко — 1-4 предложения, если не просят подробно.',
+	'Важно: если игрок во время твоей работы сам перешёл на другой экран, тебе сообщат «игрок передумал» — тогда сразу остановись и не продолжай действия.',
 ].join('\n')
 
 export const AI_SKILLS_HINT = [
-	'Ты умеешь создавать контент для Minecraft и писать код — делай это файлами в песочнице, а результат отдавай архивом:',
+	'Ты умеешь создавать контент для Minecraft, сайты, картинки и код на любых языках — всё делаешь файлами в песочнице, а готовый результат отдаёшь архивом и открываешь папку игроку через <<open_folder|путь>>:',
 	'- Ресурс-пак: pack.mcmeta (поле pack_format зависит от версии — если не уверен, уточни через web_search), assets/minecraft/textures/..., модели, звуки (sounds.json). Собери файлы и упакуй в .zip.',
 	'- Шейдеры (OptiFine/Iris): папка shaders/ с вершинными и фрагментными программами (*.vsh, *.fsh, GLSL), composite/final проходы, shaders.properties. Собери и упакуй в .zip.',
-	'- Моды: Fabric — fabric.mod.json (id, version, entrypoints main/client), код на Java или Kotlin, mixins; Forge — mods.toml; NeoForge — neoforge.mods.toml. Готовый мод — .jar (собирается как zip).',
+	'- Моды: Fabric — fabric.mod.json (id, version, entrypoints main/client), код на Java или Kotlin, mixins; Forge — mods.toml; NeoForge — neoforge.mods.toml. Java-код компилируй по-настоящему: <<launcher_compile_java|папка::мод.jar>> (нужен JDK в системе). Если javac нет — собери .jar как zip (это честный мод для ресурсных/клиентских правок) и скажи, что для скомпилированных модов нужен JDK.',
 	'- Датапаки: pack.mcmeta в корне + data/<namespace>/function/*.mcfunction и прочее.',
-	'- Код на других языках (Python, JavaScript/TypeScript, Lua, C#, GLSL и т.д.) — тоже сохраняй файлами в песочницу.',
-	'Порядок работы над артефактом: папка проекта в песочнице → файлы по одному через sandbox_write → sandbox_pack в архив → скажи игроку путь к архиву (например inbox/ или папка проекта).',
+	'- Любой другой код и файлы: сайты (html/css/js — потом open_folder), скрипты (Python, Lua, C#...), конфиги, картинки через <<gen_image|описание::файл.png>>.',
+	'Порядок работы над артефактом: папка проекта в песочнице → файлы (удобно через <<sandbox_bash|mkdir ... && ...>>) → компиляция/упаковка → <<open_folder|путь>> → скажи игроку, что где лежит.',
+	'Если знаний не хватает (версии, форматы, API) — сначала web_search, потом пиши код. Не выдумывай несуществующие API: проверяй.',
 ].join('\n')
 
 // ---- Personality ---------------------------------------------------------
@@ -692,74 +751,98 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	const hasImages = rounds !== base
 
 	resetSandboxStats()
+	beginAgentRun()
 	let providerTried = ''
 	let lastError: unknown
 	const doneActions: string[] = []
 
-	for (const providerId of fallbackChain(settings.provider)) {
-		providerTried = providerId
-		let payload = rounds
-		try {
-			for (let round = 0; round < 4; round++) {
-				let raw: string
-				try {
-					raw = await callProvider(providerId, payload, request.signal)
-				} catch (error) {
-					// A model without vision answers 400 to image parts: drop them
-					// once and answer from the text alone.
-					const status = (error as Error & { status?: number }).status
-					if (hasImages && status === 400 && payload === rounds) {
-						rounds = withoutImages(base)
-						payload = rounds
+	try {
+		for (const providerId of fallbackChain(settings.provider)) {
+			providerTried = providerId
+			let payload = rounds
+			try {
+				for (let round = 0; round < 4; round++) {
+					if (playerTookOver()) {
+						return {
+							content:
+								'Остановился: ты ушёл на другой экран, так что я решил, что ты передумал. Скажи, если продолжить.',
+							provider: providerTried,
+							actions: doneActions,
+							activity: sandboxStatsSnapshot(),
+						}
+					}
+					let raw: string
+					try {
 						raw = await callProvider(providerId, payload, request.signal)
-					} else {
-						throw error
+					} catch (error) {
+						// A model without vision answers 400 to image parts: drop them
+						// once and answer from the text alone.
+						const status = (error as Error & { status?: number }).status
+						if (hasImages && status === 400 && payload === rounds) {
+							rounds = withoutImages(base)
+							payload = rounds
+							raw = await callProvider(providerId, payload, request.signal)
+						} else {
+							throw error
+						}
 					}
-				}
-				const parsed = parseActions(raw)
-				const askAction = parsed.actions.find((action) => action.tool === 'ask_user')
-				if (askAction) {
-					const [text, options] = askAction.args.split('::')
-					return {
-						content: parsed.text || raw,
-						provider: providerTried,
-						actions: doneActions,
-						activity: sandboxStatsSnapshot(),
-						question: {
-							text: (text ?? 'Как поступить?').trim(),
-							options: (options ?? '')
-								.split(';;')
-								.map((option) => option.trim())
-								.filter(Boolean),
-						},
+					const parsed = parseActions(raw)
+					const askAction = parsed.actions.find((action) => action.tool === 'ask_user')
+					if (askAction) {
+						const [text, options] = askAction.args.split('::')
+						return {
+							content: parsed.text || raw,
+							provider: providerTried,
+							actions: doneActions,
+							activity: sandboxStatsSnapshot(),
+							question: {
+								text: (text ?? 'Как поступить?').trim(),
+								options: (options ?? '')
+									.split(';;')
+									.map((option) => option.trim())
+									.filter(Boolean),
+							},
+						}
 					}
-				}
-				if (parsed.actions.length === 0 || round === 3) {
-					return {
-						content: parsed.text || raw,
-						provider: providerTried,
-						actions: doneActions,
-						activity: sandboxStatsSnapshot(),
+					if (parsed.actions.length === 0 || round === 3) {
+						return {
+							content: parsed.text || raw,
+							provider: providerTried,
+							actions: doneActions,
+							activity: sandboxStatsSnapshot(),
+						}
 					}
+					const notes: string[] = []
+					for (const action of parsed.actions.slice(0, 4)) {
+						if (playerTookOver()) {
+							notes.push('Игрок сам перешёл на другой экран - он передумал. Немедленно прекрати действия по этому запросу и попрощайся.')
+							return {
+								content:
+									'Остановился: ты ушёл на другой экран, так что я решил, что ты передумал. Скажи, если продолжить.',
+								provider: providerTried,
+								actions: doneActions,
+								activity: sandboxStatsSnapshot(),
+							}
+						}
+						const result = await runTool(action.tool, action.args)
+						doneActions.push(action.tool)
+						request.onActionDone?.(action.tool, action.args, result)
+						notes.push(`Результат ${action.tool}(${action.args}): ${result.slice(0, 1200)}`)
+					}
+					payload = [
+						...payload,
+						{ role: 'assistant', content: raw },
+						{ role: 'user', content: notes.join('\n') + '\nПродолжи ответ пользователю.' },
+					]
 				}
-				const notes: string[] = []
-				for (const action of parsed.actions.slice(0, 4)) {
-					const result = await runTool(action.tool, action.args)
-					doneActions.push(action.tool)
-					request.onActionDone?.(action.tool, action.args, result)
-					notes.push(`Результат ${action.tool}(${action.args}): ${result.slice(0, 1200)}`)
-				}
-				payload = [
-					...payload,
-					{ role: 'assistant', content: raw },
-					{ role: 'user', content: notes.join('\n') + '\nПродолжи ответ пользователю.' },
-				]
+			} catch (error) {
+				lastError = error
+				if (request.signal?.aborted) throw error
+				if (!isRetryable(error)) throw error
 			}
-		} catch (error) {
-			lastError = error
-			if (request.signal?.aborted) throw error
-			if (!isRetryable(error)) throw error
 		}
+	} finally {
+		endAgentRun()
 	}
 	throw lastError ?? new Error('Ни один провайдер не ответил')
 }
@@ -781,6 +864,84 @@ function stripHtml(html: string): string {
 		.trim()
 }
 
+/** DuckDuckGo wraps result links in its own redirect; the real URL sits in
+ * the uddg query parameter. */
+function unwrapDdgLink(href: string): string {
+	try {
+		const url = new URL(href, 'https://duckduckgo.com')
+		const target = url.searchParams.get('uddg')
+		return target ? decodeURIComponent(target) : href
+	} catch {
+		return href
+	}
+}
+
+interface SearchHit {
+	title: string
+	url: string
+}
+
+function parseDdgHtml(html: string): SearchHit[] {
+	const hits: SearchHit[] = []
+	const pattern = /class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g
+	let match = pattern.exec(html)
+	while (match && hits.length < 6) {
+		hits.push({ title: stripHtml(match[2]), url: unwrapDdgLink(match[1]) })
+		match = pattern.exec(html)
+	}
+	return hits
+}
+
+/**
+ * The agent's own web search: DuckDuckGo, asked three ways, because one of
+ * the three doors is always open - the plain HTML endpoint, the same one
+ * through a POST (what a browser form does), and the "lite" mirror. Whichever
+ * answers first wins; the others never see the query.
+ */
+async function webSearch(query: string): Promise<string> {
+	const attempts: (() => Promise<Response>)[] = [
+		() =>
+			proxiedFetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+				headers: { Accept: 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+				signal: AbortSignal.timeout(15000),
+			}),
+		() =>
+			proxiedFetch('https://html.duckduckgo.com/html/', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+					Accept: 'text/html',
+					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+				},
+				body: `q=${encodeURIComponent(query)}`,
+				signal: AbortSignal.timeout(15000),
+			}),
+		() =>
+			proxiedFetch(`https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`, {
+				headers: { Accept: 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+				signal: AbortSignal.timeout(15000),
+			}),
+	]
+	let lastDetail = ''
+	for (const attempt of attempts) {
+		try {
+			const response = await attempt()
+			if (!response.ok) {
+				lastDetail = `HTTP ${response.status}`
+				continue
+			}
+			const hits = parseDdgHtml(await response.text())
+			if (hits.length > 0) {
+				return hits.map((hit, index) => `${index + 1}. ${hit.title} — ${hit.url}`).join('\n')
+			}
+			lastDetail = 'пустая выдача'
+		} catch (error) {
+			lastDetail = String(error).slice(0, 120)
+		}
+	}
+	return `Ничего не нашлось или поиск недоступен (${lastDetail}). Попробуй переформулировать запрос или открой конкретный сайт через web_fetch`
+}
+
 registerAiToolHandler(async (tool, args) => {
 	if (tool === 'web_fetch') {
 		const url = args.trim()
@@ -792,20 +953,94 @@ registerAiToolHandler(async (tool, args) => {
 	if (tool === 'web_search') {
 		const query = args.trim()
 		if (!query) return 'Пустой запрос'
-		const response = await proxiedFetch(
-			`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
-			{ headers: { Accept: 'text/html' } },
-		)
-		const html = await response.text()
-		const results: string[] = []
-		const pattern = /class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g
-		let match = pattern.exec(html)
-		while (match && results.length < 5) {
-			results.push(`${stripHtml(match[2])} — ${match[1]}`)
-			match = pattern.exec(html)
+		return webSearch(query)
+	}
+	if (tool === 'sandbox_bash') {
+		if (!args.trim()) return 'Пустая команда'
+		return sandboxBash(args)
+	}
+	if (tool === 'open_folder') {
+		if (!args.trim()) return 'Укажите путь'
+		return sandboxReveal(args.trim())
+	}
+	if (tool === 'gen_image') {
+		const separator = args.indexOf('::')
+		const prompt = (separator < 0 ? args : args.slice(0, separator)).trim()
+		const file = separator < 0 ? '' : args.slice(separator + 2).trim()
+		if (!prompt) return 'Опиши, что нарисовать'
+		const name = file || `image-${Date.now()}.png`
+		if (!/\.(png|jpg|jpeg|webp)$/i.test(name)) return 'Имя файла должно заканчиваться на .png, .jpg или .webp'
+		try {
+			const size = name.match(/(\d+)x(\d+)/i)
+			const width = Math.min(1024, Math.max(256, Number(size?.[1]) || 1024))
+			const height = Math.min(1024, Math.max(256, Number(size?.[2]) || 1024))
+			const response = await proxiedFetch(
+				`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&nologo=true`,
+				{ signal: AbortSignal.timeout(90000) },
+			)
+			if (!response.ok) return `Картинка не сгенерировалась: HTTP ${response.status}`
+			const bytes = new Uint8Array(await response.arrayBuffer())
+			if (bytes.length < 1000) return 'Картинка не сгенерировалась (пустой ответ)'
+			const path = await sandboxWriteBinary(name, bytes)
+			return `сгенерирована картинка ${name} (${Math.round(bytes.length / 1024)} КБ), сохранена: ${path}`
+		} catch (error) {
+			return `Картинка не получилась: ${String(error).slice(0, 200)}`
 		}
-		if (results.length === 0) return 'Ничего не нашлось или поиск недоступен'
-		return results.join('\n')
+	}
+	if (tool === 'launcher_set_theme') {
+		const theme = args.trim().toLowerCase()
+		const known = ['dark', 'light', 'oled', 'retro', 'system']
+		if (!known.includes(theme)) return `Темы бывают: ${known.join(', ')}`
+		useTheme().preferred.value = theme as 'dark' | 'light' | 'oled' | 'retro' | 'system'
+		return `Тема лаунчера сменена на ${theme}`
+	}
+	if (tool === 'launcher_compile_java') {
+		const parts = args.split('::').map((part) => part.trim())
+		if (!parts[0] || !parts[1]) return 'Формат: <<launcher_compile_java|папка-с-кодом::мод.jar>>'
+		return sandboxCompileJava(parts[0], parts[1])
+	}
+	if (tool === 'launcher_install') {
+		const parts = args.split('::').map((part) => part.trim())
+		const projectId = parts[0] ?? ''
+		const kind = (parts[1] ?? 'mod').toLowerCase()
+		const instanceId = parts[2] ?? ''
+		if (!projectId) return 'Укажите id проекта (из launcher_search_mods или /project/<id>)'
+		if (!['mod', 'resourcepack', 'shader', 'datapack'].includes(kind)) {
+			return 'Тип бывает: mod, resourcepack, shader, datapack (сборки ставятся через open_creation_modal)'
+		}
+		const instances = await list()
+		const target =
+			instances.find((instance) => instance.id === instanceId) ??
+			(instances.length === 1 ? instances[0] : undefined)
+		if (!target) {
+			return instances.length === 0
+				? 'Сборок нет - создай через <<open_creation_modal|>>'
+				: `Укажите id сборки. Есть: ${instances.map((instance) => `${instance.id} «${instance.name}»`).join('; ')}`
+		}
+		try {
+			const versionResponse = await proxiedFetch(
+				`https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}/version?loaders=${encodeURIComponent(JSON.stringify([target.loader ?? 'vanilla']))}&game_versions=${encodeURIComponent(JSON.stringify([target.game_version ?? '']))}`,
+				{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(15000) },
+			)
+			let versionId = ''
+			if (versionResponse.ok) {
+				const versions = (await versionResponse.json()) as { id: string }[]
+				versionId = versions[0]?.id ?? ''
+			}
+			if (!versionId) {
+				const anyResponse = await proxiedFetch(
+					`https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}/version`,
+					{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(15000) },
+				)
+				const versions = anyResponse.ok ? ((await anyResponse.json()) as { id: string }[]) : []
+				versionId = versions[0]?.id ?? ''
+			}
+			if (!versionId) return 'У проекта нет версий для этой сборки'
+			await add_project_from_version(target.id, versionId, 'standalone' as DownloadReason)
+			return `Установлено в «${target.name}»: версия ${versionId}`
+		} catch (error) {
+			return `Не установилось: ${String(error).slice(0, 200)}`
+		}
 	}
 	if (tool === 'list_instances') {
 		const instances = await list()

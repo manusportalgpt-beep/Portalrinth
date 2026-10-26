@@ -194,6 +194,15 @@ export async function sandboxWriteBinary(rel: string, bytes: Uint8Array): Promis
 	return path
 }
 
+/** Reads a sandbox image back as a data URL, for previews in the chat. */
+export async function sandboxReadDataUrl(rel: string): Promise<string> {
+	const path = await resolveIn(rel, root())
+	const bytes = new Uint8Array(await fs.readFile(path))
+	const extension = (rel.split('.').pop() ?? 'png').toLowerCase()
+	const mime = extension === 'jpg' ? 'jpeg' : extension === 'webp' ? 'webp' : 'png'
+	return `data:image/${mime};base64,${bytesToBase64(bytes)}`
+}
+
 export async function sandboxDelete(rel: string): Promise<string> {
 	countCommand()
 	const path = await resolveIn(rel, root())
@@ -253,6 +262,261 @@ export async function sandboxUnpack(archiveRel: string, destRel: string): Promis
 		return `Распаковка не удалась: ${String(error).slice(0, 300)}`
 	}
 }
+
+/** Shows a sandbox file or folder in the system file manager. */
+export async function sandboxReveal(rel: string): Promise<string> {
+	countCommand()
+	const target = rel.trim()
+	if (!target) return 'Укажите путь'
+	try {
+		await invoke('plugin:portalrinth-archiver|archiver_reveal', {
+			path: await resolveIn(target, root()),
+		})
+		return `открыл папку: ${target}`
+	} catch (error) {
+		return `Папку не открыть: ${String(error).slice(0, 300)}`
+	}
+}
+
+/** Compiles every .java under a sandbox folder into a real .jar. */
+export async function sandboxCompileJava(sourceRel: string, jarRel: string): Promise<string> {
+	countCommand()
+	const source = sourceRel.trim()
+	const jar = jarRel.trim()
+	if (!source || !jar) return 'Формат: <<launcher_compile_java|папка-с-кодом::мод.jar>>'
+	if (!/\.jar$/i.test(jar)) return 'Результат должен быть .jar'
+	try {
+		return await invoke('plugin:portalrinth-archiver|archiver_compile_java', {
+			sourceDir: await resolveIn(source, root()),
+			outputJar: await resolveIn(jar, root()),
+		})
+	} catch (error) {
+		return `Компиляция не удалась: ${String(error).slice(0, 600)}`
+	}
+}
+
+// ---- The little shell ------------------------------------------------------
+
+/**
+ * The assistant's bash. Not a real shell - nothing here can start a process
+ * - but the familiar commands over the sandbox's files: ls, cd, cat, echo
+ * with redirection, mkdir, rm, cp, mv, touch, head, tail, wc, find, grep,
+ * tree. Commands chain with `&&`, output lands in a file with `>` or `>>`.
+ */
+let shellCwd = ''
+
+function resolveWithCwd(rel: string): Promise<string> {
+	const trimmed = rel.trim().replace(/^\/+/, '')
+	if (!trimmed || trimmed === '~') return resolveIn(shellCwd, root())
+	if (trimmed === '.') return resolveIn(shellCwd, root())
+	return resolveIn(shellCwd ? `${shellCwd}/${trimmed}` : trimmed, root())
+}
+
+function relWithCwd(rel: string): string {
+	const trimmed = rel.trim().replace(/^\/+/, '')
+	if (!trimmed || trimmed === '~') return shellCwd
+	if (!shellCwd) return trimmed
+	return `${shellCwd}/${trimmed}`
+}
+
+async function isDir(abs: string): Promise<boolean> {
+	try {
+		return (await fs.stat(abs)).isDirectory ?? false
+	} catch {
+		return false
+	}
+}
+
+async function listOne(rel: string, long: boolean): Promise<string> {
+	const abs = await resolveWithCwd(rel)
+	if (!(await pathExists(relWithCwd(rel)))) throw new Error(`ls: нет такого пути: ${rel}`)
+	if (!(await isDir(abs))) return rel
+	const entries = await fs.readDir(abs)
+	const sorted = entries.sort((a, b) => Number(b.isDirectory) - Number(a.isDirectory))
+	if (!long) return sorted.map((entry) => (entry.isDirectory ? `${entry.name}/` : entry.name)).join('  ')
+	return sorted
+		.map((entry) =>
+			entry.isDirectory
+				? `${entry.name}/`
+				: `${entry.name} (${entry.size ?? 0} Б)`,
+		)
+		.join('\n')
+}
+
+async function treeOf(rel: string, depth: number): Promise<string> {
+	const lines: string[] = [`${relWithCwd(rel) || '/'}`]
+	async function walk(dirRel: string, level: number): Promise<void> {
+		if (level > depth) return
+		const abs = await resolveWithCwd(dirRel)
+		const entries = await fs.readDir(abs)
+		entries.sort((a, b) => Number(b.isDirectory) - Number(a.isDirectory))
+		for (const entry of entries) {
+			lines.push(`${'  '.repeat(level)}${entry.isDirectory ? '├─ ' : '├─ '}${entry.name}`)
+			if (entry.isDirectory) {
+				await walk(dirRel ? `${dirRel}/${entry.name}` : entry.name, level + 1)
+			}
+		}
+	}
+	await walk(rel.trim(), 1)
+	return lines.slice(0, 120).join('\n')
+}
+
+function splitArgs(input: string): string[] {
+	const args: string[] = []
+	let current = ''
+	let quote: string | null = null
+	for (const char of input) {
+		if (quote) {
+			if (char === quote) quote = null
+			else current += char
+		} else if (char === '"' || char === "'") {
+			quote = char
+		} else if (/\s/.test(char)) {
+			if (current) args.push(current)
+			current = ''
+		} else {
+			current += char
+		}
+	}
+	if (current) args.push(current)
+	return args
+}
+
+async function runOne(raw: string): Promise<string> {
+	// Redirection first: the last > or >> sends output to a file.
+	let redirect: { file: string; append: boolean } | null = null
+	let line = raw.trim()
+	const appendMatch = line.match(/>>\s*(\S+)\s*$/)
+	const writeMatch = line.match(/>\s*(\S+)\s*$/)
+	if (appendMatch) {
+		redirect = { file: appendMatch[1], append: true }
+		line = line.slice(0, appendMatch.index ?? line.length).trim()
+	} else if (writeMatch && line.startsWith('echo ')) {
+		redirect = { file: writeMatch[1], append: false }
+		line = line.slice(0, writeMatch.index ?? line.length).trim()
+	}
+	const parts = splitArgs(line)
+	const cmd = parts.shift() ?? ''
+	switch (cmd) {
+		case 'pwd':
+			return `/${relWithCwd('')}`
+		case 'cd': {
+			const target = parts[0] ?? ''
+			const abs = await resolveWithCwd(target)
+			if (!(await pathExists(relWithCwd(target)))) throw new Error(`cd: нет такого пути: ${target}`)
+			if (!(await isDir(abs))) throw new Error(`cd: это не папка: ${target}`)
+			shellCwd = relWithCwd(target)
+			return `/${shellCwd}`
+		}
+		case 'ls':
+			return await listOne(parts.filter((a) => !a.startsWith('-'))[0] ?? '', parts.includes('-l'))
+		case 'cat': {
+			if (!parts[0]) throw new Error('cat: укажите файл')
+			return (await sandboxRead(relWithCwd(parts[0]))).replace(/\n…\(обрезано\)$/, '')
+		}
+		case 'head':
+		case 'tail': {
+			const count = parts.includes('-n') ? Number(parts[parts.indexOf('-n') + 1]) || 10 : 10
+			const file = parts.filter((a) => !a.startsWith('-') && a !== String(count))[0] ?? ''
+			if (!file) throw new Error(`${cmd}: укажите файл`)
+			const text = await sandboxRead(relWithCwd(file))
+			const lines = text.split('\n')
+			return (cmd === 'head' ? lines.slice(0, count) : lines.slice(-count)).join('\n')
+		}
+		case 'wc': {
+			const file = parts.filter((a) => !a.startsWith('-'))[0] ?? ''
+			if (!file) throw new Error('wc: укажите файл')
+			const text = await sandboxRead(relWithCwd(file))
+			return `${text.split('\n').length} строк, ${text.split(/\s+/).filter(Boolean).length} слов, ${text.length} символов`
+		}
+		case 'echo': {
+			const text = parts.join(' ').replace(/^["']|["']$/g, '')
+			if (redirect) {
+				const target = relWithCwd(redirect.file)
+				let previous = ''
+				if (redirect.append) {
+					try {
+						previous = await sandboxRead(target)
+					} catch {
+						previous = ''
+					}
+				}
+				return await sandboxWrite(target, previous + (previous ? '\n' : '') + text)
+			}
+			return text
+		}
+		case 'touch': {
+			if (!parts[0]) throw new Error('touch: укажите файл')
+			const target = relWithCwd(parts[0])
+			if (await pathExists(target)) return `${parts[0]} уже есть`
+			return await sandboxWrite(target, '')
+		}
+		case 'mkdir': {
+			const target = parts.filter((a) => !a.startsWith('-'))[0] ?? ''
+			if (!target) throw new Error('mkdir: укажите папку')
+			const abs = await resolveWithCwd(target)
+			await fs.mkdir(abs, { recursive: true })
+			return `папка создана: ${relWithCwd(target)}`
+		}
+		case 'rm': {
+			const target = parts.filter((a) => !a.startsWith('-'))[0] ?? ''
+			if (!target) throw new Error('rm: укажите путь')
+			return await sandboxDelete(relWithCwd(target))
+		}
+		case 'cp':
+		case 'mv': {
+			const from = parts[0] ?? ''
+			const to = parts[1] ?? ''
+			if (!from || !to) throw new Error(`${cmd}: укажите откуда и куда`)
+			const fromAbs = await resolveWithCwd(from)
+			const toRel = relWithCwd(to)
+			const toAbs = await resolveWithCwd(to)
+			if (await isDir(toAbs)) throw new Error(`${cmd}: цель - папка, укажите имя файла`)
+			if (cmd === 'cp') {
+				await fs.copyFile(fromAbs, toAbs)
+				return `скопировано: ${relWithCwd(from)} → ${toRel}`
+			}
+			await fs.rename(fromAbs, toAbs)
+			return `перемещено: ${relWithCwd(from)} → ${toRel}`
+		}
+		case 'find':
+		case 'tree':
+			return await treeOf(parts.filter((a) => !a.startsWith('-'))[0] ?? '', cmd === 'tree' ? 4 : 8)
+		case 'grep': {
+			const pattern = parts.filter((a) => !a.startsWith('-'))[0] ?? ''
+			const file = parts.filter((a) => !a.startsWith('-'))[1] ?? ''
+			if (!pattern || !file) throw new Error('grep: укажите образец и файл')
+			const insensitive = parts.includes('-i')
+			const regex = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), insensitive ? 'i' : '')
+			const text = await sandboxRead(relWithCwd(file))
+			const hits = text.split('\n').filter((row) => regex.test(row))
+			return hits.length > 0 ? hits.slice(0, 40).join('\n') : 'grep: совпадений нет'
+		}
+		default:
+			throw new Error(`${cmd}: такой команды нет (умею: pwd, cd, ls, cat, head, tail, wc, echo, touch, mkdir, rm, cp, mv, find, tree, grep)`)
+	}
+}
+
+/**
+ * Runs one shell line over the sandbox. `&&` chains commands; a failed
+ * command stops the chain and reports why.
+ */
+export async function sandboxBash(command: string): Promise<string> {
+	countCommand()
+	const input = command.trim()
+	if (!input) return 'Пустая команда'
+	const segments = input.split('&&').map((part) => part.trim()).filter(Boolean)
+	const outputs: string[] = []
+	try {
+		for (const segment of segments) {
+			outputs.push(await runOne(segment))
+		}
+	} catch (error) {
+		outputs.push(`ошибка: ${String(error instanceof Error ? error.message : error).slice(0, 300)}`)
+	}
+	return outputs.join('\n')
+}
+
 
 // ---- The inbox -------------------------------------------------------------
 

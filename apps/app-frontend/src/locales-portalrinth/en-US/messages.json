@@ -1726,5 +1726,11 @@
 	},
 	"app.settings.resource-management.skin-services.minotar": {
 		"message": "Draws a flat full-body picture straight from the texture hash on its own host - a fallback that keeps working when laby.net is throttled."
+	},
+	"app.ai.activity.open-folder": {
+		"message": "Open folder in file manager"
+	},
+	"app.screenshots.set-as-background": {
+		"message": "Apply as background"
 	}
 }

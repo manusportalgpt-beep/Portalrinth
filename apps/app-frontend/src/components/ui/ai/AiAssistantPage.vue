@@ -4,6 +4,7 @@ import {
 	ClipboardCopyIcon,
 	ChevronDownIcon,
 	FileIcon,
+	FolderOpenIcon,
 	PlusIcon,
 	SparklesIcon,
 	XIcon,
@@ -27,6 +28,8 @@ import {
 	formatSize,
 	inboxSave,
 	readLatestSession,
+	sandboxReadDataUrl,
+	sandboxReveal,
 } from '@/helpers/ai-sandbox'
 
 const { formatMessage } = useVIntl()
@@ -84,6 +87,10 @@ const messages = {
 	commands: { id: 'app.ai.activity.commands', defaultMessage: 'команд' },
 	filesCreated: { id: 'app.ai.activity.created', defaultMessage: 'сгенерирован файл' },
 	filesChanged: { id: 'app.ai.activity.changed', defaultMessage: 'изменён файл' },
+	openFolderCard: {
+		id: 'app.ai.activity.open-folder',
+		defaultMessage: 'Открыть папку в проводнике',
+	},
 	questionTitle: {
 		id: 'app.ai.question.title',
 		defaultMessage: 'Помощник ждёт вашего решения',
@@ -112,6 +119,10 @@ const modelsOpen = ref(false)
 const scrollBox = ref<HTMLElement | null>(null)
 const attachments = ref<AttachedFile[]>([])
 const questionDraft = ref('')
+/** Folders and pictures Portalus produced during the reply in progress -
+ * shown as cards under the message once it lands. */
+const turnFolders = ref<string[]>([])
+const turnImages = ref<string[]>([])
 let typeTimer: ReturnType<typeof setInterval> | undefined
 
 const visibleHistory = computed(() => aiHistory.value.filter((m) => m.role !== 'note'))
@@ -185,8 +196,40 @@ function actionName(tool: string) {
 		session_read: 'перечитал сессию',
 		ask_user: 'спросил вас',
 		celebrate: 'отплясывает',
+		sandbox_bash: 'выполнил команду',
+		open_folder: 'открыл папку',
+		gen_image: 'сгенерировал картинку',
+		launcher_set_theme: 'сменил тему',
+		launcher_compile_java: 'скомпилировал мод в .jar',
+		launcher_install: 'установил контент в сборку',
 	}
 	return map[tool] ?? tool
+}
+
+/** Collects what the reply in progress shows the player: folders to open
+ * with one click and generated pictures to preview inline. */
+function onAgentAction(tool: string, args: string, result: string) {
+	streaming.value = ''
+	if (tool === 'open_folder') {
+		const path = args.trim()
+		if (path && !turnFolders.value.includes(path)) {
+			turnFolders.value = [...turnFolders.value, path]
+		}
+	}
+	if (tool === 'gen_image') {
+		const name = result.match(/картинка (\S+) \(/)?.[1] ?? ''
+		if (name) {
+			void sandboxReadDataUrl(name)
+				.then((url) => {
+					turnImages.value = [...turnImages.value, url]
+				})
+				.catch(() => {})
+		}
+	}
+}
+
+function openSandboxFolder(path: string) {
+	void sandboxReveal(path)
 }
 
 async function send(text?: string) {
@@ -223,6 +266,8 @@ async function send(text?: string) {
 		attachments: files.length > 0 ? files : undefined,
 	})
 	sending.value = true
+	turnFolders.value = []
+	turnImages.value = []
 
 	const payload = aiHistory.value
 		.filter((m) => m.role !== 'note')
@@ -237,9 +282,7 @@ async function send(text?: string) {
 			kind: 'tab',
 			messages: payload,
 			images: files.filter((file) => file.kind === 'image'),
-			onActionDone: () => {
-				streaming.value = ''
-			},
+			onActionDone: onAgentAction,
 		})
 		stopTyping()
 		const done: AiMessage = {
@@ -248,7 +291,13 @@ async function send(text?: string) {
 			ts: Date.now(),
 			provider: result.provider,
 			actions: result.actions,
-			activity: result.activity,
+			activity: result.activity
+				? {
+						...result.activity,
+						foldersOpened: turnFolders.value,
+						images: turnImages.value,
+					}
+				: undefined,
 			question: result.question,
 		}
 		if (aiSettings.value.chatEffects) {
@@ -446,6 +495,23 @@ defineExpose({ send })
 								<span class="text-green">+{{ change.added }}</span>/<span class="text-red">
 									−{{ change.removed }}</span
 								>
+							</span>
+							<button
+								v-for="folder in message.activity.foldersOpened ?? []"
+								:key="`f-${folder}`"
+								class="ai-activity-chip ai-activity-folder"
+								:title="formatMessage(messages.openFolderCard)"
+								@click="openSandboxFolder(folder)"
+							>
+								<FolderOpenIcon class="h-3.5 w-3.5" />
+								{{ folder }}
+							</button>
+							<span
+								v-for="(image, imageIndex) in message.activity.images ?? []"
+								:key="`img-${imageIndex}`"
+								class="ai-activity-image-wrap"
+							>
+								<img :src="image" class="ai-activity-image" alt="" />
 							</span>
 						</div>
 
@@ -761,6 +827,37 @@ defineExpose({ send })
 .ai-activity-changed {
 	background: color-mix(in srgb, var(--color-orange) 16%, transparent);
 	color: var(--color-orange);
+}
+
+.ai-activity-folder {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	cursor: pointer;
+	border: 1px solid color-mix(in srgb, var(--color-brand) 35%, transparent);
+	background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+	color: var(--color-brand);
+	font: inherit;
+	font-size: 0.75rem;
+	padding: 0.25rem 0.5rem;
+	border-radius: 9999px;
+}
+
+.ai-activity-folder:hover {
+	background: color-mix(in srgb, var(--color-brand) 22%, transparent);
+}
+
+.ai-activity-image-wrap {
+	display: inline-flex;
+	max-width: 100%;
+}
+
+.ai-activity-image {
+	max-width: 200px;
+	max-height: 150px;
+	border-radius: 0.75rem;
+	border: 1px solid var(--color-surface-5);
+	object-fit: cover;
 }
 
 .ai-question-card {

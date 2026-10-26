@@ -3346,5 +3346,11 @@
 	},
 	"app.settings.resource-management.skin-services.minotar": {
 		"message": "Рисует плоскую фигуру в полный рост прямо по хэшу текстуры на своём хосте — запасной вариант, который работает, даже когда laby.net тормозит."
+	},
+	"app.ai.activity.open-folder": {
+		"message": "Открыть папку в проводнике"
+	},
+	"app.screenshots.set-as-background": {
+		"message": "Сделать фоном лаунчера"
 	}
 }
