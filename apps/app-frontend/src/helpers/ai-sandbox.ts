@@ -760,14 +760,14 @@ export async function attachFromPaths(paths: string[]): Promise<AttachedFile[]> 
 					path,
 					dataUrl: `data:image/${extension === 'jpg' ? 'jpeg' : extension};base64,${bytesToBase64(bytes)}`,
 				})
-			} else if (TEXT_EXTENSIONS.includes(extension) || size < 200000) {
+			} else if (TEXT_EXTENSIONS.includes(extension) || size < 2000000) {
 				const text = await fs.readTextFile(path)
 				attached.push({
 					name,
 					size,
 					kind: 'text',
 					path,
-					text: text.length > 12000 ? `${text.slice(0, 12000)}\n…` : text,
+					text: text.length > 120000 ? `${text.slice(0, 120000)}\n…` : text,
 				})
 			} else {
 				attached.push({ name, size, kind: 'file', path })

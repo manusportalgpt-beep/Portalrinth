@@ -7,6 +7,7 @@
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 
 import { get as getSettings } from './settings'
+import { loggedFetch } from './portalrinth-connections'
 
 type TauriFetchInit = Parameters<typeof tauriFetch>[1] & {
 	proxy?: { all: string }
@@ -31,5 +32,5 @@ export async function proxiedFetch(
 	if (proxyUrl) {
 		init = { ...init, proxy: { all: proxyUrl } }
 	}
-	return tauriFetch(input, init)
+	return loggedFetch(input, init, () => tauriFetch(input, init))
 }

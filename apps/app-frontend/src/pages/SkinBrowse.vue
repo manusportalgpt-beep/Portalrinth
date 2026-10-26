@@ -337,7 +337,7 @@ async function select(skin: LabySkin) {
 	currentTexture.value = ''
 	renderChains.set(
 		skin.image_hash,
-		[...labySkinRenderSources(skin.image_hash, 480, 868), minotarBodyUrl(skin.image_hash, 868)],
+		[...labySkinRenderSources(skin.image_hash, 640, 1152), minotarBodyUrl(skin.image_hash, 1024)],
 	)
 	renderStep.set(skin.image_hash, 0)
 	currentRender.value = renderChain(skin.image_hash)[0]

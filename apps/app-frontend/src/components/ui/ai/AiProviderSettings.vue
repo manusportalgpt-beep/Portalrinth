@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ExternalIcon, EyeIcon, EyeOffIcon, KeyIcon } from '@modrinth/assets'
+import { ExternalIcon, EyeIcon, EyeOffIcon, KeyIcon, XIcon } from '@modrinth/assets'
 import { Button, DropdownSelect, Input, useVIntl } from '@modrinth/ui'
 import { computed, onMounted, ref } from 'vue'
 
@@ -78,6 +78,22 @@ const messages = {
 	bridgeCopied: { id: 'app.ai.bridge.copied', defaultMessage: 'Скопировано!' },
 	bridgeRunning: { id: 'app.ai.bridge.running', defaultMessage: 'Работает' },
 	bridgeIdle: { id: 'app.ai.bridge.idle', defaultMessage: 'Выключен' },
+	skills: { id: 'app.ai.skills', defaultMessage: 'Скиллы' },
+	skillsHint: {
+		id: 'app.ai.skills.hint',
+		defaultMessage:
+			'Скилл - постоянная инструкция для ИИ (что уметь и как себя вести). ИИ тоже может ставить их сам через <<skill_save|имя::описание>>.',
+	},
+	skillsEmpty: {
+		id: 'app.ai.skills.empty',
+		defaultMessage: 'Скиллов пока нет - добавь свой ниже.',
+	},
+	skillName: { id: 'app.ai.skills.name', defaultMessage: 'Название скилла' },
+	skillText: {
+		id: 'app.ai.skills.text',
+		defaultMessage: 'Что уметь и как (инструкция)',
+	},
+	skillAdd: { id: 'app.ai.skills.add', defaultMessage: 'Установить скилл' },
 }
 
 const showKey = ref(false)
@@ -170,6 +186,33 @@ async function runConnectionTest() {
 		testResult.value = String((error as Error)?.message ?? error).slice(0, 240)
 		testState.value = 'fail'
 	}
+}
+
+// ---- Skills ---------------------------------------------------------------
+
+const skills = computed(() => aiSettings.value.skills ?? [])
+const newSkillName = ref('')
+const newSkillText = ref('')
+
+function addSkill() {
+	const name = newSkillName.value.trim()
+	const text = newSkillText.value.trim()
+	if (!name || !text) return
+	saveAiSettings({
+		skills: [...skills.value, { id: `skill-${Date.now()}`, name, text, on: true }],
+	})
+	newSkillName.value = ''
+	newSkillText.value = ''
+}
+
+function removeSkill(id: string) {
+	saveAiSettings({ skills: skills.value.filter((skill) => skill.id !== id) })
+}
+
+function toggleSkill(id: string) {
+	saveAiSettings({
+		skills: skills.value.map((skill) => (skill.id === id ? { ...skill, on: !skill.on } : skill)),
+	})
 }
 
 // ---- The bridge -----------------------------------------------------------
@@ -377,6 +420,30 @@ onMounted(() => {
 			</div>
 		</div>
 
+		<div class="ai-skill-section flex flex-col gap-1.5">
+			<span class="text-sm font-semibold text-primary">{{ formatMessage(messages.skills) }}</span>
+			<p v-if="skills.length === 0" class="m-0 text-sm text-secondary">
+				{{ formatMessage(messages.skillsEmpty) }}
+			</p>
+			<div v-for="skill in skills" :key="skill.id" class="ai-skill-row">
+				<label class="ai-skill-head">
+					<input type="checkbox" :checked="skill.on" @change="() => toggleSkill(skill.id)" />
+					<span class="text-sm font-medium text-primary">{{ skill.name }}</span>
+				</label>
+				<p class="ai-skill-text m-0">{{ skill.text }}</p>
+				<button class="ai-skill-delete" aria-label="Удалить" @click="() => removeSkill(skill.id)">
+					<XIcon class="size-3.5" />
+				</button>
+			</div>
+			<div class="flex flex-col gap-1.5">
+				<Input v-model="newSkillName" :placeholder="formatMessage(messages.skillName)" />
+				<Input v-model="newSkillText" :placeholder="formatMessage(messages.skillText)" />
+				<Button size="sm" :disabled="!newSkillName.trim() || !newSkillText.trim()" @click="addSkill">
+					{{ formatMessage(messages.skillAdd) }}
+				</Button>
+			</div>
+			<p class="m-0 text-xs leading-relaxed text-secondary">{{ formatMessage(messages.skillsHint) }}</p>
+		</div>
 		<div class="ai-bridge-section flex flex-col gap-1.5">
 			<div class="flex items-center justify-between gap-2">
 				<span class="flex items-center gap-1.5 text-sm font-semibold text-primary">
@@ -481,5 +548,49 @@ onMounted(() => {
 .ai-bridge-section {
 	border-top: 1px solid var(--surface-5);
 	padding-top: 0.75rem;
+}
+.ai-skill-section {
+	border-top: 1px solid var(--surface-5);
+	padding-top: 0.75rem;
+}
+
+.ai-skill-row {
+	border: 1px solid var(--surface-5);
+	border-radius: 0.625rem;
+	background: var(--color-button-bg);
+	padding: 0.5rem 0.625rem;
+	position: relative;
+}
+
+.ai-skill-head {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+}
+
+.ai-skill-text {
+	margin-top: 0.25rem;
+	font-size: 0.75rem;
+	line-height: 1.45;
+	color: var(--color-secondary);
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.ai-skill-delete {
+	position: absolute;
+	top: 0.4rem;
+	right: 0.4rem;
+	border: none;
+	background: transparent;
+	color: var(--color-secondary);
+	cursor: pointer;
+	padding: 0.15rem;
+	border-radius: 0.375rem;
+}
+
+.ai-skill-delete:hover {
+	color: var(--color-red);
 }
 </style>

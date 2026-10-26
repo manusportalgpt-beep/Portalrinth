@@ -193,6 +193,7 @@ import {
 	update_managed_modrinth_version,
 } from '@/helpers/instance'
 import { type InstanceContentData, loadInstanceContentData } from '@/helpers/instance-content'
+import { backupInstance } from '@/helpers/portalrinth-mods'
 import { get as getSettings, set as setSettings } from '@/helpers/settings'
 import { set_synced_pack_enabled, syncedPackKeys } from '@/helpers/synced-packs'
 import type { CacheBehaviour } from '@/helpers/types'
@@ -1536,6 +1537,10 @@ async function handleModpackUpdateRequest(selectedVersion: Labrinth.Versions.v2.
 
 async function handleModpackUpdateConfirm() {
 	if (!pendingModpackUpdateVersion.value || !instance.value?.id) return
+
+	// A safety net before the update: if it breaks anything, the pre-update
+	// copy of the whole instance is sitting in the Backups tab.
+	await backupInstance(instance.value.id)
 
 	const version = pendingModpackUpdateVersion.value
 	pendingModpackUpdateVersion.value = null

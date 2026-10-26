@@ -53,6 +53,7 @@
 				@export="() => !instance?.quarantined && exportModal?.show()"
 				@create-shortcut="() => createShortcut()"
 				@report="reportSharedInstance"
+				@clean-launch="() => handleCleanLaunch()"
 			/>
 		</div>
 		<div :class="['px-6', { 'shrink-0': isFixedRender }]">
@@ -149,6 +150,13 @@ import {
 	run,
 	sync_content_files,
 } from '@/helpers/instance'
+import {
+	cleanLaunch,
+	cleanLaunchBusy,
+	modSyncEnabled,
+	propagateModUpdates,
+	restoreCleanLaunch,
+} from '@/helpers/portalrinth-mods'
 import { kill as killProcess } from '@/helpers/process'
 import { useSharedInstanceErrors } from '@/helpers/shared-instance-errors'
 import type { GameInstance } from '@/helpers/types'
@@ -591,6 +599,20 @@ watch(
 
 const options = ref<InstanceType<typeof ContextMenu> | null>(null)
 
+/** The 3-dot "Clean launch": mods step aside for one run, then come back. */
+const handleCleanLaunch = async () => {
+	if (!instance.value || instance.value.quarantined || cleanLaunchBusy.value) return
+	const currentInstance = instance.value
+	loading.value = true
+	try {
+		await cleanLaunch(currentInstance.id)
+		await processesQuery.refetch()
+	} catch (err) {
+		handleSevereError(err, { instanceId: currentInstance.id })
+	}
+	loading.value = false
+}
+
 const launchInstance = async (context: string) => {
 	if (!instance.value || instance.value.quarantined) return
 	const currentInstance = instance.value
@@ -1009,6 +1031,14 @@ watch(instanceId, (currentInstanceId, previousInstanceId) => {
 useAppEvent('instance', async (event) => {
 	if (event.instance_id !== instanceId.value || event.event !== 'removed') return
 	if (route.path !== '/') await router.push({ path: '/' })
+})
+
+// Mod sync between builds: an install finishing in a synced instance is
+// pushed to every other synced build carrying the same project.
+useAppEvent('instance', (event) => {
+	if (event.event !== 'content_install_finished') return
+	if (!modSyncEnabled(event.instance_id)) return
+	void propagateModUpdates(event.instance_id)
 })
 
 useAppEvent('process', (event) => {

@@ -1831,5 +1831,80 @@
 	},
 	"app.speed.fail": {
 		"message": "Could not measure"
+	},
+	"app.ai.skills": {
+		"message": "Skills"
+	},
+	"app.ai.skills.hint": {
+		"message": "A skill is a standing instruction for the AI (what to be able to do and how to behave). The AI can install them itself via <<skill_save|name::description>>."
+	},
+	"app.ai.skills.empty": {
+		"message": "No skills yet - add your own below."
+	},
+	"app.ai.skills.name": {
+		"message": "Skill name"
+	},
+	"app.ai.skills.text": {
+		"message": "What it should do (instruction)"
+	},
+	"app.ai.skills.add": {
+		"message": "Install skill"
+	},
+	"app.settings.tabs.connections": {
+		"message": "Connections"
+	},
+	"instance.action.clean-launch": {
+		"message": "Clean launch (no mods)"
+	},
+	"instance.settings.tabs.mods-sync": {
+		"message": "Mod sync"
+	},
+	"instance.settings.tabs.backups": {
+		"message": "Backups"
+	},
+	"instance.settings.mods-sync.title": {
+		"message": "Mod sync"
+	},
+	"instance.settings.mods-sync.description": {
+		"message": "Mods installed or updated in this instance update themselves in every other instance that already carries the same mod. Nothing new gets added there - only shared mods stay on one version. Off by default."
+	},
+	"instance.settings.mods-sync.enabled": {
+		"message": "Sync shared mods with other instances"
+	},
+	"instance.settings.mods-sync.sync-now": {
+		"message": "Sync now"
+	},
+	"instance.settings.mods-sync.running": {
+		"message": "Comparing versions…"
+	},
+	"instance.settings.backups.title": {
+		"message": "Backups"
+	},
+	"instance.settings.backups.description": {
+		"message": "Whole-instance copies: mods, configs, worlds. The launcher backs the instance up before updating it, and you can save one any time with the button below. Restoring unfolds a copy over the instance."
+	},
+	"instance.settings.backups.new": {
+		"message": "New backup"
+	},
+	"instance.settings.backups.making": {
+		"message": "Packing a copy… Finished versions never change in here."
+	},
+	"instance.settings.backups.empty": {
+		"message": "No copies yet - make the first one so your progress is safe."
+	},
+	"instance.settings.backups.restore": {
+		"message": "Restore"
+	},
+	"instance.settings.backups.restore-confirm": {
+		"message": "Sure? Over the instance"
+	},
+	"instance.settings.backups.restoring": {
+		"message": "Unpacking the copy…"
+	},
+	"instance.settings.backups.delete": {
+		"message": "Delete"
+	},
+	"instance.settings.backups.fail": {
+		"message": "Did not work"
 	}
 }

@@ -47,7 +47,7 @@
  */
 import { XIcon } from '@modrinth/assets'
 import { Button, useVIntl } from '@modrinth/ui'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { agentNavNotice, queuedUserMessage } from '@/helpers/ai-assistant'
@@ -68,6 +68,14 @@ function dismiss() {
         agentNavNotice.value = null
         expanded.value = false
 }
+
+/** The notch is a notification: after ten seconds it steps aside on its own,
+ * so it never lingers over the screen the player moved to. */
+let noticeTimer: ReturnType<typeof setTimeout> | undefined
+watch(notice, (value) => {
+        clearTimeout(noticeTimer)
+        if (value) noticeTimer = setTimeout(dismiss, 10000)
+})
 
 function reply() {
         const text = draft.value.trim()

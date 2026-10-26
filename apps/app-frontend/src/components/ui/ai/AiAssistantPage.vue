@@ -3,11 +3,11 @@ import {
 	ArrowUpIcon,
 	ClipboardCopyIcon,
 	ChevronDownIcon,
+	ExternalIcon,
 	FileIcon,
 	FolderOpenIcon,
 	HistoryIcon,
 	PlusIcon,
-	SparklesIcon,
 	XIcon,
 } from '@modrinth/assets'
 import { Button, IconButton, Input, useVIntl } from '@modrinth/ui'
@@ -20,6 +20,7 @@ import {
 	type AiJarCard,
 	type AiMessage,
 	type AiModCard,
+	type AiPoll,
 	aiComplete,
 	aiHistory,
 	aiSettings,
@@ -156,6 +157,9 @@ const turnFolders = ref<AiFolderCard[]>([])
 const turnImages = ref<string[]>([])
 const turnMods = ref<AiModCard[]>([])
 const turnJars = ref<AiJarCard[]>([])
+const turnPolls = ref<AiPoll[]>([])
+	const galleryOpen = ref<Record<string, boolean>>({})
+	const zoomedImage = ref('')
 const collapsedCards = ref<Record<string, boolean>>({})
 const jarInstalled = ref<Record<string, boolean>>({})
 const instances = ref<Awaited<ReturnType<typeof listInstances>>>([])
@@ -214,7 +218,7 @@ function actionName(tool: string) {
 		open_instance: 'открыл сборку',
 		list_instances: 'посмотрел список сборок',
 		get_page: 'посмотрел, где вы находитесь',
-		web_fetch: 'прочитал страницу',
+		web_fetch: 'открыл страницу',
 		web_search: 'поискал в интернете',
 		launcher_set_accent: 'сменил цвет акцента',
 		launcher_set_background: 'поставил фон',
@@ -419,6 +423,7 @@ async function send(text?: string) {
 	turnImages.value = []
 	turnMods.value = []
 	turnJars.value = []
+	turnPolls.value = []
 
 	const payload = aiHistory.value
 		.filter((m) => m.role !== 'note')
@@ -449,6 +454,7 @@ async function send(text?: string) {
 						images: turnImages.value,
 						mods: turnMods.value,
 						jars: turnJars.value,
+						polls: turnPolls.value,
 					}
 				: undefined,
 			question: result.question,
@@ -483,6 +489,26 @@ async function send(text?: string) {
 	}
 }
 
+/** Error boxes speak for 10 seconds, then step aside - or leave earlier
+	 * through the cross, and never leave without a way to be copied. */
+	let errorTimer: ReturnType<typeof setTimeout> | undefined
+	watch(errorText, (value) => {
+		clearTimeout(errorTimer)
+		if (value) errorTimer = setTimeout(() => (errorText.value = ''), 10000)
+	})
+
+	function dismissError() {
+		errorText.value = ''
+	}
+
+	async function copyError() {
+		try {
+			await navigator.clipboard.writeText(errorText.value)
+		} catch {
+			/* the box just stays */
+		}
+	}
+
 function clearChat() {
 	if (sending.value) return
 	stopTyping()
@@ -497,24 +523,6 @@ function togglePlus() {
 function plusNewChat() {
 	plusOpen.value = false
 	clearChat()
-}
-
-async function plusPaste() {
-	plusOpen.value = false
-	if (sending.value) return
-	let text = ''
-	try {
-		text = await navigator.clipboard.readText()
-	} catch {
-		text = ''
-	}
-	const trimmed = text.trim()
-	if (!trimmed) {
-		errorText.value = formatMessage(messages.plusPasteEmpty)
-		return
-	}
-	const clipped = trimmed.length > 12000 ? `${trimmed.slice(0, 12000)}\n…` : trimmed
-	await send(clipped)
 }
 
 async function plusAttach() {
@@ -537,6 +545,125 @@ async function plusAttach() {
 
 function removeAttachment(index: number) {
 	attachments.value = attachments.value.filter((_, i) => i !== index)
+}
+
+// ---- Message rendering: links out, code in -----------------------------
+
+interface AiSegmentPart {
+	kind: 'text' | 'link'
+	text: string
+	url?: string
+}
+type AiSegment =
+	| { kind: 'code'; lang: string; lines: string[] }
+	| { kind: 'text'; parts: AiSegmentPart[] }
+
+const LINK_RE = /(\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>"')\]]+)/g
+
+function splitLinks(text: string): AiSegmentPart[] {
+	const parts: AiSegmentPart[] = []
+	let cursor = 0
+	let match = LINK_RE.exec(text)
+	while (match) {
+		if (match.index > cursor) parts.push({ kind: 'text', text: text.slice(cursor, match.index) })
+		const token = match[0]
+		const markdown = /^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/.exec(token)
+		if (markdown) parts.push({ kind: 'link', text: markdown[1], url: markdown[2] })
+		else parts.push({ kind: 'link', text: token, url: token })
+		cursor = match.index + token.length
+		match = LINK_RE.exec(text)
+	}
+	if (cursor < text.length) parts.push({ kind: 'text', text: text.slice(cursor) })
+	return parts
+}
+
+/** Fenced code becomes its own segment; prose is scanned for links. */
+function parseSegments(content: string): AiSegment[] {
+	const segments: AiSegment[] = []
+	const blocks = content.split('```')
+	for (let i = 0; i < blocks.length; i++) {
+		const block = blocks[i]
+		if (i % 2 === 1) {
+			const newline = block.indexOf('\n')
+			const lang = newline >= 0 ? block.slice(0, newline).trim() : ''
+			const code = newline >= 0 ? block.slice(newline + 1) : block
+			segments.push({ kind: 'code', lang, lines: code.replace(/\n+$/, '').split('\n') })
+		} else if (block.trim()) {
+			segments.push({ kind: 'text', parts: splitLinks(block) })
+		}
+	}
+	return segments
+}
+
+async function openLink(url: string) {
+	try {
+		const { openUrl } = await import('@tauri-apps/plugin-opener')
+		await openUrl(url)
+	} catch {
+		/* the link simply did not open */
+	}
+}
+
+function answerPoll(option: string) {
+	if (sending.value) return
+	void send(option)
+}
+
+function toggleGallery(key: string) {
+	galleryOpen.value = { ...galleryOpen.value, [key]: !galleryOpen.value[key] }
+}
+
+/** The chat box itself: grows line by line up to eight, then scrolls. */
+const inputEl = ref<HTMLTextAreaElement | null>(null)
+const CHAT_MAX_HEIGHT = 264
+
+function autoGrow() {
+	const el = inputEl.value
+	if (!el) return
+	el.style.height = 'auto'
+	el.style.height = `${Math.min(el.scrollHeight, CHAT_MAX_HEIGHT)}px`
+	el.classList.toggle('ai-input-full', el.scrollHeight > CHAT_MAX_HEIGHT)
+}
+
+watch(input, autoGrow)
+
+/** Paste goes straight in: pictures become previews, files become chips,
+ * text lands where the caret is - no menu detour, no length cuts. */
+function onPaste(event: ClipboardEvent) {
+	const items = event.clipboardData?.items
+	if (!items) return
+	const files: File[] = []
+	for (const item of items) {
+		if (item.kind === 'file') {
+			const file = item.getAsFile()
+			if (file) files.push(file)
+		}
+	}
+	if (files.length === 0) return
+	event.preventDefault()
+	void (async () => {
+		const attached: AttachedFile[] = []
+		for (const file of files) {
+			try {
+				if (file.type.startsWith('image/')) {
+					const dataUrl = await new Promise<string>((resolve, reject) => {
+						const reader = new FileReader()
+						reader.onload = () => resolve(String(reader.result))
+						reader.onerror = () => reject(reader.error)
+						reader.readAsDataURL(file)
+					})
+					attached.push({ name: file.name || 'картинка.png', size: file.size, kind: 'image', dataUrl })
+				} else if (file.size < 2000000) {
+					attached.push({ name: file.name || 'файл', size: file.size, kind: 'text', text: await file.text() })
+				} else {
+					attached.push({ name: file.name || 'файл', size: file.size, kind: 'file' })
+				}
+			} catch {
+				attached.push({ name: file.name || 'файл', size: file.size, kind: 'file' })
+			}
+		}
+		if (attached.length > 0) attachments.value = [...attachments.value, ...attached]
+	})()
 }
 
 function answerQuestion(answer: string) {
@@ -588,13 +715,7 @@ defineExpose({ send })
 	<div class="ai-page flex h-full min-h-0 flex-col">
 		<div class="flex items-start justify-between gap-3 px-6 pt-6">
 			<div class="flex flex-col gap-1">
-				<h1 class="m-0 flex items-center gap-2 text-2xl font-bold text-primary">
-					<SparklesIcon class="text-brand" />
-					{{ formatMessage(messages.heading) }}
-				</h1>
-				<p class="m-0 max-w-3xl text-base text-secondary">
-					{{ formatMessage(messages.description) }}
-				</p>
+				<h1 class="m-0 text-2xl font-bold text-primary">{{ formatMessage(messages.heading) }}</h1>
 			</div>
 			<div class="relative shrink-0">
 				<IconButton
@@ -647,7 +768,6 @@ defineExpose({ send })
 				v-if="visibleHistory.length === 0"
 				class="flex h-full flex-col items-center justify-center gap-2 text-center"
 			>
-				<SparklesIcon class="size-10 text-secondary" />
 				<p class="m-0 text-lg font-semibold text-primary">
 					{{ formatMessage(messages.emptyTitle) }}
 				</p>
@@ -692,7 +812,30 @@ defineExpose({ send })
 								</span>
 							</template>
 						</div>
-						<p class="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed">
+						<template v-if="parseSegments(message.content).length > 0">
+							<template v-for="(segment, segmentIndex) in parseSegments(message.content)" :key="`seg-${segmentIndex}`">
+								<div v-if="segment.kind === 'code'" class="ai-code-block">
+									<p class="ai-code-head m-0">{{ segment.lang || 'код' }}</p>
+									<pre class="ai-code-pre m-0"><code><span
+										v-for="(line, lineIndex) in segment.lines"
+										:key="lineIndex"
+										class="ai-code-line"
+										:class="{ 'ai-code-animated': aiSettings.chatEffects }"
+										:style="{ animationDelay: `${Math.min(lineIndex * 70, 2800)}ms` }"
+									>{{ line }}</span></code></pre>
+								</div>
+								<p v-else class="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed"><template
+									v-for="(part, partIndex) in segment.parts"
+									:key="partIndex"
+								><span v-if="part.kind === 'text'">{{ part.text }}</span><a
+									v-else
+									class="ai-link"
+									:href="part.url"
+									@click.prevent="() => openLink(part.url!)"
+								>{{ part.text }}<ExternalIcon class="ai-link-icon" /></a></template></p>
+							</template>
+						</template>
+						<p v-else class="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed">
 							{{ message.content }}
 						</p>
 
@@ -765,6 +908,24 @@ defineExpose({ send })
 												· {{ compactCount(mod.follows) }} ♥
 											</template>
 										</p>
+										<span
+											v-if="mod.gallery?.length"
+											class="ai-gallery-open"
+											@click.stop="() => toggleGallery(`${index}-${mod.projectId}`)"
+										>
+											Галерея · {{ mod.gallery.length }}
+										</span>
+										<div v-if="galleryOpen[`${index}-${mod.projectId}`] && mod.gallery?.length" class="ai-gallery">
+											<img
+												v-for="(shot, shotIndex) in mod.gallery"
+												:key="shotIndex"
+												:src="shot"
+												class="ai-gallery-thumb"
+												loading="lazy"
+												alt=""
+												@click.stop="() => (zoomedImage = shot)"
+											/>
+										</div>
 									</div>
 								</button>
 							</div>
@@ -804,6 +965,16 @@ defineExpose({ send })
 							</div>
 						</div>
 
+						<div v-if="message.activity?.polls?.length" class="ai-cards">
+							<div v-for="(poll, pollIndex) in message.activity.polls" :key="`poll-${pollIndex}`" class="ai-poll-card">
+								<p class="ai-card-title m-0">{{ poll.text }}</p>
+								<div class="mt-1 flex flex-wrap gap-2">
+									<Button v-for="option in poll.options" :key="option" size="sm" :disabled="sending" @click="() => answerPoll(option)">
+										{{ option }}
+									</Button>
+								</div>
+							</div>
+						</div>
 						<div v-if="message.actions?.length" class="mt-1.5 flex flex-wrap gap-1">
 							<span v-for="action in message.actions" :key="action" class="ai-action-chip">
 								{{ actionName(action) }}
@@ -855,6 +1026,10 @@ defineExpose({ send })
 				</div>
 			</template>
 
+			<div v-if="zoomedImage" class="ai-zoom" @click="() => (zoomedImage = '')">
+				<img :src="zoomedImage" class="ai-zoom-image" alt="" />
+			</div>
+
 			<div v-if="sending" class="mb-3 flex justify-start">
 				<div class="ai-bubble ai-bubble-assistant rounded-2xl px-4 py-2.5">
 					<span class="ai-typing">
@@ -873,9 +1048,15 @@ defineExpose({ send })
 		</div>
 
 		<div class="shrink-0 px-6 pb-6">
-			<p v-if="errorText" class="ai-error m-0 mb-2 rounded-xl px-3 py-2 text-sm">
-				{{ errorText }}
-			</p>
+			<div v-if="errorText" class="ai-error m-0 mb-2 flex items-start gap-2 rounded-xl px-3 py-2 text-sm">
+				<span class="min-w-0 grow break-words">{{ errorText }}</span>
+				<button v-tooltip="'Скопировать'" class="ai-error-btn" aria-label="Скопировать" @click="copyError">
+					<ClipboardCopyIcon class="size-3.5" />
+				</button>
+				<button v-tooltip="'Закрыть'" class="ai-error-btn" aria-label="Закрыть" @click="dismissError">
+					<XIcon class="size-3.5" />
+				</button>
+			</div>
 
 			<div v-if="attachments.length > 0" class="mb-2 flex flex-wrap gap-2">
 				<span v-for="(file, index) in attachments" :key="`${file.name}-${index}`" class="ai-attach-chip">
@@ -926,19 +1107,17 @@ defineExpose({ send })
 							<FileIcon class="size-4" />
 							{{ formatMessage(messages.plusAttach) }}
 						</button>
-						<button class="ai-menu-item" @click="plusPaste">
-							<ClipboardCopyIcon class="size-4" />
-							{{ formatMessage(messages.plusPaste) }}
-						</button>
 					</div>
 				</div>
-				<Input
+				<textarea
+					ref="inputEl"
 					v-model="input"
-					class="grow"
-					:wrapper-class="'grow'"
+					class="ai-input grow"
+					rows="1"
 					:disabled="sending"
 					:placeholder="formatMessage(messages.placeholder)"
-					@keydown.enter.prevent="() => send()"
+					@keydown.enter.exact.prevent="() => send()"
+					@paste="onPaste"
 				/>
 				<div class="relative shrink-0">
 					<button class="ai-model-chip" :disabled="sending" @click="toggleModels">
@@ -1356,5 +1535,154 @@ defineExpose({ send })
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+.ai-input {
+	resize: none;
+	border: none;
+	background: transparent;
+	color: var(--color-primary);
+	font: inherit;
+	font-size: 0.875rem;
+	line-height: 1.5;
+	padding: 0.5rem 0.25rem;
+	outline: none;
+	min-width: 0;
+}
+
+.ai-input-full {
+	overflow-y: auto;
+}
+
+.ai-link {
+	color: var(--color-brand);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	cursor: pointer;
+}
+
+.ai-link-icon {
+	display: inline;
+	width: 0.75rem;
+	height: 0.75rem;
+	margin-left: 0.125rem;
+	vertical-align: baseline;
+	opacity: 0.7;
+}
+
+.ai-code-block {
+	margin: 0.375rem 0;
+	border: 1px solid var(--surface-5);
+	border-radius: 0.625rem;
+	background: var(--color-bg);
+	overflow: hidden;
+}
+
+.ai-code-head {
+	padding: 0.25rem 0.625rem;
+	font-size: 0.6875rem;
+	color: var(--color-secondary);
+	border-bottom: 1px solid var(--surface-5);
+}
+
+.ai-code-pre {
+	padding: 0.5rem 0.625rem;
+	overflow-x: auto;
+	font-family: var(--monospace, monospace);
+	font-size: 0.75rem;
+	line-height: 1.45;
+}
+
+.ai-code-line {
+	display: block;
+	white-space: pre;
+}
+
+.ai-code-animated {
+	opacity: 0;
+	animation: ai-code-in 0.18s ease forwards;
+}
+
+@keyframes ai-code-in {
+	from {
+		opacity: 0;
+		transform: translateY(2px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.ai-poll-card {
+	border: 1px solid color-mix(in srgb, var(--color-brand) 30%, transparent);
+	background: color-mix(in srgb, var(--color-brand) 8%, transparent);
+	border-radius: 0.75rem;
+	padding: 0.625rem 0.75rem;
+}
+
+.ai-gallery-open {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	margin-top: 0.25rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--color-secondary);
+	font-size: 0.6875rem;
+	padding: 0.1rem 0.5rem;
+	cursor: pointer;
+}
+
+.ai-gallery-open:hover {
+	color: var(--color-primary);
+	border-color: var(--color-brand);
+}
+
+.ai-gallery {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	margin-top: 0.375rem;
+}
+
+.ai-gallery-thumb {
+	height: 4rem;
+	width: 6.5rem;
+	object-fit: cover;
+	border-radius: 0.5rem;
+	border: 1px solid var(--surface-5);
+	cursor: zoom-in;
+}
+
+.ai-zoom {
+	position: fixed;
+	inset: 0;
+	z-index: 50;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgb(0 0 0 / 70%);
+	cursor: zoom-out;
+}
+
+.ai-zoom-image {
+	max-width: min(60rem, 92vw);
+	max-height: 86vh;
+	border-radius: 0.75rem;
+}
+
+.ai-error-btn {
+	border: none;
+	background: transparent;
+	color: inherit;
+	opacity: 0.75;
+	cursor: pointer;
+	padding: 0.1rem;
+	border-radius: 0.375rem;
+}
+
+.ai-error-btn:hover {
+	opacity: 1;
 }
 </style>

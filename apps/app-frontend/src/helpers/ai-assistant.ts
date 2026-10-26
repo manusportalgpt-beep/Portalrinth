@@ -196,6 +196,56 @@ export const AI_PROVIDERS: AiProvider[] = [
 		note: 'Платный, но очень дешёвый и умный.',
 	},
 	{
+		id: 'github-models',
+		label: 'GitHub Models',
+		baseUrl: 'https://models.github.ai/inference/chat/completions',
+		needsKey: true,
+		keyUrl: 'https://github.com/settings/tokens',
+		models: [
+			{ id: 'openai/gpt-4.1-mini', label: 'GPT 4.1 Mini' },
+			{ id: 'openai/gpt-4o-mini', label: 'GPT 4o Mini' },
+			{ id: 'meta/Llama-3.3-70B-Instruct', label: 'Llama 3.3 70B' },
+		],
+		note: 'Бесплатный дневной лимит запросов с обычным токеном GitHub.',
+	},
+	{
+		id: 'nvidia',
+		label: 'NVIDIA NIM',
+		baseUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
+		needsKey: true,
+		keyUrl: 'https://build.nvidia.com',
+		models: [
+			{ id: 'meta/llama-3.3-70b-instruct', label: 'Llama 3.3 70B' },
+			{ id: 'qwen/qwen2.5-coder-32b-instruct', label: 'Qwen2.5 Coder 32B' },
+			{ id: 'deepseek-ai/deepseek-r1', label: 'DeepSeek R1' },
+		],
+		note: 'Бесплатные кредиты каждому новому ключу на build.nvidia.com.',
+	},
+	{
+		id: 'together',
+		label: 'Together AI',
+		baseUrl: 'https://api.together.xyz/v1/chat/completions',
+		needsKey: true,
+		keyUrl: 'https://api.together.ai/settings/api-keys',
+		models: [
+			{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free', label: 'Llama 3.3 70B Turbo' },
+			{ id: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free', label: 'DeepSeek R1 Distill 70B' },
+		],
+		note: 'Бесплатные Turbo-модели под своим ключом.',
+	},
+	{
+		id: 'cohere',
+		label: 'Cohere',
+		baseUrl: 'https://api.cohere.ai/compatibility/v1/chat/completions',
+		needsKey: true,
+		keyUrl: 'https://dashboard.cohere.com/api-keys',
+		models: [
+			{ id: 'command-r7b-12-2024', label: 'Command R7B' },
+			{ id: 'command-r-08-2024', label: 'Command R' },
+		],
+		note: 'Пробные ключи бесплатны и без привязки карты.',
+	},
+	{
 		id: 'custom',
 		label: 'Свой сервер',
 		baseUrl: '',
@@ -204,6 +254,14 @@ export const AI_PROVIDERS: AiProvider[] = [
 		note: 'Любой OpenAI-совместимый сервер: LM Studio, Ollama, свой шлюз.',
 	},
 ]
+
+/** A skill: a standing instruction the player installed for the agent. */
+export interface AiSkill {
+	id: string
+	name: string
+	text: string
+	on: boolean
+}
 
 /** Everything that survives a restart lives here. */
 export interface AiSettings {
@@ -214,6 +272,8 @@ export interface AiSettings {
 	keys: Record<string, string>
 	customBaseUrl: string
 	customModel: string
+	/** Installed skills, kept in the same blob as the rest of the settings. */
+	skills: AiSkill[]
 	/** Which service gen_image draws from. */
 	imageProvider: string
 	/** Keys for image providers, same shape as text keys. */
@@ -236,6 +296,7 @@ const DEFAULT_SETTINGS: AiSettings = {
 	keys: {},
 	customBaseUrl: '',
 	customModel: '',
+	skills: [],
 	imageProvider: 'pollinations',
 	imageKeys: {},
 	mascotEnabled: true,
@@ -335,6 +396,8 @@ export interface AiActivity {
 	mods?: AiModCard[]
 	/** .jar files the agent built this reply, installable in one click. */
 	jars?: AiJarCard[]
+	/** Polls the agent put up during this reply. */
+	polls?: AiPoll[]
 	/** Generated pictures, as data URLs for inline previews. */
 	images?: string[]
 }
@@ -356,6 +419,8 @@ export interface AiModCard {
 	downloads: number
 	follows?: number
 	url: string
+	/** Modrinth gallery screenshots, for the card's flip-through gallery. */
+	gallery?: string[]
 }
 
 /** A .jar the agent built, ready to drop into an instance. */
@@ -483,11 +548,19 @@ export function parseActions(text: string): ParsedReply {
 const MOD_MARKER = /@@MOD@@(\{.*\})/g
 const JAR_MARKER = /@@JAR@@(\{.*\})/g
 const IMAGE_MARKER = /@@IMG@@(data:image\/[a-z+.-]+;base64,[^\s]+)/
+const POLL_MARKER = /@@POLL@@(\{.*\})/g
+
+/** A poll the agent set up, with clickable answer buttons. */
+export interface AiPoll {
+	text: string
+	options: string[]
+}
 
 export interface ParsedCards {
 	text: string
 	mods: AiModCard[]
 	jars: AiJarCard[]
+	polls: AiPoll[]
 	image?: string
 }
 
@@ -496,6 +569,7 @@ export interface ParsedCards {
 export function extractCards(result: string): ParsedCards {
 	const mods: AiModCard[] = []
 	const jars: AiJarCard[] = []
+	const polls: AiPoll[] = []
 	const text = result
 		.replace(MOD_MARKER, (_match, json: string) => {
 			try {
@@ -513,8 +587,18 @@ export function extractCards(result: string): ParsedCards {
 			}
 			return ''
 		})
+		.replace(POLL_MARKER, (_match, json: string) => {
+			try {
+				const raw = JSON.parse(json) as { text?: string; options?: string[] }
+				const options = (raw.options ?? []).map((option) => String(option)).filter(Boolean)
+				if (raw.text && options.length > 0) polls.push({ text: raw.text, options })
+			} catch {
+				/* and here */
+			}
+			return ''
+		})
 		.trim()
-	return { text, mods, jars, image: IMAGE_MARKER.exec(result)?.[1] }
+	return { text, mods, jars, polls, image: IMAGE_MARKER.exec(result)?.[1] }
 }
 
 // ---- Walking the launcher alongside the player -----------------------------
@@ -579,13 +663,13 @@ export const AI_TOOLS_HINT = [
 	'- <<web_search|запрос>> — поиск в интернете (DuckDuckGo), вернёт ссылки и заголовки; всегда проверяй факты поиском, не выдумывай',
 	'- <<web_fetch|url>> — скачать страницу по ссылке (вернёт очищенный текст)',
 	'Экраны лаунчера (команды лаунчера касаются только лаунчера):',
-	'- <<navigate|путь>> — открыть экран, например <<navigate|/browse/mod?q=jei>>; если спрашивают «покажи/расскажи, как это», открой нужный экран и коротко объясни. Игрок видит тот же экран, что и ты: двигайся по лаунчеру вместе с ним',
+	'- <<navigate|путь>> — открыть экран, например <<navigate|/browse/mod?q=jei>>; если просят показать/найти/открыть — вызывай navigate СРАЗУ, в этом же ответе, без лишних вопросов и расспросов, и коротко объясни после перехода. Игрок видит тот же экран, что и ты: двигайся по лаунчеру вместе с ним',
 	'- <<get_page|>> — узнать, какой экран сейчас открыт (путь игрока и твой совпадают)',
 	'- <<open_creation_modal|>> — открыть окно создания сборки (можно с подсказкой: <<open_creation_modal|сборка на 1.21.1 с JEI>>)',
 	'- <<open_instance|id>> — открыть сборку по id',
 	'- <<list_instances|>> — получить список сборок игрока',
 	'- <<launcher_search_mods|запрос>> — найти мод/сборку сразу в Modrinth и CurseForge (иконка, автор, версия, описание — на странице проекта: открой её через <<navigate|/project/<id>>)',
-	'- <<launcher_install|id проекта::тип::id сборки>> — установить контент (тип: mod, modpack, resourcepack, shader) в сборку; игрок увидит карточку мода (название, автор, иконка, загрузки) — упомяни её в ответе',
+	'- <<launcher_install|id::тип::id сборки>> — установить контент (тип: mod, resourcepack, shader, datapack) в сборку; можно перечислить несколько id через запятую (id1,id2,id3) — поставятся пачкой в фоне, игрок увидит карточки модов — упомяни их в ответе',
 	'- <<launcher_set_accent|цвет>> — сменить цвет акцента лаунчера, hex (например <<launcher_set_accent|#22c55e>>)',
 	'- <<launcher_set_background|url>> — поставить фон окна по прямой ссылке на картинку',
 	'- <<launcher_set_theme|тема>> — тема оформления: dark, light, oled, retro или system',
@@ -599,6 +683,9 @@ export const AI_TOOLS_HINT = [
 	'- <<sandbox_pack|архив.zip::путь1::путь2>> — упаковать файлы/папки в .zip, .7z или .jar (ресурс-пак, шейдерпак, датапак)',
 	'- <<sandbox_unpack|архив.zip::папка>> — распаковать архив (в том числе присланный игроком)',
 	'- <<launcher_compile_java|папка-с-кодом::мод.jar>> — скомпилировать .java настоящим javac и собрать .jar (нужен JDK в системе; без него отдавай исходники + .jar как zip через sandbox_pack)',
+	'Обои: <<find_wallpaper|что ищешь>> — найти по-настоящему красивые картинки-обои в интернете (высокое разрешение); посмотри лучшие через <<view_image|url>> и предложи игроку: «Хотите, чтобы я поставил на фон лаунчера?» — ставится через <<launcher_set_background|url>>',
+	'Опрос: <<show_poll|вопрос::вариант 1;;вариант 2>> — покажет игроку карточку-опрос с кнопками; используй, когда нужно узнать мнение или выбор.',
+	'Навыки: <<skill_save|имя::что уметь и как>> — сохранить навык как постоянную инструкцию себе; включится сам и переживёт перезапуск.',
 	'Картинки: <<gen_image|описание::файл.png>> — сгенерировать изображение по описанию и сохранить в песочницу (годится и для текстур; для точных пиксель-арт текстур 16x16 лучше рисуй PNG вручную только если умеешь, иначе gen_image).',
 	'Файлы, которые игрок скинул в чат, сохраняются в папку inbox/ твоей песочницы — они остаются там: читай их, распаковывай, переделывай, удаляй по просьбе.',
 	'Память — твои заметки и прошлые разговоры не пропадают:',
@@ -684,6 +771,13 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 		AI_TOOLS_HINT,
 		AI_SKILLS_HINT,
 	]
+	const skills = (settings.skills ?? []).filter((skill) => skill.on && skill.text.trim())
+	if (skills.length > 0) {
+		lines.push(
+			'Установленные навыки (игрок поставил их сам - следуй им):\n' +
+				skills.map((skill) => `- ${skill.name}: ${skill.text}`).join('\n'),
+		)
+	}
 	if (kind === 'mascot') {
 		lines.push(
 			'Ты живёшь в интерфейсе лаунчера как маленький маскот. Ответ должен быть очень коротким: одно-два предложения, максимум.',
@@ -849,7 +943,17 @@ export async function testProvider(): Promise<string> {
  * a key saved. */
 function fallbackChain(primary: string): string[] {
 	const chain = [primary]
-	for (const candidate of ['pollinations', 'openrouter', 'zai', 'groq', 'cerebras']) {
+	for (const candidate of [
+		'pollinations',
+		'openrouter',
+		'zai',
+		'groq',
+		'cerebras',
+		'github-models',
+		'nvidia',
+		'together',
+		'cohere',
+	]) {
 		if (candidate === primary) continue
 		const provider = providerById(candidate)
 		if (!provider) continue
@@ -1001,8 +1105,15 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						}
 					}
 					if (parsed.actions.length === 0 || round === 3) {
+						// A model that only shouted commands and never spoke still owes
+						// the player words - summarize what was done instead of silence.
+						const silent = !parsed.text.trim()
 						return {
-							content: parsed.text || raw,
+							content: silent
+								? doneActions.length > 0
+									? `Готово: выполнил ${doneActions.length} действий — смотри отметки ниже. Спроси, если нужны подробности.`
+									: 'Готово. Спроси, если нужны подробности.'
+								: parsed.text || raw,
 							provider: providerTried,
 							actions: doneActions,
 							activity: sandboxStatsSnapshot(),
@@ -1010,7 +1121,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 					}
 					const notes: string[] = []
 					const seenImages: string[] = []
-					for (const action of parsed.actions.slice(0, 4)) {
+					for (const action of parsed.actions.slice(0, 6)) {
 						if (playerTookOver()) {
 							notes.push('Игрок сам перешёл на другой экран - он передумал. Немедленно прекрати действия по этому запросу и попрощайся.')
 							return {
@@ -1140,6 +1251,26 @@ async function webSearch(query: string): Promise<string> {
 				signal: AbortSignal.timeout(15000),
 			}),
 	]
+	attempts.push(() =>
+		proxiedFetch(`https://www.bing.com/search?q=${encodeURIComponent(query)}&setlang=ru`, {
+			headers: {
+				Accept: 'text/html',
+				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+				'Accept-Language': 'ru,en;q=0.8',
+			},
+			signal: AbortSignal.timeout(15000),
+		}).then(async (response) => {
+			if (!response.ok) throw new Error(`HTTP ${response.status}`)
+			const html = await response.text()
+			const hits = [...html.matchAll(/<h2><a href="([^"]+)"[^>]*>([\s\S]*?)<\/a><\/h2>/g)].slice(0, 6)
+			if (hits.length === 0) throw new Error('пустая выдача')
+			// Packed back into the one shape the shared parser already reads.
+			return new Response(
+				hits.map((match) => `<a class="result__a" href="${match[1]}">${match[2]}</a>`).join(''),
+				{ status: 200 },
+			)
+		}),
+	)
 	let lastDetail = ''
 	for (const attempt of attempts) {
 		try {
@@ -1185,6 +1316,26 @@ async function fetchModrinthCard(projectId: string): Promise<AiModCard | null> {
 		const hit = data.hits?.[0]
 		if (!hit?.project_id) return null
 		const slug = hit.slug ?? hit.project_id
+		// The project's own gallery, so the player can flip through screenshots
+		// right from the card (best effort - the card ships without it if slow).
+		let gallery: string[] = []
+		try {
+			const projectResponse = await proxiedFetch(
+				`https://api.modrinth.com/v2/project/${encodeURIComponent(hit.project_id)}`,
+				{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(10000) },
+			)
+			if (projectResponse.ok) {
+				const project = (await projectResponse.json()) as {
+					gallery?: { url?: string }[]
+				}
+				gallery = (project.gallery ?? [])
+					.map((shot) => shot.url ?? '')
+					.filter(Boolean)
+					.slice(0, 8)
+			}
+		} catch {
+			/* gallery is a bonus, never a blocker */
+		}
 		return {
 			source: 'Modrinth',
 			projectId: hit.project_id,
@@ -1196,10 +1347,53 @@ async function fetchModrinthCard(projectId: string): Promise<AiModCard | null> {
 			downloads: hit.downloads ?? 0,
 			follows: hit.follows ?? 0,
 			url: `https://modrinth.com/project/${slug}`,
+			gallery,
 		}
 	} catch {
 		return null
 	}
+}
+
+/** Installs one Modrinth project into an instance: picks the best version,
+ * downloads it, and returns a line for the model plus a card for the player. */
+async function installOneProject(
+	projectId: string,
+	kind: string,
+	instanceId: string,
+): Promise<string> {
+	const instances = await list()
+	const target =
+		instances.find((instance) => instance.id === instanceId) ??
+		(instances.length === 1 ? instances[0] : undefined)
+	if (!target) {
+		throw new Error(
+			instances.length === 0
+				? 'Сборок нет - создай через <<open_creation_modal|>>'
+				: `Укажите id сборки. Есть: ${instances.map((instance) => `${instance.id} «${instance.name}»`).join('; ')}`,
+		)
+	}
+	const versionResponse = await proxiedFetch(
+		`https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}/version?loaders=${encodeURIComponent(JSON.stringify([target.loader ?? 'vanilla']))}&game_versions=${encodeURIComponent(JSON.stringify([target.game_version ?? '']))}`,
+		{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(15000) },
+	)
+	let versionId = ''
+	if (versionResponse.ok) {
+		const versions = (await versionResponse.json()) as { id: string }[]
+		versionId = versions[0]?.id ?? ''
+	}
+	if (!versionId) {
+		const anyResponse = await proxiedFetch(
+			`https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}/version`,
+			{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(15000) },
+		)
+		const versions = anyResponse.ok ? ((await anyResponse.json()) as { id: string }[]) : []
+		versionId = versions[0]?.id ?? ''
+	}
+	if (!versionId) throw new Error('у проекта нет версий для этой сборки')
+	await add_project_from_version(target.id, versionId, 'standalone' as DownloadReason)
+	const card = await fetchModrinthCard(projectId)
+	const line = `Установлено в «${target.name}»: версия ${versionId}`
+	return card ? `${line}\n@@MOD@@${JSON.stringify(card)}` : line
 }
 
 registerAiToolHandler(async (tool, args) => {
@@ -1296,6 +1490,49 @@ registerAiToolHandler(async (tool, args) => {
 			return `Картинка не получилась: ${String(error).slice(0, 200)}`
 		}
 	}
+	if (tool === 'find_wallpaper') {
+		const query = args.trim() || 'nature landscape 4k wallpaper'
+		try {
+			const response = await proxiedFetch(
+				`https://wallhaven.cc/api/v1/search?q=${encodeURIComponent(query)}&categories=100&purity=100&sorting=relevance&atleast=1920x1080`,
+				{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20000) },
+			)
+			if (!response.ok) return `Обои не нашлись: HTTP ${response.status}`
+			const data = (await response.json()) as { data?: { path?: string }[] }
+			const hits = (data.data ?? []).map((hit) => hit.path).filter(Boolean).slice(0, 6)
+			if (hits.length === 0) return 'Ничего не нашлось - попробуй другой запрос'
+			return [
+				`Нашёл обои по запросу «${query}» (покажи лучшие через view_image и предложи поставить на фон):`,
+				...hits.map((url, index) => `${index + 1}. ${url}`),
+			].join('\n')
+		} catch (error) {
+			return `Обои не получились: ${String(error).slice(0, 150)}`
+		}
+	}
+	if (tool === 'show_poll') {
+		const separator = args.indexOf('::')
+		const text = (separator < 0 ? args : args.slice(0, separator)).trim()
+		const options = (separator < 0 ? '' : args.slice(separator + 2))
+			.split(';;')
+			.map((option) => option.trim())
+			.filter(Boolean)
+		if (!text || options.length < 2) return 'Формат: <<show_poll|вопрос::вариант 1;;вариант 2>>'
+		return `опрос показан@@POLL@@${JSON.stringify({ text, options })}`
+	}
+	if (tool === 'skill_save') {
+		const separator = args.indexOf('::')
+		const name = (separator < 0 ? '' : args.slice(0, separator)).trim()
+		const text = (separator < 0 ? args : args.slice(separator + 2)).trim()
+		if (!name || !text) return 'Формат: <<skill_save|имя::что уметь и как>>'
+		const skills = aiSettings.value.skills ?? []
+		if (skills.some((skill) => skill.name.toLowerCase() === name.toLowerCase())) {
+			return `Навык «${name}» уже установлен`
+		}
+		saveAiSettings({
+			skills: [...skills, { id: `skill-${Date.now()}`, name, text, on: true }],
+		})
+		return `Навык «${name}» установлен и включён`
+	}
 	if (tool === 'launcher_set_theme') {
 		const theme = args.trim().toLowerCase()
 		const known = ['dark', 'light', 'oled', 'retro', 'system']
@@ -1333,45 +1570,32 @@ registerAiToolHandler(async (tool, args) => {
 	}
 	if (tool === 'launcher_install') {
 		const parts = args.split('::').map((part) => part.trim())
-		const projectId = parts[0] ?? ''
+		const projectIds = (parts[0] ?? '').split(',').map((id) => id.trim()).filter(Boolean)
 		const kind = (parts[1] ?? 'mod').toLowerCase()
 		const instanceId = parts[2] ?? ''
-		if (!projectId) return 'Укажите id проекта (из launcher_search_mods или /project/<id>)'
+		if (projectIds.length === 0) return 'Укажите id проекта (из launcher_search_mods или /project/<id>)'
 		if (!['mod', 'resourcepack', 'shader', 'datapack'].includes(kind)) {
 			return 'Тип бывает: mod, resourcepack, shader, datapack (сборки ставятся через open_creation_modal)'
 		}
-		const instances = await list()
-		const target =
-			instances.find((instance) => instance.id === instanceId) ??
-			(instances.length === 1 ? instances[0] : undefined)
-		if (!target) {
-			return instances.length === 0
-				? 'Сборок нет - создай через <<open_creation_modal|>>'
-				: `Укажите id сборки. Есть: ${instances.map((instance) => `${instance.id} «${instance.name}»`).join('; ')}`
-		}
-		try {
-			const versionResponse = await proxiedFetch(
-				`https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}/version?loaders=${encodeURIComponent(JSON.stringify([target.loader ?? 'vanilla']))}&game_versions=${encodeURIComponent(JSON.stringify([target.game_version ?? '']))}`,
-				{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(15000) },
+		if (projectIds.length > 1) {
+			// A batch: everything goes out at once, in the background, and the
+			// model gets one line per project instead of a round per project.
+			const outcomes = await Promise.all(
+				projectIds.map(async (projectId) => {
+					try {
+						const detail = await installOneProject(projectId, kind, instanceId)
+						const clean = extractCards(detail)
+						return `${projectId}: ${clean.text}\n${clean.mods.map((mod) => `@@MOD@@${JSON.stringify(mod)}`).join('\n')}`
+					} catch (error) {
+						return `${projectId}: не установилось - ${String(error).slice(0, 150)}`
+					}
+				}),
 			)
-			let versionId = ''
-			if (versionResponse.ok) {
-				const versions = (await versionResponse.json()) as { id: string }[]
-				versionId = versions[0]?.id ?? ''
-			}
-			if (!versionId) {
-				const anyResponse = await proxiedFetch(
-					`https://api.modrinth.com/v2/project/${encodeURIComponent(projectId)}/version`,
-					{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(15000) },
-				)
-				const versions = anyResponse.ok ? ((await anyResponse.json()) as { id: string }[]) : []
-				versionId = versions[0]?.id ?? ''
-			}
-			if (!versionId) return 'У проекта нет версий для этой сборки'
-			await add_project_from_version(target.id, versionId, 'standalone' as DownloadReason)
-			const card = await fetchModrinthCard(projectId)
-			const line = `Установлено в «${target.name}»: версия ${versionId}`
-			return card ? `${line}\n@@MOD@@${JSON.stringify(card)}` : line
+			return `Пакетная установка завершена:\n${outcomes.join('\n')}`
+		}
+		const projectId = projectIds[0]
+		try {
+			return await installOneProject(projectId, kind, instanceId)
 		} catch (error) {
 			return `Не установилось: ${String(error).slice(0, 200)}`
 		}

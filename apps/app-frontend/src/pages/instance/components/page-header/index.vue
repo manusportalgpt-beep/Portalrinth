@@ -163,6 +163,7 @@ import {
 	PackageIcon,
 	PlayIcon,
 	ReportIcon,
+	RocketIcon,
 	SettingsIcon,
 	TimerIcon,
 	UnknownIcon,
@@ -213,6 +214,10 @@ const messages = defineMessages({
 	moreActions: {
 		id: 'instance.action.more-actions',
 		defaultMessage: 'More actions',
+	},
+	cleanLaunch: {
+		id: 'instance.action.clean-launch',
+		defaultMessage: 'Clean launch (without mods)',
 	},
 	neverPlayed: {
 		id: 'instance.playtime.never-played',
@@ -334,6 +339,7 @@ const emit = defineEmits<{
 	openFolder: []
 	export: []
 	createShortcut: []
+	cleanLaunch: []
 	report: [event?: MouseEvent]
 }>()
 
@@ -413,6 +419,15 @@ const moreActions = computed<ButtonMenuOption[]>(() => {
 			action: () => emit('openFolder'),
 		},
 	]
+
+	if (!props.instance.quarantined && props.instance.install_stage === 'installed') {
+		actions.unshift({
+			id: 'clean-launch',
+			label: formatMessage(messages.cleanLaunch),
+			icon: RocketIcon,
+			action: () => emit('cleanLaunch'),
+		})
+	}
 
 	if (!props.instance.quarantined) {
 		actions.push(

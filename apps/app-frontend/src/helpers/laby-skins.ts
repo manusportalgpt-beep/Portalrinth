@@ -121,26 +121,51 @@ async function browserTextureBytes(url: string): Promise<Uint8Array> {
  * Every source is tried over the app's client, then over the webview's own,
  * and the whole run is given a second chance after a pause — whatever the
  * network drops once, it usually lets through the next moment. */
+/** Resolves with the first task that answers, rejects only when all do. */
+function firstSuccess<T>(tasks: (() => Promise<T>)[]): Promise<T> {
+	return new Promise((resolve, reject) => {
+		let pending = tasks.length
+		let firstError: unknown
+		if (pending === 0) {
+			reject(new Error('no sources to try'))
+			return
+		}
+		for (const task of tasks) {
+			task().then(resolve, (error: unknown) => {
+				if (firstError === undefined) firstError = error
+				pending -= 1
+				if (pending === 0) reject(firstError)
+			})
+		}
+	})
+}
+
+/**
+ * The skin as a 64×64 PNG. Speed comes from racing every source at once -
+ * the fastest road wins instead of each dead road being walked in turn -
+ * and a calmer sequential pass runs only if the whole race crashes out.
+ */
 export async function labySkinTexture(hash: string): Promise<Uint8Array> {
 	const sources = labySkinTextureSources(hash)
+	const viaApp = (source: string) => normalize_skin_texture(source)
+	const viaBrowser = async (source: string) => browserTextureBytes(source)
 	let lastError: unknown
-	for (let round = 0; round < 2; round++) {
-		for (const source of sources) {
-			try {
-				// Comes back over IPC as a plain list of bytes, not a typed array.
-				return new Uint8Array(await normalize_skin_texture(source))
-			} catch (error) {
-				lastError = error
-			}
+	try {
+		const texture = await firstSuccess([
+			...sources.map(viaApp),
+			...sources.map(viaBrowser),
+		])
+		return new Uint8Array(texture)
+	} catch (error) {
+		lastError = error
+	}
+	await new Promise((resolve) => setTimeout(resolve, 700))
+	for (const source of sources) {
+		try {
+			return new Uint8Array(await viaBrowser(source))
+		} catch (error) {
+			lastError = error
 		}
-		for (const source of sources) {
-			try {
-				return new Uint8Array(await normalize_skin_texture(await browserTextureBytes(source)))
-			} catch (error) {
-				lastError = error
-			}
-		}
-		if (round === 0) await new Promise((resolve) => setTimeout(resolve, 700))
 	}
 	throw lastError ?? new Error(`The skin texture ${hash} could not be loaded`)
 }
@@ -176,7 +201,7 @@ async function drawSkinPreview(hash: string): Promise<string> {
 	const bitmap = await createImageBitmap(
 		new Blob([new Uint8Array(texture)], { type: 'image/png' }),
 	)
-	const scale = 4
+	const scale = 6
 	const canvas = document.createElement('canvas')
 	canvas.width = 16 * scale
 	canvas.height = 32 * scale

@@ -3451,5 +3451,80 @@
 	},
 	"app.speed.fail": {
 		"message": "Не получилось измерить"
+	},
+	"app.ai.skills": {
+		"message": "Скиллы"
+	},
+	"app.ai.skills.hint": {
+		"message": "Скилл — постоянная инструкция для ИИ (что уметь и как себя вести). ИИ тоже может ставить их сам через <<skill_save|имя::описание>>."
+	},
+	"app.ai.skills.empty": {
+		"message": "Скиллов пока нет — добавь свой ниже."
+	},
+	"app.ai.skills.name": {
+		"message": "Название скилла"
+	},
+	"app.ai.skills.text": {
+		"message": "Что уметь и как (инструкция)"
+	},
+	"app.ai.skills.add": {
+		"message": "Установить скилл"
+	},
+	"app.settings.tabs.connections": {
+		"message": "Подключения"
+	},
+	"instance.action.clean-launch": {
+		"message": "Чистый запуск (без модов)"
+	},
+	"instance.settings.tabs.mods-sync": {
+		"message": "Синхронизация"
+	},
+	"instance.settings.tabs.backups": {
+		"message": "Бэкапы"
+	},
+	"instance.settings.mods-sync.title": {
+		"message": "Синхронизация модов"
+	},
+	"instance.settings.mods-sync.description": {
+		"message": "Моды, установленные или обновлённые в этой сборке, сами обновятся во всех остальных сборках, где тот же мод уже стоит. Чего-то нового туда не добавляется — только общие моды держатся одной версии. По умолчанию выключена."
+	},
+	"instance.settings.mods-sync.enabled": {
+		"message": "Синхронизировать общие моды с другими сборками"
+	},
+	"instance.settings.mods-sync.sync-now": {
+		"message": "Синхронизировать сейчас"
+	},
+	"instance.settings.mods-sync.running": {
+		"message": "Сверяю версии…"
+	},
+	"instance.settings.backups.title": {
+		"message": "Бэкапы"
+	},
+	"instance.settings.backups.description": {
+		"message": "Копии сборки целиком: моды, конфиги, миры. Лаунчер сам делает бэкап перед обновлением сборки, а ты можешь сохранить ещё один в любой момент кнопкой ниже. Восстановление разворачивает копию поверх сборки."
+	},
+	"instance.settings.backups.new": {
+		"message": "Новый Бэкап"
+	},
+	"instance.settings.backups.making": {
+		"message": "Собираю копию… Готовые версии сюда не изменяются."
+	},
+	"instance.settings.backups.empty": {
+		"message": "Копий пока нет — сделай первую, чтобы не потерять прогресс."
+	},
+	"instance.settings.backups.restore": {
+		"message": "Восстановить"
+	},
+	"instance.settings.backups.restore-confirm": {
+		"message": "Точно? Поверх сборки"
+	},
+	"instance.settings.backups.restoring": {
+		"message": "Разворачиваю копию…"
+	},
+	"instance.settings.backups.delete": {
+		"message": "Удалить"
+	},
+	"instance.settings.backups.fail": {
+		"message": "Не получилось"
 	}
 }

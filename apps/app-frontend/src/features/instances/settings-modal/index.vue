@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
 import {
+	ArchiveIcon,
 	ChevronRightIcon,
 	CodeIcon,
 	CoffeeIcon,
 	InfoIcon,
+	RefreshCwIcon,
 	Settings2Icon,
 	UsersIcon,
 	WindowIcon,
@@ -29,10 +31,12 @@ import { get_loader_versions } from '@/helpers/metadata'
 import { get_game_versions, get_loaders } from '@/helpers/tags'
 import type { GameInstance } from '@/helpers/types'
 
+import BackupsSettings from './backups-settings.vue'
 import GeneralSettings from './general-settings.vue'
 import HooksSettings from './hooks-settings.vue'
 import InstallationSettings from './installation-settings.vue'
 import { provideInstanceSettings } from './instance-settings-context.ts'
+import ModsSyncSettings from './mods-sync-settings.vue'
 import JavaSettings from './java-settings.vue'
 import SharingSettings from './sharing-settings.vue'
 import SyncedOptionsSettings from './synced-options-settings.vue'
@@ -167,6 +171,24 @@ const tabs = computed<TabbedModalTab[]>(() => [
 		icon: Settings2Icon,
 		category: tabCategories.game,
 		content: SyncedOptionsSettings,
+	},
+	{
+		name: defineMessage({
+			id: 'instance.settings.tabs.mods-sync',
+			defaultMessage: 'Mod sync',
+		}),
+		icon: RefreshCwIcon,
+		category: tabCategories.instance,
+		content: ModsSyncSettings,
+	},
+	{
+		name: defineMessage({
+			id: 'instance.settings.tabs.backups',
+			defaultMessage: 'Backups',
+		}),
+		icon: ArchiveIcon,
+		category: tabCategories.instance,
+		content: BackupsSettings,
 	},
 ])
 
