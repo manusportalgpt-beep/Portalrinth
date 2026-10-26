@@ -471,7 +471,7 @@ async fn serve_socket<R: tauri::Runtime>(
     ws_stream: async_tungstenite::WebSocketStream<async_tungstenite::tokio::TokioAdapter<TcpStream>>,
     tx: broadcast::Sender<String>,
 ) {
-    use futures_util::{SinkExt, StreamExt};
+    use futures_util::StreamExt;
     use tokio::sync::broadcast::error::RecvError;
 
     let (mut sink, mut source) = ws_stream.split();

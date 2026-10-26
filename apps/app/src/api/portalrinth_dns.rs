@@ -85,7 +85,7 @@ fn skip_name(payload: &[u8], mut pos: usize) -> Option<usize> {
         if len == 0 {
             return Some(pos);
         }
-        pos += len;
+        pos += usize::from(len);
     }
 }
 
