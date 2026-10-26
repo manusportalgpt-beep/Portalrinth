@@ -7,6 +7,7 @@ import {
 	injectAuth,
 	injectUserPreferences,
 	provideAppearanceSettings,
+	Slider,
 	Toggle,
 	useSavable,
 	useVIntl,

@@ -8,7 +8,7 @@
  * leaving or removing it undoes everything, which is what makes this safe.
  */
 import { CheckIcon, CopyIcon, PlusIcon, SpinnerIcon, TrashIcon } from '@modrinth/assets'
-import { Button, defineMessages, Input, useVIntl } from '@modrinth/ui'
+import { Button, defineMessages, IconButton, Input, useVIntl } from '@modrinth/ui'
 import { computed, reactive, ref } from 'vue'
 
 import { invoke } from '@tauri-apps/api/core'

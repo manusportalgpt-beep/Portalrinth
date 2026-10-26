@@ -175,10 +175,16 @@ const overrideModel = computed({
 	get: () => aiSettings.value.models[aiSettings.value.provider] ?? '',
 	set: (value: string) => {
 		const trimmed = value.trim()
-		const models = { ...aiSettings.value.models }
-		if (trimmed) models[aiSettings.value.provider] = trimmed
-		else delete models[aiSettings.value.provider]
-		saveAiSettings({ models })
+		if (trimmed) {
+			saveAiSettings({
+				models: { ...aiSettings.value.models, [aiSettings.value.provider]: trimmed },
+			})
+		} else {
+			// Destructuring instead of delete: the lint forbids dynamic deletion.
+			const { [aiSettings.value.provider]: removed, ...rest } = aiSettings.value.models
+			void removed
+			saveAiSettings({ models: rest })
+		}
 	},
 })
 
