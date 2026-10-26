@@ -130,7 +130,7 @@ export async function sandboxRead(rel: string): Promise<string> {
 	const path = await resolveIn(rel, root())
 	const text = await fs.readTextFile(path)
 	knownContents.set(norm(rel), text)
-	return text.length > 16000 ? `${text.slice(0, 16000)}\n…(обрезано)` : text
+	return text.length > 24000 ? `${text.slice(0, 24000)}\n…(обрезано, читай дальше через head/tail)` : text
 }
 
 function norm(rel: string): string {
@@ -201,6 +201,12 @@ export async function sandboxReadDataUrl(rel: string): Promise<string> {
 	const extension = (rel.split('.').pop() ?? 'png').toLowerCase()
 	const mime = extension === 'jpg' ? 'jpeg' : extension === 'webp' ? 'webp' : 'png'
 	return `data:image/${mime};base64,${bytesToBase64(bytes)}`
+}
+
+/** The absolute path of a sandbox file - for commands that live outside
+ * the sandbox plugin (e.g. installing a built .jar into an instance). */
+export async function sandboxAbsolutePath(rel: string): Promise<string> {
+	return resolveIn(rel.trim(), root())
 }
 
 export async function sandboxDelete(rel: string): Promise<string> {
@@ -719,7 +725,7 @@ export async function attachFromPaths(paths: string[]): Promise<AttachedFile[]> 
 	return attached
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
+export function bytesToBase64(bytes: Uint8Array): string {
 	let binary = ''
 	const chunk = 0x8000
 	for (let i = 0; i < bytes.length; i += chunk) {

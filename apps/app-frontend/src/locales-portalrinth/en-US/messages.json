@@ -1718,6 +1718,51 @@
 	"app.ai.no-vision": {
 		"message": "This model cannot see images."
 	},
+	"app.ai.cards.mods": {
+		"message": "Mods"
+	},
+	"app.ai.cards.jars": {
+		"message": "Files"
+	},
+	"app.ai.cards.open": {
+		"message": "Open"
+	},
+	"app.ai.cards.install": {
+		"message": "Install"
+	},
+	"app.ai.cards.installed": {
+		"message": "Installed"
+	},
+	"app.ai.cards.install-fail": {
+		"message": "Installation failed"
+	},
+	"app.ai.cards.no-instances": {
+		"message": "Create an instance first — where would the .jar go?"
+	},
+	"app.ai.bridge": {
+		"message": "Bridge"
+	},
+	"app.ai.bridge.hint": {
+		"message": "The bridge serves a local page: open the address in a browser on this same computer, paste the key, and talk to Portalus from the page. Everything runs through the launcher — no cloud, no fees."
+	},
+	"app.ai.bridge.start": {
+		"message": "Start"
+	},
+	"app.ai.bridge.stop": {
+		"message": "Stop"
+	},
+	"app.ai.bridge.copy": {
+		"message": "Copy address and key"
+	},
+	"app.ai.bridge.copied": {
+		"message": "Copied!"
+	},
+	"app.ai.bridge.running": {
+		"message": "Running"
+	},
+	"app.ai.bridge.idle": {
+		"message": "Off"
+	},
 	"app.settings.ai-assistant.assistant.title": {
 		"message": "Assistant"
 	},

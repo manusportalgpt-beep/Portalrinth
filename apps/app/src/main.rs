@@ -489,6 +489,7 @@ fn main() {
         .plugin(api::portalrinth_bedrock::init())
         .plugin(api::portalrinth_offline_auth::init())
         .plugin(api::portalrinth_archive::init())
+        .plugin(api::portalrinth_bridge::init())
         .plugin(api::portalrinth_recovery::init())
         .plugin(api::jre::init())
         .plugin(api::metadata::init())

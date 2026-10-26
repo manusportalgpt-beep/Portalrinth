@@ -221,6 +221,7 @@
 		"portalrinth-curseforge:default",
 		"portalrinth-lan:default",
 		"portalrinth-bedrock:default",
-		"portalrinth-archiver:default"
+		"portalrinth-archiver:default",
+		"portalrinth-bridge:default"
 	]
 }

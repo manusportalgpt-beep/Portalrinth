@@ -38,7 +38,10 @@ import { get_default_user, users } from './auth'
 import { addCustomAccentColor, setCustomAccentColor } from '../composables/use-accent'
 import { setBackgroundFromPath } from './portalrinth-background'
 import { searchCurseforge } from './curseforge-api'
+import { bytesToBase64 } from './ai-sandbox'
 import { useTheme } from '../composables/use-theme'
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 
 export interface AiModelOption {
 	id: string
@@ -288,7 +291,11 @@ export interface AiActivity {
 	/** Files it edited, with the line diff that made the change. */
 	filesChanged: AiFileChange[]
 	/** Folders the agent revealed to the player, clickable in the chat. */
-	foldersOpened?: string[]
+	foldersOpened?: (AiFolderCard | string)[]
+	/** Mods the agent found or installed this reply, as rich cards. */
+	mods?: AiModCard[]
+	/** .jar files the agent built this reply, installable in one click. */
+	jars?: AiJarCard[]
 	/** Generated pictures, as data URLs for inline previews. */
 	images?: string[]
 }
@@ -296,6 +303,35 @@ export interface AiActivity {
 export interface AiQuestion {
 	text: string
 	options: string[]
+}
+
+/** One mod the agent found or installed, shown as a rich card in the chat. */
+export interface AiModCard {
+	source: 'Modrinth' | 'CurseForge'
+	projectId: string
+	slug: string
+	title: string
+	author: string
+	iconUrl: string
+	description: string
+	downloads: number
+	follows?: number
+	url: string
+}
+
+/** A .jar the agent built, ready to drop into an instance. */
+export interface AiJarCard {
+	name: string
+	version: string
+	iconDataUrl?: string
+	/** Sandbox-relative path, resolvable in front of any instance. */
+	path: string
+}
+
+/** A folder the agent handed to the player, with a one-line what's-inside. */
+export interface AiFolderCard {
+	path: string
+	description?: string
 }
 
 export interface AiMessage {
@@ -399,6 +435,49 @@ export function parseActions(text: string): ParsedReply {
 	return { text: cleaned.trim(), actions }
 }
 
+// ---- Rich cards ------------------------------------------------------------
+//
+// Tool results are plain text for the model, but the interface deserves
+// more: every card the agent produces rides along as a marker line, which
+// the notes strip back off before the model ever sees it again.
+
+const MOD_MARKER = /@@MOD@@(\{.*\})/g
+const JAR_MARKER = /@@JAR@@(\{.*\})/g
+const IMAGE_MARKER = /@@IMG@@(data:image\/[a-z+.-]+;base64,[^\s]+)/
+
+export interface ParsedCards {
+	text: string
+	mods: AiModCard[]
+	jars: AiJarCard[]
+	image?: string
+}
+
+/** Splits card markers off a tool result: the model keeps clean text, the
+ * chat gets structured cards to render. */
+export function extractCards(result: string): ParsedCards {
+	const mods: AiModCard[] = []
+	const jars: AiJarCard[] = []
+	const text = result
+		.replace(MOD_MARKER, (_match, json: string) => {
+			try {
+				mods.push(JSON.parse(json) as AiModCard)
+			} catch {
+				/* a broken card is just dropped */
+			}
+			return ''
+		})
+		.replace(JAR_MARKER, (_match, json: string) => {
+			try {
+				jars.push(JSON.parse(json) as AiJarCard)
+			} catch {
+				/* same here */
+			}
+			return ''
+		})
+		.trim()
+	return { text, mods, jars, image: IMAGE_MARKER.exec(result)?.[1] }
+}
+
 // ---- Walking the launcher alongside the player -----------------------------
 
 /**
@@ -467,7 +546,7 @@ export const AI_TOOLS_HINT = [
 	'- <<open_instance|id>> — открыть сборку по id',
 	'- <<list_instances|>> — получить список сборок игрока',
 	'- <<launcher_search_mods|запрос>> — найти мод/сборку сразу в Modrinth и CurseForge (иконка, автор, версия, описание — на странице проекта: открой её через <<navigate|/project/<id>>)',
-	'- <<launcher_install|id проекта::тип::id сборки>> — установить контент (тип: mod, modpack, resourcepack, shader) в сборку',
+	'- <<launcher_install|id проекта::тип::id сборки>> — установить контент (тип: mod, modpack, resourcepack, shader) в сборку; игрок увидит карточку мода (название, автор, иконка, загрузки) — упомяни её в ответе',
 	'- <<launcher_set_accent|цвет>> — сменить цвет акцента лаунчера, hex (например <<launcher_set_accent|#22c55e>>)',
 	'- <<launcher_set_background|url>> — поставить фон окна по прямой ссылке на картинку',
 	'- <<launcher_set_theme|тема>> — тема оформления: dark, light, oled, retro или system',
@@ -475,7 +554,8 @@ export const AI_TOOLS_HINT = [
 	'- <<sandbox_bash|команда>> — мини-shell: pwd, cd, ls [-l], cat, head, tail, wc, echo (с > и >> в файл), touch, mkdir, rm, cp, mv, find, tree, grep; цепочки через && (пример: <<sandbox_bash|mkdir proj && echo hi > proj/a.txt>>)',
 	'- <<sandbox_list|путь>>, <<sandbox_read|файл>>, <<sandbox_write|файл::текст>> — то же самое по шагам (многострочный текст разрешён); «.exe» и другие исполняемые файлы создать нельзя',
 	'- <<sandbox_delete|путь>> — удалить файл или папку (только с явного согласия)',
-	'- <<open_folder|путь>> — показать папку игроку в проводнике (карточка в чате) — делай это, когда отдал игроку готовый файл',
+	'- <<open_folder|путь::что там>> — показать папку игроку карточкой с кнопкой «Открыть»; в двух-трёх словах опиши, что в ней (например: «готовый ресурс-пак») — делай это, когда отдал игроку готовый файл',
+	'- <<view_image|url>> — посмотреть картинку из интернета своими глазами (и показать её игроку в чате); пользуйся, когда нужно разглядеть скриншот, схему или текстуру',
 	'Архиватор и компилятор (встроенные, как 7-zip и javac):',
 	'- <<sandbox_pack|архив.zip::путь1::путь2>> — упаковать файлы/папки в .zip, .7z или .jar (ресурс-пак, шейдерпак, датапак)',
 	'- <<sandbox_unpack|архив.zip::папка>> — распаковать архив (в том числе присланный игроком)',
@@ -500,6 +580,7 @@ export const AI_SKILLS_HINT = [
 	'- Датапаки: pack.mcmeta в корне + data/<namespace>/function/*.mcfunction и прочее.',
 	'- Любой другой код и файлы: сайты (html/css/js — потом open_folder), скрипты (Python, Lua, C#...), конфиги, картинки через <<gen_image|описание::файл.png>>.',
 	'Порядок работы над артефактом: папка проекта в песочнице → файлы (удобно через <<sandbox_bash|mkdir ... && ...>>) → компиляция/упаковка → <<open_folder|путь>> → скажи игроку, что где лежит.',
+	'Большие проекты: сначала осмотрись (<<sandbox_bash|tree>> или ls), потом читай файлы по одному и частями (head/tail), план работ держи в memory_write — не пытайся прочитать всё сразу и ничего не теряй между шагами.',
 	'Если знаний не хватает (версии, форматы, API) — сначала web_search, потом пиши код. Не выдумывай несуществующие API: проверяй.',
 ].join('\n')
 
@@ -733,6 +814,12 @@ function withoutImages(messages: ChatMessagePayload[]): ChatMessagePayload[] {
 }
 
 /**
+ * Images Portalus decided to look at with view_image during this run: they
+ * ride along to the next model round, so a vision model truly sees them.
+ */
+const pendingVisionImages: string[] = []
+
+/**
  * One assistant turn: asks the chosen provider, runs any launcher actions the
  * reply contained (up to three rounds, so the model can look things up and
  * then answer), and falls across providers when a free limit gets in the way.
@@ -813,6 +900,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						}
 					}
 					const notes: string[] = []
+					const seenImages: string[] = []
 					for (const action of parsed.actions.slice(0, 4)) {
 						if (playerTookOver()) {
 							notes.push('Игрок сам перешёл на другой экран - он передумал. Немедленно прекрати действия по этому запросу и попрощайся.')
@@ -827,12 +915,27 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						const result = await runTool(action.tool, action.args)
 						doneActions.push(action.tool)
 						request.onActionDone?.(action.tool, action.args, result)
-						notes.push(`Результат ${action.tool}(${action.args}): ${result.slice(0, 1200)}`)
+						const cards = extractCards(result)
+						if (cards.image) seenImages.push(cards.image)
+						notes.push(`Результат ${action.tool}(${action.args}): ${cards.text.slice(0, 1200)}`)
 					}
+					const noteText = notes.join('\n') + '\nПродолжи ответ пользователю.'
+					const queuedImages = seenImages.length > 0 ? seenImages : pendingVisionImages.splice(0, pendingVisionImages.length)
+					const noteMessage: ChatMessagePayload =
+						queuedImages.length > 0
+							? {
+									role: 'user',
+									content: [
+										{ type: 'text', text: noteText },
+										...queuedImages.map((url) => ({ type: 'image_url', image_url: { url } })),
+									],
+								}
+							: { role: 'user', content: noteText }
+					pendingVisionImages.length = 0
 					payload = [
 						...payload,
 						{ role: 'assistant', content: raw },
-						{ role: 'user', content: notes.join('\n') + '\nПродолжи ответ пользователю.' },
+						noteMessage,
 					]
 				}
 			} catch (error) {
@@ -942,6 +1045,48 @@ async function webSearch(query: string): Promise<string> {
 	return `Ничего не нашлось или поиск недоступен (${lastDetail}). Попробуй переформулировать запрос или открой конкретный сайт через web_fetch`
 }
 
+/** One Modrinth project as a card: search-by-id returns author, icon,
+ * downloads and follows in a single request. */
+async function fetchModrinthCard(projectId: string): Promise<AiModCard | null> {
+	try {
+		const facets = encodeURIComponent(JSON.stringify([[`project_id:${projectId}`]]))
+		const response = await proxiedFetch(`https://api.modrinth.com/v2/search?limit=1&facets=${facets}`, {
+			headers: { Accept: 'application/json' },
+			signal: AbortSignal.timeout(10000),
+		})
+		if (!response.ok) return null
+		const data = (await response.json()) as {
+			hits?: {
+				title?: string
+				project_id?: string
+				slug?: string
+				author?: string
+				icon_url?: string
+				description?: string
+				downloads?: number
+				follows?: number
+			}[]
+		}
+		const hit = data.hits?.[0]
+		if (!hit?.project_id) return null
+		const slug = hit.slug ?? hit.project_id
+		return {
+			source: 'Modrinth',
+			projectId: hit.project_id,
+			slug,
+			title: hit.title ?? '?',
+			author: hit.author ?? '',
+			iconUrl: hit.icon_url ?? '',
+			description: hit.description ?? '',
+			downloads: hit.downloads ?? 0,
+			follows: hit.follows ?? 0,
+			url: `https://modrinth.com/project/${slug}`,
+		}
+	} catch {
+		return null
+	}
+}
+
 registerAiToolHandler(async (tool, args) => {
 	if (tool === 'web_fetch') {
 		const url = args.trim()
@@ -955,13 +1100,35 @@ registerAiToolHandler(async (tool, args) => {
 		if (!query) return 'Пустой запрос'
 		return webSearch(query)
 	}
+	if (tool === 'view_image') {
+		const url = args.trim()
+		if (!/^https?:\/\//.test(url)) return 'Нужен полный http(s) адрес картинки'
+		try {
+			const response = await proxiedFetch(url, { signal: AbortSignal.timeout(30000) })
+			if (!response.ok) return `Картинка не скачалась: HTTP ${response.status}`
+			const bytes = new Uint8Array(await response.arrayBuffer())
+			if (bytes.length > 6 * 1024 * 1024) return 'Картинка больше 6 МБ - не осилю'
+			const kind =
+				(response.headers.get('content-type') ?? 'image/png').split('/')[1]?.split(';')[0] ?? 'png'
+			const safeKind = /png|jpe?g|webp|gif/.test(kind) ? kind.replace('jpeg', 'jpg') : 'png'
+			const dataUrl = `data:image/${safeKind};base64,${bytesToBase64(bytes)}`
+			if (pendingVisionImages.length > 3) pendingVisionImages.shift()
+			pendingVisionImages.push(dataUrl)
+			return `смотрю на картинку ${url} (${Math.round(bytes.length / 1024)} КБ)@@IMG@@${dataUrl}`
+		} catch (error) {
+			return `Картинка не открылась: ${String(error).slice(0, 200)}`
+		}
+	}
 	if (tool === 'sandbox_bash') {
 		if (!args.trim()) return 'Пустая команда'
 		return sandboxBash(args)
 	}
 	if (tool === 'open_folder') {
-		if (!args.trim()) return 'Укажите путь'
-		return sandboxReveal(args.trim())
+		const separator = args.indexOf('::')
+		const path = (separator < 0 ? args : args.slice(0, separator)).trim()
+		if (!path) return 'Укажите путь'
+		const revealed = await sandboxReveal(path)
+		return revealed
 	}
 	if (tool === 'gen_image') {
 		const separator = args.indexOf('::')
@@ -997,7 +1164,30 @@ registerAiToolHandler(async (tool, args) => {
 	if (tool === 'launcher_compile_java') {
 		const parts = args.split('::').map((part) => part.trim())
 		if (!parts[0] || !parts[1]) return 'Формат: <<launcher_compile_java|папка-с-кодом::мод.jar>>'
-		return sandboxCompileJava(parts[0], parts[1])
+		const compiled = await sandboxCompileJava(parts[0], parts[1])
+		if (/не удалась|Формат|Результат должен/.test(compiled)) return compiled
+		const jarName = parts[1].split(/[\\/]/).pop() ?? parts[1]
+		let version = ''
+		let iconDataUrl: string | undefined
+		try {
+			const manifest = JSON.parse(await sandboxRead(`${parts[0]}/fabric.mod.json`)) as {
+				version?: string
+				icon?: string
+			}
+			version = typeof manifest.version === 'string' ? manifest.version : ''
+			if (typeof manifest.icon === 'string' && manifest.icon) {
+				iconDataUrl = await sandboxReadDataUrl(`${parts[0]}/${manifest.icon}`).catch(() => undefined)
+			}
+		} catch {
+			/* not a fabric mod or no manifest - the card ships without extras */
+		}
+		const card = {
+			name: jarName.replace(/\.jar$/i, ''),
+			version: version || '1.0.0',
+			iconDataUrl,
+			path: parts[1],
+		}
+		return `${compiled}\n@@JAR@@${JSON.stringify(card)}`
 	}
 	if (tool === 'launcher_install') {
 		const parts = args.split('::').map((part) => part.trim())
@@ -1037,7 +1227,9 @@ registerAiToolHandler(async (tool, args) => {
 			}
 			if (!versionId) return 'У проекта нет версий для этой сборки'
 			await add_project_from_version(target.id, versionId, 'standalone' as DownloadReason)
-			return `Установлено в «${target.name}»: версия ${versionId}`
+			const card = await fetchModrinthCard(projectId)
+			const line = `Установлено в «${target.name}»: версия ${versionId}`
+			return card ? `${line}\n@@MOD@@${JSON.stringify(card)}` : line
 		} catch (error) {
 			return `Не установилось: ${String(error).slice(0, 200)}`
 		}
@@ -1143,6 +1335,7 @@ registerAiToolHandler(async (tool, args) => {
 		const query = args.trim()
 		if (!query) return 'Пустой запрос'
 		const lines: string[] = []
+		const cards: AiModCard[] = []
 		try {
 			const response = await proxiedFetch(
 				`https://api.modrinth.com/v2/search?limit=5&query=${encodeURIComponent(query)}`,
@@ -1150,12 +1343,36 @@ registerAiToolHandler(async (tool, args) => {
 			)
 			if (response.ok) {
 				const data = (await response.json()) as {
-					hits?: { title?: string; project_id?: string; downloads?: number; description?: string }[]
+					hits?: {
+						title?: string
+						project_id?: string
+						slug?: string
+						author?: string
+						icon_url?: string
+						downloads?: number
+						follows?: number
+						description?: string
+					}[]
 				}
 				for (const hit of data.hits ?? []) {
+					const slug = hit.slug ?? hit.project_id ?? ''
 					lines.push(
-						`[Modrinth] ${hit.title ?? '?'} — ${hit.description?.slice(0, 100) ?? ''} (загрузок: ${hit.downloads ?? 0}; открыть: <<navigate|/project/${hit.project_id}>>)`,
+						`[Modrinth] ${hit.title ?? '?'} — автор: ${hit.author ?? '?'}; ${hit.description?.slice(0, 100) ?? ''} (загрузок: ${hit.downloads ?? 0}; открыть: <<navigate|/project/${slug}>>)`,
 					)
+					if (hit.project_id && slug) {
+						cards.push({
+							source: 'Modrinth',
+							projectId: hit.project_id,
+							slug,
+							title: hit.title ?? '?',
+							author: hit.author ?? '',
+							iconUrl: hit.icon_url ?? '',
+							description: hit.description ?? '',
+							downloads: hit.downloads ?? 0,
+							follows: hit.follows ?? 0,
+							url: `https://modrinth.com/project/${slug}`,
+						})
+					}
 				}
 			}
 		} catch {
@@ -1165,13 +1382,28 @@ registerAiToolHandler(async (tool, args) => {
 			const page = await searchCurseforge({ filter: query, pageSize: 5 })
 			for (const hit of page.hits ?? []) {
 				lines.push(
-					`[CurseForge] ${hit.name} — ${hit.summary?.slice(0, 100) ?? ''} (загрузок: ${hit.download_count ?? 0})`,
+					`[CurseForge] ${hit.name} — автор: ${hit.author_name ?? '?'}; ${hit.summary?.slice(0, 100) ?? ''} (загрузок: ${hit.download_count ?? 0})`,
 				)
+				cards.push({
+					source: 'CurseForge',
+					projectId: String(hit.id ?? hit.slug ?? hit.name),
+					slug: hit.slug ?? hit.name,
+					title: hit.name,
+					author: hit.author_name ?? '',
+					iconUrl: hit.icon_url ?? '',
+					description: hit.summary ?? '',
+					downloads: hit.download_count ?? 0,
+					url: `https://www.curseforge.com/minecraft/search?search=${encodeURIComponent(hit.slug ?? hit.name)}`,
+				})
 			}
 		} catch {
 			/* a missing key is the ordinary case */
 		}
-		return lines.length > 0 ? lines.join('\n') : 'Ничего не нашлось'
+		if (lines.length === 0) return 'Ничего не нашлось'
+		return (
+			lines.join('\n') +
+			cards.map((card) => `\n@@MOD@@${JSON.stringify(card)}`).join('')
+		)
 	}
 	return null
 })
@@ -1191,6 +1423,91 @@ async function readSessionByIndex(index: number): Promise<string> {
  */
 async function writeSandboxBinary(name: string, bytes: Uint8Array): Promise<string> {
 	return sandboxWriteBinary(name, bytes)
+}
+
+// ---- The local bridge -------------------------------------------------------
+//
+// A browser tab on the same machine can join the conversation: the launcher
+// serves a small page, the tab connects with the one-time key, and every
+// message from there runs through the same agent that lives in the chat.
+
+export interface BridgeInfo {
+	port: number
+	key: string
+	url: string
+}
+
+let bridgeUnlisten: (() => void) | undefined
+let bridgeBusy = false
+
+async function bridgeSend(text: string): Promise<void> {
+	await invoke('plugin:portalrinth-bridge|bridge_send', { text })
+}
+
+/** Runs one bridge message through the very same agent the chat uses. */
+async function handleBridgeTurn(text: string): Promise<void> {
+	if (bridgeBusy) {
+		await bridgeSend('Дай мне договорить предыдущую мысль — и сразу за твою.').catch(() => {})
+		return
+	}
+	bridgeBusy = true
+	try {
+		pushAiMessage({ role: 'user', content: `[мост] ${text}`, ts: Date.now() })
+		const result = await aiComplete({
+			kind: 'tab',
+			messages: aiHistory.value
+				.filter((message) => message.role !== 'note')
+				.slice(-20)
+				.map((message) => ({
+					role: message.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+					content: message.content,
+				})),
+		})
+		pushAiMessage({
+			role: 'assistant',
+			content: result.content,
+			ts: Date.now(),
+			provider: result.provider,
+			actions: result.actions,
+			activity: result.activity,
+			question: result.question,
+		})
+		const reply = result.question
+			? `${result.content}\n(варианты: ${result.question.options.join(' / ')})`
+			: result.content
+		await bridgeSend(reply).catch(() => {})
+	} catch (error) {
+		const detail = String((error as Error)?.message ?? error)
+		pushAiMessage({ role: 'assistant', content: `Не вышло: ${detail}`, ts: Date.now() })
+		await bridgeSend(`Не вышло: ${detail}`).catch(() => {})
+	} finally {
+		bridgeBusy = false
+	}
+}
+
+/** Opens the localhost bridge and starts listening for browser messages. */
+export async function startBridge(): Promise<BridgeInfo> {
+	const info = (await invoke('plugin:portalrinth-bridge|bridge_start')) as BridgeInfo
+	if (!bridgeUnlisten) {
+		bridgeUnlisten = await listen<string>('bridge-chat', (event) => {
+			void handleBridgeTurn(event.payload)
+		})
+	}
+	return info
+}
+
+/** Closes the bridge door. */
+export async function stopBridge(): Promise<void> {
+	await invoke('plugin:portalrinth-bridge|bridge_stop')
+}
+
+/** Where the bridge listens right now, if at all. */
+export async function bridgeStatus(): Promise<BridgeInfo | null> {
+	try {
+		return (await invoke('plugin:portalrinth-bridge|bridge_info')) as BridgeInfo | null
+	} catch {
+		return null
+	}
 }
 
 // ---- The mascot's little bus ---------------------------------------------

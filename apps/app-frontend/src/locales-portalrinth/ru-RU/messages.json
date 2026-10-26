@@ -3338,6 +3338,51 @@
 	"app.ai.no-vision": {
 		"message": "Эта модель не видит изображения."
 	},
+	"app.ai.cards.mods": {
+		"message": "Моды"
+	},
+	"app.ai.cards.jars": {
+		"message": "Файлы"
+	},
+	"app.ai.cards.open": {
+		"message": "Открыть"
+	},
+	"app.ai.cards.install": {
+		"message": "В сборку"
+	},
+	"app.ai.cards.installed": {
+		"message": "Установлено"
+	},
+	"app.ai.cards.install-fail": {
+		"message": "Не установилось"
+	},
+	"app.ai.cards.no-instances": {
+		"message": "Сначала создай сборку — куда ставить .jar?"
+	},
+	"app.ai.bridge": {
+		"message": "Мост"
+	},
+	"app.ai.bridge.hint": {
+		"message": "Мост поднимает локальную страницу: открой адрес в браузере на этом же компьютере, введи ключ — и общайся с Порталусом со страницы. Всё работает через лаунчер, без облака и бесплатно."
+	},
+	"app.ai.bridge.start": {
+		"message": "Запустить"
+	},
+	"app.ai.bridge.stop": {
+		"message": "Остановить"
+	},
+	"app.ai.bridge.copy": {
+		"message": "Скопировать адрес и ключ"
+	},
+	"app.ai.bridge.copied": {
+		"message": "Скопировано!"
+	},
+	"app.ai.bridge.running": {
+		"message": "Работает"
+	},
+	"app.ai.bridge.idle": {
+		"message": "Выключен"
+	},
 	"app.settings.ai-assistant.assistant.title": {
 		"message": "Помощник"
 	},

@@ -714,6 +714,19 @@ fn main() {
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),
+            )
+            .plugin(
+                "portalrinth-bridge",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "bridge_start",
+                        "bridge_info",
+                        "bridge_stop",
+                        "bridge_send",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
             ),
     )
     .expect("Failed to run tauri-build");

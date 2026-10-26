@@ -176,7 +176,7 @@ pub async fn archiver_pack<R: tauri::Runtime>(
     }
 
     match format_of(&dest_path) {
-        ArchiveFormat::SevenZip => {
+        Ok(ArchiveFormat::SevenZip) => {
             if source_paths.len() > 1 {
                 return Err(error("в .7z упаковать можно один файл или одну папку - для нескольких источников возьмите .zip"));
             }
@@ -189,7 +189,7 @@ pub async fn archiver_pack<R: tauri::Runtime>(
             .map_err(|e| error(format!("сжатие не выполнилось: {e}")))?
             .map_err(|e| error(format!("7z не получился: {e}")))?;
         }
-        ArchiveFormat::Zip | ArchiveFormat::Jar => {
+        Ok(ArchiveFormat::Zip | ArchiveFormat::Jar) => {
             let mut files = Vec::new();
             for source in &source_paths {
                 collect_files(source, &mut files).await?;
@@ -248,7 +248,7 @@ pub async fn archiver_unpack<R: tauri::Runtime>(
         .map_err(|e| error(format!("не удалось создать папку {}: {e}", dest_path.display())))?;
 
     match format_of(&archive_path) {
-        ArchiveFormat::SevenZip => {
+        Ok(ArchiveFormat::SevenZip) => {
             let archive_for_thread = archive_path.clone();
             let dest_for_thread = dest_path.clone();
             tokio::task::spawn_blocking(move || {
@@ -258,7 +258,7 @@ pub async fn archiver_unpack<R: tauri::Runtime>(
             .map_err(|e| error(format!("распаковка не выполнилась: {e}")))?
             .map_err(|e| error(format!("7z не распаковался: {e}")))?;
         }
-        ArchiveFormat::Zip | ArchiveFormat::Jar => {
+        Ok(ArchiveFormat::Zip | ArchiveFormat::Jar) => {
             let mut reader = async_zip::tokio::read::fs::ZipFileReader::new(&archive_path)
                 .await
                 .map_err(|e| error(format!("архив не читается: {e}")))?;
@@ -338,7 +338,10 @@ pub async fn archiver_reveal<R: tauri::Runtime>(
     let path = PathBuf::from(&path);
     ensure_allowed(&roots, &path)?;
     if !path.exists() {
-        return Err(error(format!("нет такого файла или папки: {path}")));
+        return Err(error(format!(
+            "нет такого файла или папки: {}",
+            path.display()
+        )));
     }
     app.opener()
         .reveal_item_in_dir(&path)
@@ -362,7 +365,7 @@ async fn collect_java_sources(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> 
             .await
             .map_err(|e| error(format!("не удалось понять тип {}: {e}", path.display())))?;
         if kind.is_dir() {
-            collect_java_sources(&path, out).await?;
+            Box::pin(collect_java_sources(&path, out)).await?;
         } else if kind.is_file() && path.extension().map(|ext| ext == "java").unwrap_or(false) {
             out.push(path);
         }
@@ -459,7 +462,10 @@ pub async fn archiver_compile_java<R: tauri::Runtime>(
     let source = PathBuf::from(&source_dir);
     ensure_allowed(&roots, &source)?;
     if !source.is_dir() {
-        return Err(error(format!("это не папка: {source}")));
+        return Err(error(format!(
+            "это не папка: {}",
+            source.display()
+        )));
     }
     let jar_path = PathBuf::from(&output_jar);
     ensure_allowed(&roots, &jar_path)?;

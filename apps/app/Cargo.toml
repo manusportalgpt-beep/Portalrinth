@@ -10,6 +10,7 @@ license = "GPL-3.0-only"
 [dependencies]
 aes-gcm = { workspace = true }
 anyhow = { workspace = true }
+async_tungstenite = { workspace = true, features = ["tokio-runtime"] }
 async_zip = { workspace = true, features = ["deflate", "tokio-fs"] }
 base64 = { workspace = true }
 chrono = { workspace = true }
@@ -18,6 +19,7 @@ dashmap = { workspace = true }
 either = { workspace = true }
 enumset = { workspace = true, features = ["serde"] }
 hkdf = { workspace = true }
+futures-util = { workspace = true }
 hyper = { workspace = true, features = ["server"] }
 hyper-util = { workspace = true }
 image = { workspace = true, features = ["gif", "jpeg", "png", "webp"] }

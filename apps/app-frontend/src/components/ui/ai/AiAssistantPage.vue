@@ -11,17 +11,29 @@ import {
 } from '@modrinth/assets'
 import { Button, IconButton, Input, useVIntl } from '@modrinth/ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 import AiProviderSettings from '@/components/ui/ai/AiProviderSettings.vue'
 import {
+	type AiFolderCard,
+	type AiJarCard,
 	type AiMessage,
+	type AiModCard,
+	type BridgeInfo,
 	aiComplete,
 	aiHistory,
 	aiSettings,
+	bridgeStatus,
 	clearAiHistory,
+	extractCards,
 	providerById,
+	noteAgentNavigation,
 	pushAiMessage,
+	startBridge,
+	stopBridge,
 } from '@/helpers/ai-assistant'
+import { sandboxAbsolutePath } from '@/helpers/ai-sandbox'
+import { add_project_from_path, list as listInstances } from '@/helpers/instance'
 import {
 	attachFromPaths,
 	type AttachedFile,
@@ -101,6 +113,28 @@ const messages = {
 		id: 'app.ai.no-vision',
 		defaultMessage: 'Эта модель не видит изображения.',
 	},
+	modsTitle: { id: 'app.ai.cards.mods', defaultMessage: 'Моды' },
+	jarsTitle: { id: 'app.ai.cards.jars', defaultMessage: 'Файлы' },
+	open: { id: 'app.ai.cards.open', defaultMessage: 'Открыть' },
+	install: { id: 'app.ai.cards.install', defaultMessage: 'В сборку' },
+	installed: { id: 'app.ai.cards.installed', defaultMessage: 'Установлено' },
+	installFail: { id: 'app.ai.cards.install-fail', defaultMessage: 'Не установилось' },
+	noInstances: {
+		id: 'app.ai.cards.no-instances',
+		defaultMessage: 'Сначала создай сборку — куда ставить .jar?',
+	},
+	bridge: { id: 'app.ai.bridge', defaultMessage: 'Мост' },
+	bridgeHint: {
+		id: 'app.ai.bridge.hint',
+		defaultMessage:
+			'Мост поднимает локальную страницу: открой адрес в браузере на этом же компьютере, введи ключ — и общайся с Порталусом со страницы. Всё работает через лаунчер, без облака и бесплатно.',
+	},
+	bridgeStart: { id: 'app.ai.bridge.start', defaultMessage: 'Запустить' },
+	bridgeStop: { id: 'app.ai.bridge.stop', defaultMessage: 'Остановить' },
+	bridgeCopy: { id: 'app.ai.bridge.copy', defaultMessage: 'Скопировать адрес и ключ' },
+	bridgeCopied: { id: 'app.ai.bridge.copied', defaultMessage: 'Скопировано!' },
+	bridgeRunning: { id: 'app.ai.bridge.running', defaultMessage: 'Работает' },
+	bridgeIdle: { id: 'app.ai.bridge.idle', defaultMessage: 'Выключен' },
 }
 
 const suggestions = computed(() => [
@@ -121,9 +155,20 @@ const attachments = ref<AttachedFile[]>([])
 const questionDraft = ref('')
 /** Folders and pictures Portalus produced during the reply in progress -
  * shown as cards under the message once it lands. */
-const turnFolders = ref<string[]>([])
+const turnFolders = ref<AiFolderCard[]>([])
 const turnImages = ref<string[]>([])
+const turnMods = ref<AiModCard[]>([])
+const turnJars = ref<AiJarCard[]>([])
+const collapsedCards = ref<Record<string, boolean>>({})
+const jarInstalled = ref<Record<string, boolean>>({})
+const instances = ref<Awaited<ReturnType<typeof listInstances>>>([])
+const chosenInstance = ref('')
+const bridgePanelOpen = ref(false)
+const bridgeInfoState = ref<BridgeInfo | null>(null)
+const bridgeWorking = ref(false)
+const bridgeCopied = ref(false)
 let typeTimer: ReturnType<typeof setInterval> | undefined
+const router = useRouter()
 
 const visibleHistory = computed(() => aiHistory.value.filter((m) => m.role !== 'note'))
 
@@ -207,13 +252,15 @@ function actionName(tool: string) {
 }
 
 /** Collects what the reply in progress shows the player: folders to open
- * with one click and generated pictures to preview inline. */
+ * with one click, mod and jar cards, generated and viewed pictures. */
 function onAgentAction(tool: string, args: string, result: string) {
 	streaming.value = ''
 	if (tool === 'open_folder') {
-		const path = args.trim()
-		if (path && !turnFolders.value.includes(path)) {
-			turnFolders.value = [...turnFolders.value, path]
+		const separator = args.indexOf('::')
+		const path = (separator < 0 ? args : args.slice(0, separator)).trim()
+		const description = separator < 0 ? '' : args.slice(separator + 2).trim()
+		if (path && !turnFolders.value.some((folder) => folder.path === path)) {
+			turnFolders.value = [...turnFolders.value, { path, description: description || undefined }]
 		}
 	}
 	if (tool === 'gen_image') {
@@ -226,10 +273,117 @@ function onAgentAction(tool: string, args: string, result: string) {
 				.catch(() => {})
 		}
 	}
+	const cards = extractCards(result)
+	if (cards.mods.length > 0) {
+		const fresh = cards.mods.filter(
+			(mod) => !turnMods.value.some((existing) => existing.source === mod.source && existing.projectId === mod.projectId),
+		)
+		turnMods.value = [...turnMods.value, ...fresh]
+	}
+	if (cards.jars.length > 0) {
+		turnJars.value = [
+			...turnJars.value,
+			...cards.jars.filter((jar) => !turnJars.value.some((existing) => existing.path === jar.path)),
+		]
+	}
+	if (cards.image && !turnImages.value.includes(cards.image)) {
+		turnImages.value = [...turnImages.value, cards.image]
+	}
 }
 
 function openSandboxFolder(path: string) {
 	void sandboxReveal(path)
+}
+
+// ---- Card helpers ----------------------------------------------------------
+
+function folderCardsOf(message: AiMessage): AiFolderCard[] {
+	const raw = message.activity?.foldersOpened ?? []
+	return raw.map((folder) => (typeof folder === 'string' ? { path: folder } : folder))
+}
+
+function folderName(path: string): string {
+	const parts = path.split(/[\\/]/).filter(Boolean)
+	return parts[parts.length - 1] ?? path
+}
+
+function compactCount(value: number | undefined): string {
+	if (!value) return '0'
+	try {
+		return new Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
+	} catch {
+		return String(value)
+	}
+}
+
+function toggleCardGroup(key: string) {
+	collapsedCards.value = { ...collapsedCards.value, [key]: !collapsedCards.value[key] }
+}
+
+async function openMod(mod: AiModCard) {
+	if (mod.source === 'Modrinth') {
+		noteAgentNavigation()
+		void router.push(`/project/${mod.slug}`)
+		return
+	}
+	try {
+		const { openUrl } = await import('@tauri-apps/plugin-opener')
+		await openUrl(mod.url)
+	} catch {
+		/* the card simply did not open - nothing sensible to do */
+	}
+}
+
+async function installJar(jar: AiJarCard) {
+	if (jarInstalled.value[jar.path]) return
+	const instanceId = chosenInstance.value || instances.value[0]?.id
+	if (!instanceId) {
+		errorText.value = formatMessage(messages.noInstances)
+		return
+	}
+	try {
+		const absolute = await sandboxAbsolutePath(jar.path)
+		await add_project_from_path(instanceId, absolute, 'mod')
+		jarInstalled.value = { ...jarInstalled.value, [jar.path]: true }
+	} catch (error) {
+		errorText.value = `${formatMessage(messages.installFail)}: ${String(error).slice(0, 200)}`
+	}
+}
+
+// ---- The bridge ------------------------------------------------------------
+
+function toggleBridgePanel() {
+	bridgePanelOpen.value = !bridgePanelOpen.value
+}
+
+async function toggleBridge() {
+	bridgeWorking.value = true
+	try {
+		if (bridgeInfoState.value) {
+			await stopBridge()
+			bridgeInfoState.value = null
+		} else {
+			bridgeInfoState.value = await startBridge()
+		}
+	} catch (error) {
+		errorText.value = String((error as Error)?.message ?? error)
+	} finally {
+		bridgeWorking.value = false
+	}
+}
+
+async function copyBridgeDetails() {
+	const info = bridgeInfoState.value
+	if (!info) return
+	try {
+		await navigator.clipboard.writeText(`${info.url} — ключ: ${info.key}`)
+		bridgeCopied.value = true
+		setTimeout(() => {
+			bridgeCopied.value = false
+		}, 1500)
+	} catch {
+		/* the clipboard may refuse - the fields are visible anyway */
+	}
 }
 
 async function send(text?: string) {
@@ -268,6 +422,8 @@ async function send(text?: string) {
 	sending.value = true
 	turnFolders.value = []
 	turnImages.value = []
+	turnMods.value = []
+	turnJars.value = []
 
 	const payload = aiHistory.value
 		.filter((m) => m.role !== 'note')
@@ -296,6 +452,8 @@ async function send(text?: string) {
 						...result.activity,
 						foldersOpened: turnFolders.value,
 						images: turnImages.value,
+						mods: turnMods.value,
+						jars: turnJars.value,
 					}
 				: undefined,
 			question: result.question,
@@ -400,6 +558,17 @@ onMounted(async () => {
 			aiHistory.value = session.messages as AiMessage[]
 		}
 	}
+	listInstances()
+		.then((all) => {
+			instances.value = all
+			chosenInstance.value = all[0]?.id ?? ''
+		})
+		.catch(() => {})
+	bridgeStatus()
+		.then((info) => {
+			bridgeInfoState.value = info
+		})
+		.catch(() => {})
 })
 
 onBeforeUnmount(stopTyping)
@@ -418,6 +587,45 @@ defineExpose({ send })
 				<p class="m-0 max-w-3xl text-base text-secondary">
 					{{ formatMessage(messages.description) }}
 				</p>
+			</div>
+			<div class="relative shrink-0">
+				<button class="ai-model-chip" :disabled="bridgeWorking" @click="toggleBridgePanel">
+					<span
+						class="size-2 rounded-full"
+						:style="{ background: bridgeInfoState ? 'var(--color-green)' : 'var(--color-surface-5)' }"
+					/>
+					{{ formatMessage(messages.bridge) }}
+				</button>
+				<div v-if="bridgePanelOpen" class="fixed inset-0 z-10 cursor-default" @click="bridgePanelOpen = false" />
+				<div
+					v-if="bridgePanelOpen"
+					class="ai-menu absolute right-0 top-full z-20 mt-2 w-[26rem] rounded-2xl border border-solid border-surface-5 bg-surface-2 p-4"
+					>
+						<div class="mb-2 flex items-center justify-between gap-2">
+							<p class="m-0 text-sm font-semibold text-primary">{{ formatMessage(messages.bridge) }}</p>
+							<span class="ai-bridge-status" :class="{ 'ai-bridge-on': bridgeInfoState }">
+								{{ bridgeInfoState ? formatMessage(messages.bridgeRunning) : formatMessage(messages.bridgeIdle) }}
+							</span>
+						</div>
+						<p class="m-0 mb-3 text-xs leading-relaxed text-secondary">
+							{{ formatMessage(messages.bridgeHint) }}
+						</p>
+						<template v-if="bridgeInfoState">
+							<Input :model-value="bridgeInfoState.url" readonly class="mb-2" />
+							<Input :model-value="bridgeInfoState.key" readonly class="mb-2" />
+							<div class="flex gap-2">
+								<Button size="sm" @click="copyBridgeDetails">
+									{{ bridgeCopied ? formatMessage(messages.bridgeCopied) : formatMessage(messages.bridgeCopy) }}
+								</Button>
+								<Button size="sm" :disabled="bridgeWorking" @click="toggleBridge">
+									{{ formatMessage(messages.bridgeStop) }}
+								</Button>
+							</div>
+						</template>
+						<Button v-else color="brand" size="sm" :disabled="bridgeWorking" @click="toggleBridge">
+							{{ formatMessage(messages.bridgeStart) }}
+						</Button>
+				</div>
 			</div>
 		</div>
 
@@ -496,16 +704,6 @@ defineExpose({ send })
 									−{{ change.removed }}</span
 								>
 							</span>
-							<button
-								v-for="folder in message.activity.foldersOpened ?? []"
-								:key="`f-${folder}`"
-								class="ai-activity-chip ai-activity-folder"
-								:title="formatMessage(messages.openFolderCard)"
-								@click="openSandboxFolder(folder)"
-							>
-								<FolderOpenIcon class="h-3.5 w-3.5" />
-								{{ folder }}
-							</button>
 							<span
 								v-for="(image, imageIndex) in message.activity.images ?? []"
 								:key="`img-${imageIndex}`"
@@ -513,6 +711,84 @@ defineExpose({ send })
 							>
 								<img :src="image" class="ai-activity-image" alt="" />
 							</span>
+						</div>
+
+						<div v-if="folderCardsOf(message).length" class="ai-cards">
+							<div v-for="folder in folderCardsOf(message)" :key="`fc-${folder.path}`" class="ai-folder-card">
+								<span class="ai-card-glyph"><FolderOpenIcon class="size-5" /></span>
+								<div class="min-w-0 grow">
+									<p class="ai-card-title">{{ folderName(folder.path) }}</p>
+									<p v-if="folder.description" class="ai-card-desc">{{ folder.description }}</p>
+								</div>
+								<Button size="sm" class="shrink-0" @click="() => openSandboxFolder(folder.path)">
+									{{ formatMessage(messages.open) }}
+								</Button>
+							</div>
+						</div>
+
+						<div v-if="message.activity?.mods?.length" class="ai-cards">
+							<button class="ai-cards-toggle" @click="() => toggleCardGroup(`m-${index}`)">
+								<span>{{ formatMessage(messages.modsTitle) }} · {{ message.activity.mods.length }}</span>
+								<ChevronDownIcon class="size-3.5 transition-transform" :class="{ '-rotate-90': collapsedCards[`m-${index}`] }" />
+							</button>
+							<div v-if="!collapsedCards[`m-${index}`]" class="flex flex-col gap-1.5">
+								<button
+									v-for="mod in message.activity.mods"
+									:key="`${mod.source}-${mod.projectId}`"
+									class="ai-mod-card"
+									@click="() => openMod(mod)"
+								>
+									<img v-if="mod.iconUrl" :src="mod.iconUrl" class="ai-mod-icon" alt="" loading="lazy" />
+									<FileIcon v-else class="ai-mod-icon ai-mod-icon-fallback" />
+									<div class="min-w-0 grow text-left">
+										<p class="ai-card-title">{{ mod.title }}</p>
+										<p class="ai-card-meta">
+											{{ mod.source }}<template v-if="mod.author"> · {{ mod.author }}</template>
+										</p>
+										<p v-if="mod.description" class="ai-card-desc">{{ mod.description }}</p>
+										<p class="ai-card-meta">
+											{{ compactCount(mod.downloads) }} ↓
+											<template v-if="mod.source === 'Modrinth' && mod.follows">
+												· {{ compactCount(mod.follows) }} ♥
+											</template>
+										</p>
+									</div>
+								</button>
+							</div>
+						</div>
+
+						<div v-if="message.activity?.jars?.length" class="ai-cards">
+							<button class="ai-cards-toggle" @click="() => toggleCardGroup(`j-${index}`)">
+								<span>{{ formatMessage(messages.jarsTitle) }} · {{ message.activity.jars.length }}</span>
+								<ChevronDownIcon class="size-3.5 transition-transform" :class="{ '-rotate-90': collapsedCards[`j-${index}`] }" />
+							</button>
+							<div v-if="!collapsedCards[`j-${index}`]" class="flex flex-col gap-1.5">
+								<div v-for="jar in message.activity.jars" :key="jar.path" class="ai-jar-card">
+									<img v-if="jar.iconDataUrl" :src="jar.iconDataUrl" class="ai-mod-icon" alt="" />
+									<FileIcon v-else class="ai-mod-icon ai-mod-icon-fallback" />
+									<div class="min-w-0 grow">
+										<p class="ai-card-title">{{ jar.name }}</p>
+										<p class="ai-card-meta">{{ jar.version }} · .jar</p>
+									</div>
+									<div class="flex shrink-0 items-center gap-1.5">
+										<select v-if="instances.length > 1" v-model="chosenInstance" class="ai-jar-select">
+											<option v-for="instance in instances" :key="instance.id" :value="instance.id">
+												{{ instance.name }}
+											</option>
+										</select>
+										<Button size="sm" color="brand" :disabled="jarInstalled[jar.path]" @click="() => installJar(jar)">
+											{{ jarInstalled[jar.path] ? formatMessage(messages.installed) : formatMessage(messages.install) }}
+										</Button>
+										<IconButton
+											v-tooltip="formatMessage(messages.openFolderCard)"
+											:label="formatMessage(messages.openFolderCard)"
+											@click="() => openSandboxFolder(jar.path)"
+										>
+											<FolderOpenIcon class="size-4" />
+										</IconButton>
+									</div>
+								</div>
+							</div>
 						</div>
 
 						<div v-if="message.actions?.length" class="mt-1.5 flex flex-wrap gap-1">
@@ -907,5 +1183,150 @@ defineExpose({ send })
 	.ai-typing span {
 		animation: none;
 	}
+}
+
+.ai-cards {
+	margin-top: 0.5rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.ai-cards-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	align-self: flex-start;
+	border: 1px solid var(--surface-5);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--color-brand) 10%, var(--color-button-bg));
+	color: var(--color-primary);
+	font: inherit;
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 0.2rem 0.65rem;
+	cursor: pointer;
+}
+
+.ai-cards-toggle:hover {
+	border-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+}
+
+.ai-folder-card,
+.ai-jar-card {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 0.875rem;
+	background: var(--color-button-bg);
+	padding: 0.55rem 0.7rem;
+}
+
+.ai-folder-card {
+	border-color: color-mix(in srgb, var(--color-brand) 30%, transparent);
+}
+
+.ai-card-glyph {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.25rem;
+	height: 2.25rem;
+	flex-shrink: 0;
+	border-radius: 0.65rem;
+	background: color-mix(in srgb, var(--color-brand) 14%, transparent);
+	color: var(--color-brand);
+}
+
+.ai-mod-card {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	width: 100%;
+	border: 1px solid var(--surface-5);
+	border-radius: 0.875rem;
+	background: var(--color-button-bg);
+	padding: 0.55rem 0.7rem;
+	font: inherit;
+	color: var(--color-primary);
+	cursor: pointer;
+	text-align: left;
+	transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.ai-mod-card:hover {
+	border-color: color-mix(in srgb, var(--color-brand) 50%, transparent);
+	transform: translateY(-1px);
+}
+
+.ai-mod-icon {
+	width: 2.75rem;
+	height: 2.75rem;
+	flex-shrink: 0;
+	border-radius: 0.6rem;
+	border: 1px solid var(--surface-5);
+	object-fit: cover;
+}
+
+.ai-mod-icon-fallback {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: color-mix(in srgb, var(--color-secondary) 12%, transparent);
+	color: var(--color-secondary);
+}
+
+.ai-card-title {
+	margin: 0;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--color-primary);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ai-card-meta {
+	margin: 0;
+	font-size: 0.6875rem;
+	color: var(--color-secondary);
+}
+
+.ai-card-desc {
+	margin: 0.1rem 0 0;
+	font-size: 0.75rem;
+	color: var(--color-secondary);
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.ai-jar-select {
+	max-width: 10rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 0.5rem;
+	background: var(--color-button-bg);
+	color: var(--color-primary);
+	font: inherit;
+	font-size: 0.75rem;
+	padding: 0.25rem 0.4rem;
+}
+
+.ai-bridge-status {
+	display: inline-flex;
+	align-items: center;
+	border-radius: 999px;
+	padding: 0.1rem 0.55rem;
+	font-size: 0.6875rem;
+	background: color-mix(in srgb, var(--color-secondary) 14%, transparent);
+	color: var(--color-secondary);
+}
+
+.ai-bridge-on {
+	background: color-mix(in srgb, var(--color-green) 16%, transparent);
+	color: var(--color-green);
 }
 </style>
