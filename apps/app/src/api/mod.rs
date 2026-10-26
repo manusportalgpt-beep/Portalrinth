@@ -17,6 +17,7 @@ pub mod portalrinth_clipboard;
 pub mod portalrinth_crash;
 pub mod portalrinth_curseforge;
 pub mod portalrinth_bedrock;
+pub mod portalrinth_dns;
 pub mod portalrinth_lan;
 pub mod portalrinth_music;
 pub mod portalrinth_offline_auth;

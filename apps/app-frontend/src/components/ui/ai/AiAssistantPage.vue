@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
 	ArrowUpIcon,
+	BrainCogIcon,
 	ClipboardCopyIcon,
 	ChevronDownIcon,
 	ExternalIcon,
@@ -8,6 +9,7 @@ import {
 	FolderOpenIcon,
 	HistoryIcon,
 	PlusIcon,
+	StopCircleIcon,
 	XIcon,
 } from '@modrinth/assets'
 import { Button, IconButton, Input, useVIntl } from '@modrinth/ui'
@@ -20,30 +22,31 @@ import {
 	type AiJarCard,
 	type AiMessage,
 	type AiModCard,
-	type AiPoll,
-	aiComplete,
+	agentBusy,
+	agentPhase,
+	agentQueue,
+	agentStreaming,
+	agentTurn,
 	aiHistory,
 	aiSettings,
 	clearAiHistory,
-	extractCards,
+	errorOnTurn,
 	providerById,
 	noteAgentNavigation,
-	pushAiMessage,
 	queuedUserMessage,
-	showAgentNavNotice,
+	sendAgentMessage,
+	stopAgentRun,
 } from '@/helpers/ai-assistant'
 import {
 	attachFromPaths,
 	type AttachedFile,
 	currentSessionId,
 	formatSize,
-	inboxSave,
 	listSessions,
 	type SessionMeta,
 	readLatestSession,
 	readSession,
 	sandboxAbsolutePath,
-	sandboxReadDataUrl,
 	sandboxReveal,
 } from '@/helpers/ai-sandbox'
 
@@ -133,6 +136,15 @@ const messages = {
 	},
 	historyNewChat: { id: 'app.ai.history.new-chat', defaultMessage: 'Новый чат' },
 	historyMessages: { id: 'app.ai.history.messages', defaultMessage: 'сообщ.' },
+	stop: { id: 'app.ai.stop', defaultMessage: 'Остановить' },
+	processTitle: {
+		id: 'app.ai.process.title',
+		defaultMessage: 'Процесс размышления',
+	},
+	phaseThinking: { id: 'app.ai.phase.thinking', defaultMessage: 'Думаю…' },
+	phaseWorking: { id: 'app.ai.phase.working', defaultMessage: 'Работаю…' },
+	phaseSpeaking: { id: 'app.ai.phase.speaking', defaultMessage: 'Отвечаю…' },
+	queuedBadge: { id: 'app.ai.queued', defaultMessage: 'в очереди' },
 }
 
 const suggestions = computed(() => [
@@ -143,21 +155,17 @@ const suggestions = computed(() => [
 ])
 
 const input = ref('')
-const sending = ref(false)
-const streaming = ref('')
+/** Shared with the module: a run survives leaving the page, so its state is
+ * not the page's own. */
+const sending = agentBusy
+const streaming = agentStreaming
 const errorText = ref('')
+const processOpen = ref(true)
 const plusOpen = ref(false)
 const modelsOpen = ref(false)
 const scrollBox = ref<HTMLElement | null>(null)
 const attachments = ref<AttachedFile[]>([])
 const questionDraft = ref('')
-/** Folders and pictures Portalus produced during the reply in progress -
- * shown as cards under the message once it lands. */
-const turnFolders = ref<AiFolderCard[]>([])
-const turnImages = ref<string[]>([])
-const turnMods = ref<AiModCard[]>([])
-const turnJars = ref<AiJarCard[]>([])
-const turnPolls = ref<AiPoll[]>([])
 	const galleryOpen = ref<Record<string, boolean>>({})
 	const zoomedImage = ref('')
 const collapsedCards = ref<Record<string, boolean>>({})
@@ -167,7 +175,6 @@ const chosenInstance = ref('')
 const historyOpen = ref(false)
 const sessionsList = ref<SessionMeta[]>([])
 const historyLoading = ref(false)
-let typeTimer: ReturnType<typeof setInterval> | undefined
 const router = useRouter()
 
 const visibleHistory = computed(() => aiHistory.value.filter((m) => m.role !== 'note'))
@@ -191,9 +198,20 @@ const lastQuestion = computed(() => {
 })
 
 function stopTyping() {
-	clearInterval(typeTimer)
-	typeTimer = undefined
 	streaming.value = ''
+}
+
+/** What the run in flight says it is doing right now. */
+const phaseLabel = computed(() =>
+	agentPhase.value === 'working'
+		? formatMessage(messages.phaseWorking)
+		: agentPhase.value === 'speaking'
+			? formatMessage(messages.phaseSpeaking)
+			: formatMessage(messages.phaseThinking),
+)
+
+function removeQueued(index: number) {
+	agentQueue.value = agentQueue.value.filter((_, i) => i !== index)
 }
 
 function scrollToBottom() {
@@ -241,48 +259,13 @@ function actionName(tool: string) {
 		launcher_set_theme: 'сменил тему',
 		launcher_compile_java: 'скомпилировал мод в .jar',
 		launcher_install: 'установил контент в сборку',
+		music_add_url: 'скачал трек в плейлист',
+		find_wallpaper: 'искал обои',
+		view_image: 'посмотрел картинку',
+		skill_save: 'сохранил навык',
+		show_poll: 'устроил опрос',
 	}
 	return map[tool] ?? tool
-}
-
-/** Collects what the reply in progress shows the player: folders to open
- * with one click, mod and jar cards, generated and viewed pictures. */
-function onAgentAction(tool: string, args: string, result: string) {
-	streaming.value = ''
-	if (tool === 'open_folder') {
-		const separator = args.indexOf('::')
-		const path = (separator < 0 ? args : args.slice(0, separator)).trim()
-		const description = separator < 0 ? '' : args.slice(separator + 2).trim()
-		if (path && !turnFolders.value.some((folder) => folder.path === path)) {
-			turnFolders.value = [...turnFolders.value, { path, description: description || undefined }]
-		}
-	}
-	if (tool === 'gen_image') {
-		const name = result.match(/картинка (\S+) \(/)?.[1] ?? ''
-		if (name) {
-			void sandboxReadDataUrl(name)
-				.then((url) => {
-					turnImages.value = [...turnImages.value, url]
-				})
-				.catch(() => {})
-		}
-	}
-	const cards = extractCards(result)
-	if (cards.mods.length > 0) {
-		const fresh = cards.mods.filter(
-			(mod) => !turnMods.value.some((existing) => existing.source === mod.source && existing.projectId === mod.projectId),
-		)
-		turnMods.value = [...turnMods.value, ...fresh]
-	}
-	if (cards.jars.length > 0) {
-		turnJars.value = [
-			...turnJars.value,
-			...cards.jars.filter((jar) => !turnJars.value.some((existing) => existing.path === jar.path)),
-		]
-	}
-	if (cards.image && !turnImages.value.includes(cards.image)) {
-		turnImages.value = [...turnImages.value, cards.image]
-	}
 }
 
 function openSandboxFolder(path: string) {
@@ -385,108 +368,17 @@ function startFreshChat() {
 	plusNewChat()
 }
 
+/** The chat never blocks: while Portalus works, a new message quietly lines
+ * up "в очереди" and goes out the moment the run ends or is stopped. */
 async function send(text?: string) {
 	const message = (text ?? input.value).trim()
-	if ((!message && attachments.value.length === 0) || sending.value) return
+	if (!message && attachments.value.length === 0) return
 	errorText.value = ''
+	errorOnTurn.value = ''
 	input.value = ''
 	const files = attachments.value
 	attachments.value = []
-	// A copy lands in the sandbox's inbox, so Portalus can return to
-	// these files on any later turn - read, unpack, rework, delete.
-	let inboxNote = ''
-	if (files.length > 0) {
-		try {
-			const saved = await inboxSave(files)
-			if (saved.length > 0) {
-				inboxNote = `\n\n[файлы сохранены в песочницу: ${saved.join(', ')}]`
-			}
-		} catch {
-			/* the chat copy below still carries text and previews */
-		}
-	}
-	const attachmentNote = files
-		.map((file) =>
-			file.kind === 'text' && file.text
-				? `\n\n[файл ${file.name}]:\n\`\`\`\n${file.text}\n\`\`\``
-				: `\n\n[прикреплён файл: ${file.name}${file.size ? `, ${formatSize(file.size)}` : ''}]`,
-		)
-		.join('')
-	pushAiMessage({
-		role: 'user',
-		content: message + attachmentNote + inboxNote,
-		ts: Date.now(),
-		attachments: files.length > 0 ? files : undefined,
-	})
-	sending.value = true
-	turnFolders.value = []
-	turnImages.value = []
-	turnMods.value = []
-	turnJars.value = []
-	turnPolls.value = []
-
-	const payload = aiHistory.value
-		.filter((m) => m.role !== 'note')
-		.slice(-20)
-		.map((m) => ({
-			role: m.role === 'assistant' ? ('assistant' as const) : ('user' as const),
-			content: m.content,
-		}))
-
-	try {
-		const result = await aiComplete({
-			kind: 'tab',
-			messages: payload,
-			images: files.filter((file) => file.kind === 'image'),
-			onActionDone: onAgentAction,
-		})
-		stopTyping()
-		const done: AiMessage = {
-			role: 'assistant',
-			content: result.content,
-			ts: Date.now(),
-			provider: result.provider,
-			actions: result.actions,
-			activity: result.activity
-				? {
-						...result.activity,
-						foldersOpened: turnFolders.value,
-						images: turnImages.value,
-						mods: turnMods.value,
-						jars: turnJars.value,
-						polls: turnPolls.value,
-					}
-				: undefined,
-			question: result.question,
-		}
-		if (aiSettings.value.chatEffects) {
-			let index = 0
-			const content = result.content
-			typeTimer = setInterval(() => {
-				index = Math.min(content.length, index + 3)
-				streaming.value = content.slice(0, index)
-				if (index >= content.length) {
-					stopTyping()
-					pushAiMessage(done)
-				}
-			}, 16)
-		} else {
-			pushAiMessage(done)
-		}
-		// Portalus moved the player somewhere: leave a small top-center
-		// notch with his words, so the answer is never lost off-screen.
-		if (
-			result.actions.some((action) => action === 'navigate' || action === 'open_instance') &&
-			router.currentRoute.value.path !== '/ai'
-		) {
-			showAgentNavNotice(result.content)
-		}
-	} catch (error) {
-		stopTyping()
-		errorText.value = String((error as Error)?.message ?? error)
-	} finally {
-		sending.value = false
-	}
+	await sendAgentMessage(message, files)
 }
 
 /** Error boxes speak for 10 seconds, then step aside - or leave earlier
@@ -495,6 +387,11 @@ async function send(text?: string) {
 	watch(errorText, (value) => {
 		clearTimeout(errorTimer)
 		if (value) errorTimer = setTimeout(() => (errorText.value = ''), 10000)
+	})
+
+	// A failed run reports through the module; the page shows it the same way.
+	watch(errorOnTurn, (value) => {
+		if (value) errorText.value = value
 	})
 
 	function dismissError() {
@@ -1031,11 +928,39 @@ defineExpose({ send })
 			</div>
 
 			<div v-if="sending" class="mb-3 flex justify-start">
-				<div class="ai-bubble ai-bubble-assistant rounded-2xl px-4 py-2.5">
-					<span class="ai-typing">
-						<span /><span /><span />
-						{{ formatMessage(messages.thinking) }}
-					</span>
+				<div class="ai-bubble ai-bubble-assistant ai-process rounded-2xl px-4 py-2.5">
+					<button
+						class="ai-process-toggle"
+						:aria-expanded="processOpen"
+						@click="processOpen = !processOpen"
+					>
+						<BrainCogIcon class="size-4 shrink-0 text-brand" />
+						<span class="grow text-left">{{ formatMessage(messages.processTitle) }}</span>
+						<span class="ai-process-phase">{{ phaseLabel }}</span>
+						<ChevronDownIcon
+							class="size-3.5 opacity-70 transition-transform"
+							:class="{ '-rotate-90': !processOpen }"
+						/>
+					</button>
+					<div v-if="processOpen" class="ai-process-body">
+						<span
+							v-for="action in agentTurn.actions"
+							:key="action"
+							class="ai-action-chip ai-action-chip-live"
+						>
+							{{ actionName(action) }}
+						</span>
+						<span v-if="agentTurn.actions.length === 0" class="ai-typing">
+							<span /><span /><span />
+							{{ phaseLabel }}
+						</span>
+					</div>
+					<div class="mt-2 flex items-center justify-between gap-2">
+						<Button size="sm" @click="stopAgentRun">
+							<StopCircleIcon class="size-4" />
+							{{ formatMessage(messages.stop) }}
+						</Button>
+					</div>
 				</div>
 			</div>
 			<div v-else-if="streaming" class="mb-3 flex justify-start">
@@ -1048,6 +973,21 @@ defineExpose({ send })
 		</div>
 
 		<div class="shrink-0 px-6 pb-6">
+			<div v-if="agentQueue.length > 0" class="mb-2 flex flex-col gap-1">
+				<div v-for="(queued, queueIndex) in agentQueue" :key="queued.ts" class="ai-queued">
+					<span class="ai-queued-badge">{{ formatMessage(messages.queuedBadge) }}</span>
+					<span class="min-w-0 grow truncate">{{ queued.text }}</span>
+					<button
+						v-tooltip="'Убрать из очереди'"
+						class="ai-queued-remove"
+						aria-label="Убрать из очереди"
+						@click="() => removeQueued(queueIndex)"
+					>
+						<XIcon class="size-3.5" />
+					</button>
+				</div>
+			</div>
+
 			<div v-if="errorText" class="ai-error m-0 mb-2 flex items-start gap-2 rounded-xl px-3 py-2 text-sm">
 				<span class="min-w-0 grow break-words">{{ errorText }}</span>
 				<button v-tooltip="'Скопировать'" class="ai-error-btn" aria-label="Скопировать" @click="copyError">
@@ -1084,7 +1024,6 @@ defineExpose({ send })
 				<div class="relative shrink-0">
 					<IconButton
 						v-tooltip="formatMessage(messages.plus)"
-						:disabled="sending"
 						:label="formatMessage(messages.plus)"
 						@click="togglePlus"
 					>
@@ -1114,13 +1053,12 @@ defineExpose({ send })
 					v-model="input"
 					class="ai-input grow"
 					rows="1"
-					:disabled="sending"
 					:placeholder="formatMessage(messages.placeholder)"
 					@keydown.enter.exact.prevent="() => send()"
 					@paste="onPaste"
 				/>
 				<div class="relative shrink-0">
-					<button class="ai-model-chip" :disabled="sending" @click="toggleModels">
+					<button class="ai-model-chip" @click="toggleModels">
 						{{ modelChipLabel }}
 						<ChevronDownIcon class="size-3.5 opacity-70" />
 					</button>
@@ -1140,9 +1078,19 @@ defineExpose({ send })
 					</div>
 				</div>
 				<Button
+					v-if="sending"
+					v-tooltip="formatMessage(messages.stop)"
+					class="ai-send !rounded-full"
+					:label="formatMessage(messages.stop)"
+					@click="stopAgentRun"
+				>
+					<StopCircleIcon />
+				</Button>
+				<Button
+					v-else
 					color="brand"
 					class="ai-send !rounded-full"
-					:disabled="sending || (!input.trim() && attachments.length === 0)"
+					:disabled="!input.trim() && attachments.length === 0"
 					@click="() => send()"
 				>
 					<ArrowUpIcon />
@@ -1684,5 +1632,98 @@ defineExpose({ send })
 
 .ai-error-btn:hover {
 	opacity: 1;
+}
+
+/* The live "thought process" card: what Portalus is doing right now,
+   foldable like a notebook, with a Stop button an arm's length away. */
+.ai-process {
+	min-width: 17rem;
+	max-width: min(85%, 34rem);
+}
+
+.ai-process-toggle {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	gap: 0.5rem;
+	border: none;
+	background: transparent;
+	color: var(--color-primary);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	cursor: pointer;
+	padding: 0;
+	text-align: left;
+}
+
+.ai-process-phase {
+	font-size: 0.6875rem;
+	font-weight: 400;
+	color: var(--color-secondary);
+	white-space: nowrap;
+}
+
+.ai-process-body {
+	margin-top: 0.5rem;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	border-top: 1px solid var(--surface-5);
+	padding-top: 0.5rem;
+	max-height: 9rem;
+	overflow-y: auto;
+}
+
+.ai-action-chip-live {
+	animation: ai-chip-in 0.25s ease;
+}
+
+@keyframes ai-chip-in {
+	from {
+		opacity: 0;
+		transform: translateY(2px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/* A message waiting behind the running one: quiet, removable, labelled. */
+.ai-queued {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	border: 1px dashed var(--surface-5);
+	border-radius: 0.75rem;
+	background: color-mix(in srgb, var(--color-button-bg) 60%, transparent);
+	padding: 0.3rem 0.6rem;
+	font-size: 0.8125rem;
+	color: var(--color-secondary);
+}
+
+.ai-queued-badge {
+	flex-shrink: 0;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--color-brand) 18%, transparent);
+	color: var(--color-brand);
+	font-size: 0.625rem;
+	font-weight: 700;
+	padding: 0.05rem 0.45rem;
+	white-space: nowrap;
+}
+
+.ai-queued-remove {
+	flex-shrink: 0;
+	border: none;
+	background: transparent;
+	color: var(--color-secondary);
+	cursor: pointer;
+	padding: 0.1rem;
+	border-radius: 0.375rem;
+}
+
+.ai-queued-remove:hover {
+	color: var(--color-red);
 }
 </style>

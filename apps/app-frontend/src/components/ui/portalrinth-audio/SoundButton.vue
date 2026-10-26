@@ -1,5 +1,9 @@
 <template>
-	<FloatingMenu v-if="visible" placement="bottom-end" panel-class="!p-3">
+	<FloatingMenu
+		v-if="visible"
+		placement="bottom-end"
+		panel-class="!p-3 portalrinth-audio-panel"
+	>
 		<IconButton
 			v-tooltip="formatMessage(messages.sound)"
 			type="quiet"
@@ -57,3 +61,15 @@ const videoOn = computed(
 )
 const visible = computed(() => musicOn.value || videoOn.value)
 </script>
+
+<style>
+/* The sound panel is glass: it shows a hint of what is behind it, so it sits
+   in the interface instead of floating above it as a grey slab. */
+.portalrinth-audio-panel {
+	background: color-mix(in srgb, var(--color-raised-bg, var(--color-button-bg)) 72%, transparent) !important;
+	backdrop-filter: blur(16px) saturate(1.15);
+	-webkit-backdrop-filter: blur(16px) saturate(1.15);
+	border: 1px solid rgb(255 255 255 / 6%);
+	box-shadow: 0 12px 32px rgb(0 0 0 / 35%);
+}
+</style>

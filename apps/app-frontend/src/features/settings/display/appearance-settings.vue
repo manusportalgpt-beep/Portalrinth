@@ -24,6 +24,8 @@ import {
 	MAX_ACCENT_GRADIENT_STOPS,
 	MAX_CUSTOM_ACCENT_COLORS,
 	accentGradientAnimated,
+	accentGradientSpeed,
+	setAccentGradientSpeed,
 	removeCustomAccentColor,
 	setAccentGradientAnimated,
 	showAccent,
@@ -107,6 +109,12 @@ const gradientAnimated = computed({
 	set: setAccentGradientAnimated,
 })
 
+/** How fast the run pours: one walk of the gradient in seconds. */
+const gradientSpeed = computed({
+	get: () => accentGradientSpeed.value,
+	set: setAccentGradientSpeed,
+})
+
 // The accent lives in a store of its own that the picker repaints as you move
 // through it, so what was saved has to be kept apart from it ╨а╨Ж╨атАЪ╨▓╨В╤Ь otherwise the
 // preview would read back as the saved value and nothing would count as a
@@ -178,6 +186,14 @@ const messages = defineMessages({
 	accentShimmerTitle: {
 		id: 'app.appearance-settings.accent.gradient-shimmer.title',
 		defaultMessage: 'Shimmering gradient',
+	},
+	accentShimmerSpeedTitle: {
+		id: 'app.appearance-settings.accent.gradient-speed.title',
+		defaultMessage: 'Pour speed',
+	},
+	accentShimmerSpeedDescription: {
+		id: 'app.appearance-settings.accent.gradient-speed.description',
+		defaultMessage: 'One walk of the gradient takes {seconds} s.',
 	},
 	accentShimmerDescription: {
 		id: 'app.appearance-settings.accent.gradient-shimmer.description',
@@ -524,6 +540,25 @@ provideAppearanceSettings({
 				id="accent-gradient-shimmer"
 				v-model="gradientAnimated"
 				aria-labelledby="accent-gradient-shimmer-label"
+			/>
+		</div>
+		<div v-if="gradientAnimated" class="mt-3 flex items-center justify-between gap-4">
+			<div class="min-w-0">
+				<h3 id="accent-shimmer-speed-label" class="m-0 text-lg font-semibold text-contrast">
+					{{ formatMessage(messages.accentShimmerSpeedTitle) }}
+				</h3>
+				<p class="m-0 mt-1 text-secondary">
+					{{ formatMessage(messages.accentShimmerSpeedDescription, { seconds: gradientSpeed }) }}
+				</p>
+			</div>
+			<Slider
+				id="accent-shimmer-speed"
+				v-model="gradientSpeed"
+				:min="1"
+				:max="30"
+				:step="1"
+				unit="s"
+				aria-labelledby="accent-shimmer-speed-label"
 			/>
 		</div>
 	</div>

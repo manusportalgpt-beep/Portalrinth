@@ -2,12 +2,12 @@
  * Sound in the launcher: a playlist of one's own music, and the sound of a
  * background video.
  *
- * Tracks are copied into a folder next to the app database (up to 3 GB, see
- * `portalrinth_music.rs`), so a playlist outlives the files it was made from.
- * What the interface needs to know about a track - its title, its artist, its
- * cover, how long it is - is read once, when it is added, and kept on this
- * computer with the order and the settings below, as they only say how this
- * launcher sounds.
+ * Tracks are copied into a folder next to the app database (no hard cap - a
+ * gentle warning comes when the folder grows past five gigabytes), so a
+ * playlist outlives the files it was made from. What the interface needs to
+ * know about a track - its title, its artist, its cover, how long it is - is
+ * read once, when it is added, and kept on this computer with the order and
+ * the settings below, as they only say how this launcher sounds.
  *
  * There is one player for the whole window. The title bar's sound button and
  * Settings → Sound both drive it; neither owns it.
@@ -15,6 +15,9 @@
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { computed, reactive, ref, shallowRef, watch } from 'vue'
+
+import { proxiedFetch } from './proxy-fetch'
+import { bytesToBase64 } from './ai-sandbox'
 
 export const MUSIC_EXTENSIONS = ['mp3', 'ogg', 'oga', 'opus', 'wav', 'flac', 'm4a', 'aac', 'webm']
 
@@ -256,6 +259,37 @@ interface AddedFile {
 	name: string
 }
 
+/** Copies a downloaded track into the launcher's folder and reads its tags. */
+async function registerTrack(
+	bytes: Uint8Array,
+	extension: string,
+	fallbackName: string,
+	addedAt: number,
+): Promise<MusicTrack> {
+	const file = await invoke<AddedFile>('plugin:portalrinth-music|music_add_bytes', {
+		bytesBase64: bytesToBase64(bytes),
+		extension,
+	})
+	const tags = readId3(bytes.subarray(0, Math.min(bytes.length, 16 * 1024 * 1024)))
+	const url = URL.createObjectURL(new Blob([bytes], { type: MIME[file.extension] }))
+	const duration = await durationOf(url)
+	URL.revokeObjectURL(url)
+	const track: MusicTrack = {
+		id: file.id,
+		extension: file.extension,
+		size: file.size,
+		title: tags.title || fallbackName,
+		artist: tags.artist || '',
+		duration,
+		cover: tags.cover ? await smallCover(tags.cover) : null,
+		addedAt,
+	}
+	musicTracks.value = [...musicTracks.value, track]
+	if (audioSettings.sort === 'custom') audioSettings.customOrder.push(track.id)
+	if (audioSettings.sort === 'random') audioSettings.shuffledOrder.push(track.id)
+	return track
+}
+
 /** Asks for files and adds them to the playlist. Returns how many were added. */
 export async function addMusicFiles(): Promise<number> {
 	const picked = await open({
@@ -290,6 +324,45 @@ export async function addMusicFiles(): Promise<number> {
 	return added
 }
 
+/** Sniffs an audio format off the file's first bytes - the honest way to
+ * know what a link carries when its name says nothing. */
+function sniffExtension(bytes: Uint8Array, fromName: string): string {
+	const fromUrl = (fromName.split('?')[0].split('.').pop() ?? '').toLowerCase()
+	if (MUSIC_EXTENSIONS.includes(fromUrl)) return fromUrl
+	if (bytes.length > 12) {
+		const ascii = (offset: number, text: string) =>
+			String.fromCharCode(...bytes.subarray(offset, offset + text.length)) === text
+		if (ascii(0, 'ID3')) return 'mp3'
+		if (ascii(0, 'OggS')) return 'ogg'
+		if (ascii(0, 'fLaC')) return 'flac'
+		if (ascii(0, 'RIFF')) return 'wav'
+		if (ascii(4, 'ftyp')) return 'm4a'
+		if (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) return 'mp3'
+	}
+	return ''
+}
+
+/** Downloads a track by a direct link - a CDN of a music site, a cloud, a
+ * radio dump - and puts it in the playlist. */
+export async function addMusicFromUrl(url: string): Promise<MusicTrack> {
+	const response = await proxiedFetch(url, { signal: AbortSignal.timeout(180000) })
+	if (!response.ok) throw new Error(`HTTP ${response.status}`)
+	const bytes = new Uint8Array(await response.arrayBuffer())
+	if (bytes.length < 2048) throw new Error('файл пустой или не аудио')
+	if (bytes.length > 200 * 1024 * 1024) throw new Error('файл больше 200 МБ')
+	let name = 'трек'
+	try {
+		name = decodeURIComponent(new URL(url).pathname.split('/').pop() ?? '') || name
+	} catch {
+		/* a relative or odd URL keeps the plain name */
+	}
+	const extension = sniffExtension(bytes, name)
+	if (!extension) throw new Error('не похоже на аудио (mp3, ogg, flac, wav, m4a)')
+	const track = await registerTrack(bytes, extension, name.replace(/\.[a-z0-9]+$/i, ''), Date.now())
+	await refreshMusicUsage()
+	return track
+}
+
 export async function removeMusicTrack(id: string): Promise<void> {
 	if (player.trackId === id) stopMusic()
 	await invoke('plugin:portalrinth-music|music_remove', { id })
@@ -299,7 +372,10 @@ export async function removeMusicTrack(id: string): Promise<void> {
 	await refreshMusicUsage()
 }
 
-export const musicUsage = ref({ used: 0, limit: 3 * 1024 * 1024 * 1024 })
+/** `limit` is not a cap - it is where the friendly "this is getting heavy"
+ * warning starts (5 GB), so huge playlists are a choice, not a wall. */
+export const MUSIC_WARN_BYTES = 5 * 1024 * 1024 * 1024
+export const musicUsage = ref({ used: 0, limit: MUSIC_WARN_BYTES })
 export async function refreshMusicUsage(): Promise<void> {
 	musicUsage.value = await invoke('plugin:portalrinth-music|music_usage')
 }

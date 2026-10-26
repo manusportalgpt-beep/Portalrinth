@@ -2,11 +2,13 @@
 //!
 //! A track is copied into a folder of its own next to the app database rather
 //! than remembered by path, so a playlist survives the original being moved or
-//! deleted. The folder holds up to 3 GB; what is in it is handed to the
-//! interface as raw bytes, as the background is, because the webview cannot
-//! read files on disk.
+//! deleted. The folder has no hard cap - the interface shows a gentle warning
+//! once it grows past five gigabytes. What is in it is handed to the interface
+//! as raw bytes, as the background is, because the webview cannot read files
+//! on disk.
 
 use crate::api::Result;
+use base64::Engine as _;
 use serde::Serialize;
 use tauri::ipc::Response;
 
@@ -14,6 +16,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
     tauri::plugin::Builder::new("portalrinth-music")
         .invoke_handler(tauri::generate_handler![
             music_add,
+            music_add_bytes,
             music_get,
             music_remove,
             music_usage,
@@ -22,8 +25,9 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .build()
 }
 
-/// How much the music folder may hold, all tracks together.
-const MAX_TOTAL_BYTES: u64 = 3 * 1024 * 1024 * 1024;
+/// Where the interface starts mentioning that the playlist got heavy; not a
+/// cap, just a nudge.
+const WARN_TOTAL_BYTES: u64 = 5 * 1024 * 1024 * 1024;
 
 /// What can be played.
 const EXTENSIONS: &[&str] = &[
@@ -104,14 +108,6 @@ pub async fn music_add(path: String) -> Result<MusicFile> {
         return Err(error(format!("Cannot play .{extension} files")));
     }
     let size = tokio::fs::metadata(source).await.map_err(error)?.len();
-    let used = used_bytes().await?;
-    if used + size > MAX_TOTAL_BYTES {
-        return Err(error(format!(
-            "The music folder holds up to {} GB; {} MB are left",
-            MAX_TOTAL_BYTES / 1024 / 1024 / 1024,
-            MAX_TOTAL_BYTES.saturating_sub(used) / 1024 / 1024
-        )));
-    }
     let id = uuid::Uuid::new_v4().simple().to_string();
     let target = music_dir().await?.join(format!("{id}.{extension}"));
     tokio::fs::copy(source, &target).await.map_err(error)?;
@@ -125,6 +121,31 @@ pub async fn music_add(path: String) -> Result<MusicFile> {
         extension,
         size,
         name,
+    })
+}
+
+/// Saves a downloaded track (a direct link fetched by the interface) into the
+/// music folder. The bytes ride base64-encoded: the IPC prefers text.
+#[tauri::command]
+pub async fn music_add_bytes(bytes_base64: String, extension: String) -> Result<MusicFile> {
+    let extension = extension.to_lowercase();
+    if !EXTENSIONS.contains(&extension.as_str()) {
+        return Err(error(format!("Cannot play .{extension} files")));
+    }
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(bytes_base64.trim())
+        .map_err(|e| error(format!("Broken audio payload: {e}")))?;
+    if bytes.len() < 512 {
+        return Err(error("The audio file is empty"));
+    }
+    let id = uuid::Uuid::new_v4().simple().to_string();
+    let target = music_dir().await?.join(format!("{id}.{extension}"));
+    tokio::fs::write(&target, &bytes).await.map_err(error)?;
+    Ok(MusicFile {
+        id,
+        extension,
+        size: bytes.len() as u64,
+        name: String::new(),
     })
 }
 
@@ -151,7 +172,7 @@ pub async fn music_remove(id: String) -> Result<()> {
 pub async fn music_usage() -> Result<MusicUsage> {
     Ok(MusicUsage {
         used: used_bytes().await?,
-        limit: MAX_TOTAL_BYTES,
+        limit: WARN_TOTAL_BYTES,
     })
 }
 

@@ -147,7 +147,16 @@
 						{{
 							formatMessage(messages.playlistUsage, {
 								used: formatSize(musicUsage.used),
-								limit: formatSize(musicUsage.limit),
+							})
+						}}
+					</p>
+					<p
+						v-if="musicUsage.used > musicUsage.limit"
+						class="m-0 mt-1 text-sm font-semibold text-orange"
+					>
+						{{
+							formatMessage(messages.playlistHeavy, {
+								used: formatSize(musicUsage.used),
 							})
 						}}
 					</p>
@@ -173,6 +182,46 @@
 					aria-labelledby="sound-sort-label"
 					@update:model-value="onSort"
 				/>
+			</div>
+
+			<div class="flex flex-col gap-2 rounded-2xl bg-surface-2 p-4">
+				<span class="font-semibold text-contrast">
+					{{ formatMessage(messages.onlineTitle) }}
+				</span>
+				<div class="flex flex-wrap items-center gap-2">
+					<Input
+						v-model="onlineQuery"
+						:placeholder="formatMessage(messages.onlineSearchPlaceholder)"
+						class="w-72"
+						@keydown.enter="searchOnline"
+					/>
+					<Button :disabled="!onlineQuery.trim()" @click="searchOnline">
+						<SearchIcon class="size-4" aria-hidden="true" />
+						{{ formatMessage(messages.onlineSearch) }}
+					</Button>
+				</div>
+				<div class="flex flex-wrap items-center gap-2">
+					<Input
+						v-model="onlineUrl"
+						:placeholder="formatMessage(messages.onlineUrlPlaceholder)"
+						class="min-w-64 grow"
+					/>
+					<Button
+						type="colored"
+						color="brand"
+						:disabled="addingUrl || !onlineUrl.trim()"
+						@click="addByUrl"
+					>
+						<SpinnerIcon v-if="addingUrl" class="animate-spin" aria-hidden="true" />
+						{{ formatMessage(messages.onlineAdd) }}
+					</Button>
+				</div>
+				<p class="m-0 text-xs leading-relaxed text-secondary">
+					{{ formatMessage(messages.onlineHint) }}
+				</p>
+				<p v-if="urlMessage" class="m-0 text-xs font-semibold" :class="urlOk ? 'text-green' : 'text-red'">
+					{{ urlMessage }}
+				</p>
 			</div>
 
 			<p v-if="!rows.length" class="m-0 rounded-2xl bg-surface-2 p-4 text-secondary">
@@ -265,8 +314,17 @@
  * that order and switches the sorting to "Arranged", which only arranging
  * picks.
  */
-import { MusicIcon, PauseIcon, PlayIcon, PlusIcon, SpinnerIcon, TrashIcon } from '@modrinth/assets'
 import {
+	MusicIcon,
+	PauseIcon,
+	PlayIcon,
+	PlusIcon,
+	SearchIcon,
+	SpinnerIcon,
+	TrashIcon,
+} from '@modrinth/assets'
+import {
+	Input,
 	Button,
 	Combobox,
 	type ComboboxOption,
@@ -281,6 +339,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import {
 	addMusicFiles,
+	addMusicFromUrl,
 	audioSettings,
 	formatTrackTime,
 	type MusicSort,
@@ -336,9 +395,38 @@ const messages = defineMessages({
 	playlistUsage: {
 		id: 'app.settings.sound.playlist-usage',
 		defaultMessage:
-			'Tracks are copied into the launcher, so they stay after the original is deleted. {used} of {limit} used.',
+			'Tracks are copied into the launcher, so they stay after the original is deleted. Taken: {used} — no limit.',
+	},
+	playlistHeavy: {
+		id: 'app.settings.sound.playlist-heavy',
+		defaultMessage:
+			'The playlist already takes up a lot of space ({used}) — you might want to remove something.',
 	},
 	addMusic: { id: 'app.settings.sound.add', defaultMessage: 'Add music' },
+	onlineTitle: {
+		id: 'app.settings.sound.online.title',
+		defaultMessage: 'Music from the internet',
+	},
+	onlineSearchPlaceholder: {
+		id: 'app.settings.sound.online.search-placeholder',
+		defaultMessage: 'Artist or track name…',
+	},
+	onlineSearch: {
+		id: 'app.settings.sound.online.search',
+		defaultMessage: 'Search on LightAudio',
+	},
+	onlineUrlPlaceholder: {
+		id: 'app.settings.sound.online.url-placeholder',
+		defaultMessage: 'Direct link to a track (https://…/track.mp3)',
+	},
+	onlineAdd: { id: 'app.settings.sound.online.add', defaultMessage: 'Download' },
+	onlineHint: {
+		id: 'app.settings.sound.online.hint',
+		defaultMessage:
+			'Search opens on web.ligaudio.ru in your browser (the site checks that a real browser is visiting). Copy the direct link to the file from its player, paste it here, and the track downloads into the playlist. Portalus can do the same: ask it to “download a track by the link …”.',
+	},
+	urlOk: { id: 'app.settings.sound.online.url-ok', defaultMessage: 'Track downloaded into the playlist' },
+	urlFail: { id: 'app.settings.sound.online.url-fail', defaultMessage: 'Could not add' },
 	sortTitle: { id: 'app.settings.sound.sort', defaultMessage: 'Order' },
 	sortAdded: { id: 'app.settings.sound.sort-added', defaultMessage: 'By date added' },
 	sortDuration: {
@@ -398,6 +486,46 @@ async function add() {
 		handleError(error as Error)
 	} finally {
 		adding.value = false
+	}
+}
+
+// ---- Music from the internet -----------------------------------------------
+
+const onlineQuery = ref('')
+const onlineUrl = ref('')
+const addingUrl = ref(false)
+const urlMessage = ref('')
+const urlOk = ref(false)
+
+/** Opens the LightAudio search in the system browser: the site greets robots
+ * with a check only a real browser passes, so the search lives there. */
+async function searchOnline() {
+	const query = onlineQuery.value.trim()
+	if (!query) return
+	try {
+		const { openUrl } = await import('@tauri-apps/plugin-opener')
+		await openUrl(`https://web.ligaudio.ru/search?q=${encodeURIComponent(query)}`)
+	} catch {
+		window.open(`https://web.ligaudio.ru/search?q=${encodeURIComponent(query)}`, '_blank')
+	}
+}
+
+/** Downloads a track by its direct link straight into the playlist. */
+async function addByUrl() {
+	const url = onlineUrl.value.trim()
+	if (!url || addingUrl.value) return
+	addingUrl.value = true
+	urlMessage.value = ''
+	try {
+		const track = await addMusicFromUrl(url)
+		urlOk.value = true
+		urlMessage.value = `${formatMessage(messages.urlOk)}: ${track.title}`
+		onlineUrl.value = ''
+	} catch (error) {
+		urlOk.value = false
+		urlMessage.value = `${formatMessage(messages.urlFail)}: ${String((error as Error)?.message ?? error).slice(0, 160)}`
+	} finally {
+		addingUrl.value = false
 	}
 }
 

@@ -487,6 +487,7 @@ fn main() {
         .plugin(api::portalrinth_curseforge::init())
         .plugin(api::portalrinth_lan::init())
         .plugin(api::portalrinth_bedrock::init())
+        .plugin(api::portalrinth_dns::init())
         .plugin(api::portalrinth_offline_auth::init())
         .plugin(api::portalrinth_archive::init())
         .plugin(api::portalrinth_bridge::init())

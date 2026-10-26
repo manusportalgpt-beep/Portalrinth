@@ -40,20 +40,23 @@ function toggleMute() {
 </script>
 
 <style>
-/* A thin bar in the accent, filled up to where it is; shared by every audio control. */
+/* A thin bar in the accent, filled up to where it is; shared by every audio
+   control. The input itself is a generous invisible grab area - the visible
+   bar is the gradient, squeezed into a thin centred strip by background-size. */
 .portalrinth-range {
 	--progress: 0%;
 	appearance: none;
-	height: 0.375rem;
+	height: 1.1rem;
 	margin: 0;
 	border-radius: 999px;
 	background:
 		linear-gradient(
-			to right,
-			transparent var(--progress),
-			var(--surface-5, rgb(255 255 255 / 15%)) var(--progress)
-		),
-		var(--portalrinth-accent-gradient, var(--color-brand));
+				to right,
+				transparent var(--progress),
+				var(--surface-5, rgb(255 255 255 / 15%)) var(--progress)
+			)
+			no-repeat center / 100% 0.375rem,
+		var(--portalrinth-accent-gradient, var(--color-brand)) no-repeat center / 100% 0.375rem;
 	cursor: pointer;
 	outline: none;
 }
@@ -74,8 +77,9 @@ function toggleMute() {
 }
 
 .portalrinth-range:hover::-webkit-slider-thumb,
-.portalrinth-range:focus-visible::-webkit-slider-thumb {
-	transform: scale(1.2);
+.portalrinth-range:focus-visible::-webkit-slider-thumb,
+.portalrinth-range:active::-webkit-slider-thumb {
+	transform: scale(1.25);
 }
 
 .portalrinth-range::-moz-range-thumb {

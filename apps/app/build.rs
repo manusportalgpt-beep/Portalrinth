@@ -716,6 +716,14 @@ fn main() {
                     ),
             )
             .plugin(
+                "portalrinth-dns",
+                InlinedPlugin::new()
+                    .commands(&["dns_check"])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "portalrinth-bridge",
                 InlinedPlugin::new()
                     .commands(&[

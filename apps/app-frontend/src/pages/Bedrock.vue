@@ -61,6 +61,13 @@ const route = useRoute()
 const router = useRouter()
 
 const messages = defineMessages({
+	notFoundTitle: { id: 'app.bedrock.not-found.title', defaultMessage: 'Build not found' },
+	notFoundDescription: {
+		id: 'app.bedrock.not-found.description',
+		defaultMessage:
+			'This Bedrock build no longer exists \u2014 it may have been removed. The sidebar has been refreshed.',
+	},
+	goHome: { id: 'app.bedrock.not-found.home', defaultMessage: 'Back to the launcher' },
 	edition: { id: 'app.bedrock.edition', defaultMessage: 'Bedrock Edition' },
 	play: { id: 'app.bedrock.play', defaultMessage: 'Play' },
 	getFromStore: { id: 'app.bedrock.get-from-store', defaultMessage: 'Get it from Microsoft Store' },
@@ -137,16 +144,22 @@ useRootBreadcrumb({
 	to: () => `/bedrock/${encodeURIComponent(profileId.value)}`,
 })
 
+const notFound = ref(false)
+
 async function loadProfile() {
 	// Navigating away empties the route id; asking the backend for a build
 	// with no id only ever comes back with a "no Bedrock build" error.
 	if (!profileId.value) return
 	try {
 		profile.value = await getBedrock(profileId.value)
-	} catch (error) {
-		handleError(error as Error)
-		await router.push('/')
+		notFound.value = false
+	} catch {
+		// A removed or stale build gets a quiet note on the page itself,
+		// not a modal - the sidebar is refreshed so the dead entry leaves.
+		notFound.value = true
+		profile.value = null
 	}
+	void refreshBedrockProfiles()
 }
 
 async function loadStatus() {
@@ -425,6 +438,18 @@ function formatDate(date: string | null) {
 </script>
 
 <template>
+	<div
+		v-if="notFound"
+		class="flex h-full flex-col items-center justify-center gap-3 p-6 text-center"
+	>
+		<h1 class="m-0 text-xl font-bold text-contrast">
+			{{ formatMessage(messages.notFoundTitle) }}
+		</h1>
+		<p class="m-0 max-w-md text-secondary">
+			{{ formatMessage(messages.notFoundDescription) }}
+		</p>
+		<Button @click="() => router.push('/')">{{ formatMessage(messages.goHome) }}</Button>
+	</div>
 	<div v-if="profile" class="flex flex-col gap-4 p-6">
 		<div
 			class="flex flex-wrap items-center gap-4 rounded-2xl border border-solid border-surface-5 bg-surface-3 p-4"

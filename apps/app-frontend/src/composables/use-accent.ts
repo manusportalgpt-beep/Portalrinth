@@ -311,7 +311,7 @@ ${G} .button-frame--outlined${BRAND}::after {
 ${filledSelectors(GA)},
 ${softSelectors(GA)} {
 	background-size: 280% 280% !important;
-	animation: portalrinth-accent-shimmer 9s ease-in-out infinite;
+	animation: portalrinth-accent-shimmer var(--portalrinth-shimmer-duration, 9s) ease-in-out infinite;
 }
 }
 
@@ -558,6 +558,43 @@ export function setAccentGradientAnimated(animated: boolean): void {
 		// Not kept, but still in effect until the window is closed.
 	}
 }
+
+/** How many seconds one walk of the run takes, from a crawl to a blink.
+ * A setting of its own, next to the switch that starts the walk at all. */
+const SPEED_KEY = 'portalrinth-accent-gradient-speed'
+
+function readSpeed(): number {
+	try {
+		const raw = Number(localStorage.getItem(SPEED_KEY))
+		return Number.isFinite(raw) && raw >= 1 && raw <= 60 ? raw : 9
+	} catch {
+		return 9
+	}
+}
+
+export const accentGradientSpeed = ref(readSpeed())
+
+function applyShimmerSpeed(seconds: number): void {
+	try {
+		document.documentElement.style.setProperty('--portalrinth-shimmer-duration', `${seconds}s`)
+	} catch {
+		/* no document yet - it is applied on the next set */
+	}
+}
+
+/** Changes how fast the run pours, and keeps the choice. */
+export function setAccentGradientSpeed(seconds: number): void {
+	const clamped = Math.max(1, Math.min(60, seconds))
+	accentGradientSpeed.value = clamped
+	applyShimmerSpeed(clamped)
+	try {
+		localStorage.setItem(SPEED_KEY, String(clamped))
+	} catch {
+		// Not kept, but still in effect until the window is closed.
+	}
+}
+
+applyShimmerSpeed(accentGradientSpeed.value)
 
 /** The colour a preset is drawn in under the theme currently on screen. */
 /**

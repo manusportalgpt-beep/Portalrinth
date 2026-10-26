@@ -1,14 +1,14 @@
 <script setup>
-import { BoxIcon, CheckIcon, FolderSearchIcon, KeyIcon } from '@modrinth/assets'
+import { BoxIcon, CheckIcon, FolderSearchIcon } from '@modrinth/assets'
 import { defineMessages, IconButton, Input, Slider, useVIntl } from '@modrinth/ui'
-import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 
 import { get, set } from '@/helpers/settings.ts'
 import { setSkinRenderService, useSkinRenderService } from '@/helpers/skin-render-service'
 
 import ContentStorageSettings from './content-storage.vue'
+import DnsSettings from '../dns-settings.vue'
 
 const { formatMessage } = useVIntl()
 const settings = ref(await get())
@@ -30,28 +30,6 @@ const messages = defineMessages({
 	browseAppDirectory: {
 		id: 'app.settings.resource-management.app-directory.browse',
 		defaultMessage: 'Browse for an app directory',
-	},
-	curseforgeTitle: {
-		id: 'app.settings.resource-management.curseforge.title',
-		defaultMessage: 'CurseForge API key',
-	},
-	curseforgeDescription: {
-		id: 'app.settings.resource-management.curseforge.description',
-		defaultMessage:
-			'CurseForge requires a key for searching, listing files and downloading. Leave this empty to use the key this build was made with, if it has one.',
-	},
-	curseforgeHint: {
-		id: 'app.settings.resource-management.curseforge.hint',
-		defaultMessage: 'Create an API token at',
-	},
-	curseforgeMissing: {
-		id: 'app.settings.resource-management.curseforge.missing',
-		defaultMessage:
-			'No key is configured, so CurseForge is not available anywhere in this launcher.',
-	},
-	curseforgePresent: {
-		id: 'app.settings.resource-management.curseforge.present',
-		defaultMessage: 'A key of your own is in use for CurseForge.',
 	},
 	maximumConcurrentDownloadsTitle: {
 		id: 'app.settings.resource-management.maximum-concurrent-downloads.title',
@@ -120,10 +98,6 @@ watch(
 			setSettings.custom_dir = null
 		}
 
-		if (!setSettings.curseforge_api_key) {
-			setSettings.curseforge_api_key = null
-		}
-
 		await set(setSettings)
 	},
 	{ deep: true },
@@ -134,21 +108,6 @@ watch(
  * settings change: a key can be pasted, changed or cleared while the tab is
  * open, and this is what decides whether CurseForge is reachable at all.
  */
-const curseforgeAvailable = ref(false)
-
-async function refreshCurseforgeAvailability() {
-	try {
-		curseforgeAvailable.value = await invoke(
-			'plugin:portalrinth-curseforge|curseforge_is_available',
-		)
-	} catch {
-		// An empty key is the ordinary case, not a failure to report.
-		curseforgeAvailable.value = false
-	}
-}
-
-onMounted(refreshCurseforgeAvailability)
-
 async function findLauncherDir() {
 	const newDir = await open({
 		multiple: false,
@@ -165,6 +124,7 @@ async function findLauncherDir() {
 <template>
 	<div class="flex flex-col gap-6">
 		<ContentStorageSettings />
+		<DnsSettings />
 		<div class="flex flex-col gap-2.5">
 			<h2 class="m-0 text-lg font-semibold text-contrast">
 				{{ formatMessage(messages.appDirectoryTitle) }}
@@ -224,10 +184,10 @@ async function findLauncherDir() {
 			</p>
 		</div>
 
-		<div class="flex flex-col gap-2.5">
-			<h2 class="mt-0 m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.skinServicesTitle) }}
-			</h2>
+			<div class="flex flex-col gap-2.5">
+				<h2 class="mt-0 m-0 text-lg font-semibold text-contrast">
+					{{ formatMessage(messages.skinServicesTitle) }}
+				</h2>
 			<p class="m-0 leading-tight text-secondary">
 				{{ formatMessage(messages.skinServicesDescription) }}
 			</p>
@@ -259,38 +219,5 @@ async function findLauncherDir() {
 			</div>
 		</div>
 
-		<div class="flex flex-col gap-2.5">
-			<h2 class="mt-0 m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.curseforgeTitle) }}
-			</h2>
-			<Input
-				id="curseforge-api-key"
-				v-model="settings.curseforge_api_key"
-				:icon="KeyIcon"
-				type="password"
-				placeholder="••••••••••••••••"
-				wrapper-class="w-full"
-			/>
-			<p class="m-0 leading-tight text-secondary">
-				{{ formatMessage(messages.curseforgeDescription) }}
-			</p>
-			<span class="text-sm text-secondary">
-				{{ formatMessage(messages.curseforgeHint) }}
-				<a
-					href="https://www.curseforge.com/account/api-tokens"
-					target="_blank"
-					rel="noopener noreferrer"
-					class="font-semibold text-brand hover:underline"
-					>curseforge.com</a
-				>
-			</span>
-			<p class="m-0 leading-tight text-secondary">
-				{{
-					curseforgeAvailable
-						? formatMessage(messages.curseforgePresent)
-						: formatMessage(messages.curseforgeMissing)
-				}}
-			</p>
-		</div>
 	</div>
 </template>

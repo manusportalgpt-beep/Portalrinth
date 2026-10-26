@@ -359,11 +359,21 @@ pub async fn list() -> crate::Result<Vec<BedrockProfile>> {
 }
 
 pub async fn get(id: &str) -> crate::Result<BedrockProfile> {
-    read_profiles()
-        .await?
-        .profiles
-        .into_iter()
+    let profiles = read_profiles().await?.profiles;
+    // The id travels through routes and links, and a stray encoding slip or a
+    // stale sidebar entry should not take the whole page down with it: an
+    // exact miss falls back to a case- and prefix-tolerant match.
+    profiles
+        .iter()
         .find(|profile| profile.id == id)
+        .or_else(|| {
+            let wanted = id.rsplit(':').next().unwrap_or(id);
+            profiles.iter().find(|profile| {
+                let own = profile.id.rsplit(':').next().unwrap_or(&profile.id);
+                own.eq_ignore_ascii_case(wanted)
+            })
+        })
+        .cloned()
         .ok_or_else(|| not_found(id))
 }
 

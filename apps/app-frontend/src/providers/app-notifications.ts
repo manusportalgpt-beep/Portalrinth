@@ -1,3 +1,4 @@
+import { isCancelledError } from '@tanstack/vue-query'
 import {
 	AbstractWebNotificationManager,
 	type NotificationPanelLocation,
@@ -8,6 +9,19 @@ import { type Ref, ref } from 'vue'
 export class AppNotificationManager extends AbstractWebNotificationManager {
 	private readonly state: Ref<WebNotification[]>
 	private readonly locationState: Ref<NotificationPanelLocation>
+
+	/** Errors speak for ten seconds - long enough to read, short enough not
+	 * to loiter - and always leave a copy button behind. */
+	public handleError = (error: Error): void => {
+		if (isCancelledError(error)) return
+		this.addNotification({
+			title: 'An error occurred',
+			text: error.message ?? String(error),
+			type: 'error',
+			autoCloseMs: 10_000,
+			copyable: true,
+		})
+	}
 
 	public constructor() {
 		super()

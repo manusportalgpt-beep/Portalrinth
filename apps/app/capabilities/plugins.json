@@ -222,6 +222,7 @@
 		"portalrinth-lan:default",
 		"portalrinth-bedrock:default",
 		"portalrinth-archiver:default",
-		"portalrinth-bridge:default"
+		"portalrinth-bridge:default",
+		"portalrinth-dns:default"
 	]
 }

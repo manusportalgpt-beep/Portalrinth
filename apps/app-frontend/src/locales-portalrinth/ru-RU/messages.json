@@ -3526,5 +3526,122 @@
 	},
 	"instance.settings.backups.fail": {
 		"message": "Не получилось"
+	},
+	"app.ai.stop": {
+		"message": "Остановить"
+	},
+	"app.ai.process.title": {
+		"message": "Процесс размышления"
+	},
+	"app.ai.phase.thinking": {
+		"message": "Думаю…"
+	},
+	"app.ai.phase.working": {
+		"message": "Работаю…"
+	},
+	"app.ai.phase.speaking": {
+		"message": "Отвечаю…"
+	},
+	"app.ai.queued": {
+		"message": "в очереди"
+	},
+	"app.ai.settings.custom-model-any": {
+		"message": "Своя модель (id с сайта провайдера — там их намного больше):"
+	},
+	"app.settings.sound.playlist-heavy": {
+		"message": "Плейлист уже занимает много места ({used}) — возможно, стоит удалить что-нибудь."
+	},
+	"app.settings.sound.online.title": {
+		"message": "Музыка из интернета"
+	},
+	"app.settings.sound.online.search-placeholder": {
+		"message": "Исполнитель или название трека…"
+	},
+	"app.settings.sound.online.search": {
+		"message": "Искать на LightAudio"
+	},
+	"app.settings.sound.online.url-placeholder": {
+		"message": "Прямая ссылка на трек (https://…/track.mp3)"
+	},
+	"app.settings.sound.online.add": {
+		"message": "Скачать"
+	},
+	"app.settings.sound.online.hint": {
+		"message": "Поиск открывается на web.ligaudio.ru в браузере (сайт проверяет, что зашёл настоящий браузер). Скопируйте из их плеера прямую ссылку на файл, вставьте сюда — трек скачается в плейлист. То же умеет Порталус: попросите «скачай трек по ссылке …»."
+	},
+	"app.settings.sound.online.url-ok": {
+		"message": "Трек скачан в плейлист"
+	},
+	"app.settings.sound.online.url-fail": {
+		"message": "Не добавилось"
+	},
+	"app.settings.dns.title": {
+		"message": "DNS-серверы"
+	},
+	"app.settings.dns.description": {
+		"message": "Публичные резолверы, которые видят то, что провайдер прячет, — включая игровые серверы вроде Hypixel. Лаунчер только опрашивает их для проверки и никогда не меняет системные настройки, так что пробовать их полностью безопасно."
+	},
+	"app.settings.dns.how-to": {
+		"message": "Чтобы пользоваться: Windows → настройки сетевого адаптера → DNS → впишите адреса вручную, или задайте их в роутере. Только поля IPv4 — больше ничего не затрагивается."
+	},
+	"app.settings.dns.preferred": {
+		"message": "Предпоч."
+	},
+	"app.settings.dns.alternate": {
+		"message": "Альтерн."
+	},
+	"app.settings.dns.no-alternate": {
+		"message": "Отсутст."
+	},
+	"app.settings.dns.check": {
+		"message": "Проверить"
+	},
+	"app.settings.dns.checking": {
+		"message": "Проверяю…"
+	},
+	"app.settings.dns.ok": {
+		"message": "отвечает за {ms} мс"
+	},
+	"app.settings.dns.fail": {
+		"message": "не отвечает: {detail}"
+	},
+	"app.settings.dns.custom.title": {
+		"message": "Свой DNS-сервер"
+	},
+	"app.settings.dns.custom.name": {
+		"message": "Название"
+	},
+	"app.settings.dns.custom.ip": {
+		"message": "IP-адрес"
+	},
+	"app.settings.dns.custom.add": {
+		"message": "Добавить сервер"
+	},
+	"app.settings.dns.custom.bad": {
+		"message": "Адрес должен быть IP, например 9.9.9.9"
+	},
+	"app.settings.dns.copied": {
+		"message": "Скопировано"
+	},
+	"app.settings.dns.copy": {
+		"message": "Копировать"
+	},
+	"app.settings.dns.remove": {
+		"message": "Удалить"
+	},
+	"app.bedrock.not-found.title": {
+		"message": "Сборка не найдена"
+	},
+	"app.bedrock.not-found.description": {
+		"message": "Такой сборки Bedrock больше нет — возможно, она была удалена. Боковая панель обновлена."
+	},
+	"app.bedrock.not-found.home": {
+		"message": "Вернуться в лаунчер"
+	},
+	"app.appearance-settings.accent.gradient-speed.title": {
+		"message": "Скорость переливания"
+	},
+	"app.appearance-settings.accent.gradient-speed.description": {
+		"message": "Один проход градиента занимает {seconds} с."
 	}
 }

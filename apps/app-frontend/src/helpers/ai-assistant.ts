@@ -24,6 +24,7 @@ import {
 	sandboxList,
 	sandboxPack,
 	sandboxRead,
+	sandboxReadDataUrl,
 	sandboxReveal,
 	sandboxStatsSnapshot,
 	sandboxUnpack,
@@ -33,8 +34,11 @@ import {
 	readSessionsOverview,
 	startNewSession,
 	resetSandboxStats,
+	inboxSave,
+	formatSize,
 } from './ai-sandbox'
 import { get_default_user, users } from './auth'
+import { addMusicFromUrl } from './portalrinth-audio'
 import { addCustomAccentColor, setCustomAccentColor } from '../composables/use-accent'
 import { setBackgroundFromPath } from './portalrinth-background'
 import { searchCurseforge } from './curseforge-api'
@@ -76,9 +80,30 @@ export const AI_PROVIDERS: AiProvider[] = [
 		label: 'Pollinations',
 		baseUrl: 'https://text.pollinations.ai/openai',
 		needsKey: false,
-		models: [{ id: 'openai', label: 'OpenAI GPT' }],
-		note: 'Ключ не нужен. Иногда отвечает медленно - это цена бесплатности.',
+		models: [
+			{ id: 'openai', label: 'GPT' },
+			{ id: 'openai-fast', label: 'GPT быстрый' },
+			{ id: 'openai-large', label: 'GPT большой' },
+			{ id: 'mistral', label: 'Mistral' },
+			{ id: 'qwen-coder', label: 'Qwen Coder' },
+			{ id: 'llama', label: 'Llama' },
+			{ id: 'deepseek', label: 'DeepSeek' },
+		],
+		note: 'Ключ не нужен. Любую модель можно вписать вручную — у Pollinations их десятки. Иногда отвечает медленно — это цена бесплатности.',
 		fromRussia: true,
+	},
+	{
+		id: 'orcarouter',
+		label: 'OrcaRouter',
+		baseUrl: 'https://api.orcarouter.ai/v1/chat/completions',
+		needsKey: true,
+		keyUrl: 'https://orcarouter.ai',
+		models: [
+			{ id: 'deepseek/deepseek-v4-flash-free', label: 'DeepSeek V4 Flash (free)' },
+			{ id: 'orcarouter/auto', label: 'Авто-выбор' },
+			{ id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
+		],
+		note: 'Шлюз к десяткам провайдеров под одним ключом (id вида openai/gpt-5.1, anthropic/claude-sonnet-5 — любой можно вписать вручную). Есть бесплатные модели.',
 	},
 	{
 		id: 'openrouter',
@@ -156,10 +181,12 @@ export const AI_PROVIDERS: AiProvider[] = [
 		needsKey: true,
 		keyUrl: 'https://z.ai/model-api',
 		models: [
+			{ id: 'glm-4.7-flash', label: 'GLM 4.7 Flash' },
 			{ id: 'glm-4.5-flash', label: 'GLM 4.5 Flash' },
 			{ id: 'glm-4.5-air', label: 'GLM 4.5 Air' },
+			{ id: 'glm-5.3-flash', label: 'GLM 5.3 Flash' },
 		],
-		note: 'GLM 4.5 Flash бесплатен, доступен из России и очень добротный.',
+		note: 'GLM 4.7 Flash и 4.5 Flash бесплатны, доступны из России и очень добротные.',
 		fromRussia: true,
 	},
 	{
@@ -614,6 +641,10 @@ const agentRun = {
 	active: false,
 	lastAgentNavAt: 0,
 	interrupted: false,
+	/** Where the run was started. A run born in the chat keeps working in
+	 * the background while the player wanders; only a guided run - one
+	 * started from the mascot or the notch - yields the wheel. */
+	homePath: '',
 }
 
 const AGENT_NAV_GRACE_MS = 1200
@@ -622,6 +653,11 @@ export function beginAgentRun(): void {
 	agentRun.active = true
 	agentRun.interrupted = false
 	agentRun.lastAgentNavAt = 0
+	try {
+		agentRun.homePath = window.location.pathname
+	} catch {
+		agentRun.homePath = ''
+	}
 }
 
 export function endAgentRun(): void {
@@ -638,9 +674,11 @@ export function playerTookOver(): boolean {
 	return Date.now() - agentRun.lastAgentNavAt > AGENT_NAV_GRACE_MS
 }
 
-/** Called by the router listener: the route moved without the agent. */
+/** Called by the router listener: the route moved without the agent.
+ * Chat-born runs are background work - they only stop when asked to. */
 export function maybeMarkPlayerInterrupt(): void {
 	if (!agentRun.active) return
+	if (agentRun.homePath === '/ai') return
 	if (Date.now() - agentRun.lastAgentNavAt < AGENT_NAV_GRACE_MS) return
 	agentRun.interrupted = true
 }
@@ -687,6 +725,7 @@ export const AI_TOOLS_HINT = [
 	'Опрос: <<show_poll|вопрос::вариант 1;;вариант 2>> — покажет игроку карточку-опрос с кнопками; используй, когда нужно узнать мнение или выбор.',
 	'Навыки: <<skill_save|имя::что уметь и как>> — сохранить навык как постоянную инструкцию себе; включится сам и переживёт перезапуск.',
 	'Картинки: <<gen_image|описание::файл.png>> — сгенерировать изображение по описанию и сохранить в песочницу (годится и для текстур; для точных пиксель-арт текстур 16x16 лучше рисуй PNG вручную только если умеешь, иначе gen_image).',
+	'Музыка: <<music_add_url|прямая ссылка на .mp3/.ogg>> — скачать трек по ссылке и положить его в плейлист игрока (играет через кнопку звука в титл-баре).',
 	'Файлы, которые игрок скинул в чат, сохраняются в папку inbox/ твоей песочницы — они остаются там: читай их, распаковывай, переделывай, удаляй по просьбе.',
 	'Память — твои заметки и прошлые разговоры не пропадают:',
 	'- <<memory_read|>> — перечитать свои заметки (memory.md)',
@@ -903,7 +942,7 @@ async function callProviderWithRetry(
 	payload: ChatMessagePayload[],
 	signal?: AbortSignal,
 ): Promise<string> {
-	const pauses = [2500, 6000]
+	const pauses = [1500, 4000]
 	let lastError: unknown
 	for (let attempt = 0; attempt <= pauses.length; attempt++) {
 		if (attempt > 0) {
@@ -945,6 +984,7 @@ function fallbackChain(primary: string): string[] {
 	const chain = [primary]
 	for (const candidate of [
 		'pollinations',
+		'orcarouter',
 		'openrouter',
 		'zai',
 		'groq',
@@ -1158,8 +1198,9 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						noteMessage,
 					]
 					// A breath between tool rounds keeps anonymous free tiers
-					// from answering 429 in the middle of a task.
-					await sleep(800, request.signal)
+					// from answering 429 in the middle of a task - kept short,
+					// the player is waiting.
+					await sleep(300, request.signal)
 				}
 			} catch (error) {
 				lastError = error
@@ -1172,7 +1213,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	}
 	const detail = lastError ? String((lastError as Error)?.message ?? lastError) : ''
 	throw new Error(
-		`${detail || 'Ни один провайдер не ответил'}. Порталус не дозвонился до ИИ: подожди минуту и напиши ещё раз, а надёжный вариант — бесплатный ключ OpenRouter или Z.AI в настройках провайдера.`,
+		`${detail || 'Ни один провайдер не ответил'}. Порталус не дозвонился до ИИ: подожди минуту и напиши ещё раз, а надёжный вариант — бесплатный ключ Z.AI (GLM) или GigaChat в настройках провайдера.`,
 	)
 }
 
@@ -1771,6 +1812,16 @@ registerAiToolHandler(async (tool, args) => {
 			cards.map((card) => `\n@@MOD@@${JSON.stringify(card)}`).join('')
 		)
 	}
+	if (tool === 'music_add_url') {
+		const url = args.trim()
+		if (!/^https?:\/\//.test(url)) return 'Нужна прямая http(s) ссылка на аудиофайл'
+		try {
+			const track = await addMusicFromUrl(url)
+			return `Трек «${track.title}» скачан и добавлен в плейлист игрока`
+		} catch (error) {
+			return `Трек не скачался: ${String(error).slice(0, 200)}`
+		}
+	}
 	return null
 })
 
@@ -1790,6 +1841,272 @@ async function readSessionByIndex(index: number): Promise<string> {
 async function writeSandboxBinary(name: string, bytes: Uint8Array): Promise<string> {
 	return sandboxWriteBinary(name, bytes)
 }
+
+// ---- The agent's shared turn runner ----------------------------------------
+//
+// The chat page is only one face of the agent; the run itself lives here, in
+// the module, so switching tabs, closing the page or wandering the launcher
+// never interrupts a working Portalus. It also owns three player-facing
+// things: the Stop button, the queue of messages typed mid-run, and the live
+// "thought process" the chat draws while the model works.
+
+/** A run is in flight - the chat shows the stop button, not send. */
+export const agentBusy = ref(false)
+/** The typewriter text of a reply still being drawn, word by word. */
+export const agentStreaming = ref('')
+/** How far the run has got, for the chat's live process card. */
+export type AgentPhase = 'thinking' | 'working' | 'speaking'
+export const agentPhase = ref<AgentPhase>('thinking')
+/** What the run in flight has done so far: the chat shows it live. */
+export interface AgentTurnState {
+	actions: string[]
+	folders: AiFolderCard[]
+	images: string[]
+	mods: AiModCard[]
+	jars: AiJarCard[]
+	polls: AiPoll[]
+}
+export const agentTurn = ref<AgentTurnState>({
+	actions: [],
+	folders: [],
+	images: [],
+	mods: [],
+	jars: [],
+	polls: [],
+})
+/** Messages typed while a run was in flight; they go out when it ends. */
+export interface QueuedTurn {
+	text: string
+	files: AttachedFile[]
+	ts: number
+}
+export const agentQueue = ref<QueuedTurn[]>([])
+
+let runController: AbortController | null = null
+
+/** The Stop button: ends the run the moment it is pressed. */
+export function stopAgentRun(): void {
+	runController?.abort()
+}
+
+function resetTurnState(): void {
+	agentTurn.value = { actions: [], folders: [], images: [], mods: [], jars: [], polls: [] }
+}
+
+async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> {
+	agentBusy.value = true
+	agentPhase.value = 'thinking'
+	agentStreaming.value = ''
+	resetTurnState()
+	errorOnTurn.value = ''
+	const controller = new AbortController()
+	runController = controller
+
+	let attachmentNote = ''
+	let inboxNote = ''
+	if (files.length > 0) {
+		attachmentNote = files
+			.map((file) =>
+				file.kind === 'text' && file.text
+					? `\n\n[файл ${file.name}]:\n\`\`\`\n${file.text}\n\`\`\``
+					: `\n\n[прикреплён файл: ${file.name}${file.size ? `, ${formatSize(file.size)}` : ''}]`,
+			)
+			.join('')
+		// A copy lands in the sandbox's inbox, so Portalus can return to
+		// these files on any later turn - read, unpack, rework, delete.
+		try {
+			const saved = await inboxSave(files)
+			if (saved.length > 0) {
+				inboxNote = `\n\n[файлы сохранены в песочницу: ${saved.join(', ')}]`
+			}
+		} catch {
+			/* the chat copy below still carries text and previews */
+		}
+	}
+	pushAiMessage({
+		role: 'user',
+		content: text + attachmentNote + inboxNote,
+		ts: Date.now(),
+		attachments: files.length > 0 ? files : undefined,
+	})
+
+	const payload = aiHistory.value
+		.filter((message) => message.role !== 'note')
+		.slice(-20)
+		.map((message) => ({
+			role: message.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+			content: message.content,
+		}))
+	const images = files.filter((file) => file.kind === 'image')
+
+	try {
+		const result = await aiComplete({
+			kind: 'tab',
+			messages: payload,
+			images,
+			signal: controller.signal,
+			onActionDone: (tool, args, result2) => {
+				agentPhase.value = 'working'
+				if (!agentTurn.value.actions.includes(tool)) {
+					agentTurn.value = {
+						...agentTurn.value,
+						actions: [...agentTurn.value.actions, tool],
+					}
+				}
+				const cards = extractCards(result2)
+				if (cards.mods.length > 0) {
+					const fresh = cards.mods.filter(
+						(mod) =>
+							!agentTurn.value.mods.some(
+								(existing) => existing.source === mod.source && existing.projectId === mod.projectId,
+							),
+					)
+					agentTurn.value = { ...agentTurn.value, mods: [...agentTurn.value.mods, ...fresh] }
+				}
+				if (cards.jars.length > 0) {
+					const fresh = cards.jars.filter(
+						(jar) => !agentTurn.value.jars.some((existing) => existing.path === jar.path),
+					)
+					agentTurn.value = { ...agentTurn.value, jars: [...agentTurn.value.jars, ...fresh] }
+				}
+				if (cards.polls.length > 0) {
+					agentTurn.value = { ...agentTurn.value, polls: [...agentTurn.value.polls, ...cards.polls] }
+				}
+				if (cards.image && !agentTurn.value.images.includes(cards.image)) {
+					agentTurn.value = { ...agentTurn.value, images: [...agentTurn.value.images, cards.image] }
+				}
+				if (tool === 'gen_image') {
+					const name = result2.match(/картинка (\S+) \(/)?.[1] ?? ''
+					if (name) {
+						void sandboxReadDataUrl(name)
+							.then((url) => {
+								agentTurn.value = {
+									...agentTurn.value,
+									images: [...agentTurn.value.images, url],
+								}
+							})
+							.catch(() => {})
+					}
+				}
+				if (tool === 'open_folder') {
+					const separator = args.indexOf('::')
+					const path = (separator < 0 ? args : args.slice(0, separator)).trim()
+					const description = separator < 0 ? '' : args.slice(separator + 2).trim()
+					if (path && !agentTurn.value.folders.some((folder) => folder.path === path)) {
+						agentTurn.value = {
+							...agentTurn.value,
+							folders: [
+								...agentTurn.value.folders,
+								{ path, description: description || undefined },
+							],
+						}
+					}
+				}
+			},
+		})
+		// The folder cards come from the open_folder handler registered by
+		// the app shell; the sandbox path rides in the second argument.
+		const done: AiMessage = {
+			role: 'assistant',
+			content: result.content,
+			ts: Date.now(),
+			provider: result.provider,
+			actions: result.actions,
+			activity: result.activity
+				? {
+						...result.activity,
+						foldersOpened: agentTurn.value.folders,
+						images: agentTurn.value.images,
+						mods: agentTurn.value.mods,
+						jars: agentTurn.value.jars,
+						polls: agentTurn.value.polls,
+					}
+				: undefined,
+			question: result.question,
+		}
+		agentPhase.value = 'speaking'
+		if (aiSettings.value.chatEffects) {
+			await typeOut(result.content)
+			pushAiMessage(done)
+		} else {
+			pushAiMessage(done)
+		}
+		// Portalus moved the player somewhere: leave a small top-center
+		// notch with his words, so the answer is never lost off-screen.
+		if (
+			result.actions.some((action) => action === 'navigate' || action === 'open_instance') &&
+			!window.location.pathname.startsWith('/ai')
+		) {
+			showAgentNavNotice(result.content)
+		}
+	} catch (error) {
+		agentStreaming.value = ''
+		if (controller.signal.aborted) {
+			pushAiMessage({
+				role: 'assistant',
+				content: '⏹ Остановлено. Скажи, когда продолжить — или просто напиши следующее сообщение.',
+				ts: Date.now(),
+			})
+		} else {
+			const detail = String((error as Error)?.message ?? error)
+			errorOnTurn.value = detail
+			pushAiMessage({
+				role: 'assistant',
+				content: `Не вышло: ${detail}`,
+				ts: Date.now(),
+			})
+		}
+	} finally {
+		runController = null
+		agentStreaming.value = ''
+		agentBusy.value = false
+		agentPhase.value = 'thinking'
+		void flushAgentQueue()
+	}
+}
+
+/** The typewriter, drawn from the module so it survives leaving the page. */
+let typeTimer: ReturnType<typeof setInterval> | undefined
+function typeOut(content: string): Promise<void> {
+	return new Promise((resolve) => {
+		clearInterval(typeTimer)
+		let index = 0
+		const step = Math.max(4, Math.ceil(content.length / 160))
+		typeTimer = setInterval(() => {
+			index = Math.min(content.length, index + step)
+			agentStreaming.value = content.slice(0, index)
+			if (index >= content.length) {
+				clearInterval(typeTimer)
+				typeTimer = undefined
+				agentStreaming.value = ''
+				resolve()
+			}
+		}, 16)
+	})
+}
+
+/** Sends now if the agent is free, or lines the message up behind the run. */
+export async function sendAgentMessage(text: string, files: AttachedFile[] = []): Promise<void> {
+	const message = text.trim()
+	if ((!message && files.length === 0) || agentBusy.value) {
+		if (message || files.length > 0) {
+			agentQueue.value = [...agentQueue.value, { text: message, files, ts: Date.now() }]
+		}
+		return
+	}
+	await runAgentTurn(message, files)
+}
+
+/** Sends everything that lined up while the agent was busy. */
+async function flushAgentQueue(): Promise<void> {
+	if (agentBusy.value || agentQueue.value.length === 0) return
+	const next = agentQueue.value[0]
+	agentQueue.value = agentQueue.value.slice(1)
+	await runAgentTurn(next.text, next.files)
+}
+
+/** Live error of the run in flight (or just ended), for the chat's red box. */
+export const errorOnTurn = ref('')
 
 // ---- The local bridge -------------------------------------------------------
 //

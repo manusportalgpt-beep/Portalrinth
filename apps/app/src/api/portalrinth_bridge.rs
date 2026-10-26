@@ -69,81 +69,311 @@ fn bridge_page() -> &'static str {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Portalrinth — Мост</title>
 <style>
-  :root { color-scheme: dark; }
+  :root {
+    color-scheme: dark;
+    --bg: #0b0e14;
+    --panel: rgba(22, 27, 39, .72);
+    --line: rgba(255, 255, 255, .08);
+    --text: #eef4ff;
+    --muted: #8fa0bd;
+    --brand: #00af54;
+    --brand-soft: rgba(0, 175, 84, .14);
+    --bubble: #1a2030;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #10131a; color: #ecf9ff; min-height: 100vh; display: flex; flex-direction: column; }
-  header { padding: 1rem 1.25rem; display: flex; align-items: center; gap: .6rem; border-bottom: 1px solid #2c3342; }
-  .dot { width: .6rem; height: .6rem; border-radius: 999px; background: #5b657a; }
-  .dot.on { background: #00af54; box-shadow: 0 0 8px #00af54; }
-  h1 { font-size: 1rem; margin: 0; font-weight: 700; }
-  .sub { font-size: .75rem; color: #93a1bd; }
-  #keyrow { display: flex; gap: .5rem; padding: .75rem 1.25rem; border-bottom: 1px solid #2c3342; }
-  input { background: #1a1f2b; color: #ecf9ff; border: 1px solid #2c3342; border-radius: .75rem; padding: .55rem .8rem; font-size: .9rem; outline: none; }
-  input:focus { border-color: #00af54; }
-  #key { flex: 1; min-width: 0; font-family: ui-monospace, monospace; }
-  button { background: #00af54; color: #06210f; border: none; border-radius: .75rem; padding: .55rem 1rem; font-size: .9rem; font-weight: 600; cursor: pointer; }
-  button:hover { filter: brightness(1.1); }
-  button:disabled { opacity: .5; cursor: default; }
-  #log { flex: 1; overflow-y: auto; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: .6rem; }
-  .msg { max-width: 82%; padding: .55rem .85rem; border-radius: 1rem; font-size: .9rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
-  .me { align-self: flex-end; background: #1d3a2b; border: 1px solid #2e5c41; border-bottom-right-radius: .35rem; }
-  .bot { align-self: flex-start; background: #1a1f2b; border: 1px solid #2c3342; border-bottom-left-radius: .35rem; }
-  .sys { align-self: center; color: #93a1bd; font-size: .75rem; }
-  #inputrow { display: flex; gap: .5rem; padding: .75rem 1.25rem; border-top: 1px solid #2c3342; }
-  #text { flex: 1; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(0, 175, 84, .10), transparent 60%),
+      radial-gradient(900px 500px at 90% 110%, rgba(56, 130, 246, .08), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: .8rem;
+    padding: .9rem 1.25rem;
+    background: var(--panel);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  .logo {
+    width: 2.4rem; height: 2.4rem; border-radius: .9rem;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #00af54, #0a7a40);
+    box-shadow: 0 4px 18px rgba(0, 175, 84, .35);
+    font-size: 1.15rem;
+  }
+  h1 { font-size: 1.02rem; margin: 0; letter-spacing: .01em; }
+  h1 b { background: linear-gradient(90deg, #5eeaa0, #00af54); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { font-size: .74rem; color: var(--muted); margin-top: .1rem; }
+  .dot { width: .55rem; height: .55rem; border-radius: 999px; background: #57627a; margin-left: auto; transition: background .25s; }
+  .dot.on { background: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft), 0 0 12px var(--brand); }
+  .state { font-size: .74rem; color: var(--muted); white-space: nowrap; }
+
+  #gate {
+    flex: 1; display: grid; place-items: center; padding: 1rem;
+  }
+  .gate-card {
+    width: min(26rem, 94vw);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 1.25rem;
+    padding: 1.6rem;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .45);
+  }
+  .gate-card h2 { margin: 0 0 .4rem; font-size: 1.1rem; }
+  .gate-card p { margin: 0 0 1rem; font-size: .82rem; line-height: 1.5; color: var(--muted); }
+  .row { display: flex; gap: .5rem; }
+  input, textarea {
+    background: rgba(10, 13, 20, .8);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: .8rem;
+    padding: .65rem .85rem;
+    font-size: .9rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  #key { flex: 1; min-width: 0; font-family: ui-monospace, monospace; letter-spacing: .03em; }
+  button.primary {
+    background: linear-gradient(135deg, #00c25e, #00914a);
+    color: #04170c;
+    border: none; border-radius: .8rem;
+    padding: .65rem 1.1rem;
+    font-size: .88rem; font-weight: 700;
+    cursor: pointer;
+    transition: filter .15s, transform .08s;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button.primary:active { transform: scale(.97); }
+  button.ghost {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--line); border-radius: .8rem;
+    padding: .65rem .9rem; font-size: .85rem; cursor: pointer;
+  }
+  button.ghost:hover { color: var(--text); border-color: rgba(255, 255, 255, .2); }
+  button:disabled { opacity: .45; cursor: default; transform: none; }
+
+  #chat { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  #log {
+    flex: 1; overflow-y: auto;
+    padding: 1.1rem 1.25rem;
+    display: flex; flex-direction: column; gap: .7rem;
+    scroll-behavior: smooth;
+  }
+  .msg {
+    max-width: min(82%, 40rem);
+    padding: .6rem .9rem;
+    border-radius: 1.1rem;
+    font-size: .9rem; line-height: 1.5;
+    white-space: pre-wrap; word-break: break-word;
+    animation: rise .22s ease;
+    position: relative;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .me {
+    align-self: flex-end;
+    background: linear-gradient(135deg, rgba(0, 175, 84, .28), rgba(0, 175, 84, .16));
+    border: 1px solid rgba(0, 175, 84, .35);
+    border-bottom-right-radius: .35rem;
+  }
+  .bot {
+    align-self: flex-start;
+    background: var(--bubble);
+    border: 1px solid var(--line);
+    border-bottom-left-radius: .35rem;
+  }
+  .who { display: block; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; opacity: .55; margin-bottom: .2rem; }
+  .sys {
+    align-self: center;
+    color: var(--muted);
+    font-size: .74rem;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: .25rem .8rem;
+    animation: rise .22s ease;
+  }
+  .typing { display: inline-flex; gap: .3rem; align-items: center; padding: .2rem 0; }
+  .typing i {
+    width: .42rem; height: .42rem; border-radius: 999px;
+    background: var(--brand);
+    opacity: .4;
+    animation: bounce 1.1s infinite;
+  }
+  .typing i:nth-child(2) { animation-delay: .18s; }
+  .typing i:nth-child(3) { animation-delay: .36s; }
+  @keyframes bounce { 0%, 60%, 100% { transform: none; opacity: .4; } 30% { transform: translateY(-4px); opacity: 1; } }
+
+  #inputrow {
+    display: flex; gap: .55rem; align-items: flex-end;
+    padding: .8rem 1.25rem 1rem;
+    background: var(--panel);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line);
+  }
+  #text {
+    flex: 1; min-width: 0; resize: none;
+    max-height: 8rem; border-radius: 1rem;
+    line-height: 1.45;
+  }
+  @media (max-width: 480px) {
+    header { padding: .8rem 1rem; }
+    #log { padding: 1rem; }
+    #inputrow { padding: .7rem 1rem .9rem; }
+    .msg { max-width: 90%; }
+  }
 </style>
 </head>
 <body>
 <header>
-  <span id="dot" class="dot"></span>
+  <div class="logo">🌌</div>
   <div>
-    <h1>Portalrinth — Мост</h1>
-    <div class="sub">Порталус отвечает из лаунчера; ключ — в чате лаунчера</div>
+    <h1>Portalrinth <b>Мост</b></h1>
+    <div class="sub">Порталус отвечает из лаунчера — ключ показывается в чате лаунчера</div>
   </div>
+  <span class="dot" id="dot"></span>
+  <span class="state" id="state">не подключено</span>
 </header>
-<div id="keyrow">
-  <input id="key" placeholder="Ключ подключения" spellcheck="false" />
-  <button id="connect">Подключить</button>
+
+<div id="gate">
+  <div class="gate-card">
+    <h2>Подключение к лаунчеру</h2>
+    <p>Вставьте ключ из настроек ИИ в лаунчере (кнопка «Мост» в попапе выбора модели). Всё общение идёт по локальной сети этого компьютера — без облака.</p>
+    <div class="row">
+      <input id="key" placeholder="Ключ подключения" spellcheck="false" autocomplete="off" />
+      <button class="primary" id="connect">Подключить</button>
+    </div>
+  </div>
 </div>
-<div id="log"><div class="sys">Вставьте ключ из чата лаунчера и нажмите «Подключить»</div></div>
-<div id="inputrow">
-  <input id="text" placeholder="Сообщение Порталусу…" disabled />
-  <button id="send" disabled>Отправить</button>
+
+<div id="chat">
+  <div id="log"><div class="sys">Мост подключён — пишите Порталусу</div></div>
+  <div id="inputrow">
+    <textarea id="text" rows="1" placeholder="Сообщение Порталусу…" disabled></textarea>
+    <button class="primary" id="send" disabled>Отправить</button>
+    <button class="ghost" id="disconnect">Выйти</button>
+  </div>
 </div>
+
 <script>
+  const gate = document.getElementById('gate');
+  const chat = document.getElementById('chat');
   const log = document.getElementById('log');
   const dot = document.getElementById('dot');
+  const state = document.getElementById('state');
   const keyInput = document.getElementById('key');
   const text = document.getElementById('text');
   const sendBtn = document.getElementById('send');
   const connectBtn = document.getElementById('connect');
+  const disconnectBtn = document.getElementById('disconnect');
   let ws = null;
+  let wantConnected = false;
+  let retryDelay = 1500;
+  let retryTimer = null;
+  let typingEl = null;
+
   keyInput.value = localStorage.getItem('portalrinth-bridge-key') || '';
-  function add(cls, t) { const d = document.createElement('div'); d.className = 'msg ' + cls; d.textContent = t; log.appendChild(d); log.scrollTop = log.scrollHeight; }
+
+  function add(cls, t, who) {
+    const d = document.createElement('div');
+    d.className = 'msg ' + cls;
+    if (who) {
+      const w = document.createElement('span');
+      w.className = 'who';
+      w.textContent = who;
+      d.appendChild(w);
+    }
+    d.appendChild(document.createTextNode(t));
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+    return d;
+  }
+  function showTyping() {
+    if (typingEl) return;
+    typingEl = document.createElement('div');
+    typingEl.className = 'msg bot';
+    typingEl.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+    log.appendChild(typingEl);
+    log.scrollTop = log.scrollHeight;
+  }
+  function hideTyping() {
+    if (typingEl) { typingEl.remove(); typingEl = null; }
+  }
+  function setConnected(on) {
+    dot.classList.toggle('on', on);
+    state.textContent = on ? 'подключено' : 'не подключено';
+    text.disabled = !on;
+    sendBtn.disabled = !on;
+    connectBtn.textContent = on ? 'Переподключить' : 'Подключить';
+    gate.style.display = on ? 'none' : 'grid';
+    chat.style.display = on ? 'flex' : 'none';
+    if (on) { hideTyping(); retryDelay = 1500; }
+  }
+  function scheduleRetry() {
+    if (!wantConnected) return;
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(connect, retryDelay);
+    retryDelay = Math.min(retryDelay * 1.6, 10000);
+  }
   function connect() {
     const key = keyInput.value.trim();
     if (!key) { add('sys', 'Нужен ключ из чата лаунчера'); return; }
     localStorage.setItem('portalrinth-bridge-key', key);
-    if (ws) { try { ws.close(); } catch (e) {} }
+    wantConnected = true;
+    if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} }
     const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    state.textContent = 'подключаюсь…';
     ws = new WebSocket(proto + location.host + '/ws?key=' + encodeURIComponent(key));
-    connectBtn.textContent = '…';
-    ws.onopen = () => { dot.classList.add('on'); connectBtn.textContent = 'Отключить'; text.disabled = false; sendBtn.disabled = false; add('sys', 'Мост подключён'); };
-    ws.onmessage = (e) => { try { const m = JSON.parse(e.data); if (m.type === 'reply' && m.text) add('bot', m.text); } catch (err) {} };
-    ws.onclose = () => { dot.classList.remove('on'); connectBtn.textContent = 'Подключить'; text.disabled = true; sendBtn.disabled = true; add('sys', 'Соединение закрыто'); };
-    ws.onerror = () => { add('sys', 'Не подключилось: проверьте ключ'); };
+    ws.onopen = () => { setConnected(true); add('sys', 'Мост подключён'); };
+    ws.onmessage = (e) => {
+      hideTyping();
+      try {
+        const m = JSON.parse(e.data);
+        if (m.type === 'reply' && m.text) add('bot', m.text, 'Порталус');
+      } catch (err) {}
+    };
+    ws.onclose = () => {
+      hideTyping();
+      setConnected(false);
+      if (wantConnected) { add('sys', 'Соединение потеряно — переподключаюсь…'); scheduleRetry(); }
+    };
+    ws.onerror = () => { state.textContent = 'не подключилось — проверьте ключ'; };
   }
   function sendMsg() {
     const t = text.value.trim();
     if (!t || !ws || ws.readyState !== 1) return;
-    add('me', t);
+    add('me', t, 'Вы');
+    showTyping();
     ws.send(JSON.stringify({ type: 'chat', text: t }));
     text.value = '';
+    text.style.height = 'auto';
   }
   connectBtn.onclick = connect;
   keyInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') connect(); });
   sendBtn.onclick = sendMsg;
-  text.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMsg(); });
+  disconnectBtn.onclick = () => {
+    wantConnected = false;
+    clearTimeout(retryTimer);
+    if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} }
+    setConnected(false);
+    log.innerHTML = '';
+    add('sys', 'Отключено. Ключ всё ещё сохранён в этом браузере.');
+  };
+  text.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+  });
+  text.addEventListener('input', () => {
+    text.style.height = 'auto';
+    text.style.height = Math.min(text.scrollHeight, 128) + 'px';
+  });
 </script>
 </body>
 </html>

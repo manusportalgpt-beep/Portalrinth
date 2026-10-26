@@ -43,6 +43,10 @@ const messages = {
 		defaultMessage: 'Адрес (OpenAI-совместимый)',
 	},
 	customModel: { id: 'app.ai.settings.custommodel', defaultMessage: 'Имя модели' },
+	customModelAny: {
+		id: 'app.ai.settings.custom-model-any',
+		defaultMessage: 'Своя модель (id с сайта провайдера — там их намного больше):',
+	},
 	noteFree: {
 		id: 'app.ai.settings.note.free',
 		defaultMessage:
@@ -98,7 +102,6 @@ const messages = {
 
 const showKey = ref(false)
 const showImageKey = ref(false)
-
 const provider = computed<AiProvider>(
 	() => AI_PROVIDERS.find((p) => p.id === aiSettings.value.provider) ?? AI_PROVIDERS[0],
 )
@@ -163,6 +166,19 @@ const customModelName = computed({
 	set: (value: string) => {
 		aiSettings.value.customModel = value
 		saveAiSettings()
+	},
+})
+
+/** Any model of the chosen provider, typed by hand - the catalogues here show
+ * only a fraction of what each service actually serves. */
+const overrideModel = computed({
+	get: () => aiSettings.value.models[aiSettings.value.provider] ?? '',
+	set: (value: string) => {
+		const trimmed = value.trim()
+		const models = { ...aiSettings.value.models }
+		if (trimmed) models[aiSettings.value.provider] = trimmed
+		else delete models[aiSettings.value.provider]
+		saveAiSettings({ models })
 	},
 })
 
@@ -292,6 +308,12 @@ onMounted(() => {
 					:options="modelOptions"
 					:model-value="currentModel"
 					@change="(o) => selectModelLabel(String(o.option))"
+				/>
+				<p class="m-0 text-xs text-secondary">{{ formatMessage(messages.customModelAny) }}</p>
+				<Input
+					v-model="overrideModel"
+					autocomplete="off"
+					:placeholder="provider.models[0]?.id ?? 'model-id'"
 				/>
 			</div>
 			<div v-if="provider.needsKey" class="flex flex-col gap-1.5">

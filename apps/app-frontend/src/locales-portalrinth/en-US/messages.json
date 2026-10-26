@@ -1906,5 +1906,122 @@
 	},
 	"instance.settings.backups.fail": {
 		"message": "Did not work"
+	},
+	"app.ai.stop": {
+		"message": "Stop"
+	},
+	"app.ai.process.title": {
+		"message": "Thought process"
+	},
+	"app.ai.phase.thinking": {
+		"message": "Thinking…"
+	},
+	"app.ai.phase.working": {
+		"message": "Working…"
+	},
+	"app.ai.phase.speaking": {
+		"message": "Replying…"
+	},
+	"app.ai.queued": {
+		"message": "queued"
+	},
+	"app.ai.settings.custom-model-any": {
+		"message": "Your own model (an id from the provider's site - they have far more):"
+	},
+	"app.settings.sound.playlist-heavy": {
+		"message": "The playlist already takes up a lot of space ({used}) - you might want to remove something."
+	},
+	"app.settings.sound.online.title": {
+		"message": "Music from the internet"
+	},
+	"app.settings.sound.online.search-placeholder": {
+		"message": "Artist or track name…"
+	},
+	"app.settings.sound.online.search": {
+		"message": "Search on LightAudio"
+	},
+	"app.settings.sound.online.url-placeholder": {
+		"message": "Direct link to a track (https://…/track.mp3)"
+	},
+	"app.settings.sound.online.add": {
+		"message": "Download"
+	},
+	"app.settings.sound.online.hint": {
+		"message": "Search opens on web.ligaudio.ru in your browser (the site checks that a real browser is visiting). Copy the direct link to the file from its player, paste it here, and the track downloads into the playlist. Portalus can do the same: ask it to “download a track by the link …”."
+	},
+	"app.settings.sound.online.url-ok": {
+		"message": "Track downloaded into the playlist"
+	},
+	"app.settings.sound.online.url-fail": {
+		"message": "Could not add"
+	},
+	"app.settings.dns.title": {
+		"message": "DNS servers"
+	},
+	"app.settings.dns.description": {
+		"message": "Public resolvers that can reach what an internet provider hides - game servers like Hypixel included. The launcher only queries them to check; it never changes your system settings, so trying them is completely safe."
+	},
+	"app.settings.dns.how-to": {
+		"message": "To actually use one: Windows → network adapter settings → DNS → enter the addresses below manually, or put them into your router. IPv4 fields only - nothing else is affected."
+	},
+	"app.settings.dns.preferred": {
+		"message": "Preferred"
+	},
+	"app.settings.dns.alternate": {
+		"message": "Alternate"
+	},
+	"app.settings.dns.no-alternate": {
+		"message": "None"
+	},
+	"app.settings.dns.check": {
+		"message": "Check"
+	},
+	"app.settings.dns.checking": {
+		"message": "Checking…"
+	},
+	"app.settings.dns.ok": {
+		"message": "answers in {ms} ms"
+	},
+	"app.settings.dns.fail": {
+		"message": "no answer: {detail}"
+	},
+	"app.settings.dns.custom.title": {
+		"message": "Your own DNS server"
+	},
+	"app.settings.dns.custom.name": {
+		"message": "Name"
+	},
+	"app.settings.dns.custom.ip": {
+		"message": "IP address"
+	},
+	"app.settings.dns.custom.add": {
+		"message": "Add server"
+	},
+	"app.settings.dns.custom.bad": {
+		"message": "The address must be an IP, like 9.9.9.9"
+	},
+	"app.settings.dns.copied": {
+		"message": "Copied"
+	},
+	"app.settings.dns.copy": {
+		"message": "Copy"
+	},
+	"app.settings.dns.remove": {
+		"message": "Remove"
+	},
+	"app.bedrock.not-found.title": {
+		"message": "Build not found"
+	},
+	"app.bedrock.not-found.description": {
+		"message": "This Bedrock build no longer exists - it may have been removed. The sidebar has been refreshed."
+	},
+	"app.bedrock.not-found.home": {
+		"message": "Back to the launcher"
+	},
+	"app.appearance-settings.accent.gradient-speed.title": {
+		"message": "Pour speed"
+	},
+	"app.appearance-settings.accent.gradient-speed.description": {
+		"message": "One walk of the gradient takes {seconds} s."
 	}
 }
