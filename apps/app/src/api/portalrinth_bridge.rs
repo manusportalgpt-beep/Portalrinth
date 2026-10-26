@@ -15,7 +15,7 @@ use async_tungstenite::tungstenite::Message;
 use base64::Engine as _;
 use rand::RngCore;
 use serde::Deserialize;
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
@@ -240,7 +240,7 @@ async fn handle_connection<R: tauri::Runtime>(
 /// replies from the agent go back to every connected tab.
 async fn serve_socket<R: tauri::Runtime>(
     app: AppHandle<R>,
-    ws_stream: async_tungstenite::WebSocketStream<TcpStream>,
+    ws_stream: async_tungstenite::WebSocketStream<async_tungstenite::tokio::TokioAdapter<TcpStream>>,
     tx: broadcast::Sender<String>,
 ) {
     use futures_util::{SinkExt, StreamExt};

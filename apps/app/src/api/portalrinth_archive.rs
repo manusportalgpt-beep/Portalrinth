@@ -216,6 +216,7 @@ pub async fn archiver_pack<R: tauri::Runtime>(
                 .await
                 .map_err(|e| error(format!("не удалось закрыть архив: {e}")))?;
         }
+        Err(e) => return Err(e),
     }
     let size = tokio::fs::metadata(&dest_path)
         .await
@@ -306,6 +307,7 @@ pub async fn archiver_unpack<R: tauri::Runtime>(
                     .map_err(|e| error(format!("не удалось записать {safe_name}: {e}")))?;
             }
         }
+        Err(e) => return Err(e),
     }
     let mut written = 0usize;
     let mut stack = vec![dest_path.clone()];
