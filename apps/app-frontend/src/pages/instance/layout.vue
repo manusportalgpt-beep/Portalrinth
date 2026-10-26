@@ -616,6 +616,9 @@ const handleCleanLaunch = async () => {
 const launchInstance = async (context: string) => {
 	if (!instance.value || instance.value.quarantined) return
 	const currentInstance = instance.value
+	// A clean launch that ended abruptly (app closed mid-game) leaves its
+	// parked mods waiting - any normal launch hands them back first.
+	await restoreCleanLaunch(currentInstance.id).catch(() => {})
 	loading.value = true
 	try {
 		await run(currentInstance.id)

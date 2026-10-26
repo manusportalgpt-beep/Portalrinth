@@ -61,8 +61,8 @@ export async function restoreCleanLaunch(instanceId: string): Promise<number> {
 			/* a deleted mod stays deleted */
 		}
 	}
-	delete pending[instanceId]
-	writePending(pending)
+	const { [instanceId]: _restored, ...remaining } = pending
+	writePending(remaining)
 	return restored
 }
 
