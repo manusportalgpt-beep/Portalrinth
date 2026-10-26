@@ -2023,5 +2023,50 @@
 	},
 	"app.appearance-settings.accent.gradient-speed.description": {
 		"message": "One walk of the gradient takes {seconds} s."
+	},
+	"app.search.title": {
+		"message": "Web search"
+	},
+	"app.weather.title": {
+		"message": "Weather"
+	},
+	"app.weather.wind": {
+		"message": "wind"
+	},
+	"app.weather.day": {
+		"message": "day"
+	},
+	"app.weather.night": {
+		"message": "night"
+	},
+	"app.weather.loading": {
+		"message": "Looking out the window…"
+	},
+	"app.weather.fail": {
+		"message": "Weather is not answering"
+	},
+	"app.weather.refresh": {
+		"message": "Refresh"
+	},
+	"app.widgets.title": {
+		"message": "Widgets and features"
+	},
+	"app.widgets.search.title": {
+		"message": "Web search"
+	},
+	"app.widgets.search.description": {
+		"message": "A search button in the title bar: opens DuckDuckGo in a separate launcher window."
+	},
+	"app.widgets.clock.title": {
+		"message": "Clock at the top"
+	},
+	"app.widgets.clock.description": {
+		"message": "Time in the system timezone at the center of the title bar: sun by day, moon at night, sunrise and sunset."
+	},
+	"app.widgets.weather.title": {
+		"message": "Weather"
+	},
+	"app.widgets.weather.description": {
+		"message": "A quiet button next to sound: the weather icon and degrees in Celsius (Open-Meteo, keyless)."
 	}
 }

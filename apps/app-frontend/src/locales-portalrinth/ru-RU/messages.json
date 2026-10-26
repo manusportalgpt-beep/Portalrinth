@@ -3643,5 +3643,50 @@
 	},
 	"app.appearance-settings.accent.gradient-speed.description": {
 		"message": "Один проход градиента занимает {seconds} с."
+	},
+	"app.search.title": {
+		"message": "Поиск в интернете"
+	},
+	"app.weather.title": {
+		"message": "Погода"
+	},
+	"app.weather.wind": {
+		"message": "ветер"
+	},
+	"app.weather.day": {
+		"message": "день"
+	},
+	"app.weather.night": {
+		"message": "ночь"
+	},
+	"app.weather.loading": {
+		"message": "Смотрю в окно…"
+	},
+	"app.weather.fail": {
+		"message": "Погода не отвечает"
+	},
+	"app.weather.refresh": {
+		"message": "Обновить"
+	},
+	"app.widgets.title": {
+		"message": "Виджеты и функции"
+	},
+	"app.widgets.search.title": {
+		"message": "Поиск в интернете"
+	},
+	"app.widgets.search.description": {
+		"message": "Кнопка поиска в титл-баре: открывает DuckDuckGo в отдельном окне лаунчера."
+	},
+	"app.widgets.clock.title": {
+		"message": "Часы сверху"
+	},
+	"app.widgets.clock.description": {
+		"message": "Время по системному региону в центре титл-бара: солнце днём, луна ночью, рассвет и закат."
+	},
+	"app.widgets.weather.title": {
+		"message": "Погода"
+	},
+	"app.widgets.weather.description": {
+		"message": "Прозрачная кнопка у звука: иконка явления и градусы по Цельсию (Open-Meteo, без ключа)."
 	}
 }

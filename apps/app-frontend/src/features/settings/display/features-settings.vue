@@ -25,6 +25,7 @@ import {
 	type BrowseScrollScope,
 	browseScrollScope,
 } from '@/helpers/portalrinth-browse.ts'
+import { portalrinthFeatures } from '@/helpers/portalrinth-features'
 import {
 	type AppSettings,
 	appSettingsKeys,
@@ -145,6 +146,37 @@ const messages = defineMessages({
 	showJumpInDescription: {
 		id: 'app.features-settings.show-jump-in.description',
 		defaultMessage: 'Show recently played worlds and instances at the top of the Play page.',
+	},
+	widgetsTitle: {
+		id: 'app.widgets.title',
+		defaultMessage: 'Виджеты и функции',
+	},
+	searchTitle: {
+		id: 'app.widgets.search.title',
+		defaultMessage: 'Поиск в интернете',
+	},
+	searchDescription: {
+		id: 'app.widgets.search.description',
+		defaultMessage:
+			'Кнопка поиска в титл-баре: открывает DuckDuckGo в отдельном окне лаунчера.',
+	},
+	clockTitle: {
+		id: 'app.widgets.clock.title',
+		defaultMessage: 'Часы сверху',
+	},
+	clockDescription: {
+		id: 'app.widgets.clock.description',
+		defaultMessage:
+			'Время по системному региону в центре титл-бара: солнце днём, луна ночью, рассвет и закат.',
+	},
+	weatherTitle: {
+		id: 'app.widgets.weather.title',
+		defaultMessage: 'Погода',
+	},
+	weatherDescription: {
+		id: 'app.widgets.weather.description',
+		defaultMessage:
+			'Прозрачная кнопка у звука: иконка явления и градусы по Цельсию (Open-Meteo, без ключа).',
 	},
 })
 
@@ -497,6 +529,59 @@ onBeforeUnmount(() => {
 				>
 					{{ size }}
 				</button>
+			</div>
+		</div>
+	</section>
+
+	<!--
+		Portalrinth's own: the desktop widgets and windows that can be
+		switched off entirely. They save instantly, no unsaved-changes gate.
+	-->
+	<section class="mt-8 border-0 border-t border-solid border-surface-4 pt-6">
+		<h2 class="m-0 text-xl font-semibold text-contrast">
+			{{ formatMessage(messages.widgetsTitle) }}
+		</h2>
+		<div class="mt-4 flex flex-col gap-6">
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<h3 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.searchTitle) }}
+					</h3>
+					<p class="m-0 mt-1">{{ formatMessage(messages.searchDescription) }}</p>
+				</div>
+				<Toggle
+					id="portalrinth-search"
+					v-model="portalrinthFeatures.search"
+					:aria-label="formatMessage(messages.searchTitle)"
+				/>
+			</div>
+
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<h3 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.clockTitle) }}
+					</h3>
+					<p class="m-0 mt-1">{{ formatMessage(messages.clockDescription) }}</p>
+				</div>
+				<Toggle
+					id="portalrinth-clock"
+					v-model="portalrinthFeatures.clock"
+					:aria-label="formatMessage(messages.clockTitle)"
+				/>
+			</div>
+
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<h3 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.weatherTitle) }}
+					</h3>
+					<p class="m-0 mt-1">{{ formatMessage(messages.weatherDescription) }}</p>
+				</div>
+				<Toggle
+					id="portalrinth-weather"
+					v-model="portalrinthFeatures.weather"
+					:aria-label="formatMessage(messages.weatherTitle)"
+				/>
 			</div>
 		</div>
 	</section>

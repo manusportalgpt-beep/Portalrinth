@@ -7,6 +7,7 @@ import {
 	ExternalIcon,
 	FileIcon,
 	FolderOpenIcon,
+	EditIcon,
 	HistoryIcon,
 	PlusIcon,
 	StopCircleIcon,
@@ -229,6 +230,20 @@ function providerName(id?: string) {
 	return providerById(id)?.label ?? id
 }
 
+/** The honest label under a reply: the exact provider and model that
+ * answered, plus a note when the chosen provider was down and another
+ * one brought the answer home. */
+function replySource(message: AiMessage): string {
+	const provider = providerName(message.provider)
+	if (!provider) return ''
+	const model = message.model
+		? providerById(message.provider ?? '')?.models.find((m) => m.id === message.model)?.label ??
+			message.model
+		: ''
+	const base = model ? `${provider} · ${model}` : provider
+	return message.fallbackNote ? `${base} — ${message.fallbackNote}` : base
+}
+
 function actionName(tool: string) {
 	const map: Record<string, string> = {
 		navigate: 'открыл экран',
@@ -415,11 +430,6 @@ function clearChat() {
 
 function togglePlus() {
 	plusOpen.value = !plusOpen.value
-}
-
-function plusNewChat() {
-	plusOpen.value = false
-	clearChat()
 }
 
 async function plusAttach() {
@@ -614,9 +624,18 @@ defineExpose({ send })
 			<div class="flex flex-col gap-1">
 				<h1 class="m-0 text-2xl font-bold text-primary">{{ formatMessage(messages.heading) }}</h1>
 			</div>
-			<div class="relative shrink-0">
+			<div class="relative flex shrink-0 items-center gap-1">
+				<IconButton
+					v-tooltip="formatMessage(messages.historyNewChat)"
+					type="quiet"
+					:label="formatMessage(messages.historyNewChat)"
+					@click="startFreshChat"
+				>
+					<EditIcon />
+				</IconButton>
 				<IconButton
 					v-tooltip="formatMessage(messages.historyTitle)"
+					type="quiet"
 					:label="formatMessage(messages.historyTitle)"
 					@click="toggleHistory"
 				>
@@ -878,10 +897,11 @@ defineExpose({ send })
 							</span>
 						</div>
 						<span
-							v-if="message.role === 'assistant' && providerName(message.provider)"
+							v-if="message.role === 'assistant' && replySource(message)"
 							class="ai-provider-tag"
+							:title="message.fallbackNote || undefined"
 						>
-							{{ providerName(message.provider) }}
+							{{ replySource(message) }}
 						</span>
 					</div>
 				</div>
@@ -1019,7 +1039,7 @@ defineExpose({ send })
 			</div>
 
 			<div
-				class="ai-input-row flex items-center gap-2 rounded-3xl border border-solid border-surface-5 bg-surface-2 p-2"
+				class="ai-input-row flex items-center gap-2 rounded-3xl bg-surface-2 p-2"
 			>
 				<div class="relative shrink-0">
 					<IconButton
@@ -1038,10 +1058,6 @@ defineExpose({ send })
 						v-if="plusOpen"
 						class="ai-menu absolute bottom-full left-0 z-20 mb-2 flex min-w-56 flex-col gap-1 rounded-xl border border-solid border-surface-5 bg-surface-2 p-1"
 					>
-						<button class="ai-menu-item" @click="plusNewChat">
-							<PlusIcon class="size-4" />
-							{{ formatMessage(messages.plusNewChat) }}
-						</button>
 						<button class="ai-menu-item" @click="plusAttach">
 							<FileIcon class="size-4" />
 							{{ formatMessage(messages.plusAttach) }}

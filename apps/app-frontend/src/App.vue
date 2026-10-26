@@ -247,6 +247,27 @@ const breadcrumbManager = createBreadcrumbManager()
 provideBreadcrumbManager(breadcrumbManager)
 let fullscreenAdsWindowHold = false
 
+/**
+ * F11 toggles the launcher's own fullscreen, the way every browser and
+ * game does it. The window is asked, not the document - Tauri's window
+ * fullscreen is the real, borderless kind.
+ */
+async function toggleFullscreen() {
+        try {
+                const window = getCurrentWindow()
+                await window.setFullscreen(!(await window.isFullscreen()))
+        } catch (error) {
+                console.error('Fullscreen не переключился', error)
+        }
+}
+
+function handleKeyDown(event) {
+        if (event.key === 'F11') {
+                event.preventDefault()
+                void toggleFullscreen()
+        }
+}
+
 async function handleFullscreenChange() {
         const fullscreen = document.fullscreenElement !== null
         if (fullscreen === fullscreenAdsWindowHold) return
@@ -630,6 +651,7 @@ onMounted(async () => {
         document.querySelector('body').addEventListener('auxclick', handleAuxClick)
         document.querySelector('body').addEventListener('contextmenu', handleContextMenu)
         document.addEventListener('fullscreenchange', handleFullscreenChange)
+        document.addEventListener('keydown', handleKeyDown)
 
         checkUpdates()
 })
@@ -639,6 +661,7 @@ onUnmounted(async () => {
         document.querySelector('body').removeEventListener('auxclick', handleAuxClick)
         document.querySelector('body').removeEventListener('contextmenu', handleContextMenu)
         document.removeEventListener('fullscreenchange', handleFullscreenChange)
+        document.removeEventListener('keydown', handleKeyDown)
         unlistenEditMenu?.()
         clearDelayedUpdatePopup()
 

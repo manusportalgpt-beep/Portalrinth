@@ -39,6 +39,7 @@ import {
 } from './ai-sandbox'
 import { get_default_user, users } from './auth'
 import { addMusicFromUrl } from './portalrinth-audio'
+import { fetchWeather } from './portalrinth-widgets'
 import { addCustomAccentColor, setCustomAccentColor } from '../composables/use-accent'
 import { setBackgroundFromPath } from './portalrinth-background'
 import { searchCurseforge } from './curseforge-api'
@@ -83,13 +84,8 @@ export const AI_PROVIDERS: AiProvider[] = [
 		models: [
 			{ id: 'openai', label: 'GPT' },
 			{ id: 'openai-fast', label: 'GPT быстрый' },
-			{ id: 'openai-large', label: 'GPT большой' },
-			{ id: 'mistral', label: 'Mistral' },
-			{ id: 'qwen-coder', label: 'Qwen Coder' },
-			{ id: 'llama', label: 'Llama' },
-			{ id: 'deepseek', label: 'DeepSeek' },
 		],
-		note: 'Ключ не нужен. Любую модель можно вписать вручную — у Pollinations их десятки. Иногда отвечает медленно — это цена бесплатности.',
+		note: 'Ключ не нужен. Бесплатно отвечает GPT (модель openai-fast, «openai» — её псевдоним). Любую другую модель можно вписать вручную, но анонимно пускают только к GPT.',
 		fromRussia: true,
 	},
 	{
@@ -181,12 +177,12 @@ export const AI_PROVIDERS: AiProvider[] = [
 		needsKey: true,
 		keyUrl: 'https://z.ai/model-api',
 		models: [
+			{ id: 'glm-5.3-flash', label: 'GLM 5.3 Flash' },
 			{ id: 'glm-4.7-flash', label: 'GLM 4.7 Flash' },
 			{ id: 'glm-4.5-flash', label: 'GLM 4.5 Flash' },
 			{ id: 'glm-4.5-air', label: 'GLM 4.5 Air' },
-			{ id: 'glm-5.3-flash', label: 'GLM 5.3 Flash' },
 		],
-		note: 'GLM 4.7 Flash и 4.5 Flash бесплатны, доступны из России и очень добротные.',
+		note: 'GLM 5.3/4.7/4.5 Flash бесплатны, доступны из России и очень добротные.',
 		fromRussia: true,
 	},
 	{
@@ -472,6 +468,10 @@ export interface AiMessage {
 	ts?: number
 	/** Which provider actually answered, for the label under a reply. */
 	provider?: string
+	/** The exact model that answered, shown next to the provider. */
+	model?: string
+	/** Set when the chosen provider was down and another one answered. */
+	fallbackNote?: string
 	/** Names of the launcher actions the reply carried out. */
 	actions?: string[]
 	/** What the sandbox did while composing this reply. */
@@ -726,6 +726,9 @@ export const AI_TOOLS_HINT = [
 	'Навыки: <<skill_save|имя::что уметь и как>> — сохранить навык как постоянную инструкцию себе; включится сам и переживёт перезапуск.',
 	'Картинки: <<gen_image|описание::файл.png>> — сгенерировать изображение по описанию и сохранить в песочницу (годится и для текстур; для точных пиксель-арт текстур 16x16 лучше рисуй PNG вручную только если умеешь, иначе gen_image).',
 	'Музыка: <<music_add_url|прямая ссылка на .mp3/.ogg>> — скачать трек по ссылке и положить его в плейлист игрока (играет через кнопку звука в титл-баре).',
+	'Компьютер: <<sysinfo|>> — узнать железо и систему игрока (платформа, ядер CPU, память, экран, язык, время) — отвечай точными фактами, а не догадками.',
+	'Погода: <<weather_get|город или пусто>> — настоящая погода прямо сейчас (температура, явление, ветер); пусто — по месту игрока, можно назвать город (например <<weather_get|Санкт-Петербург>>).',
+	'Таймер: <<timer_set|минуты::название>> — завести таймер, когда время выйдет — придёт плашка сверху и сообщение в чат (например <<timer_set|25::достать чай>>).',
 	'Файлы, которые игрок скинул в чат, сохраняются в папку inbox/ твоей песочницы — они остаются там: читай их, распаковывай, переделывай, удаляй по просьбе.',
 	'Память — твои заметки и прошлые разговоры не пропадают:',
 	'- <<memory_read|>> — перечитать свои заметки (memory.md)',
@@ -1024,6 +1027,10 @@ export interface AiResult {
 	content: string
 	provider: string
 	actions: string[]
+	/** The exact model id that answered, for the label under a reply. */
+	model?: string
+	/** Set when the chosen provider was down and another one answered. */
+	fallbackNote?: string
 	/** What the sandbox did while composing the reply. */
 	activity?: AiActivity
 	/** Set when the assistant asked the user a question instead of finishing. */
@@ -1095,6 +1102,14 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	let providerTried = ''
 	let lastError: unknown
 	const doneActions: string[] = []
+	// The honest story of who answered: the first provider that gave up
+	// rides along on the reply, so the label never lies about the source.
+	let failedProviderLabel = ''
+	let failedDetail = ''
+	const fallbackTag = () =>
+	failedProviderLabel && providerTried !== failedProviderLabel
+	? `${failedProviderLabel} не ответил${failedDetail ? `: ${failedDetail}` : ''} — ответил ${providerById(providerTried)?.label ?? providerTried}`
+	: ''
 
 	try {
 		for (const providerId of fallbackChain(settings.provider)) {
@@ -1107,6 +1122,8 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 							content:
 								'Остановился: ты ушёл на другой экран, так что я решил, что ты передумал. Скажи, если продолжить.',
 							provider: providerTried,
+							model: chosenModel(settings, providerTried),
+							...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
 							actions: doneActions,
 							activity: sandboxStatsSnapshot(),
 						}
@@ -1133,6 +1150,8 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						return {
 							content: parsed.text || raw,
 							provider: providerTried,
+							model: chosenModel(settings, providerTried),
+							...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
 							actions: doneActions,
 							activity: sandboxStatsSnapshot(),
 							question: {
@@ -1155,6 +1174,8 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 									: 'Готово. Спроси, если нужны подробности.'
 								: parsed.text || raw,
 							provider: providerTried,
+							model: chosenModel(settings, providerTried),
+							...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
 							actions: doneActions,
 							activity: sandboxStatsSnapshot(),
 						}
@@ -1168,6 +1189,8 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 								content:
 									'Остановился: ты ушёл на другой экран, так что я решил, что ты передумал. Скажи, если продолжить.',
 								provider: providerTried,
+							model: chosenModel(settings, providerTried),
+							...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
 								actions: doneActions,
 								activity: sandboxStatsSnapshot(),
 							}
@@ -1206,6 +1229,10 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 				lastError = error
 				if (request.signal?.aborted) throw error
 				if (!isRetryable(error)) throw error
+				if (!failedProviderLabel) {
+					failedProviderLabel = providerById(providerId)?.label ?? providerId
+					failedDetail = String((error as Error)?.message ?? error).slice(0, 140)
+				}
 			}
 		}
 	} finally {
@@ -1821,6 +1848,49 @@ registerAiToolHandler(async (tool, args) => {
 		} catch (error) {
 			return `Трек не скачался: ${String(error).slice(0, 200)}`
 		}
+	}
+	if (tool === 'sysinfo') {
+		const nav = navigator as Navigator & {
+			deviceMemory?: number
+			userAgentData?: { platform?: string }
+		}
+		return [
+			`Платформа: ${nav.userAgentData?.platform ?? nav.platform ?? 'неизвестно'}`,
+			`Ядер CPU: ${nav.hardwareConcurrency ?? 'неизвестно'}`,
+			`Память: ${nav.deviceMemory ? `около ${nav.deviceMemory} ГБ` : 'неизвестно'}`,
+			`Экран: ${screen.width}x${screen.height}`,
+			`Язык: ${navigator.language}`,
+			`Время системы: ${new Date().toLocaleString()}`,
+		].join('\n')
+	}
+	if (tool === 'weather_get') {
+		const place = args.trim()
+		try {
+			const weather = await fetchWeather(place || undefined)
+			return [
+				`Место: ${weather.place}`,
+				`Погода: ${weather.label}, ${weather.temp}°C`,
+				`Ветер: ${weather.wind} км/ч`,
+				`Сейчас ${weather.isDay ? 'день' : 'ночь'}`,
+			].join('\n')
+		} catch (error) {
+			return `Погоду не узнать: ${String(error).slice(0, 200)}`
+		}
+	}
+	if (tool === 'timer_set') {
+		const [minutesRaw, ...rest] = args.split('::')
+		const minutes = Number.parseFloat((minutesRaw ?? '').trim().replace(',', '.'))
+		if (!Number.isFinite(minutes) || minutes <= 0) {
+			return 'Нужны минуты: <<timer_set|10::название>>'
+		}
+		const label = rest.join('::').trim() || 'Таймер'
+		const ms = Math.min(minutes * 60_000, 24 * 60 * 60_000)
+		setTimeout(() => {
+			const text = `Время вышло: таймер «${label}» (${minutes} мин)`
+			showAgentNavNotice(text)
+			pushAiMessage({ role: 'assistant', content: `⏰ ${text}`, ts: Date.now() })
+		}, ms)
+		return `Таймер «${label}» на ${minutes} мин заведён — напомню плашкой сверху и в чате`
 	}
 	return null
 })
