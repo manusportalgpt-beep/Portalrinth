@@ -14,6 +14,7 @@ export interface Tab {
 	name: MessageDescriptor
 	category?: MessageDescriptor
 	icon: Component
+	color?: 'orange'
 	content?: Component
 	href?: string
 	badge?: MessageDescriptor
@@ -142,6 +143,18 @@ function hide(): boolean {
 	return modal.value?.hide() ?? false
 }
 
+function tabClasses(tab: Tab) {
+	const isSelected = !tab.href && !props.hideTabSelection && selectedTabObject.value === tab
+	if (tab.color === 'orange') {
+		return isSelected
+			? 'bg-highlight-orange text-orange'
+			: 'bg-transparent text-orange hover:bg-highlight-orange'
+	}
+	return isSelected
+		? 'bg-[color-mix(in_srgb,var(--color-brand)_30%,transparent)] text-brand'
+		: 'bg-transparent text-primary hover:bg-surface-4 hover:text-contrast'
+}
+
 function startsCategory(tabs: Tab[], index: number) {
 	const category = tabs[index]?.category
 	return !!category && category.id !== tabs[index - 1]?.category?.id
@@ -208,7 +221,11 @@ defineExpose({ show, hide, selectedTab, setTab })
 								:href="tab.href ?? undefined"
 								:target="tab.href ? '_blank' : undefined"
 								:rel="tab.href ? 'noopener noreferrer' : undefined"
-								:class="`flex min-w-0 shrink-0 gap-2 items-center text-left rounded-[14px] px-4 py-2.5 border-none text-base leading-5 font-semibold cursor-pointer active:scale-[0.97] transition-all no-underline ${!tab.href && !hideTabSelection && selectedTabObject === tab ? 'bg-[color-mix(in_srgb,var(--color-brand)_30%,transparent)] text-brand' : 'bg-transparent text-primary hover:bg-surface-4 hover:text-contrast'}`"
+								:class="[
+									'flex min-w-0 shrink-0 gap-2 items-center text-left rounded-[14px] px-4 py-2.5 border-none text-base leading-5 font-semibold cursor-pointer active:scale-[0.97] transition-all no-underline',
+									{ 'no-click-animation subpixel-antialiased will-change-auto': tab.href },
+									tabClasses(tab),
+								]"
 								@click="!tab.href && setTab(visibleTabs.indexOf(tab))"
 							>
 								<component :is="tab.icon" class="size-5 flex-shrink-0" />
