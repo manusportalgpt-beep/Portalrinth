@@ -42,8 +42,21 @@
 										</div>
 										<p class="m-0 text-xs text-secondary">
 												{{ activeRegion?.place }} · {{ formatMessage(messages.wind) }}
-												{{ activeWeather.wind }} км/ч ·
+												{{ activeWeather.wind }} км/ч {{ windRose }} ·
 												{{ activeWeather.isDay ? formatMessage(messages.day) : formatMessage(messages.night) }}
+										</p>
+										<div
+											v-if="activeWeather.feels !== undefined"
+											class="grid grid-cols-2 gap-x-2 gap-y-0.5 rounded-xl bg-surface-4 px-3 py-2 text-xs text-secondary"
+										>
+											<span>Ощущается: <b class="font-semibold text-contrast">{{ activeWeather.feels }}°C</b></span>
+											<span>Влажность: <b class="font-semibold text-contrast">{{ activeWeather.humidity }}%</b></span>
+											<span>Давление: <b class="font-semibold text-contrast">{{ activeWeather.pressure }} гПа</b></span>
+											<span>Ветер: <b class="font-semibold text-contrast">{{ windRoseName }}</b></span>
+										</div>
+										<p class="m-0 text-[11px] text-secondary">
+											Метеостанция Open-Meteo · {{ activeWeather.lat?.toFixed(2) }}, {{ activeWeather.lon?.toFixed(2) }}
+											<template v-if="activeWeather.elevation !== undefined"> · {{ activeWeather.elevation }} м</template>
 										</p>
 								</template>
 								<p v-else-if="failed" class="m-0 text-sm text-red">
@@ -221,6 +234,21 @@ const weatherIcon = computed(() => {
 				return code === 95 || code === 96 || code === 99 ? CloudLightningIcon : CloudRainIcon
 		if ((code >= 71 && code <= 77) || code === 85 || code === 86) return CloudSnowIcon
 		return CloudIcon
+})
+
+const WIND_ROSE = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖']
+const WIND_NAMES = ['северный', 'северо-восточный', 'восточный', 'юго-восточный', 'южный', 'юго-западный', 'западный', 'северо-западный']
+
+const windRose = computed(() => {
+	const dir = activeWeather.value?.windDir
+	if (dir === undefined || dir === null) return ''
+	return WIND_ROSE[Math.round(dir / 45) % 8]
+})
+
+const windRoseName = computed(() => {
+	const dir = activeWeather.value?.windDir
+	if (dir === undefined || dir === null) return '—'
+	return WIND_NAMES[Math.round(dir / 45) % 8]
 })
 
 function isFresh(weather: WeatherNow | undefined): boolean {

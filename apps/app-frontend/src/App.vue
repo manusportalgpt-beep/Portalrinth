@@ -113,6 +113,7 @@ import {
         take_ads_window_hold,
 } from '@/helpers/ads.js'
 import { mascotCelebrate, maybeMarkPlayerInterrupt, noteAgentNavigation, registerAiToolHandler } from '@/helpers/ai-assistant'
+import { handleHotkeyKeyEvent, registerHotkeyHandler } from '@/helpers/portalrinth-hotkeys'
 import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { refreshBedrockProfiles } from '@/helpers/bedrock'
@@ -269,6 +270,7 @@ async function toggleFullscreen() {
 }
 
 function handleKeyDown(event) {
+        if (handleHotkeyKeyEvent(event)) return
         if (event.key === 'F11') {
                 event.preventDefault()
                 void toggleFullscreen()
@@ -1649,6 +1651,54 @@ onMounted(() => {
                         return 'Радуюсь!'
                 }
                 return null
+        })
+
+        // The player's own keys: one place per action, all of them optional.
+        registerHotkeyHandler('new-instance', () => {
+                void installationModal.value?.show()
+        })
+        registerHotkeyHandler('instance-picker', async () => {
+                try {
+                        const { list } = await import('@/helpers/instance')
+                        const all = await list()
+                        if (all.length === 1) {
+                                noteAgentNavigation()
+                                await router.push(`/instance/${all[0].id}`)
+                                return
+                        }
+                } catch {
+                        /* the home screen still shows the builds */
+                }
+                await router.push('/')
+        })
+        registerHotkeyHandler('page-home', () => router.push('/'))
+        registerHotkeyHandler('page-mods', () => router.push('/browse/mod'))
+        registerHotkeyHandler('page-modpacks', () => router.push('/browse/modpack'))
+        registerHotkeyHandler('page-skins', () => router.push('/browse/skin'))
+        registerHotkeyHandler('page-ai', () => router.push('/ai'))
+        registerHotkeyHandler('page-screenshots', () => router.push('/screenshots'))
+        registerHotkeyHandler('page-settings', () => {
+                void appSettingsModal.value?.show()
+        })
+        registerHotkeyHandler('new-chat', () => router.push('/ai'))
+        registerHotkeyHandler('browser', async () => {
+                const { openInBrowserWindow } = await import('@/helpers/portalrinth-browser')
+                await openInBrowserWindow('https://duckduckgo.com/?kae=d&k1=-1', 'Браузер — Portalrinth')
+        })
+        registerHotkeyHandler('check-updates', () => {
+                void checkUpdates()
+        })
+        registerHotkeyHandler('kill-game', async () => {
+                try {
+                        const helpers = await import('@/helpers/process')
+                        const processes = await helpers.get_all()
+                        for (const process of processes) await helpers.kill(process.uuid)
+                } catch {
+                        /* nothing was running, or the call failed - either way, quiet */
+                }
+        })
+        registerHotkeyHandler('fullscreen', () => {
+                void toggleFullscreen()
         })
 
         // When the route moves without the agent having sent the player there,

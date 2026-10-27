@@ -38,6 +38,7 @@
 				:aria-label="label"
 				tabindex="-1"
 				@keydown="handlePanelKeydown"
+				@wheel.stop
 			>
 				<!--
 					A colour, or a run of them. The switch is the same two-way

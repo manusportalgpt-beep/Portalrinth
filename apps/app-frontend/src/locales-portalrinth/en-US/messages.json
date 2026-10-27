@@ -2083,5 +2083,143 @@
 	},
 	"app.cloud.not-found": {
 		"message": "City not found"
+	},
+	"app.settings.tabs.browser": {
+		"message": "Browser"
+	},
+	"app.settings.tabs.hotkeys": {
+		"message": "Hotkeys"
+	},
+	"app.settings.tabs.updates": {
+		"message": "Updates"
+	},
+	"app.settings.browser.title": {
+		"message": "Browser"
+	},
+	"app.settings.browser.placeholder": {
+		"message": "Search the web or type an address…"
+	},
+	"app.settings.browser.search": {
+		"message": "Search"
+	},
+	"app.settings.browser.open": {
+		"message": "Open"
+	},
+	"app.settings.browser.opening": {
+		"message": "Opening…"
+	},
+	"app.settings.browser.searching": {
+		"message": "Searching…"
+	},
+	"app.settings.browser.nothing": {
+		"message": "Nothing found — try something else"
+	},
+	"app.settings.browser.error": {
+		"message": "The search did not answer"
+	},
+	"app.settings.browser.note": {
+		"message": "Pages open in a separate launcher window — a real browser, just inside Portalrinth."
+	},
+	"app.settings.browser.history": {
+		"message": "Recent searches"
+	},
+	"app.settings.browser.clear": {
+		"message": "Clear history"
+	},
+	"app.settings.hotkeys.title": {
+		"message": "Hotkeys"
+	},
+	"app.settings.hotkeys.note": {
+		"message": "Click a combo to set your own. Works from any launcher screen (while the cursor is not in a text field)."
+	},
+	"app.settings.hotkeys.press": {
+		"message": "Press the combo… (Esc to cancel)"
+	},
+	"app.settings.hotkeys.reset": {
+		"message": "Back to default"
+	},
+	"app.settings.hotkeys.taken": {
+		"message": "Released from another action"
+	},
+	"app.settings.updates.title": {
+		"message": "Updates"
+	},
+	"app.settings.updates.note": {
+		"message": "Fresh release notes from Modrinth App, Noctrinth and Portalrinth — translated into your language."
+	},
+	"app.settings.updates.launcher": {
+		"message": "Launcher"
+	},
+	"app.settings.updates.current": {
+		"message": "Installed version"
+	},
+	"app.settings.updates.up-to-date": {
+		"message": "You are on the latest version"
+	},
+	"app.settings.updates.available": {
+		"message": "Update available"
+	},
+	"app.settings.updates.update": {
+		"message": "Update (.exe)"
+	},
+	"app.settings.updates.downloading": {
+		"message": "Downloading…"
+	},
+	"app.settings.updates.running": {
+		"message": "Installer started — it takes it from here"
+	},
+	"app.settings.updates.release-page": {
+		"message": "Release page"
+	},
+	"app.settings.updates.translate": {
+		"message": "Translate"
+	},
+	"app.settings.updates.translated": {
+		"message": "Original"
+	},
+	"app.settings.updates.translated-note": {
+		"message": "Translated by the built-in Google translator"
+	},
+	"app.settings.updates.no-releases": {
+		"message": "No releases, or none available"
+	},
+	"app.settings.updates.fail": {
+		"message": "Not responding"
+	},
+	"app.settings.updates.refresh": {
+		"message": "Refresh"
+	},
+	"app.features.ai-links.title": {
+		"message": "AI links open in the built-in browser"
+	},
+	"app.features.ai-links.description": {
+		"message": "External links from the Portalus chat open in a launcher window instead of the system browser (off by default)."
+	},
+	"app.clock.time": {
+		"message": "Time"
+	},
+	"app.clock.timer": {
+		"message": "Timer"
+	},
+	"app.clock.stopwatch": {
+		"message": "Stopwatch"
+	},
+	"app.clock.action-none": {
+		"message": "Nothing"
+	},
+	"app.clock.action-close": {
+		"message": "Close the game"
+	},
+	"app.clock.action-open": {
+		"message": "Open the game"
+	},
+	"app.settings.resource-management.skin-services.vzge": {
+		"message": "vzge.me — fast 3D render on a CDN, takes any texture hash (default)"
+	},
+	"app.settings.resource-management.skin-services.skinrender": {
+		"message": "SkinRender.dev — its own 3D engine, takes any texture hash"
+	},
+	"app.settings.resource-management.skin-services.nmsr": {
+		"message": "NMSR — the reference renderer, takes any texture hash"
 	}
 }

@@ -58,6 +58,21 @@ const messages = defineMessages({
 		defaultMessage:
 			'Who draws the 3D previews of skins. One service works at a time, everywhere previews are shown, and it can be switched.',
 	},
+	skinServicesVzge: {
+		id: 'app.settings.resource-management.skin-services.vzge',
+		defaultMessage:
+			'vzge.me — быстрый 3D-рендер с CDN, принимает любой хеш (по умолчанию)',
+	},
+	skinServicesSkinrender: {
+		id: 'app.settings.resource-management.skin-services.skinrender',
+		defaultMessage:
+			'SkinRender.dev — свой 3D-движок, принимает любой хеш',
+	},
+	skinServicesNmsr: {
+		id: 'app.settings.resource-management.skin-services.nmsr',
+		defaultMessage:
+			'NMSR — эталонный рендер, принимает любой хеш',
+	},
 	skinServicesLaby: {
 		id: 'app.settings.resource-management.skin-services.laby',
 		defaultMessage:
@@ -83,7 +98,10 @@ const messages = defineMessages({
 const skinService = useSkinRenderService()
 
 const skinServiceOptions = [
+	{ id: 'vzge', name: 'vzge.me', description: messages.skinServicesVzge },
 	{ id: 'laby', name: 'Laby.net', description: messages.skinServicesLaby },
+	{ id: 'skinrender', name: 'SkinRender.dev', description: messages.skinServicesSkinrender },
+	{ id: 'nmsr', name: 'NMSR', description: messages.skinServicesNmsr },
 	{ id: 'crafty', name: 'Crafty.gg', description: messages.skinServicesCrafty },
 	{ id: 'mcskin', name: 'mcskin.me', description: messages.skinServicesMcskin },
 	{ id: 'minotar', name: 'Minotar', description: messages.skinServicesMinotar },

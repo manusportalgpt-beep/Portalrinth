@@ -17,8 +17,20 @@ export interface WeatherNow {
         label: string
         /** km/h. */
         wind: number
+        /** Where the wind blows to, degrees. */
+        windDir?: number
+        /** Feels-like temperature, Celsius. */
+        feels?: number
+        /** Relative humidity, percent. */
+        humidity?: number
+        /** Surface pressure, hPa - the station's own barometer. */
+        pressure?: number
         isDay: boolean
         place: string
+        /** The station's spot, for the fine print. */
+        lat?: number
+        lon?: number
+        elevation?: number
         fetchedAt: number
 }
 
@@ -69,6 +81,17 @@ async function geocodeByIp(): Promise<{ lat: number; lon: number; place: string 
                                                 }
                                         : null,
                 },
+                {
+                        url: 'https://ipapi.co/json/',
+                        pick: (data) =>
+                                data && typeof data.latitude === 'number'
+                                        ? {
+                                                        lat: Number(data.latitude),
+                                                        lon: Number(data.longitude),
+                                                        place: [data.city, data.country].filter(Boolean).join(', '),
+                                                }
+                                        : null,
+                },
         ]
         for (const attempt of attempts) {
                 try {
@@ -80,7 +103,28 @@ async function geocodeByIp(): Promise<{ lat: number; lon: number; place: string 
                         /* the next geolocator gets its turn */
                 }
         }
+        // No geo-IP answered - the timezone still knows roughly where we are.
+        const fallback = await geocodeByTimezone()
+        if (fallback) return fallback
         return { lat: 55.75, lon: 37.62, place: 'Москва' }
+}
+
+/**
+ * When both geo-IPs stay silent, the system timezone still knows the
+ * country: its last segment (Europe/Some_City) is a decent place guess,
+ * and Open-Meteo geocoding turns it into coordinates.
+ */
+async function geocodeByTimezone(): Promise<{ lat: number; lon: number; place: string } | null> {
+        let zone = ''
+        try {
+                zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+        } catch {
+                return null
+        }
+        const city = zone.split('/').pop()?.replace(/_/g, ' ')
+        if (!city) return null
+        const hit = await geocodeByName(city)
+        return hit ? { ...hit, place: `${hit.place} (по часовому поясу)` } : null
 }
 
 async function geocodeByName(query: string): Promise<{ lat: number; lon: number; place: string } | null> {
@@ -128,12 +172,22 @@ export async function fetchWeather(placeQuery?: string, force = false): Promise<
         const location = placeQuery ? await geocodeByName(placeQuery) : await geocodeByIp()
         if (!location) throw new Error('Место не нашлось')
         const response = await tauriFetch(
-                `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,weather_code,wind_speed_10m,is_day`,
+                `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,surface_pressure,weather_code,wind_speed_10m,wind_direction_10m,is_day`,
                 { signal: AbortSignal.timeout(10000) },
         )
         if (!response.ok) throw new Error(`Погода не ответила: HTTP ${response.status}`)
         const data = (await response.json()) as {
-                current?: { temperature_2m: number; weather_code: number; wind_speed_10m: number; is_day: number }
+                current?: {
+                        temperature_2m: number
+                        apparent_temperature: number
+                        relative_humidity_2m: number
+                        surface_pressure: number
+                        weather_code: number
+                        wind_speed_10m: number
+                        wind_direction_10m: number
+                        is_day: number
+                }
+                elevation?: number
         }
         const current = data.current
         if (!current) throw new Error('Погода не ответила')
@@ -142,8 +196,15 @@ export async function fetchWeather(placeQuery?: string, force = false): Promise<
                 code: current.weather_code,
                 label: weatherLabel(current.weather_code),
                 wind: Math.round(current.wind_speed_10m),
+                windDir: current.wind_direction_10m,
+                feels: Math.round(current.apparent_temperature),
+                humidity: Math.round(current.relative_humidity_2m),
+                pressure: Math.round(current.surface_pressure),
                 isDay: current.is_day === 1,
                 place: location.place,
+                lat: location.lat,
+                lon: location.lon,
+                elevation: data.elevation !== undefined ? Math.round(data.elevation) : undefined,
                 fetchedAt: Date.now(),
         }
         if (!placeQuery) {

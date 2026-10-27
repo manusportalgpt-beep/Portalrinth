@@ -19,6 +19,9 @@ import {
 	Volume2Icon,
 	WindowIcon,
 	WrenchIcon,
+	GlobeIcon as BrowserGlobeIcon,
+	KeyboardIcon,
+	RocketIcon,
 } from '@modrinth/assets'
 import {
 	commonMessages,
@@ -52,7 +55,10 @@ import WindowSettings from '@/features/settings/instance-defaults/window-setting
 import type { InstanceDefaultsTab } from '@/features/settings/settings-actions'
 import SyncingSettings from '@/features/settings/syncing/syncing-settings.vue'
 import AiAssistantSettings from '@/features/settings/system/ai-assistant-settings.vue'
+import BrowserSettings from '@/features/settings/system/browser-settings.vue'
 import ConnectionsSettings from '@/features/settings/system/connections-settings.vue'
+import HotkeysSettings from '@/features/settings/system/hotkeys-settings.vue'
+import UpdatesSettings from '@/features/settings/system/updates-settings.vue'
 import CurseforgeSettings from '@/features/settings/system/CurseforgeSettings.vue'
 import ResourceManagementSettings from '@/features/settings/system/resource-management-settings/index.vue'
 import TroubleshootingSettings from '@/features/settings/system/troubleshooting-settings.vue'
@@ -240,6 +246,33 @@ const tabs = [
 		category: tabCategories.system,
 		icon: SparklesIcon,
 		content: AiAssistantSettings,
+	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.browser',
+			defaultMessage: 'Browser',
+		}),
+		category: tabCategories.system,
+		icon: BrowserGlobeIcon,
+		content: BrowserSettings,
+	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.hotkeys',
+			defaultMessage: 'Hotkeys',
+		}),
+		category: tabCategories.system,
+		icon: KeyboardIcon,
+		content: HotkeysSettings,
+	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.updates',
+			defaultMessage: 'Updates',
+		}),
+		category: tabCategories.system,
+		icon: RocketIcon,
+		content: UpdatesSettings,
 	},
 	{
 		name: defineMessage({

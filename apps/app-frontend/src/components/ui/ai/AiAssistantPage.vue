@@ -15,6 +15,7 @@ import {
 } from '@modrinth/assets'
 import { Button, IconButton, Input, useVIntl } from '@modrinth/ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import { useRouter } from 'vue-router'
 
 import AiProviderSettings from '@/components/ui/ai/AiProviderSettings.vue'
@@ -567,8 +568,30 @@ function parseSegments(content: string): AiSegment[] {
 	return segments
 }
 
+const MODRINTH_LINK = /^https?:\/\/(?:[a-z-]+\.)?modrinth\.com(?:\/|$)/i
+
+/**
+ * A link Portalus gave is a door, not a detour: Modrinth pages open right
+ * here in the launcher, and everything else follows the toggle - the system
+ * browser by default, or the launcher's own browser window when the player
+ * turned that on in Settings → Функции.
+ */
 async function openLink(url: string) {
 	try {
+		if (MODRINTH_LINK.test(url)) {
+			const path = url.replace(/^https?:\/\/(?:[a-z-]+\.)?modrinth\.com/i, '')
+			await router.push(path || '/')
+			return
+		}
+		const { portalrinthFeatures } = await import('@/helpers/portalrinth-features')
+		if (portalrinthFeatures.value.aiLinksWindow) {
+			await invoke('open_web_window', {
+				label: 'portalrinth-ai-link',
+				url,
+				title: 'Браузер — Portalrinth',
+			})
+			return
+		}
 		const { openUrl } = await import('@tauri-apps/plugin-opener')
 		await openUrl(url)
 	} catch {

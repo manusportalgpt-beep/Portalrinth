@@ -95,8 +95,8 @@ export const AI_PROVIDERS: AiProvider[] = [
 		needsKey: true,
 		keyUrl: 'https://orcarouter.ai',
 		models: [
-			{ id: 'deepseek/deepseek-v4-flash-free', label: 'DeepSeek V4 Flash (free)' },
 			{ id: 'orcarouter/auto', label: 'Авто-выбор' },
+			{ id: 'deepseek/deepseek-v4-flash-free', label: 'DeepSeek V4 Flash (free)' },
 			{ id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
 		],
 		note: 'Шлюз к десяткам провайдеров под одним ключом (id вида openai/gpt-5.1, anthropic/claude-sonnet-5 — любой можно вписать вручную). Есть бесплатные модели.',
@@ -715,6 +715,7 @@ export const AI_TOOLS_HINT = [
 	'- <<sandbox_bash|команда>> — мини-shell: pwd, cd, ls [-l], cat, head, tail, wc, echo (с > и >> в файл), touch, mkdir, rm, cp, mv, find, tree, grep; цепочки через && (пример: <<sandbox_bash|mkdir proj && echo hi > proj/a.txt>>)',
 	'- <<sandbox_list|путь>>, <<sandbox_read|файл>>, <<sandbox_write|файл::текст>> — то же самое по шагам (многострочный текст разрешён); «.exe» и другие исполняемые файлы создать нельзя',
 	'- <<sandbox_delete|путь>> — удалить файл или папку (только с явного согласия)',
+	'Честность о песочнице: мини-shell НЕ запускает внешние программы (java, npm, python, pip и т.п.) — не пытайся и не обещай. Java-код компилируется через launcher_compile_java, архивы — через sandbox_pack/unpack. Песочница работает: файлы, папки, архивы — всё получается. Никогда не говори «песочница не работает» или «у меня нет доступа» — есть только список команд выше.',
 	'- <<open_folder|путь::что там>> — показать папку игроку карточкой с кнопкой «Открыть»; в двух-трёх словах опиши, что в ней (например: «готовый ресурс-пак») — делай это, когда отдал игроку готовый файл',
 	'- <<view_image|url>> — посмотреть картинку из интернета своими глазами (и показать её игроку в чате); пользуйся, когда нужно разглядеть скриншот, схему или текстуру',
 	'Архиватор и компилятор (встроенные, как 7-zip и javac):',
@@ -852,7 +853,8 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 		'Общайся как живой игровой приятель: обращайся к игроку по имени его аккаунта, уместный игровой сленг разрешён, канцелярит — нет, грубость и мат — нет.',
 		'НИКОГДА не подставляй заглушки вроде {{account}} или [имя] — если имя игрока есть в контексте, пиши его, а если нет — просто обходись без имени.',
 		'У тебя есть своё мнение: если пользователь просит вредного или сомнительного, ты вежливо споришь и предлагаешь лучше.',
-		'Отвечай на языке пользователя. Без воды: коротко, по делу, шагами где уместно.',
+		'Отвечай на языке пользователя. БУДЬ КРАТОК: по умолчанию 1–3 предложения, максимум 5 — это игровой чат, а не доклад. Никаких вступлений («Отличный вопрос!»), никаких пересказов задания, никаких встречных вопросов без крайней необходимости.',
+		'Ссылки: когда советуешь мод, сайт, инструмент или что-то ещё — всегда давай прямую ссылку (https://...) прямо в тексте ответа. Игрок кликнет по ней прямо в чате.',
 		'Ты знаешь лаунчер целиком: Discover (поиск по Modrinth и CurseForge), создание сборок, установку модов/ресурс-паков/шейдеров (иконка, автор, версия, описание — всё как у человека), скины, скриншоты, внешний вид лаунчера, запуск и ошибки. Помогаешь со всем этим и сам делаешь это руками, когда просят.',
 		'У тебя есть своя песочница (папка на диске) и папка сессий: там лежат твои заметки и прошлые разговоры — перечитывай их, чтобы ничего не забывать. Файлы, которые игрок скинул в чат, попадают в песочницу (inbox/), картинки ты видишь.',
 		'Ты ПОЛНОСТЬЮ управляешь своей песочницей — это твой рабочий стол: создавай файлы, папки, архивы, компилируй код, удаляй по просьбе. Никогда не говори «у меня нет доступа» или «я не могу работать с файлами» — доступ есть, инструменты перечислены ниже. Если команда не сработала — прочитай ошибку и исправь команду, а не сдавайся.',
@@ -1010,11 +1012,20 @@ async function callProvider(
 	if (providerId === 'openrouter') {
 		headers['X-Title'] = 'Portalrinth Launcher'
 	}
+	// A jammed model (free DeepSeek at rush hour, a stalled relay) must not
+	// hang the whole turn: every attempt carries its own 45-second ceiling,
+	// on top of whatever signal the caller holds.
+	const anySignal = (AbortSignal as { any?: (signals: AbortSignal[]) => AbortSignal }).any
+	const attemptSignal = signal
+		? anySignal
+			? anySignal([signal, AbortSignal.timeout(45000)])
+			: signal
+		: AbortSignal.timeout(45000)
 	const response = await proxiedFetch(baseUrl, {
 		method: 'POST',
 		headers,
 		body: JSON.stringify(body),
-		signal,
+		signal: attemptSignal,
 	})
 	if (!response.ok) {
 		let detail = ''
@@ -1066,7 +1077,7 @@ async function callProviderWithRetry(
 	signal?: AbortSignal,
 ): Promise<string> {
 	const peak = providerId === 'zai' && zaiPeakHoursNow()
-	const pauses = peak ? [2500, 6000, 10000, 15000] : [1500, 4000]
+	const pauses = peak ? [2500, 6000, 10000, 15000] : [1200, 3000]
 	let lastError: unknown
 	for (let attempt = 0; attempt <= pauses.length; attempt++) {
 		if (attempt > 0) {
@@ -1106,18 +1117,7 @@ export async function testProvider(): Promise<string> {
  * a key saved. */
 function fallbackChain(primary: string): string[] {
 	const chain = [primary]
-	for (const candidate of [
-		'pollinations',
-		'orcarouter',
-		'openrouter',
-		'zai',
-		'groq',
-		'cerebras',
-		'github-models',
-		'nvidia',
-		'together',
-		'cohere',
-	]) {
+	for (const candidate of ['pollinations', 'openrouter', 'zai', 'groq']) {
 		if (candidate === primary) continue
 		const provider = providerById(candidate)
 		if (!provider) continue
@@ -1397,11 +1397,12 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 		// afterwards is context, not the headline - the player picked the
 		// first one, so its story is the one that answers "why did it fail".
 		const headline = primaryFailure || detail || 'Ни один провайдер не ответил'
+		const label = providerById(aiSettings.value.provider)?.label ?? aiSettings.value.provider
 		const advice =
 			aiSettings.value.provider === 'zai' && zaiPeakHoursNow()
 			? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
-			: 'Подожди минуту и напиши ещё раз, а надёжный вариант — бесплатный ключ Z.AI (GLM) или GigaChat в настройках провайдера.'
-		throw new Error(`${headline}. Порталус не дозвонился до ИИ: ${advice}`)
+			: 'Подожди минуту и напиши ещё раз, или проверь ключ и модель этого провайдера в настройках моделей.'
+		throw new Error(`${label} не ответил: ${headline || 'ни один канал не ответил'}. ${advice}`)
 }
 
 // ---- Tool implementations ------------------------------------------------
@@ -1450,12 +1451,12 @@ function parseDdgHtml(html: string): SearchHit[] {
 }
 
 /**
- * The agent's own web search: DuckDuckGo, asked three ways, because one of
- * the three doors is always open - the plain HTML endpoint, the same one
- * through a POST (what a browser form does), and the "lite" mirror. Whichever
- * answers first wins; the others never see the query.
+ * The agent's own web search, structured: DuckDuckGo, asked four ways (the
+ * plain HTML endpoint, the same one through a POST, the "lite" mirror, and
+ * Bing as the last door), first answer wins. Both the agent's text form and
+ * the browser settings page are built on it.
  */
-async function webSearch(query: string): Promise<string> {
+export async function searchWeb(query: string): Promise<{ title: string; url: string }[]> {
 	const attempts: (() => Promise<Response>)[] = [
 		() =>
 			proxiedFetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
@@ -1492,7 +1493,6 @@ async function webSearch(query: string): Promise<string> {
 			const html = await response.text()
 			const hits = [...html.matchAll(/<h2><a href="([^"]+)"[^>]*>([\s\S]*?)<\/a><\/h2>/g)].slice(0, 6)
 			if (hits.length === 0) throw new Error('пустая выдача')
-			// Packed back into the one shape the shared parser already reads.
 			return new Response(
 				hits.map((match) => `<a class="result__a" href="${match[1]}">${match[2]}</a>`).join(''),
 				{ status: 200 },
@@ -1508,17 +1508,24 @@ async function webSearch(query: string): Promise<string> {
 				continue
 			}
 			const hits = parseDdgHtml(await response.text())
-			if (hits.length > 0) {
-				return hits.map((hit, index) => `${index + 1}. ${hit.title} — ${hit.url}`).join('\n')
-			}
+			if (hits.length > 0) return hits
 			lastDetail = 'пустая выдача'
 		} catch (error) {
 			lastDetail = String(error).slice(0, 120)
 		}
 	}
-	return `Ничего не нашлось или поиск недоступен (${lastDetail}). Попробуй переформулировать запрос или открой конкретный сайт через web_fetch`
+	throw new Error(lastDetail || 'Ничего не нашлось')
 }
 
+/** The agent's text view of a search: numbered lines for the model. */
+async function webSearch(query: string): Promise<string> {
+	try {
+		const hits = await searchWeb(query)
+		return hits.map((hit, index) => `${index + 1}. ${hit.title} — ${hit.url}`).join('\n')
+	} catch (error) {
+		return `Ничего не нашлось или поиск недоступен (${String(error).slice(0, 120)}). Попробуй переформулировать запрос или открой конкретный сайт через web_fetch`
+	}
+}
 /** One Modrinth project as a card: search-by-id returns author, icon,
  * downloads and follows in a single request. */
 async function fetchModrinthCard(projectId: string): Promise<AiModCard | null> {

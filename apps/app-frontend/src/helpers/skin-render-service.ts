@@ -6,24 +6,39 @@
  *
  * The choice is kept in localStorage: it is a pure interface preference, and
  * the launcher's own settings file belongs to the app's schema.
+ *
+ * The roster grew when the default (laby.net) proved lossy on some networks:
+ * vzge.me and SkinRender.dev take a bare texture hash straight from the
+ * hand, NMSR draws the reference-quality body - between the five of them
+ * the preview always comes through, and fast.
  */
 import { ref } from 'vue'
 
-import { labySkinRenderUrl, minotarBodyUrl } from './laby-skins'
+import { labySkinRenderUrl, minotarBodyUrl, nmsrBodyUrl, skinrenderBodyUrl, vzgeBodyUrl } from './laby-skins'
 
-export type SkinRenderService = 'laby' | 'crafty' | 'mcskin' | 'minotar'
+export type SkinRenderService = 'vzge' | 'laby' | 'skinrender' | 'nmsr' | 'crafty' | 'mcskin' | 'minotar'
 
 const STORAGE_KEY = 'portalrinth-skin-render-service'
 
 function storedService(): SkinRenderService {
 	try {
 		const value = localStorage.getItem(STORAGE_KEY)
-		if (value === 'laby' || value === 'crafty' || value === 'mcskin' || value === 'minotar')
+		if (
+			value === 'vzge' ||
+			value === 'laby' ||
+			value === 'skinrender' ||
+			value === 'nmsr' ||
+			value === 'crafty' ||
+			value === 'mcskin' ||
+			value === 'minotar'
+		)
 			return value
 	} catch {
 		// Nowhere to read the choice from - the default stands.
 	}
-	return 'laby'
+	// vzge is the new default: the fastest hash-friendly render, and it
+	// answers from an edge network rather than one origin host.
+	return 'vzge'
 }
 
 const service = ref<SkinRenderService>(storedService())
@@ -52,8 +67,14 @@ export function setSkinRenderService(value: SkinRenderService): void {
  */
 export function skinRenderUrl(hash: string, width = 270, height = 514): string | null {
 	switch (service.value) {
+		case 'vzge':
+			return vzgeBodyUrl(hash, Math.max(width, 384))
 		case 'laby':
 			return labySkinRenderUrl(hash, width, height)
+		case 'skinrender':
+			return skinrenderBodyUrl(hash, Math.max(width, 384))
+		case 'nmsr':
+			return nmsrBodyUrl(hash, width, height)
 		case 'crafty':
 			return `https://render.crafty.gg/3d/full/${hash}?width=${width}&height=${height}`
 		case 'mcskin':
