@@ -295,10 +295,7 @@ async function handleFullscreenChange() {
         }
 }
 
-const APP_LEFT_NAV_WIDTH = '3.5rem'
-// The folded rail keeps the width it had before round 25: the player
-// rolled that narrowing back (the left nav stays as it is).
-const APP_RAIL_WIDTH = '4rem'
+const APP_LEFT_NAV_WIDTH = '4rem'
 const APP_SIDEBAR_WIDTH = 300
 const INTERCOM_BUBBLE_DEFAULT_PADDING = 20
 const credentials = ref()
@@ -339,7 +336,7 @@ const sidebarOccupiedWidth = computed(() =>
         !sidebarVisible.value
                 ? '0px'
                 : sidebarCollapsed.value
-                        ? APP_RAIL_WIDTH
+                        ? APP_LEFT_NAV_WIDTH
                         : `${APP_SIDEBAR_WIDTH}px`,
 )
 const hostingRouteActive = computed(() => route.path.startsWith('/hosting'))
@@ -2463,10 +2460,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
         <div
                 v-if="stateInitialized"
                 class="app-grid-layout relative"
-                :class="{
-                        'disable-advanced-rendering': !appTheme.advancedRendering,
-                        'rail-folded': sidebarVisible && sidebarCollapsed,
-                }"
+                :class="{ 'disable-advanced-rendering': !appTheme.advancedRendering }"
         >
                 <Transition name="fade">
                         <div
@@ -2824,23 +2818,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 .app-grid-layout,
 .app-contents {
         --top-bar-height: 3rem;
-        --left-bar-width: 3.5rem;
-        --rail-bar-width: 4rem;
+        --left-bar-width: 4rem;
         --right-bar-width: 300px;
-}
-
-/*
- * Folded, the rail is one slab with the page: the title bar's stretch
- * above it is painted the page's colour for exactly the rail's width, so
- * the black plaque reaches the window's top corner - the tip - instead
- * of stopping short under the bar.
- */
-.app-grid-layout.rail-folded .app-title-bar {
-        background: linear-gradient(
-                to left,
-                var(--color-bg) var(--rail-bar-width),
-                var(--color-raised-bg) var(--rail-bar-width)
-        );
 }
 
 .app-grid-layout {
@@ -2915,16 +2894,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
          * the column it occupies is the last one.
          */
         &.sidebar-collapsed {
-                grid-template-columns: 1fr var(--rail-bar-width);
-                --sidebar-column: var(--rail-bar-width);
-
-                /* The folded rail is one slab with the page, the page's own
-                 * colour: no arc cuts the corner - the black reaches the
-                 * window's top-right tip, and the rail reads as the page's
-                 * own edge rather than a lighter strip beside it. */
-                .app-sidebar {
-                        background: var(--color-bg);
-                }
+                grid-template-columns: 1fr var(--left-bar-width);
+                --sidebar-column: var(--left-bar-width);
         }
 
         @media (prefers-reduced-motion) {
