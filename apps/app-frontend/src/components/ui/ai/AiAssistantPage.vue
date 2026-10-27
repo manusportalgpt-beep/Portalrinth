@@ -342,8 +342,6 @@ function toggleCardGroup(key: string) {
 	collapsedCards.value = { ...collapsedCards.value, [key]: !collapsedCards.value[key] }
 }
 
-async function openMod(mod: AiModCard) {
-
 const skinPreviews = ref<Record<string, string>>({})
 const skinPreviewTried = new Set<string>()
 const skinInstalling = ref<string[]>([])
@@ -384,6 +382,8 @@ async function installSkin(skin: AiSkinCard) {
 		skinInstalling.value = skinInstalling.value.filter((hash) => hash !== skin.hash)
 	}
 }
+
+async function openMod(mod: AiModCard) {
 	if (mod.source === 'Modrinth') {
 		noteAgentNavigation()
 		void router.push(`/project/${mod.slug}`)
