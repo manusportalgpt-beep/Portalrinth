@@ -658,6 +658,16 @@ export async function readSessionsOverview(limit = 8): Promise<string> {
 				lines.push(`${entry.name}: файл повреждён`)
 			}
 		}
+		// Trashed chats stay readable: the agent still remembers them,
+		// but only brings them up when the player asks about them.
+		const trashed = await listTrashedSessions(6).catch(() => [] as SessionMeta[])
+		if (trashed.length > 0) {
+			lines.push(
+				`В корзине — помни их, но сам не упоминай, только если игрок спросит про эти чаты: ${trashed
+					.map((meta) => `${meta.id}: «${meta.preview.slice(0, 60)}»`)
+					.join('; ')}`,
+			)
+		}
 		return lines.join('\n')
 	} catch {
 		return 'Прошлых сессий пока нет'
@@ -720,7 +730,89 @@ export async function readSession(id: string): Promise<StoredSession | null> {
 		const text = await fs.readTextFile(joinPath(dir, `${id}.json`))
 		return JSON.parse(text) as StoredSession
 	} catch {
+		/* fall through to the trash */
+	}
+	try {
+		const dir = await sessionsRoot()
+		const text = await fs.readTextFile(joinPath(dir, 'trash', `${id}.json`))
+		return JSON.parse(text) as StoredSession
+	} catch {
 		return null
+	}
+}
+
+// ---- The chat trash ---------------------------------------------------------
+//
+// Removing a conversation never destroys it: it slides into the sessions
+// folder's trash/, where the agent can still read it (so it truly remembers
+// what it talked about) but the picker does not list it anymore. The agent
+// is told, in its context, to keep trashed chats to itself unless the
+// player brings them up.
+
+const TRASH_DIR = 'trash'
+
+async function trashRoot(): Promise<string> {
+	return sessionsRoot().then((dir) => joinPath(dir, TRASH_DIR))
+}
+
+/** Moves a saved conversation to the trash (idempotent). */
+export async function trashSession(id: string): Promise<void> {
+	const dir = await sessionsRoot()
+	const bin = await trashRoot()
+	await fs.mkdir(bin, { recursive: true }).catch(() => {})
+	await fs.rename(joinPath(dir, `${id}.json`), joinPath(bin, `${id}.json`)).catch(() => {})
+}
+
+/** Puts a trashed conversation back into the picker. */
+export async function restoreSession(id: string): Promise<void> {
+	const dir = await sessionsRoot()
+	const bin = await trashRoot()
+	await fs.rename(joinPath(bin, `${id}.json`), joinPath(dir, `${id}.json`)).catch(() => {})
+}
+
+/** Erases a trashed conversation for good - only from the trash. */
+export async function deleteSessionForever(id: string): Promise<void> {
+	const bin = await trashRoot()
+	await fs.remove(joinPath(bin, `${id}.json`), { recursive: true }).catch(() => {})
+}
+
+const toMeta = (session: StoredSession): SessionMeta => {
+	const firstUser = session.messages?.find(
+		(message) =>
+			typeof message === 'object' &&
+			message !== null &&
+			(message as { role?: string }).role === 'user',
+	) as { content?: string } | undefined
+	return {
+		id: session.id,
+		updated: session.updated ?? session.started ?? 0,
+		count: session.messages?.length ?? 0,
+		preview: (firstUser?.content ?? '').replace(/\s+/g, ' ').slice(0, 90),
+	}
+}
+
+/** Lists the conversations sitting in the trash, newest first. */
+export async function listTrashedSessions(limit = 30): Promise<SessionMeta[]> {
+	try {
+		const bin = await trashRoot()
+		const entries = (await fs.readDir(bin))
+			.filter((entry) => entry.name?.endsWith('.json'))
+			.sort((a, b) => (b.name ?? '').localeCompare(a.name ?? ''))
+			.slice(0, limit)
+		const found: SessionMeta[] = []
+		for (const entry of entries) {
+			try {
+				const session = JSON.parse(
+					await fs.readTextFile(joinPath(bin, entry.name ?? '')),
+				) as StoredSession
+				found.push(toMeta(session))
+			} catch {
+				/* a broken file simply does not get listed */
+			}
+		}
+		return found
+	} catch {
+		return []
 	}
 }
 

@@ -27,6 +27,7 @@ import {
 	agentPhase,
 	agentQueue,
 	agentStreaming,
+	agentThoughts,
 	agentTurn,
 	aiHistory,
 	aiSettings,
@@ -35,20 +36,28 @@ import {
 	providerById,
 	noteAgentNavigation,
 	queuedUserMessage,
+	readSelectedBuild,
 	sendAgentMessage,
+	setSelectedBuild,
 	stopAgentRun,
+	zaiPeakHoursLabel,
 } from '@/helpers/ai-assistant'
+import { getInstanceIconUrl, list as listInstances } from '@/helpers/instance'
 import {
 	attachFromPaths,
 	type AttachedFile,
 	currentSessionId,
+	deleteSessionForever,
 	formatSize,
 	listSessions,
+	listTrashedSessions,
 	type SessionMeta,
 	readLatestSession,
 	readSession,
+	restoreSession,
 	sandboxAbsolutePath,
 	sandboxReveal,
+	trashSession,
 } from '@/helpers/ai-sandbox'
 
 const { formatMessage } = useVIntl()
@@ -137,6 +146,20 @@ const messages = {
 	},
 	historyNewChat: { id: 'app.ai.history.new-chat', defaultMessage: 'Новый чат' },
 	historyMessages: { id: 'app.ai.history.messages', defaultMessage: 'сообщ.' },
+	trashTitle: { id: 'app.ai.trash.title', defaultMessage: 'Корзина чатов' },
+	trashEmpty: { id: 'app.ai.trash.empty', defaultMessage: 'Корзина пуста' },
+	trashMove: { id: 'app.ai.trash.move', defaultMessage: 'В корзину' },
+	trashRestore: { id: 'app.ai.trash.restore', defaultMessage: 'Восстановить' },
+	trashDeleteForever: {
+		id: 'app.ai.trash.delete-forever',
+		defaultMessage: 'Удалить навсегда',
+	},
+	builds: { id: 'app.ai.builds', defaultMessage: 'Сборка для работы' },
+	buildNone: { id: 'app.ai.builds.none', defaultMessage: 'Без сборки' },
+	buildNoneHint: {
+		id: 'app.ai.builds.none-hint',
+		defaultMessage: 'Как со сборкой, но не только с ней — агент сам уточняет, куда ставить',
+	},
 	stop: { id: 'app.ai.stop', defaultMessage: 'Остановить' },
 	processTitle: {
 		id: 'app.ai.process.title',
@@ -173,8 +196,11 @@ const collapsedCards = ref<Record<string, boolean>>({})
 const jarInstalled = ref<Record<string, boolean>>({})
 const instances = ref<Awaited<ReturnType<typeof listInstances>>>([])
 const chosenInstance = ref('')
+const buildsOpen = ref(false)
 const historyOpen = ref(false)
 const sessionsList = ref<SessionMeta[]>([])
+const trashedList = ref<SessionMeta[]>([])
+const trashOpen = ref(false)
 const historyLoading = ref(false)
 const router = useRouter()
 
@@ -197,6 +223,19 @@ const lastQuestion = computed(() => {
 	}
 	return null
 })
+
+/** The thinking box shows roughly eight lines, then scrolls - and it is
+ * transparent on purpose: thoughts float in the bubble, not in a panel. */
+const thoughtBox = ref<HTMLElement | null>(null)
+
+watch(
+	() => agentThoughts.value.length,
+	async () => {
+		await nextTick()
+		const box = thoughtBox.value
+		if (box) box.scrollTop = box.scrollHeight
+	},
+)
 
 function stopTyping() {
 	streaming.value = ''
@@ -224,25 +263,6 @@ function scrollToBottom() {
 
 watch(visibleHistory, scrollToBottom, { deep: false })
 watch(streaming, scrollToBottom)
-
-function providerName(id?: string) {
-	if (!id) return ''
-	return providerById(id)?.label ?? id
-}
-
-/** The honest label under a reply: the exact provider and model that
- * answered, plus a note when the chosen provider was down and another
- * one brought the answer home. */
-function replySource(message: AiMessage): string {
-	const provider = providerName(message.provider)
-	if (!provider) return ''
-	const model = message.model
-		? providerById(message.provider ?? '')?.models.find((m) => m.id === message.model)?.label ??
-			message.model
-		: ''
-	const base = model ? `${provider} · ${model}` : provider
-	return message.fallbackNote ? `${base} — ${message.fallbackNote}` : base
-}
 
 function actionName(tool: string) {
 	const map: Record<string, string> = {
@@ -350,12 +370,49 @@ async function toggleHistory() {
 		historyLoading.value = true
 		try {
 			sessionsList.value = await listSessions(30)
+			trashedList.value = await listTrashedSessions(30)
 		} catch {
 			sessionsList.value = []
+			trashedList.value = []
 		} finally {
 			historyLoading.value = false
 		}
 	}
+}
+
+async function refreshSessionLists() {
+	try {
+		sessionsList.value = await listSessions(30)
+		trashedList.value = await listTrashedSessions(30)
+	} catch {
+		/* the list simply stays as it was */
+	}
+}
+
+function toggleTrash() {
+	trashOpen.value = !trashOpen.value
+	if (trashOpen.value) void refreshSessionLists()
+}
+
+/** A chat in the trash is not gone: Portalus can still read it - he just
+ * does not bring it up on his own anymore. */
+async function moveToTrash(meta: SessionMeta) {
+	await trashSession(meta.id)
+	if (currentSessionId.value === meta.id) {
+		startFreshChat()
+		return
+	}
+	await refreshSessionLists()
+}
+
+async function restoreTrashed(meta: SessionMeta) {
+	await restoreSession(meta.id)
+	await refreshSessionLists()
+}
+
+async function purgeTrashed(meta: SessionMeta) {
+	await deleteSessionForever(meta.id)
+	await refreshSessionLists()
 }
 
 function sessionLabel(meta: SessionMeta): string {
@@ -593,6 +650,32 @@ function toggleModels() {
 	modelsOpen.value = !modelsOpen.value
 }
 
+function toggleBuilds() {
+	buildsOpen.value = !buildsOpen.value
+	if (buildsOpen.value) {
+		listInstances()
+			.then((all) => (instances.value = all))
+			.catch(() => {})
+	}
+}
+
+const chosenBuildLabel = computed(() => {
+	const found = instances.value.find((instance) => instance.id === chosenInstance.value)
+	return found?.name ?? formatMessage(messages.buildNone)
+})
+
+/** Picking a build tells the agent where things go; "Без сборки" unbinds. */
+function selectBuild(id: string) {
+	chosenInstance.value = id
+	const found = instances.value.find((instance) => instance.id === id)
+	setSelectedBuild(id && found ? { id, name: found.name } : null)
+	buildsOpen.value = false
+}
+
+function instanceIcon(iconPath: string | undefined): string | null {
+	return getInstanceIconUrl(iconPath ?? null)
+}
+
 onMounted(async () => {
 	scrollToBottom()
 	// The chat itself lives in localStorage; the sessions folder is the
@@ -606,7 +689,11 @@ onMounted(async () => {
 	listInstances()
 		.then((all) => {
 			instances.value = all
-			chosenInstance.value = all[0]?.id ?? ''
+			const stored = readSelectedBuild()
+			chosenInstance.value =
+				stored && all.some((instance) => instance.id === stored.id)
+					? stored.id
+					: ''
 		})
 		.catch(() => {})
 	watch(
@@ -656,11 +743,21 @@ defineExpose({ send })
 				>
 					<div class="mb-1 flex items-center justify-between gap-2 px-2">
 						<p class="m-0 text-sm font-semibold text-primary">
-							{{ formatMessage(messages.historyTitle) }}
+							{{ formatMessage(trashOpen ? messages.trashTitle : messages.historyTitle) }}
 						</p>
-						<Button size="sm" @click="startFreshChat">
-							{{ formatMessage(messages.historyNewChat) }}
-						</Button>
+						<div class="flex items-center gap-1">
+							<IconButton
+								v-tooltip="formatMessage(messages.trashTitle)"
+								type="quiet"
+								:label="formatMessage(messages.trashTitle)"
+								@click="toggleTrash"
+							>
+								<TrashIcon />
+							</IconButton>
+							<Button size="sm" @click="startFreshChat">
+								{{ formatMessage(messages.historyNewChat) }}
+							</Button>
+						</div>
 					</div>
 					<div class="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
 						<p
@@ -668,20 +765,48 @@ defineExpose({ send })
 							class="m-0 px-2 py-3 text-sm text-secondary"
 						>…</p>
 						<p
-							v-else-if="sessionsList.length === 0"
+							v-else-if="(trashOpen ? trashedList : sessionsList).length === 0"
 							class="m-0 px-2 py-3 text-sm text-secondary"
 						>
-							{{ formatMessage(messages.historyEmpty) }}
+							{{ formatMessage(trashOpen ? messages.trashEmpty : messages.historyEmpty) }}
 						</p>
-						<button
-							v-for="meta in sessionsList"
+						<div
+							v-for="meta in trashOpen ? trashedList : sessionsList"
 							:key="meta.id"
-							class="ai-history-item"
-							@click="() => openSession(meta)"
+							class="flex items-center gap-0.5"
 						>
-							<span class="ai-history-meta">{{ sessionLabel(meta) }}</span>
-							<span class="ai-history-preview">{{ meta.preview || meta.id }}</span>
-						</button>
+							<button class="ai-history-item grow" @click="() => openSession(meta)">
+								<span class="ai-history-meta">{{ sessionLabel(meta) }}</span>
+								<span class="ai-history-preview">{{ meta.preview || meta.id }}</span>
+							</button>
+							<template v-if="trashOpen">
+								<IconButton
+									v-tooltip="formatMessage(messages.trashRestore)"
+									type="quiet"
+									:label="formatMessage(messages.trashRestore)"
+									@click="() => restoreTrashed(meta)"
+								>
+									<RefreshCwIcon />
+								</IconButton>
+								<IconButton
+									v-tooltip="formatMessage(messages.trashDeleteForever)"
+									type="quiet"
+									:label="formatMessage(messages.trashDeleteForever)"
+									@click="() => purgeTrashed(meta)"
+								>
+									<XIcon />
+								</IconButton>
+							</template>
+							<IconButton
+								v-else
+								v-tooltip="formatMessage(messages.trashMove)"
+								type="quiet"
+								:label="formatMessage(messages.trashMove)"
+								@click="() => moveToTrash(meta)"
+							>
+								<TrashIcon />
+							</IconButton>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -904,13 +1029,6 @@ defineExpose({ send })
 								{{ actionName(action) }}
 							</span>
 						</div>
-						<span
-							v-if="message.role === 'assistant' && replySource(message)"
-							class="ai-provider-tag"
-							:title="message.fallbackNote || undefined"
-						>
-							{{ replySource(message) }}
-						</span>
 					</div>
 				</div>
 
@@ -971,23 +1089,28 @@ defineExpose({ send })
 						/>
 					</button>
 					<div v-if="processOpen" class="ai-process-body">
-						<span
-							v-for="action in agentTurn.actions"
-							:key="action"
-							class="ai-action-chip ai-action-chip-live"
-						>
-							{{ actionName(action) }}
-						</span>
-						<span v-if="agentTurn.actions.length === 0" class="ai-typing">
-							<span /><span /><span />
-							{{ phaseLabel }}
-						</span>
-					</div>
-					<div class="mt-2 flex items-center justify-between gap-2">
-						<Button size="sm" @click="stopAgentRun">
-							<StopCircleIcon class="size-4" />
-							{{ formatMessage(messages.stop) }}
-						</Button>
+						<div ref="thoughtBox" class="ai-thoughts">
+							<p
+								v-for="(thought, thoughtIndex) in agentThoughts"
+								:key="thoughtIndex"
+								class="ai-thought"
+							>
+								{{ thought }}
+							</p>
+							<span v-if="agentThoughts.length === 0" class="ai-typing">
+								<span /><span /><span />
+								{{ phaseLabel }}
+							</span>
+						</div>
+						<div v-if="agentTurn.actions.length > 0" class="mt-1 flex flex-wrap gap-1">
+							<span
+								v-for="action in agentTurn.actions"
+								:key="action"
+								class="ai-action-chip ai-action-chip-live"
+							>
+								{{ actionName(action) }}
+							</span>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -1082,6 +1205,54 @@ defineExpose({ send })
 					@paste="onPaste"
 				/>
 				<div class="relative shrink-0">
+					<button class="ai-model-chip" @click="toggleBuilds">
+						{{ chosenBuildLabel }}
+						<ChevronDownIcon class="size-3.5 opacity-70" />
+					</button>
+					<div
+						v-if="buildsOpen"
+						class="fixed inset-0 z-10 cursor-default"
+						@click="buildsOpen = false"
+					/>
+					<div
+						v-if="buildsOpen"
+						class="ai-menu absolute bottom-full left-0 z-20 mb-2 flex max-h-[26rem] w-[22rem] flex-col overflow-y-auto rounded-2xl border border-solid border-surface-5 bg-surface-2 p-2"
+					>
+						<p class="m-0 mb-2 px-1 text-sm font-semibold text-primary">
+							{{ formatMessage(messages.builds) }}
+						</p>
+						<button class="ai-build-item" @click="() => selectBuild('')">
+							<span class="ai-build-glyph"><PlusIcon class="size-4" /></span>
+							<span class="min-w-0 grow text-left">
+								<span class="ai-build-name">{{ formatMessage(messages.buildNone) }}</span>
+								<span class="ai-build-meta">{{ formatMessage(messages.buildNoneHint) }}</span>
+							</span>
+						</button>
+						<button
+							v-for="instance in instances"
+							:key="instance.id"
+							class="ai-build-item"
+							@click="() => selectBuild(instance.id)"
+						>
+							<img
+								v-if="instanceIcon(instance.icon_path)"
+								:src="instanceIcon(instance.icon_path) ?? ''"
+								class="ai-build-icon"
+								alt=""
+								loading="lazy"
+							/>
+							<span v-else class="ai-build-glyph"><FileIcon class="size-4" /></span>
+							<span class="min-w-0 grow text-left">
+								<span class="ai-build-name">{{ instance.name }}</span>
+								<span class="ai-build-meta">
+									{{ instance.loader ?? 'vanilla' }} · {{ instance.game_version }}
+								</span>
+							</span>
+							<span v-if="chosenInstance === instance.id" class="ai-build-check">✓</span>
+						</button>
+					</div>
+				</div>
+				<div class="relative shrink-0">
 					<button class="ai-model-chip" @click="toggleModels">
 						{{ modelChipLabel }}
 						<ChevronDownIcon class="size-3.5 opacity-70" />
@@ -1097,6 +1268,9 @@ defineExpose({ send })
 					>
 						<p class="m-0 mb-3 text-sm font-semibold text-primary">
 							{{ formatMessage(messages.models) }}
+						</p>
+						<p class="ai-peak-note m-0 mb-3 text-xs">
+							{{ zaiPeakHoursLabel() }}
 						</p>
 						<AiProviderSettings compact />
 					</div>
@@ -1148,12 +1322,90 @@ defineExpose({ send })
 	padding: 0.1rem 0.5rem;
 }
 
-.ai-provider-tag {
+.ai-process-body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+/* Eight lines of thoughts, then it scrolls - transparent on purpose. */
+.ai-thoughts {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	max-height: 9rem;
+	overflow-y: auto;
+	background: transparent;
+}
+
+.ai-thought {
+	margin: 0;
+	font-size: 0.75rem;
+	line-height: 1.3;
+	color: var(--color-secondary);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.ai-peak-note {
+	color: var(--color-secondary);
+}
+
+.ai-build-item {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	border: none;
+	border-radius: 0.6rem;
+	background: transparent;
+	padding: 0.45rem 0.6rem;
+	cursor: pointer;
+	font: inherit;
+}
+
+.ai-build-item:hover {
+	background: var(--color-button-bg);
+}
+
+.ai-build-icon {
+	height: 2.25rem;
+	width: 2.25rem;
+	border-radius: 0.45rem;
+	object-fit: cover;
+	flex-shrink: 0;
+}
+
+.ai-build-glyph {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 2.25rem;
+	width: 2.25rem;
+	border-radius: 0.45rem;
+	background: var(--color-button-bg);
+	color: var(--color-secondary);
+	flex-shrink: 0;
+}
+
+.ai-build-name {
 	display: block;
-	margin-top: 0.25rem;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--color-primary);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ai-build-meta {
+	display: block;
 	font-size: 0.6875rem;
 	color: var(--color-secondary);
-	opacity: 0.8;
+}
+
+.ai-build-check {
+	color: var(--color-brand);
+	font-weight: 700;
 }
 
 .ai-error {

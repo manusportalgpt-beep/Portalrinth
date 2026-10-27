@@ -753,6 +753,23 @@ export const AI_SKILLS_HINT = [
 	'Если знаний не хватает (версии, форматы, API) — сначала web_search, потом пиши код. Не выдумывай несуществующие API: проверяй.',
 ].join('\n')
 
+/**
+ * The long-term knowledge base: what the agent knows cold, so it answers
+ * from facts instead of guessing - versions, loaders, formats, the launcher
+ * itself and the usual troubleshooting moves. Kept compact on purpose: a
+ * wall of text costs tokens on every single turn.
+ */
+export const AI_KNOWLEDGE_HINT = [
+	'Твои крепкие знания (отвечай из них уверенно, проверяй поиском только свежее):',
+	'Версии Minecraft и форматы: pack_format ресурс-паков — 1.16.2–1.16.5:6, 1.17:7, 1.18–1.18.2:8, 1.19–1.19.2:9, 1.19.3:12, 1.19.4:13, 1.20–1.20.1:15, 1.20.2:18, 1.20.3–1.20.4:22, 1.20.5–1.20.6:32, 1.21–1.21.1:34, 1.21.2–1.21.3:42, 1.21.4:46, 1.21.5:55, 1.21.6:63, 1.21.7–1.21.8:64; датапаки — 1.20–1.20.1:15, 1.21–1.21.1:48, 1.21.4:61, 1.21.6+:80 (точные для датапаков сверяй web_search).',
+	'Загрузчики: Fabric — лёгкий, быстрый, моды через fabric.mod.json + Mixins; Forge — тяжёлый, моды через mods.toml, его API для 1.17+; NeoForge — форк Forge после 1.20.1, свежие версии; Quilt — совместим с Fabric. Моды НЕ взаимозаменяемы между загрузчиками.',
+	'Оптимизация: Sodium (рендер, Fabric/NeoForge), Lithium (логика), FerriteCore (память), ImmediatelyFast, Entity Culling, ModernFix — надёжный набор; OptiFine — устаревший путь, конфликтует с Sodium. Шейдеры — Iris + Oculus (Forge) или Oculus Embedded.',
+	'Частые сбои запуска и что смотреть в логах: «UnsupportedClassVersionError» — нужна новее Java (1.17–1.20.4 → Java 17, 1.20.5+ → Java 21); «NoSuchMethodError»/«NoClassDefFoundError» — несовпадение версий мода и загрузчика; краши с mixins — конфликт модов, читай самый последний caused-by; вылет при загрузке мира — часто повреждённый чанк или датапак; «incompatible mod set» — лаунчер показывает список, снимай галочки конфликтов.',
+	'Java: лаунчер ставит нужную сам; Java 8 — старьё до 1.16, Java 17 — 1.17–1.20.4, Java 21 — 1.20.5+. Рекомендуемая память для модовых сборок — 4–6 ГБ, больше 8 обычно вредно.',
+	'Карты, миры: папка saves/ внутри сборки; уровень.dat повреждён — бэкапы папки спасают. Сервера: адрес, версии должны совпадать с клиентом.',
+	'Стиль ответов о версиях и фактах: если не уверен в актуальном — web_search, а потом отвечай с указанием, где проверил.',
+].join('\n')
+
 // ---- Personality ---------------------------------------------------------
 
 /**
@@ -762,16 +779,44 @@ export const AI_SKILLS_HINT = [
 let playerNameCache = ''
 export async function playerName(): Promise<string> {
 	if (playerNameCache) return playerNameCache
+	// The launcher has three account systems - Microsoft, Ely.by and offline
+	// - and every one of them stores the name as `profile.name` (there is no
+	// `username` field anywhere), so all three get asked and the first real
+	// name wins. An unresolvable name stays empty: a missing name is better
+	// than a placeholder like {{account}} reaching the player.
 	try {
-		const id = await get_default_user()
-		if (id) {
-			const all = await users()
-			const me = all.find((user) => user.id === id)
-			if (me?.username) playerNameCache = me.username
-		}
+		const { offline_get_default_user, offline_users } = await import('./offline_auth')
+		const offlineId = await offline_get_default_user().catch(() => null)
+		const offline = await offline_users().catch(() => [])
+		const offlineMe = offlineId
+			? offline.find((user) => user.profile?.id === offlineId)
+			: offline[0]
+		if (offlineMe?.profile?.name) playerNameCache = offlineMe.profile.name
 	} catch {
-		/* an offline launcher still gets an assistant */
+		/* offline accounts are optional */
 	}
+	if (!playerNameCache) {
+		try {
+			const { ely_get_default_user, ely_get_users } = await import('./ely_auth')
+			const elyId = await ely_get_default_user().catch(() => null)
+			const ely = await ely_get_users().catch(() => [])
+			const elyMe = elyId ? ely.find((user) => user.profile?.id === elyId) : ely[0]
+			if (elyMe?.profile?.name) playerNameCache = elyMe.profile.name
+		} catch {
+			/* Ely.by is optional too */
+		}
+	}
+	if (!playerNameCache) {
+		try {
+			const id = await get_default_user()
+			const all = await users()
+			const me = id ? all.find((user) => user.profile?.id === id) : all[0]
+			if (me?.profile?.name) playerNameCache = me.profile.name
+		} catch {
+			/* an offline launcher still gets an assistant */
+		}
+	}
+	if (/^\{\{.*\}\}$/.test(playerNameCache)) playerNameCache = ''
 	return playerNameCache
 }
 
@@ -805,13 +850,16 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 		`Ты — ${name}, ИИ-агент лаунчера Portalrinth (форк Modrinth App) для Minecraft. Твоё имя — Portalus, и игрок обращается к тебе по нему.`,
 		warmth,
 		'Общайся как живой игровой приятель: обращайся к игроку по имени его аккаунта, уместный игровой сленг разрешён, канцелярит — нет, грубость и мат — нет.',
+		'НИКОГДА не подставляй заглушки вроде {{account}} или [имя] — если имя игрока есть в контексте, пиши его, а если нет — просто обходись без имени.',
 		'У тебя есть своё мнение: если пользователь просит вредного или сомнительного, ты вежливо споришь и предлагаешь лучше.',
 		'Отвечай на языке пользователя. Без воды: коротко, по делу, шагами где уместно.',
 		'Ты знаешь лаунчер целиком: Discover (поиск по Modrinth и CurseForge), создание сборок, установку модов/ресурс-паков/шейдеров (иконка, автор, версия, описание — всё как у человека), скины, скриншоты, внешний вид лаунчера, запуск и ошибки. Помогаешь со всем этим и сам делаешь это руками, когда просят.',
 		'У тебя есть своя песочница (папка на диске) и папка сессий: там лежат твои заметки и прошлые разговоры — перечитывай их, чтобы ничего не забывать. Файлы, которые игрок скинул в чат, попадают в песочницу (inbox/), картинки ты видишь.',
+		'Ты ПОЛНОСТЬЮ управляешь своей песочницей — это твой рабочий стол: создавай файлы, папки, архивы, компилируй код, удаляй по просьбе. Никогда не говори «у меня нет доступа» или «я не могу работать с файлами» — доступ есть, инструменты перечислены ниже. Если команда не сработала — прочитай ошибку и исправь команду, а не сдавайся.',
 		AI_NAVIGATION_HINT,
 		AI_TOOLS_HINT,
 		AI_SKILLS_HINT,
+		AI_KNOWLEDGE_HINT,
 	]
 	const skills = (settings.skills ?? []).filter((skill) => skill.on && skill.text.trim())
 	if (skills.length > 0) {
@@ -836,12 +884,51 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
  * what the notebook remembers. Kept separate so the static half above stays
  * cheap for providers that bill the system message as regular tokens.
  */
+/** The memory of the build the player picked for the agent ("Без сборки"
+ * is no build at all): read by the context builder, written by the picker. */
+const SELECTED_BUILD_KEY = 'portalrinth-ai-selected-build'
+
+export interface SelectedBuild {
+	id: string
+	name: string
+}
+
+export function readSelectedBuild(): SelectedBuild | null {
+	try {
+		const raw = localStorage.getItem(SELECTED_BUILD_KEY)
+		if (!raw) return null
+		const parsed = JSON.parse(raw) as SelectedBuild
+		return parsed && typeof parsed.id === 'string' ? parsed : null
+	} catch {
+		return null
+	}
+}
+
+export function setSelectedBuild(build: SelectedBuild | null): void {
+	try {
+		if (build && build.id) localStorage.setItem(SELECTED_BUILD_KEY, JSON.stringify(build))
+		else localStorage.removeItem(SELECTED_BUILD_KEY)
+	} catch {
+		/* a lost selection is not worth a crash */
+	}
+}
+
 async function buildLiveContext(): Promise<string> {
 	const lines: string[] = []
 	const who = await playerName()
 	if (who) {
 		lines.push(
 			`Имя игрока: ${who}. Обращайся к нему по имени — в приветствии и иногда по ходу дела, без фанатизма.`,
+		)
+	}
+	const build = readSelectedBuild()
+	if (build) {
+		lines.push(
+			`Выбранная игроком сборка: «${build.name}» (id: ${build.id}). Работай с ней: контент по умолчанию ставь в неё (launcher_install — третьим аргументом), и отвечай про неё, если не сказано иначе.`,
+		)
+	} else {
+		lines.push(
+			'Выбран режим «Без сборки»: ты не привязан к одной сборке — уточняй, куда ставить контент, или выбери сам через <<list_instances|>> и скажи, что выбрал.',
 		)
 	}
 	const memory = await readMemory()
@@ -855,6 +942,39 @@ async function buildLiveContext(): Promise<string> {
 		)
 	}
 	return lines.join('\n')
+}
+
+// ---- Z.AI peak hours ------------------------------------------------------
+//
+// Z.AI marks 10:00–22:00 Beijing time (UTC+8) as its peak hours: the server
+// is busier, replies come slower and free tiers hiccup more - but requests
+// DO get through, it just takes patience. The launcher mirrors that: it
+// shows the same peak picture in the model panel and, during those hours,
+// keeps asking Z.AI with longer pauses instead of handing the turn to the
+// first fallback that will take it.
+const ZAI_PEAK_START = 10
+const ZAI_PEAK_END = 22
+
+export function zaiPeakHoursNow(now = new Date()): boolean {
+	try {
+		const hour = Number(
+			new Intl.DateTimeFormat('en-US', {
+				hour: '2-digit',
+				hour12: false,
+				timeZone: 'Asia/Shanghai',
+			}).format(now),
+		)
+		return Number.isFinite(hour) && hour >= ZAI_PEAK_START && hour < ZAI_PEAK_END
+	} catch {
+		return false
+	}
+}
+
+/** A short human line for the model panel: which of Z.AI's two modes is on. */
+export function zaiPeakHoursLabel(): string {
+	return zaiPeakHoursNow()
+		? 'Часы пик Z.AI — 10:00–22:00 по Пекину: сервер нагружен, но очередь движется'
+		: 'Спокойные часы Z.AI — сервер свободен, отвечает быстро'
 }
 
 // ---- Network -------------------------------------------------------------
@@ -945,7 +1065,8 @@ async function callProviderWithRetry(
 	payload: ChatMessagePayload[],
 	signal?: AbortSignal,
 ): Promise<string> {
-	const pauses = [1500, 4000]
+	const peak = providerId === 'zai' && zaiPeakHoursNow()
+	const pauses = peak ? [2500, 6000, 10000, 15000] : [1500, 4000]
 	let lastError: unknown
 	for (let attempt = 0; attempt <= pauses.length; attempt++) {
 		if (attempt > 0) {
@@ -1008,7 +1129,10 @@ function fallbackChain(primary: string): string[] {
 
 function isRetryable(error: unknown): boolean {
 	const text = String(error)
-	return /HTTP 4(29|[0-9]{2})|HTTP 5|Failed to fetch|network|timeout|Empty|пустой/i.test(text)
+	// 429 and 5xx clear themselves; 4xx like 401/403/400 are a decision the
+	// service made about us - retrying only burns time.
+	if (/HTTP (408|429)|HTTP 5|Failed to fetch|network|timeout|Empty|пустой/i.test(text)) return true
+	return false
 }
 
 export interface AiRequest {
@@ -1106,6 +1230,10 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	// rides along on the reply, so the label never lies about the source.
 	let failedProviderLabel = ''
 	let failedDetail = ''
+	// The first failure of the chosen provider leads the final error: the
+	// player chose it, so its story is the one that matters - not whatever
+	// random fallback tripped last.
+	let primaryFailure = ''
 	const fallbackTag = () =>
 	failedProviderLabel && providerTried !== failedProviderLabel
 	? `${failedProviderLabel} не ответил${failedDetail ? `: ${failedDetail}` : ''} — ответил ${providerById(providerTried)?.label ?? providerTried}`
@@ -1130,6 +1258,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 					}
 					let raw: string
 					try {
+						agentPhase.value = 'thinking'
 						raw = await callProviderWithRetry(providerId, payload, request.signal)
 					} catch (error) {
 						// A model without vision answers 400 to image parts: drop them
@@ -1144,6 +1273,9 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						}
 					}
 					const parsed = parseActions(raw)
+					if (parsed.text.trim()) {
+						noteAgentThought(parsed.text.slice(0, 400))
+					}
 					const askAction = parsed.actions.find((action) => action.tool === 'ask_user')
 					if (askAction) {
 						const [text, options] = askAction.args.split('::')
@@ -1199,6 +1331,9 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						doneActions.push(action.tool)
 						request.onActionDone?.(action.tool, action.args, result)
 						const cards = extractCards(result)
+						if (cards.text.trim()) {
+							noteAgentThought(`→ ${action.tool}: ${cards.text.slice(0, 160)}`)
+						}
 						if (cards.image) seenImages.push(cards.image)
 						notes.push(`Результат ${action.tool}(${action.args}): ${cards.text.slice(0, 1200)}`)
 					}
@@ -1225,23 +1360,48 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 					// the player is waiting.
 					await sleep(300, request.signal)
 				}
-			} catch (error) {
-				lastError = error
-				if (request.signal?.aborted) throw error
-				if (!isRetryable(error)) throw error
-				if (!failedProviderLabel) {
-					failedProviderLabel = providerById(providerId)?.label ?? providerId
-					failedDetail = String((error as Error)?.message ?? error).slice(0, 140)
+				} catch (error) {
+					lastError = error
+					if (request.signal?.aborted) throw error
+					if (providerId === settings.provider && !primaryFailure) {
+						// The player's own choice failed: its story leads the report.
+						primaryFailure = String((error as Error)?.message ?? error).slice(0, 200)
+					}
+					if (!failedProviderLabel) {
+						failedProviderLabel = providerById(providerId)?.label ?? providerId
+						failedDetail = String((error as Error)?.message ?? error).slice(0, 140)
+					}
+					if (!isRetryable(error)) {
+						if (providerId === settings.provider) {
+							// A hard no from the chosen provider (a bad key, a 403, a
+							// missing model) is worth telling immediately and clearly,
+							// with the peak-hours hint when it applies.
+							const label = providerById(providerId)?.label ?? providerId
+							const advice =
+								providerId === 'zai' && zaiPeakHoursNow()
+								? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
+								: 'Проверь этот провайдер в настройках моделей, или подожди минуту и напиши ещё раз.'
+							throw new Error(`${label} не ответил: ${String((error as Error)?.message ?? error).slice(0, 200)}. ${advice}`)
+						}
+						// A fallback that hard-fails is simply skipped - the next
+						// one in line still gets its chance.
+						continue
+					}
 				}
-			}
 		}
 	} finally {
 		endAgentRun()
 	}
-	const detail = lastError ? String((lastError as Error)?.message ?? lastError) : ''
-	throw new Error(
-		`${detail || 'Ни один провайдер не ответил'}. Порталус не дозвонился до ИИ: подожди минуту и напиши ещё раз, а надёжный вариант — бесплатный ключ Z.AI (GLM) или GigaChat в настройках провайдера.`,
-	)
+		const detail = lastError ? String((lastError as Error)?.message ?? lastError) : ''
+		// The chosen provider's own failure leads; whatever the fallbacks did
+		// afterwards is context, not the headline - the player picked the
+		// first one, so its story is the one that answers "why did it fail".
+		const headline = primaryFailure || detail || 'Ни один провайдер не ответил'
+		const advice =
+			aiSettings.value.provider === 'zai' && zaiPeakHoursNow()
+			? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
+			: 'Подожди минуту и напиши ещё раз, а надёжный вариант — бесплатный ключ Z.AI (GLM) или GigaChat в настройках провайдера.'
+		throw new Error(`${headline}. Порталус не дозвонился до ИИ: ${advice}`)
 }
 
 // ---- Tool implementations ------------------------------------------------
@@ -1952,6 +2112,18 @@ export interface QueuedTurn {
 }
 export const agentQueue = ref<QueuedTurn[]>([])
 
+/** What the run in flight is thinking, line by line: the chat draws it
+ * live in the "Процесс размышления" card - the model's own words between
+ * tool rounds plus one short line per finished tool call. */
+export const agentThoughts = ref<string[]>([])
+
+/** Appends one thought line, keeping the buffer small. */
+function noteAgentThought(line: string): void {
+	const text = line.replace(/\s+/g, ' ').trim()
+	if (!text) return
+	agentThoughts.value = [...agentThoughts.value.slice(-29), text]
+}
+
 let runController: AbortController | null = null
 
 /** The Stop button: ends the run the moment it is pressed. */
@@ -1961,6 +2133,7 @@ export function stopAgentRun(): void {
 
 function resetTurnState(): void {
 	agentTurn.value = { actions: [], folders: [], images: [], mods: [], jars: [], polls: [] }
+	agentThoughts.value = []
 }
 
 async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> {

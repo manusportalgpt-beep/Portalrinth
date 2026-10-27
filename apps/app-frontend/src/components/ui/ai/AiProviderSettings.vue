@@ -191,9 +191,17 @@ const overrideModel = computed({
 })
 
 function openKeyPage(url?: string) {
-	if (url) {
-		window.open(url, '_blank')
-	}
+	if (!url) return
+	// window.open does nothing inside a Tauri webview: the key page must be
+	// opened by the system browser through the opener plugin.
+	void (async () => {
+		try {
+			const { openUrl } = await import('@tauri-apps/plugin-opener')
+			await openUrl(url)
+		} catch {
+			console.error('Страница ключа не открылась', url)
+		}
+	})()
 }
 
 const testState = ref<'idle' | 'running' | 'ok' | 'fail'>('idle')
