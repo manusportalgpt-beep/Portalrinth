@@ -1,7 +1,7 @@
 <template>
 	<div
 		v-tooltip="tooltip"
-		class="flex items-center gap-1.5 rounded-xl border-none bg-transparent px-2 py-1 text-sm font-medium text-contrast backdrop-blur transition-colors hover:bg-button-bg"
+		class="flex cursor-default select-none items-center gap-1.5 rounded-xl border-none bg-transparent px-2 py-1 text-sm font-medium text-contrast"
 	>
 		<component :is="icon" class="size-4 shrink-0" :class="iconClass" />
 		<span class="tabular-nums">{{ timeLabel }}</span>

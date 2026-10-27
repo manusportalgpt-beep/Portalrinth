@@ -860,6 +860,7 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 		'НИКОГДА не подставляй заглушки вроде {{account}} или [имя] — если имя игрока есть в контексте, пиши его, а если нет — просто обходись без имени.',
 		'У тебя есть своё мнение: если пользователь просит вредного или сомнительного, ты вежливо споришь и предлагаешь лучше.',
 		'Отвечай на языке пользователя. БУДЬ КРАТОК: по умолчанию 1–3 предложения, максимум 5 — это игровой чат, а не доклад. Никаких вступлений («Отличный вопрос!»), никаких пересказов задания, никаких встречных вопросов без крайней необходимости.',
+		'Простые сообщения — «привет», «спасибо», «как дела», болтовня, вопросы о тебе — отвечай сразу обычным текстом: НИКАКИХ команд <<...>> и никакого web_search. Инструменты нужны только для реальной задачи (найти, установить, показать, сделать файл, проверить свежий факт). Прежде чем писать команду, реши: можно ли ответить без неё — если да, отвечай сразу, это быстрее и надёжнее.',
 		'Ссылки: когда советуешь мод, сайт, инструмент или что-то ещё — всегда давай прямую ссылку (https://...) прямо в тексте ответа. Игрок кликнет по ней прямо в чате.',
 		'Ты знаешь лаунчер целиком: Discover (поиск по Modrinth и CurseForge), создание сборок, установку модов/ресурс-паков/шейдеров (иконка, автор, версия, описание — всё как у человека), скины, скриншоты, внешний вид лаунчера, запуск и ошибки. Помогаешь со всем этим и сам делаешь это руками, когда просят.',
 		'У тебя есть своя песочница (папка на диске) и папка сессий: там лежат твои заметки и прошлые разговоры — перечитывай их, чтобы ничего не забывать. Файлы, которые игрок скинул в чат, попадают в песочницу (inbox/), картинки ты видишь.',
@@ -1118,6 +1119,36 @@ export async function testProvider(): Promise<string> {
 	return `${providerById(aiSettings.value.provider)?.label ?? aiSettings.value.provider} · ${Date.now() - started} мс`
 }
 
+// ---- Providers on a short break -------------------------------------------
+//
+// A provider that answered with a permanent no (free_rate_limited, a rejected
+// key) must not stall every turn: the chain reaches it first, the player
+// waits out its retries, and the answer comes from a fallback anyway. Blocked
+// providers sit out for ten minutes, then quietly get their chance back.
+
+const BLOCK_TTL = 10 * 60 * 1000
+const blockedProviders = new Map<string, number>()
+
+function blockProvider(providerId: string): void {
+        blockedProviders.set(providerId, Date.now())
+}
+
+function providerBlocked(providerId: string): boolean {
+        const at = blockedProviders.get(providerId)
+        if (!at) return false
+        if (Date.now() - at > BLOCK_TTL) {
+                blockedProviders.delete(providerId)
+                return false
+        }
+        return true
+}
+
+/** A permanent no from a provider: exactly what the block list is for. */
+function isPermanentRefusal(error: unknown): boolean {
+        const status = (error as Error & { status?: number }).status
+        if (status === 401 || status === 403) return true
+        return /free_rate_limited|Free models are not available/i.test(String(error))
+}
 /** Providers the launcher can fall back to when the chosen one is out of
  * free minutes: first the keyless one, then any free-tier provider that has
  * a key saved. */
@@ -1128,6 +1159,7 @@ function fallbackChain(primary: string): string[] {
 		const provider = providerById(candidate)
 		if (!provider) continue
 		if (provider.needsKey && !aiSettings.value.keys[candidate]) continue
+			if (providerBlocked(candidate)) continue
 		chain.push(candidate)
 	}
 	return chain
@@ -1138,6 +1170,10 @@ function isRetryable(error: unknown): boolean {
 	// again inside the same jam only burns the player's time, the next
 	// provider in the chain starts instead.
 	if ((error as { name?: string } | null | undefined)?.name === 'TimeoutError') return false
+	// OrcaRouter's "free_rate_limited" is not a jam that clears in a minute:
+	// the account itself is not let in to free models (their side wants a
+	// linked GitHub). Retrying only burns the player's time - skip ahead.
+	if (/free_rate_limited|Free models are not available/i.test(text)) return false
 	const text = String(error)
 	// 429 and 5xx clear themselves; 4xx like 401/403/400 are a decision the
 	// service made about us - retrying only burns time.
@@ -1250,154 +1286,172 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	: ''
 
 	try {
-		for (const providerId of fallbackChain(settings.provider)) {
-			providerTried = providerId
-			let payload = rounds
-			try {
-				for (let round = 0; round < 4; round++) {
-					if (playerTookOver()) {
-						return {
-							content:
-								'Остановился: ты ушёл на другой экран, так что я решил, что ты передумал. Скажи, если продолжить.',
-							provider: providerTried,
-							model: chosenModel(settings, providerTried),
-							...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
-							actions: doneActions,
-							activity: sandboxStatsSnapshot(),
-						}
-					}
-					let raw: string
-					try {
-						agentPhase.value = 'thinking'
-						raw = await callProviderWithRetry(providerId, payload, request.signal)
-					} catch (error) {
-						// A model without vision answers 400 to image parts: drop them
-						// once and answer from the text alone.
-						const status = (error as Error & { status?: number }).status
-						if (hasImages && status === 400 && payload === rounds) {
-							rounds = withoutImages(base)
-							payload = rounds
-							raw = await callProviderWithRetry(providerId, payload, request.signal)
-						} else {
-							throw error
-						}
-					}
-					const parsed = parseActions(raw)
-					if (parsed.text.trim()) {
-						noteAgentThought(parsed.text.slice(0, 400))
-					}
-					const askAction = parsed.actions.find((action) => action.tool === 'ask_user')
-					if (askAction) {
-						const [text, options] = askAction.args.split('::')
-						return {
-							content: parsed.text || raw,
-							provider: providerTried,
-							model: chosenModel(settings, providerTried),
-							...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
-							actions: doneActions,
-							activity: sandboxStatsSnapshot(),
-							question: {
-								text: (text ?? 'Как поступить?').trim(),
-								options: (options ?? '')
-									.split(';;')
-									.map((option) => option.trim())
-									.filter(Boolean),
-							},
-						}
-					}
-					if (parsed.actions.length === 0 || round === 3) {
-						// A model that only shouted commands and never spoke still owes
-						// the player words - summarize what was done instead of silence.
-						const silent = !parsed.text.trim()
-						return {
-							content: silent
-								? doneActions.length > 0
-									? `Готово: выполнил ${doneActions.length} действий — смотри отметки ниже. Спроси, если нужны подробности.`
-									: 'Готово. Спроси, если нужны подробности.'
-								: parsed.text || raw,
-							provider: providerTried,
-							model: chosenModel(settings, providerTried),
-							...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
-							actions: doneActions,
-							activity: sandboxStatsSnapshot(),
-						}
-					}
-					const notes: string[] = []
-					const seenImages: string[] = []
-					for (const action of parsed.actions.slice(0, 6)) {
+		for (let pass = 0; pass < 2; pass++) {
+			if (pass > 0) {
+				// Every provider had its turn and failed with retryable trouble: a
+				// short breather, then one more round over the same chain - free
+				// limits clear in seconds, and this second pass is what turns
+				// "now it works, now it does not" into "almost always works".
+				try {
+					await sleep(3000, request.signal)
+				} catch {
+					break
+				}
+			}
+			const chain = fallbackChain(settings.provider)
+			for (const providerId of chain) {
+				providerTried = providerId
+				let payload = rounds
+				try {
+					for (let round = 0; round < 4; round++) {
 						if (playerTookOver()) {
-							notes.push('Игрок сам перешёл на другой экран - он передумал. Немедленно прекрати действия по этому запросу и попрощайся.')
 							return {
 								content:
 									'Остановился: ты ушёл на другой экран, так что я решил, что ты передумал. Скажи, если продолжить.',
 								provider: providerTried,
-							model: chosenModel(settings, providerTried),
-							...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
+								model: chosenModel(settings, providerTried),
+								...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
 								actions: doneActions,
 								activity: sandboxStatsSnapshot(),
 							}
 						}
-						const result = await runTool(action.tool, action.args)
-						doneActions.push(action.tool)
-						request.onActionDone?.(action.tool, action.args, result)
-						const cards = extractCards(result)
-						if (cards.text.trim()) {
-							noteAgentThought(`→ ${action.tool}: ${cards.text.slice(0, 160)}`)
+						let raw: string
+						try {
+							agentPhase.value = 'thinking'
+							raw = await callProviderWithRetry(providerId, payload, request.signal)
+						} catch (error) {
+							// A model without vision answers 400 to image parts: drop them
+							// once and answer from the text alone.
+							const status = (error as Error & { status?: number }).status
+							if (hasImages && status === 400 && payload === rounds) {
+								rounds = withoutImages(base)
+								payload = rounds
+								raw = await callProviderWithRetry(providerId, payload, request.signal)
+							} else {
+								throw error
+							}
 						}
-						if (cards.image) seenImages.push(cards.image)
-						notes.push(`Результат ${action.tool}(${action.args}): ${cards.text.slice(0, 1200)}`)
-					}
-					const noteText = notes.join('\n') + '\nПродолжи ответ пользователю.'
-					const queuedImages = seenImages.length > 0 ? seenImages : pendingVisionImages.splice(0, pendingVisionImages.length)
-					const noteMessage: ChatMessagePayload =
-						queuedImages.length > 0
-							? {
-									role: 'user',
-									content: [
-										{ type: 'text', text: noteText },
-										...queuedImages.map((url) => ({ type: 'image_url', image_url: { url } })),
-									],
+						const parsed = parseActions(raw)
+						if (parsed.text.trim()) {
+							noteAgentThought(parsed.text.slice(0, 400))
+						}
+						const askAction = parsed.actions.find((action) => action.tool === 'ask_user')
+						if (askAction) {
+							const [text, options] = askAction.args.split('::')
+							return {
+								content: parsed.text || raw,
+								provider: providerTried,
+								model: chosenModel(settings, providerTried),
+								...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
+								actions: doneActions,
+								activity: sandboxStatsSnapshot(),
+								question: {
+									text: (text ?? 'Как поступить?').trim(),
+									options: (options ?? '')
+										.split(';;')
+										.map((option) => option.trim())
+										.filter(Boolean),
+								},
+							}
+						}
+						if (parsed.actions.length === 0 || round === 3) {
+							// A model that only shouted commands and never spoke still owes
+							// the player words - summarize what was done instead of silence.
+							const silent = !parsed.text.trim()
+							return {
+								content: silent
+									? doneActions.length > 0
+										? `Готово: выполнил ${doneActions.length} действий — смотри отметки ниже. Спроси, если нужны подробности.`
+										: 'Готово. Спроси, если нужны подробности.'
+									: parsed.text || raw,
+								provider: providerTried,
+								model: chosenModel(settings, providerTried),
+								...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
+								actions: doneActions,
+								activity: sandboxStatsSnapshot(),
+							}
+						}
+						const notes: string[] = []
+						const seenImages: string[] = []
+						for (const action of parsed.actions.slice(0, 6)) {
+							if (playerTookOver()) {
+								notes.push('Игрок сам перешёл на другой экран - он передумал. Немедленно прекрати действия по этому запросу и попрощайся.')
+								return {
+									content:
+										'Остановился: ты ушёл на другой экран, так что я решил, что ты передумал. Скажи, если продолжить.',
+									provider: providerTried,
+								model: chosenModel(settings, providerTried),
+								...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
+									actions: doneActions,
+									activity: sandboxStatsSnapshot(),
 								}
-							: { role: 'user', content: noteText }
-					pendingVisionImages.length = 0
-					payload = [
-						...payload,
-						{ role: 'assistant', content: raw },
-						noteMessage,
-					]
-					// A breath between tool rounds keeps anonymous free tiers
-					// from answering 429 in the middle of a task - kept short,
-					// the player is waiting.
-					await sleep(300, request.signal)
-				}
-				} catch (error) {
-					lastError = error
-					if (request.signal?.aborted) throw error
-					if (providerId === settings.provider && !primaryFailure) {
-						// The player's own choice failed: its story leads the report.
-						primaryFailure = String((error as Error)?.message ?? error).slice(0, 200)
-					}
-					if (!failedProviderLabel) {
-						failedProviderLabel = providerById(providerId)?.label ?? providerId
-						failedDetail = String((error as Error)?.message ?? error).slice(0, 140)
-					}
-					if (!isRetryable(error)) {
-						if (providerId === settings.provider) {
-							// A hard no from the chosen provider (a bad key, a 403, a
-							// missing model) is worth telling immediately and clearly,
-							// with the peak-hours hint when it applies.
-							const label = providerById(providerId)?.label ?? providerId
-							const advice =
-								providerId === 'zai' && zaiPeakHoursNow()
-								? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
-								: 'Проверь этот провайдер в настройках моделей, или подожди минуту и напиши ещё раз.'
-							throw new Error(`${label} не ответил: ${String((error as Error)?.message ?? error).slice(0, 200)}. ${advice}`)
+							}
+							const result = await runTool(action.tool, action.args)
+							doneActions.push(action.tool)
+							request.onActionDone?.(action.tool, action.args, result)
+							const cards = extractCards(result)
+							if (cards.text.trim()) {
+								noteAgentThought(`→ ${action.tool}: ${cards.text.slice(0, 160)}`)
+							}
+							if (cards.image) seenImages.push(cards.image)
+							notes.push(`Результат ${action.tool}(${action.args}): ${cards.text.slice(0, 1200)}`)
 						}
-						// A fallback that hard-fails is simply skipped - the next
-						// one in line still gets its chance.
-						continue
+						const noteText = notes.join('\n') + '\nПродолжи ответ пользователю.'
+						const queuedImages = seenImages.length > 0 ? seenImages : pendingVisionImages.splice(0, pendingVisionImages.length)
+						const noteMessage: ChatMessagePayload =
+							queuedImages.length > 0
+								? {
+										role: 'user',
+										content: [
+											{ type: 'text', text: noteText },
+											...queuedImages.map((url) => ({ type: 'image_url', image_url: { url } })),
+										],
+									}
+								: { role: 'user', content: noteText }
+						pendingVisionImages.length = 0
+						payload = [
+							...payload,
+							{ role: 'assistant', content: raw },
+							noteMessage,
+						]
+						// A breath between tool rounds keeps anonymous free tiers
+						// from answering 429 in the middle of a task - kept short,
+						// the player is waiting.
+						await sleep(300, request.signal)
 					}
-				}
+					} catch (error) {
+						lastError = error
+						if (request.signal?.aborted) throw error
+						if (providerId === settings.provider && !primaryFailure) {
+							// The player's own choice failed: its story leads the report.
+							primaryFailure = String((error as Error)?.message ?? error).slice(0, 200)
+						}
+						if (!failedProviderLabel) {
+							failedProviderLabel = providerById(providerId)?.label ?? providerId
+							failedDetail = String((error as Error)?.message ?? error).slice(0, 140)
+						}
+											if (isPermanentRefusal(error)) blockProvider(providerId)
+						if (!isRetryable(error)) {
+							if (
+											providerId === settings.provider &&
+											!(/free_rate_limited|Free models are not available/i.test(String(error)))
+										) {
+								// A hard no from the chosen provider (a bad key, a 403, a
+								// missing model) is worth telling immediately and clearly,
+								// with the peak-hours hint when it applies.
+								const label = providerById(providerId)?.label ?? providerId
+								const advice =
+									providerId === 'zai' && zaiPeakHoursNow()
+									? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
+									: 'Проверь этот провайдер в настройках моделей, или подожди минуту и напиши ещё раз.'
+								throw new Error(`${label} не ответил: ${String((error as Error)?.message ?? error).slice(0, 200)}. ${advice}`)
+							}
+							// A fallback that hard-fails is simply skipped - the next
+							// one in line still gets its chance.
+							continue
+						}
+					}
+			}
 		}
 	} finally {
 		endAgentRun()
@@ -1408,10 +1462,12 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 		// first one, so its story is the one that answers "why did it fail".
 		const headline = primaryFailure || detail || 'Ни один провайдер не ответил'
 		const label = providerById(aiSettings.value.provider)?.label ?? aiSettings.value.provider
-		const advice =
-			aiSettings.value.provider === 'zai' && zaiPeakHoursNow()
-			? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
-			: 'Подожди минуту и напиши ещё раз, или проверь ключ и модель этого провайдера в настройках моделей.'
+					const story = primaryFailure || detail || ''
+					const advice = /free_rate_limited|Free models are not available/i.test(story)
+						? 'Бесплатные модели этого провайдера не пускают твой ключ: владельцу аккаунта нужно привязать GitHub на сайте провайдера. Выбери другого провайдера или платную модель в настройках моделей - остальные из цепочки тоже были опрошены.'
+						: aiSettings.value.provider === 'zai' && zaiPeakHoursNow()
+						? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
+						: 'Подожди минуту и напиши ещё раз, или проверь ключ и модель этого провайдера в настройках моделей.'
 		throw new Error(`${label} не ответил: ${headline || 'ни один канал не ответил'}. ${advice}`)
 }
 

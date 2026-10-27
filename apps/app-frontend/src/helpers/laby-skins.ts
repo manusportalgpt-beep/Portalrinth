@@ -205,6 +205,57 @@ export function pngDataUrl(png: Uint8Array) {
 
 const previewCache = new Map<string, Promise<string>>()
 
+// ---- Persistent previews ---------------------------------------------------
+//
+// Canvas previews used to live in memory only: the second visit to the same
+// grid refetched every texture. A small IndexedDB shelf keeps the drawn
+// previews between runs - a skin the player has already seen paints the
+// moment the page opens, and a missing or broken entry just redraws once.
+
+const PREVIEW_DB = 'portalrinth-laby-previews'
+
+function openPreviewDb(): Promise<IDBDatabase | null> {
+        return new Promise((resolve) => {
+                try {
+                        const request = indexedDB.open(PREVIEW_DB, 1)
+                        request.onupgradeneeded = () => {
+                                if (!request.result.objectStoreNames.contains('previews')) {
+                                        request.result.createObjectStore('previews')
+                                }
+                        }
+                        request.onsuccess = () => resolve(request.result)
+                        request.onerror = () => resolve(null)
+                } catch {
+                        resolve(null)
+                }
+        })
+}
+
+async function readStoredPreview(hash: string): Promise<string | null> {
+        const db = await openPreviewDb()
+        if (!db) return null
+        return new Promise((resolve) => {
+                try {
+                        const request = db.transaction('previews').objectStore('previews').get(hash)
+                        request.onsuccess = () =>
+                                resolve(typeof request.result === 'string' ? request.result : null)
+                        request.onerror = () => resolve(null)
+                } catch {
+                        resolve(null)
+                }
+        })
+}
+
+async function storePreview(hash: string, dataUrl: string): Promise<void> {
+        const db = await openPreviewDb()
+        if (!db) return
+        try {
+                db.transaction('previews', 'readwrite').objectStore('previews').put(dataUrl, hash)
+        } catch {
+                /* an unstored preview just redraws next time */
+        }
+}
+
 /**
  * A front view of the skin, drawn on a canvas from its texture. The remote
  * render services answer a texture hash they do not know with the default
@@ -213,10 +264,19 @@ const previewCache = new Map<string, Promise<string>>()
 export function labySkinPreview(hash: string): Promise<string> {
         let cached = previewCache.get(hash)
         if (!cached) {
-                cached = drawSkinPreview(hash).catch((error) => {
-                        previewCache.delete(hash)
-                        throw error
-                })
+                cached = (async () => {
+                        const stored = await readStoredPreview(hash)
+                        if (stored) return stored
+                        return drawSkinPreview(hash)
+                })()
+                        .then((url) => {
+                                void storePreview(hash, url)
+                                return url
+                        })
+                        .catch((error) => {
+                                previewCache.delete(hash)
+                                throw error
+                        })
                 previewCache.set(hash, cached)
         }
         return cached

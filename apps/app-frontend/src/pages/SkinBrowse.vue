@@ -3,6 +3,8 @@ import {
 	ArrowDownIcon,
 	ArrowUpIcon,
 	CheckIcon,
+	ChevronLeftIcon,
+	ChevronRightIcon,
 	CompassIcon,
 	ExternalIcon,
 	EyeIcon,
@@ -80,7 +82,8 @@ const messages = defineMessages({
 		defaultMessage: 'Could not reach laby.net. Check the connection and try again.',
 	},
 	retry: { id: 'app.skin-browse.retry', defaultMessage: 'Try again' },
-	loadMore: { id: 'app.skin-browse.load-more', defaultMessage: 'Load more' },
+	page: { id: 'app.skin-browse.page', defaultMessage: 'Стр. {page}' },
+	pageLast: { id: 'app.skin-browse.page-last', defaultMessage: 'Стр. {page} — последняя' },
 	modalTitle: { id: 'app.skin-browse.modal-title', defaultMessage: 'Skin' },
 	uses: { id: 'app.skin-browse.uses', defaultMessage: '{count} players' },
 	crouch: { id: 'app.skin-browse.crouch', defaultMessage: 'Crouch' },
@@ -140,6 +143,84 @@ const hasMore = ref(true)
 /** Showing look-alikes of the skin on the account instead of a search. */
 const similarMode = ref(false)
 let requestId = 0
+
+// ---- Pages ----------------------------------------------------------------
+//
+// The grid is paged, 55 cards to a page: the arrow flips to the next five
+// dozen, and every page the player has seen is remembered on disk - the next
+// visit draws it instantly from the shelf while the live list quietly
+// refreshes behind it. The page to come downloads itself in the background.
+
+const UI_PAGE_SIZE = 55
+const PAGE_CACHE_KEY = 'portalrinth-skinbrowse-pages'
+const PAGE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000
+const PAGE_CACHE_LIMIT = 80
+
+let buffer: LabySkin[] = []
+let labyPagesLoaded = 0
+let labyDone = false
+
+const pageCacheKeyOf = (q: string, p: number) => `${q.trim().toLowerCase() || '__all'}:${p}`
+
+function readPageCache(q: string, p: number): LabySkin[] | null {
+	try {
+		const all = JSON.parse(localStorage.getItem(PAGE_CACHE_KEY) ?? '{}') as Record<
+			string,
+			{ at: number; skins: LabySkin[] }
+		>
+		const hit = all[pageCacheKeyOf(q, p)]
+		if (!hit || Date.now() - hit.at > PAGE_CACHE_TTL || !Array.isArray(hit.skins)) return null
+		return hit.skins
+	} catch {
+		return null
+	}
+}
+
+function writePageCache(q: string, p: number, list: LabySkin[]) {
+	try {
+		const all = new Map(
+			Object.entries(
+				JSON.parse(localStorage.getItem(PAGE_CACHE_KEY) ?? '{}') as Record<
+					string,
+					{ at: number; skins: LabySkin[] }
+				>,
+			),
+		)
+		// The oldest pages give way when the shelf runs out of room.
+		const keys = [...all.keys()]
+		if (keys.length >= PAGE_CACHE_LIMIT) {
+			keys.sort((a, b) => (all.get(a)?.at ?? 0) - (all.get(b)?.at ?? 0))
+			for (const key of keys.slice(0, keys.length - PAGE_CACHE_LIMIT + 1)) all.delete(key)
+		}
+		all.set(pageCacheKeyOf(q, p), { at: Date.now(), skins: list })
+		localStorage.setItem(PAGE_CACHE_KEY, JSON.stringify(Object.fromEntries(all)))
+	} catch {
+		/* a full shelf just means the next visit refetches */
+	}
+}
+
+/** Pulls laby.net pages until `need` skins sit in the buffer (or the well
+ * runs dry). One shared buffer per visit: flipping back and forth never
+ * refetches what is already here. */
+async function ensureBuffer(q: string, need: number, id: number): Promise<void> {
+	while (buffer.length < need && !labyDone) {
+		const found = await searchLabySkins(q, labyPagesLoaded + 1)
+		if (id !== requestId) return
+		labyPagesLoaded += 1
+		buffer = [...buffer, ...found]
+		if (found.length < LABY_PAGE_SIZE) labyDone = true
+	}
+}
+
+async function fetchUiPage(q: string, p: number, id: number): Promise<LabySkin[]> {
+	await ensureBuffer(q, p * UI_PAGE_SIZE, id)
+	if (id !== requestId) return []
+	return buffer.slice((p - 1) * UI_PAGE_SIZE, p * UI_PAGE_SIZE)
+}
+
+function updateHasMore(p: number) {
+	hasMore.value = !labyDone || buffer.length > p * UI_PAGE_SIZE
+}
 
 /** Grid previews, drawn on a canvas from each skin's own texture. */
 const previews = ref<Record<string, string>>({})
@@ -240,27 +321,73 @@ async function load(reset: boolean) {
 	const id = ++requestId
 	if (reset) {
 		page.value = 1
-		hasMore.value = true
+		buffer = []
+		labyPagesLoaded = 0
+		labyDone = false
 	}
 	loading.value = true
 	failed.value = false
-	try {
-		const found = await searchLabySkins(query.value, page.value)
+	const q = query.value
+	const p = page.value
+	// A page the player has already seen comes off the shelf first: the grid
+	// is full the moment the tab opens, no waiting for the network.
+	const cached = readPageCache(q, p)
+	if (cached && cached.length > 0) {
 		if (id !== requestId) return
-		skins.value = reset ? found : [...skins.value, ...found]
-		hasMore.value = found.length >= LABY_PAGE_SIZE
+		skins.value = cached
+		updateHasMore(p)
+		loading.value = false
+		void refreshPage(q, p, id)
+		void preloadNext(q, p)
+		return
+	}
+	try {
+		const list = await fetchUiPage(q, p, id)
+		if (id !== requestId) return
+		skins.value = list
+		updateHasMore(p)
+		if (list.length > 0) writePageCache(q, p, list)
+		void preloadNext(q, p)
 	} catch {
 		if (id !== requestId) return
 		failed.value = true
-		if (reset) skins.value = []
 	} finally {
 		if (id === requestId) loading.value = false
 	}
 }
 
-function loadMore() {
-	page.value += 1
-	load(false)
+/** Freshens the page behind the cached copy: nothing flickers unless the
+ * live list actually changed. */
+async function refreshPage(q: string, p: number, id: number) {
+	try {
+		const list = await fetchUiPage(q, p, id)
+		if (id !== requestId || list.length === 0) return
+		writePageCache(q, p, list)
+		const same =
+			list.length === skins.value.length &&
+			list.every((skin, index) => skin.image_hash === skins.value[index]?.image_hash)
+		if (!same) skins.value = list
+		updateHasMore(p)
+	} catch {
+		/* the cached copy stays on the grid */
+	}
+}
+
+/** The next page downloads itself while this one is being looked at. */
+async function preloadNext(q: string, p: number) {
+	if (!hasMore.value) return
+	try {
+		const list = await fetchUiPage(q, p + 1, requestId)
+		if (list.length > 0) writePageCache(q, p + 1, list)
+	} catch {
+		/* the next flip will simply fetch then */
+	}
+}
+
+function goTo(p: number) {
+	if (p < 1 || loading.value || p === page.value) return
+	page.value = p
+	void load(false)
 }
 
 let searchTimer: ReturnType<typeof setTimeout> | undefined
@@ -506,8 +633,19 @@ const usesFormatter = new Intl.NumberFormat()
 		<div v-if="loading" class="flex justify-center py-4">
 			<SpinnerIcon class="size-6 animate-spin text-secondary" />
 		</div>
-		<div v-else-if="hasMore && skins.length > 0 && !similarMode" class="flex justify-center py-2">
-			<Button @click="loadMore">{{ formatMessage(messages.loadMore) }}</Button>
+		<div
+			v-else-if="!similarMode && skins.length > 0"
+			class="flex items-center justify-center gap-3 py-2"
+		>
+			<Button type="outlined" :disabled="loading || page <= 1" @click="goTo(page - 1)">
+				<ChevronLeftIcon />
+			</Button>
+			<span class="text-sm tabular-nums text-secondary">
+				{{ formatMessage(hasMore ? messages.page : messages.pageLast, { page }) }}
+			</span>
+			<Button type="outlined" :disabled="loading || !hasMore" @click="goTo(page + 1)">
+				<ChevronRightIcon />
+			</Button>
 		</div>
 	</div>
 

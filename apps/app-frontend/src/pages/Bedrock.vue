@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import {
 	CheckIcon,
+	ChevronLeftIcon,
+	ChevronRightIcon,
 	DownloadIcon,
 	EditIcon,
 	ExternalIcon,
@@ -112,7 +114,8 @@ const messages = defineMessages({
 	noFiles: { id: 'app.bedrock.no-files', defaultMessage: 'This project has no files to install.' },
 	openCurseforge: { id: 'app.bedrock.open-curseforge', defaultMessage: 'Open on CurseForge' },
 	nothingFound: { id: 'app.bedrock.nothing-found', defaultMessage: 'Nothing found' },
-	loadMore: { id: 'app.bedrock.load-more', defaultMessage: 'Load more' },
+	page: { id: 'app.bedrock.page', defaultMessage: 'Стр. {page}' },
+	pageLast: { id: 'app.bedrock.page-last', defaultMessage: 'Стр. {page} — последняя' },
 	downloads: { id: 'app.bedrock.downloads', defaultMessage: '{count} downloads' },
 	byAuthor: { id: 'app.bedrock.by-author', defaultMessage: 'by {author}' },
 	noKey: {
@@ -308,7 +311,10 @@ const sortField = ref<number>(BEDROCK_SORTS[0].id)
 const hits = ref<BedrockProject[]>([])
 const total = ref(0)
 const searching = ref(false)
+/** Which page of the browse list is on the screen right now. */
+const pageNum = ref(1)
 
+const maxPage = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
 const sortLabels: Record<string, () => string> = {
 	popularity: () => formatMessage(messages.sortPopularity),
 	downloads: () => formatMessage(messages.sortDownloads),
@@ -368,22 +374,32 @@ async function runSearch(reset: boolean) {
 	const token = ++searchToken
 	searching.value = true
 	try {
+		const index = reset ? 0 : (pageNum.value - 1) * PAGE_SIZE
 		const page = await searchBedrock({
 			classId: classId.value,
 			categoryId: categoryId.value,
 			query: query.value.trim(),
 			sortField: sortField.value,
-			index: reset ? 0 : hits.value.length,
+			index,
 			pageSize: PAGE_SIZE,
 		})
 		if (token !== searchToken) return
-		hits.value = reset ? page.hits : [...hits.value, ...page.hits]
+		hits.value = page.hits
 		total.value = page.total
+		if (reset) pageNum.value = 1
 	} catch (error) {
 		if (token === searchToken) handleError(error as Error)
 	} finally {
 		if (token === searchToken) searching.value = false
 	}
+}
+
+/** Flips the browse list to another page - the whole list is replaced, the
+ * way a book turns a page instead of growing a tail. */
+function goToPage(p: number) {
+	if (p < 1 || p > maxPage.value || p === pageNum.value || searching.value) return
+	pageNum.value = p
+	void runSearch(false)
 }
 
 const installedIds = computed(
@@ -666,9 +682,20 @@ function formatDate(date: string | null) {
 				<div v-if="searching" class="flex justify-center py-4">
 					<SpinnerIcon class="size-6 animate-spin text-secondary" />
 				</div>
-				<div v-else-if="hits.length > 0 && hits.length < total" class="flex justify-center py-2">
-					<Button @click="runSearch(false)">{{ formatMessage(messages.loadMore) }}</Button>
-				</div>
+				<div
+						v-if="total > PAGE_SIZE"
+						class="flex items-center justify-center gap-3 py-2"
+					>
+						<Button type="outlined" :disabled="searching || pageNum <= 1" @click="goToPage(pageNum - 1)">
+							<ChevronLeftIcon />
+						</Button>
+						<span class="text-sm tabular-nums text-secondary">
+							{{ formatMessage(pageNum >= maxPage ? messages.pageLast : messages.page, { page: pageNum }) }}
+						</span>
+						<Button type="outlined" :disabled="searching || pageNum >= maxPage" @click="goToPage(pageNum + 1)">
+							<ChevronRightIcon />
+						</Button>
+					</div>
 			</template>
 		</template>
 

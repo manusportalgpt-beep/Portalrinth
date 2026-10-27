@@ -55,7 +55,7 @@
 											<span>Ветер: <b class="font-semibold text-contrast">{{ windRoseName }}</b></span>
 										</div>
 										<p class="m-0 text-[11px] text-secondary">
-											Метеостанция Open-Meteo · {{ activeWeather.lat?.toFixed(2) }}, {{ activeWeather.lon?.toFixed(2) }}
+											Метеостанция {{ activeWeather.source ?? 'Open-Meteo' }} · {{ activeWeather.lat?.toFixed(2) }}, {{ activeWeather.lon?.toFixed(2) }}
 											<template v-if="activeWeather.elevation !== undefined"> · {{ activeWeather.elevation }} м</template>
 										</p>
 								</template>

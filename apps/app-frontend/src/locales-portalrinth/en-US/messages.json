@@ -2251,5 +2251,17 @@
 	},
 	"app.instance.notes.popup.ok": {
 		"message": "OK"
+	},
+	"app.skin-browse.page": {
+		"message": "Page {page}"
+	},
+	"app.skin-browse.page-last": {
+		"message": "Page {page} — last one"
+	},
+	"app.bedrock.page": {
+		"message": "Page {page}"
+	},
+	"app.bedrock.page-last": {
+		"message": "Page {page} — last one"
 	}
 }

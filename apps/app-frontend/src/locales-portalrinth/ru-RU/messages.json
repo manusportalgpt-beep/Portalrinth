@@ -3751,5 +3751,17 @@
 	},
 	"app.instance.notes.popup.ok": {
 		"message": "Ок"
+	},
+	"app.skin-browse.page": {
+		"message": "Стр. {page}"
+	},
+	"app.skin-browse.page-last": {
+		"message": "Стр. {page} — последняя"
+	},
+	"app.bedrock.page": {
+		"message": "Стр. {page}"
+	},
+	"app.bedrock.page-last": {
+		"message": "Стр. {page} — последняя"
 	}
 }

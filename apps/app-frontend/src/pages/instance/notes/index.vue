@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { StickyNotePlusIcon } from '@modrinth/assets'
 import { Button, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
@@ -71,13 +70,7 @@ onBeforeUnmount(() => {
 
 <template>
 	<div class="flex min-h-0 flex-col gap-4">
-		<div>
-			<h2 class="m-0 flex items-center gap-2 text-lg font-bold text-contrast">
-				<StickyNotePlusIcon class="size-5 text-orange" />
-				{{ formatMessage(messages.title) }}
-			</h2>
-			<p class="mt-1 mb-0 text-sm text-secondary">{{ formatMessage(messages.description) }}</p>
-		</div>
+		<p class="m-0 text-sm text-secondary">{{ formatMessage(messages.description) }}</p>
 		<textarea
 			v-model="text"
 			class="min-h-[16rem] w-full grow resize-y rounded-2xl border-0 bg-surface-3 p-3 text-sm text-contrast outline-none placeholder:text-secondary focus:outline-none"
