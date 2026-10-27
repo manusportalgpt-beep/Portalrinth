@@ -102,8 +102,9 @@ onMounted(loadAll)
 async function toggleTranslate(repo: RepoState, release: ReleaseNote) {
         const key = release.tag
         if (repo.translated[key]) {
-                const next = { ...repo.translated }
-                delete next[key]
+                // Destructuring instead of delete: the lint forbids dynamic deletion.
+                const { [key]: removed, ...next } = repo.translated
+                void removed
                 repo.translated = next
                 return
         }
@@ -115,8 +116,8 @@ async function toggleTranslate(repo: RepoState, release: ReleaseNote) {
         } catch {
                 repo.translated = { ...repo.translated, [key]: release.body }
         } finally {
-                const nextPending = { ...repo.pending }
-                delete nextPending[key]
+                const { [key]: pending, ...nextPending } = repo.pending
+                void pending
                 repo.pending = nextPending
         }
 }

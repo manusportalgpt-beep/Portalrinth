@@ -11,7 +11,9 @@ import {
 	HistoryIcon,
 	PlusIcon,
 	StopCircleIcon,
+	TrashIcon,
 	XIcon,
+	RefreshCwIcon,
 } from '@modrinth/assets'
 import { Button, IconButton, Input, useVIntl } from '@modrinth/ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'

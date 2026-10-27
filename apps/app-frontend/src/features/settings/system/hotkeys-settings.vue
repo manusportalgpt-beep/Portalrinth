@@ -5,7 +5,7 @@
  * the keys, Esc backs out), the cross resets it to the default. Combos are
  * stored by KeyboardEvent.code, so a Russian layout never breaks them.
  */
-import { KeyboardIcon, RotateCcwIcon } from '@modrinth/assets'
+import { KeyboardIcon, RotateCounterClockwiseIcon } from '@modrinth/assets'
 import { IconButton, defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, onBeforeUnmount, ref } from 'vue'
 
@@ -110,7 +110,7 @@ onBeforeUnmount(stopRecording)
                                         :label="formatMessage(messages.reset)"
                                         @click="() => reset(row.id)"
                                 >
-                                        <RotateCcwIcon class="!size-3.5" />
+                                        <RotateCounterClockwiseIcon class="!size-3.5" />
                                 </IconButton>
                         </div>
                 </div>

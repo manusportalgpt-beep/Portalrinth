@@ -153,9 +153,7 @@ import {
         stopwatchPause,
         stopwatchReset,
         stopwatchStart,
-        systemTime,
         systemTimezone,
-        timeOfDay,
         timerInstances,
         timerPause,
         timerReset,
@@ -165,6 +163,7 @@ import {
         worldTimes,
         type TimerAction,
 } from '@/helpers/portalrinth-clock'
+import { systemTime, timeOfDay } from '@/helpers/portalrinth-widgets'
 
 const { formatMessage } = useVIntl()
 
