@@ -3763,5 +3763,11 @@
 	},
 	"app.bedrock.page-last": {
 		"message": "Стр. {page} — последняя"
+	},
+	"app.skin-browse.similar-page": {
+		"message": "Стр. {page} из {total}"
+	},
+	"app.skin-browse.similar-category": {
+		"message": "Категория: {tags}"
 	}
 }

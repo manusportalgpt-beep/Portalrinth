@@ -175,7 +175,8 @@ function firstSuccess<T>(tasks: (() => Promise<T>)[]): Promise<T> {
 export async function labySkinTexture(hash: string): Promise<Uint8Array> {
         const sources = labySkinTextureSources(hash)
         const viaApp = (source: string) => normalize_skin_texture(source)
-        const viaBrowser = async (source: string) => browserTextureBytes(source)
+        const viaBrowser = async (source: string) =>
+            normalize_skin_texture(await browserTextureBytes(source))
         let lastError: unknown
         try {
                 const texture = await firstSuccess([
@@ -321,6 +322,13 @@ async function drawSkinPreview(hash: string): Promise<string> {
  */
 export const similarSkinReference = ref<{ texture: string; variant: SkinModel } | null>(null)
 
+/**
+ * The category the reference was filed under: its own laby.net tags when it
+ * has them, the palette's colours when it does not - the player's own skin
+ * among them. Discover names it above the look-alikes.
+ */
+export const similarSkinCategory = ref<string[]>([])
+
 // ---- Similarity ---------------------------------------------------------
 
 const BINS = 4
@@ -431,7 +439,12 @@ export async function findSimilarLabySkins(
         if (!pixels) return []
         const own = fingerprint(pixels)
 
-        const queries = [...(reference.tags ?? []).slice(0, 3), ...own.colours]
+        // A skin without laby.net tags - the player's own among them - is filed
+        // under the category its palette points to, so the same tag search runs
+        // for it as for any library skin.
+        similarSkinCategory.value =
+            reference.tags && reference.tags.length > 0 ? reference.tags.slice(0, 3) : own.colours
+        const queries = [...similarSkinCategory.value, ...own.colours]
         const candidates = new Map<string, LabySkin>()
         const pages = await Promise.all(queries.map((query) => searchLabySkins(query).catch(() => [])))
         for (const page of pages) {
@@ -456,9 +469,14 @@ export async function findSimilarLabySkins(
                 }
         })
 
-        return scored
+        // Skins whose texture would not come in time still take the row, at the
+        // end: an approximate look-alike beats an empty shelf - on a lossy road
+        // to laby.net this is what keeps "similar" from reading as "none".
+        const good = scored
                 .filter((entry) => entry.score >= 0)
                 .sort((a, b) => b.score - a.score)
-                .slice(0, limit)
-                .map((entry) => entry.skin)
+        const rest = scored
+                .filter((entry) => entry.score < 0)
+                .sort((a, b) => b.skin.use_count - a.skin.use_count)
+        return [...good, ...rest].slice(0, limit).map((entry) => entry.skin)
 }

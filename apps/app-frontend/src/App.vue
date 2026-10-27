@@ -295,7 +295,7 @@ async function handleFullscreenChange() {
         }
 }
 
-const APP_LEFT_NAV_WIDTH = '4rem'
+const APP_LEFT_NAV_WIDTH = '3.5rem'
 const APP_SIDEBAR_WIDTH = 300
 const INTERCOM_BUBBLE_DEFAULT_PADDING = 20
 const credentials = ref()
@@ -2818,7 +2818,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 .app-grid-layout,
 .app-contents {
         --top-bar-height: 3rem;
-        --left-bar-width: 4rem;
+        --left-bar-width: 3.5rem;
         --right-bar-width: 300px;
 }
 
@@ -2896,6 +2896,12 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
         &.sidebar-collapsed {
                 grid-template-columns: 1fr var(--left-bar-width);
                 --sidebar-column: var(--left-bar-width);
+
+                /* The folded rail is the same frame the unfolded panel is: the page
+                 * meets it with the same arc instead of a hard edge. */
+                .app-viewport {
+                        border-top-right-radius: var(--radius-xl);
+                }
         }
 
         @media (prefers-reduced-motion) {

@@ -47,6 +47,7 @@ import {
 	labySkinVariant,
 	pngDataUrl,
 	searchLabySkins,
+	similarSkinCategory,
 	similarSkinReference,
 } from '@/helpers/laby-skins'
 import { add_and_equip_custom_skin, type Cape, get_available_capes } from '@/helpers/skins'
@@ -110,6 +111,14 @@ const messages = defineMessages({
 	similarEmpty: {
 		id: 'app.skin-browse.similar-empty',
 		defaultMessage: 'No similar skins found',
+	},
+	similarPageOf: {
+		id: 'app.skin-browse.similar-page',
+		defaultMessage: 'Page {page} of {total}',
+	},
+	similarCategory: {
+		id: 'app.skin-browse.similar-category',
+		defaultMessage: 'Category: {tags}',
 	},
 })
 
@@ -500,6 +509,21 @@ const selectedCape = ref<Cape | undefined>(undefined)
 const installing = ref(false)
 const similar = ref<LabySkin[]>([])
 const similarLoading = ref(false)
+/** The look-alikes are paged like the grid behind the modal: a shelf of
+ * eight at a time instead of a cramped scroll. */
+const SIMILAR_PER_PAGE = 8
+const similarPage = ref(1)
+const similarPages = computed(() => Math.max(1, Math.ceil(similar.value.length / SIMILAR_PER_PAGE)))
+const similarPaged = computed(() =>
+	similar.value.slice(
+		(similarPage.value - 1) * SIMILAR_PER_PAGE,
+		similarPage.value * SIMILAR_PER_PAGE,
+	),
+)
+function similarGoTo(p: number) {
+	if (p < 1 || p > similarPages.value) return
+	similarPage.value = p
+}
 let viewerRequest = 0
 
 async function loadCapes() {
@@ -523,6 +547,7 @@ async function select(skin: LabySkin) {
 	renderStep.set(skin.image_hash, 0)
 	currentRender.value = renderChain(skin.image_hash)[0]
 	similar.value = []
+	similarPage.value = 1
 	try {
 		const texture = await labySkinTexture(skin.image_hash)
 		if (id !== viewerRequest) return
@@ -633,6 +658,10 @@ const usesFormatter = new Intl.NumberFormat()
 					<XIcon /> {{ formatMessage(messages.backToAll) }}
 				</Button>
 			</div>
+		</div>
+
+		<div v-if="similarMode && similarSkinCategory.length > 0" class="text-sm text-secondary">
+			{{ formatMessage(messages.similarCategory, { tags: similarSkinCategory.join(', ') }) }}
 		</div>
 
 		<div
@@ -790,7 +819,7 @@ const usesFormatter = new Intl.NumberFormat()
 					</div>
 					<div v-else class="skin-browse-similar">
 						<SkinButton
-							v-for="skin in similar"
+							v-for="skin in similarPaged"
 							:key="skin.image_hash"
 							:forward-image-src="previewSrc(skin.image_hash)"
 							:selected="false"
@@ -798,6 +827,33 @@ const usesFormatter = new Intl.NumberFormat()
 							@error="onPreviewError(skin.image_hash)"
 							@select="select(skin)"
 						/>
+					</div>
+					<div
+						v-if="!similarLoading && similar.length > SIMILAR_PER_PAGE"
+						class="flex items-center justify-center gap-2"
+					>
+						<Button
+							type="outlined"
+							:disabled="similarPage <= 1"
+							@click="similarGoTo(similarPage - 1)"
+						>
+							<ChevronLeftIcon />
+						</Button>
+						<span class="text-sm tabular-nums text-secondary">
+							{{
+								formatMessage(messages.similarPageOf, {
+									page: similarPage,
+									total: similarPages,
+								})
+							}}
+						</span>
+						<Button
+							type="outlined"
+							:disabled="similarPage >= similarPages"
+							@click="similarGoTo(similarPage + 1)"
+						>
+							<ChevronRightIcon />
+						</Button>
 					</div>
 				</section>
 			</div>
@@ -836,11 +892,8 @@ const usesFormatter = new Intl.NumberFormat()
 
 .skin-browse-similar {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
-	gap: 0.5rem;
-	max-height: 14rem;
-	overflow-y: auto;
-	padding-right: 0.25rem;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 0.625rem;
 }
 
 .skin-browse-button--active {

@@ -259,21 +259,24 @@ const messages = defineMessages({
 				thing on the rail because it is the first thing the panel shows
 				when it opens.
 			-->
-			<IconButton
+			<button
 				v-tooltip="formatMessage(messages.playingAs)"
-				:label="formatMessage(messages.playingAs)"
+				type="button"
+				class="rounded-[6px] border-0 bg-transparent p-0 cursor-pointer transition-[filter] duration-150 hover:brightness-110"
+				:aria-label="formatMessage(messages.playingAs)"
 				@click="unfold"
 			>
 				<img
 					v-if="headUrl"
 					:src="headUrl"
 					alt=""
-					class="size-6 rounded-[3px] object-cover"
+					class="size-8 rounded-[5px] object-cover"
 					draggable="false"
 				/>
-				<UserIcon v-else />
-			</IconButton>
+				<UserIcon v-else class="size-8 text-primary" />
+			</button>
 			<IconButton
+				size="lg"
 				v-tooltip="formatMessage(messages.findFriends)"
 				:label="formatMessage(messages.findFriends)"
 				@click="showFindFriendsModal()"
@@ -281,6 +284,7 @@ const messages = defineMessages({
 				<SearchIcon />
 			</IconButton>
 			<IconButton
+				size="lg"
 				v-tooltip="formatMessage(messages.addFriend)"
 				:label="formatMessage(messages.addFriend)"
 				@click="showAddFriendModal()"
@@ -297,7 +301,7 @@ const messages = defineMessages({
 			-->
 			<div v-if="railFriends.length > 0" class="mt-2 flex w-full flex-col items-center gap-1.5">
 				<div
-					class="h-0.5 w-6 rounded-full"
+					class="h-0.5 w-8 rounded-full"
 					:class="railOnline.length > 0 ? 'bg-green-500' : 'bg-surface-5'"
 				/>
 				<template v-if="railOnline.length > 0">
@@ -310,9 +314,9 @@ const messages = defineMessages({
 						:aria-label="friend.username"
 						@click="openProfile(friend.username)"
 					>
-						<UserAvatar :src="friend.avatar" size="24px" :badge="friend.online" />
+						<UserAvatar :src="friend.avatar" size="32px" :badge="friend.online" />
 					</button>
-					<div class="h-0.5 w-6 rounded-full bg-red-500" />
+					<div class="h-0.5 w-8 rounded-full bg-red-500" />
 				</template>
 				<button
 					v-for="friend in railOffline"
@@ -323,7 +327,7 @@ const messages = defineMessages({
 					:aria-label="friend.username"
 					@click="openProfile(friend.username)"
 				>
-					<UserAvatar :src="friend.avatar" size="24px" :grayscale="friend.accepted" />
+					<UserAvatar :src="friend.avatar" size="32px" :grayscale="friend.accepted" />
 				</button>
 			</div>
 		</div>
