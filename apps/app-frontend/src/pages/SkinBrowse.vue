@@ -204,11 +204,21 @@ function writePageCache(q: string, p: number, list: LabySkin[]) {
  * refetches what is already here. */
 async function ensureBuffer(q: string, need: number, id: number): Promise<void> {
 	while (buffer.length < need && !labyDone) {
-		const found = await searchLabySkins(q, labyPagesLoaded + 1)
-		if (id !== requestId) return
-		labyPagesLoaded += 1
-		buffer = [...buffer, ...found]
-		if (found.length < LABY_PAGE_SIZE) labyDone = true
+		try {
+			const found = await searchLabySkins(q, labyPagesLoaded + 1)
+			if (id !== requestId) return
+			labyPagesLoaded += 1
+			buffer = [...buffer, ...found]
+			if (found.length < LABY_PAGE_SIZE) labyDone = true
+		} catch (error) {
+			// laby.net caps the deep pages (offset past ~1500 answers 401):
+			// that is the end of the well, not a failure - the pages already
+			// collected stay good.
+			if (/\b401\b/.test(String(error))) labyDone = true
+			else throw error
+		}
+		// A seam between two fetches never shows the same skin twice.
+		buffer = [...new Map(buffer.map((skin) => [skin.image_hash, skin])).values()]
 	}
 }
 
@@ -310,12 +320,40 @@ function advanceRender(hash: string): string | null {
  * their requests. The next road in the chain takes the card; when every
  * road is dead the card stays as it was instead of flickering.
  */
+/**
+ * The picture on a card did not come through - some networks drop part of
+ * their requests. The next road in the chain takes the card; when every
+ * road is dead the card gets one more canvas try, and only then leaves
+ * the grid - a broken tile helps nobody.
+ */
+const previewGaveUp = ref<Set<string>>(new Set())
+const previewRetried = new Set<string>()
+
 function onPreviewError(hash: string) {
 	const next = advanceRender(hash)
 	if (next) {
 		previews.value = { ...previews.value, [hash]: next }
+		return
 	}
+	if (!previewRetried.has(hash)) {
+		// One more honest try: the canvas path, from the very first road.
+		previewRetried.add(hash)
+		renderStep.set(hash, 0)
+		previewRequested.delete(hash)
+		const { [hash]: gone, ...rest } = previews.value
+		void gone
+		previews.value = rest
+		queuePreview(hash)
+		return
+	}
+	// Nothing worked - the card leaves the grid instead of sulking dark.
+	previewGaveUp.value = new Set([...previewGaveUp.value, hash])
 }
+
+/** Cards whose every preview road died leave the grid quietly. */
+const visibleSkins = computed(() =>
+	skins.value.filter((skin) => !previewGaveUp.value.has(skin.image_hash)),
+)
 
 async function load(reset: boolean) {
 	const id = ++requestId
@@ -620,7 +658,7 @@ const usesFormatter = new Intl.NumberFormat()
 
 		<div v-else class="skin-browse-grid">
 			<SkinButton
-				v-for="skin in skins"
+				v-for="skin in visibleSkins"
 				:key="skin.image_hash"
 				:forward-image-src="previewSrc(skin.image_hash)"
 				:selected="false"

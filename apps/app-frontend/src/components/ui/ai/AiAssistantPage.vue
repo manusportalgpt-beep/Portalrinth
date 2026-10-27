@@ -26,6 +26,7 @@ import {
 	type AiJarCard,
 	type AiMessage,
 	type AiModCard,
+	type AiSkinCard,
 	agentBusy,
 	agentPhase,
 	agentQueue,
@@ -45,6 +46,9 @@ import {
 	stopAgentRun,
 	zaiPeakHoursLabel,
 } from '@/helpers/ai-assistant'
+import { add_and_equip_custom_skin } from '@/helpers/skins'
+import { labySkinPreview, labySkinTexture } from '@/helpers/laby-skins'
+import { skinRenderUrl } from '@/helpers/skin-render-service'
 import { getInstanceIconUrl, list as listInstances } from '@/helpers/instance'
 import {
 	attachFromPaths,
@@ -133,6 +137,9 @@ const messages = {
 		defaultMessage: 'Эта модель не видит изображения.',
 	},
 	modsTitle: { id: 'app.ai.cards.mods', defaultMessage: 'Моды' },
+	skinsTitle: { id: 'app.ai.cards.skins', defaultMessage: 'Скины' },
+	skinInstall: { id: 'app.ai.cards.skin-install', defaultMessage: 'Поставить' },
+	skinInstalled: { id: 'app.ai.cards.skin-installed', defaultMessage: 'Надет' },
 	jarsTitle: { id: 'app.ai.cards.jars', defaultMessage: 'Файлы' },
 	open: { id: 'app.ai.cards.open', defaultMessage: 'Открыть' },
 	install: { id: 'app.ai.cards.install', defaultMessage: 'В сборку' },
@@ -336,6 +343,47 @@ function toggleCardGroup(key: string) {
 }
 
 async function openMod(mod: AiModCard) {
+
+const skinPreviews = ref<Record<string, string>>({})
+const skinPreviewTried = new Set<string>()
+const skinInstalling = ref<string[]>([])
+const skinInstalledSkins = ref<string[]>([])
+
+/**
+ * The preview of a recommended skin: drawn from its texture (the same
+ * canvas the Discover grid uses); the chosen 3D service stands in when
+ * the texture route is dead.
+ */
+function skinPreviewSrc(hash: string): string {
+	if (skinPreviews.value[hash]) return skinPreviews.value[hash]
+	if (!skinPreviewTried.has(hash)) {
+		skinPreviewTried.add(hash)
+		labySkinPreview(hash)
+			.then((url) => {
+				skinPreviews.value = { ...skinPreviews.value, [hash]: url }
+			})
+			.catch(() => {
+				const remote = skinRenderUrl(hash, 360, 684)
+				if (remote) skinPreviews.value = { ...skinPreviews.value, [hash]: remote }
+			})
+	}
+	return skinPreviews.value[hash] ?? ''
+}
+
+/** Puts a recommended skin on the account right from the chat card. */
+async function installSkin(skin: AiSkinCard) {
+	if (skinInstalling.value.includes(skin.hash)) return
+	skinInstalling.value = [...skinInstalling.value, skin.hash]
+	try {
+		const texture = await labySkinTexture(skin.hash)
+		await add_and_equip_custom_skin(texture, skin.variant)
+		skinInstalledSkins.value = [...skinInstalledSkins.value, skin.hash]
+	} catch {
+		/* the card stays installable - a failed try is not a verdict */
+	} finally {
+		skinInstalling.value = skinInstalling.value.filter((hash) => hash !== skin.hash)
+	}
+}
 	if (mod.source === 'Modrinth') {
 		noteAgentNavigation()
 		void router.push(`/project/${mod.slug}`)
@@ -1012,7 +1060,36 @@ defineExpose({ send })
 							</div>
 						</div>
 
-						<div v-if="message.activity?.jars?.length" class="ai-cards">
+												<div v-if="message.activity?.skins?.length" class="ai-cards">
+							<button class="ai-cards-toggle" @click="() => toggleCardGroup(`s-${index}`)">
+								<span>{{ formatMessage(messages.skinsTitle) }} · {{ message.activity.skins.length }}</span>
+								<ChevronDownIcon class="size-3.5 transition-transform" :class="{ '-rotate-90': collapsedCards[`s-${index}`] }" />
+							</button>
+							<div v-if="!collapsedCards[`s-${index}`]" class="ai-skin-grid">
+								<div v-for="skin in message.activity.skins" :key="skin.hash" class="ai-skin-card">
+									<img
+										v-if="skinPreviewSrc(skin.hash)"
+										:src="skinPreviewSrc(skin.hash)"
+										class="ai-skin-img"
+										alt=""
+										loading="lazy"
+									/>
+									<div v-else class="ai-skin-img ai-skin-skeleton" />
+									<p class="ai-card-title">{{ skin.tags || formatMessage(messages.skinsTitle) }}</p>
+									<p class="ai-card-meta">{{ skin.uses ?? 0 }} игр. · {{ skin.variant === 'SLIM' ? 'Slim' : 'Classic' }}</p>
+									<Button
+										size="sm"
+										class="w-full"
+										:disabled="skinInstalling.includes(skin.hash) || skinInstalledSkins.includes(skin.hash)"
+										@click="() => installSkin(skin)"
+									>
+										{{ skinInstalledSkins.includes(skin.hash) ? formatMessage(messages.skinInstalled) : formatMessage(messages.skinInstall) }}
+									</Button>
+								</div>
+							</div>
+						</div>
+
+<div v-if="message.activity?.jars?.length" class="ai-cards">
 							<button class="ai-cards-toggle" @click="() => toggleCardGroup(`j-${index}`)">
 								<span>{{ formatMessage(messages.jarsTitle) }} · {{ message.activity.jars.length }}</span>
 								<ChevronDownIcon class="size-3.5 transition-transform" :class="{ '-rotate-90': collapsedCards[`j-${index}`] }" />
@@ -1691,6 +1768,43 @@ defineExpose({ send })
 	border-radius: 0.65rem;
 	background: color-mix(in srgb, var(--color-brand) 14%, transparent);
 	color: var(--color-brand);
+}
+
+.ai-skin-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+	gap: 0.5rem;
+}
+
+.ai-skin-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	padding: 0.5rem;
+	border-radius: 0.75rem;
+	background: var(--color-surface-3);
+}
+
+.ai-skin-img {
+	width: 100%;
+	aspect-ratio: 5 / 8;
+	object-fit: contain;
+}
+
+.ai-skin-skeleton {
+	background: var(--color-surface-5);
+	border-radius: 0.5rem;
+	animation: ai-skin-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ai-skin-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.55;
+	}
 }
 
 .ai-mod-card {

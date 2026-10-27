@@ -21,40 +21,42 @@ export type SkinRenderService = 'vzge' | 'laby' | 'skinrender' | 'nmsr' | 'craft
 const STORAGE_KEY = 'portalrinth-skin-render-service'
 
 function storedService(): SkinRenderService {
-	try {
-		const value = localStorage.getItem(STORAGE_KEY)
-		if (
-			value === 'vzge' ||
-			value === 'laby' ||
-			value === 'skinrender' ||
-			value === 'nmsr' ||
-			value === 'crafty' ||
-			value === 'mcskin' ||
-			value === 'minotar'
-		)
-			return value
-	} catch {
-		// Nowhere to read the choice from - the default stands.
-	}
-	// vzge is the new default: the fastest hash-friendly render, and it
-	// answers from an edge network rather than one origin host.
-	return 'vzge'
+        try {
+                const value = localStorage.getItem(STORAGE_KEY)
+                if (
+                        value === 'vzge' ||
+                        value === 'laby' ||
+                        value === 'skinrender' ||
+                        value === 'nmsr' ||
+                        value === 'crafty' ||
+                        value === 'mcskin' ||
+                        value === 'minotar'
+                )
+                        return value
+        } catch {
+                // Nowhere to read the choice from - the default stands.
+        }
+        // SkinRender.dev is the new default: it draws a full 3D body from a
+        // bare texture hash with its own pose engine, answers quickly on the
+        // networks where vzge stumbles, and its size cap (1024) keeps the
+        // preview crisp. Players who picked another service keep it.
+        return 'skinrender'
 }
 
 const service = ref<SkinRenderService>(storedService())
 
 /** The service previews come from right now, reactive. */
 export function useSkinRenderService() {
-	return service
+        return service
 }
 
 export function setSkinRenderService(value: SkinRenderService): void {
-	service.value = value
-	try {
-		localStorage.setItem(STORAGE_KEY, value)
-	} catch {
-		// Without storage the choice holds until the app is closed.
-	}
+        service.value = value
+        try {
+                localStorage.setItem(STORAGE_KEY, value)
+        } catch {
+                // Without storage the choice holds until the app is closed.
+        }
 }
 
 /**
@@ -66,20 +68,20 @@ export function setSkinRenderService(value: SkinRenderService): void {
  * which the local canvas render is there for.
  */
 export function skinRenderUrl(hash: string, width = 270, height = 514): string | null {
-	switch (service.value) {
-		case 'vzge':
-			return vzgeBodyUrl(hash, Math.max(width, 384))
-		case 'laby':
-			return labySkinRenderUrl(hash, width, height)
-		case 'skinrender':
-			return skinrenderBodyUrl(hash, Math.max(width, 384))
-		case 'nmsr':
-			return nmsrBodyUrl(hash, width, height)
-		case 'crafty':
-			return `https://render.crafty.gg/3d/full/${hash}?width=${width}&height=${height}`
-		case 'mcskin':
-			return null
-		case 'minotar':
-			return minotarBodyUrl(hash, height)
-	}
+        switch (service.value) {
+                case 'vzge':
+                        return vzgeBodyUrl(hash, Math.max(width, 384))
+                case 'laby':
+                        return labySkinRenderUrl(hash, width, height)
+                case 'skinrender':
+                        return skinrenderBodyUrl(hash, Math.max(width, 512))
+                case 'nmsr':
+                        return nmsrBodyUrl(hash, width, height)
+                case 'crafty':
+                        return `https://render.crafty.gg/3d/full/${hash}?width=${width}&height=${height}`
+                case 'mcskin':
+                        return null
+                case 'minotar':
+                        return minotarBodyUrl(hash, height)
+        }
 }

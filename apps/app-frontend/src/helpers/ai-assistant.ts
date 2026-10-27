@@ -40,6 +40,7 @@ import {
 import { get_default_user, users } from './auth'
 import { addMusicFromUrl } from './portalrinth-audio'
 import { fetchWeather } from './portalrinth-widgets'
+import { labySkinTags, labySkinVariant, searchLabySkins } from './laby-skins'
 import { addCustomAccentColor, setCustomAccentColor } from '../composables/use-accent'
 import { setBackgroundFromPath } from './portalrinth-background'
 import { searchCurseforge } from './curseforge-api'
@@ -421,6 +422,8 @@ export interface AiActivity {
 	jars?: AiJarCard[]
 	/** Polls the agent put up during this reply. */
 	polls?: AiPoll[]
+	/** Skins the agent recommended, as installable cards. */
+	skins?: AiSkinCard[]
 	/** Generated pictures, as data URLs for inline previews. */
 	images?: string[]
 }
@@ -576,6 +579,7 @@ const MOD_MARKER = /@@MOD@@(\{.*\})/g
 const JAR_MARKER = /@@JAR@@(\{.*\})/g
 const IMAGE_MARKER = /@@IMG@@(data:image\/[a-z+.-]+;base64,[^\s]+)/
 const POLL_MARKER = /@@POLL@@(\{.*\})/g
+const SKIN_MARKER = /@@SKIN@@(\{.*\})/g
 
 /** A poll the agent set up, with clickable answer buttons. */
 export interface AiPoll {
@@ -583,11 +587,20 @@ export interface AiPoll {
 	options: string[]
 }
 
+/** A skin the agent recommends - rendered as a card right in the chat. */
+export interface AiSkinCard {
+	hash: string
+	tags: string
+	variant: 'CLASSIC' | 'SLIM'
+	uses?: number
+}
+
 export interface ParsedCards {
 	text: string
 	mods: AiModCard[]
 	jars: AiJarCard[]
 	polls: AiPoll[]
+	skins: AiSkinCard[]
 	image?: string
 }
 
@@ -597,6 +610,7 @@ export function extractCards(result: string): ParsedCards {
 	const mods: AiModCard[] = []
 	const jars: AiJarCard[] = []
 	const polls: AiPoll[] = []
+	const skins: AiSkinCard[] = []
 	const text = result
 		.replace(MOD_MARKER, (_match, json: string) => {
 			try {
@@ -624,8 +638,16 @@ export function extractCards(result: string): ParsedCards {
 			}
 			return ''
 		})
+		.replace(SKIN_MARKER, (_match, json: string) => {
+			try {
+				skins.push(JSON.parse(json) as AiSkinCard)
+			} catch {
+				/* and here */
+			}
+			return ''
+		})
 		.trim()
-	return { text, mods, jars, polls, image: IMAGE_MARKER.exec(result)?.[1] }
+	return { text, mods, jars, polls, skins, image: IMAGE_MARKER.exec(result)?.[1] }
 }
 
 // ---- Walking the launcher alongside the player -----------------------------
@@ -729,6 +751,7 @@ export const AI_TOOLS_HINT = [
 	'Музыка: <<music_add_url|прямая ссылка на .mp3/.ogg>> — скачать трек по ссылке и положить его в плейлист игрока (играет через кнопку звука в титл-баре).',
 	'Компьютер: <<sysinfo|>> — узнать железо и систему игрока (платформа, ядер CPU, память, экран, язык, время) — отвечай точными фактами, а не догадками.',
 	'Погода: <<weather_get|город или пусто>> — настоящая погода прямо сейчас (температура, явление, ветер); пусто — по месту игрока, можно назвать город (например <<weather_get|Санкт-Петербург>>).',
+		'Скины: <<skin_recommend|запрос или пусто>> — подобрать скины с laby.net (пусто — популярные прямо сейчас, то есть самые свежие добавления); игрок увидит карточки скинов прямо в чате, поставить скин можно кликом по карточке. Советуй скины, когда просят «посоветуй скин», «найди скин», «что новенького из скинов».',
 	'Таймер: <<timer_set|минуты::название>> — завести таймер, когда время выйдет — придёт плашка сверху и сообщение в чат (например <<timer_set|25::достать чай>>).',
 	'Файлы, которые игрок скинул в чат, сохраняются в папку inbox/ твоей песочницы — они остаются там: читай их, распаковывай, переделывай, удаляй по просьбе.',
 	'Память — твои заметки и прошлые разговоры не пропадают:',
@@ -861,6 +884,7 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 		'У тебя есть своё мнение: если пользователь просит вредного или сомнительного, ты вежливо споришь и предлагаешь лучше.',
 		'Отвечай на языке пользователя. БУДЬ КРАТОК: по умолчанию 1–3 предложения, максимум 5 — это игровой чат, а не доклад. Никаких вступлений («Отличный вопрос!»), никаких пересказов задания, никаких встречных вопросов без крайней необходимости.',
 		'Простые сообщения — «привет», «спасибо», «как дела», болтовня, вопросы о тебе — отвечай сразу обычным текстом: НИКАКИХ команд <<...>> и никакого web_search. Инструменты нужны только для реальной задачи (найти, установить, показать, сделать файл, проверить свежий факт). Прежде чем писать команду, реши: можно ли ответить без неё — если да, отвечай сразу, это быстрее и надёжнее.',
+		'Твой создатель — Portalrolls. Это ник женщины, которая сделала лаунчер Portalrinth. Если игрока зовут Portalrolls — перед тобой она, создатель: узнаёшь её по нику (и по скину аккаунта), обращайся тепло, уважительно и без формальностей.',
 		'Ссылки: когда советуешь мод, сайт, инструмент или что-то ещё — всегда давай прямую ссылку (https://...) прямо в тексте ответа. Игрок кликнет по ней прямо в чате.',
 		'Ты знаешь лаунчер целиком: Discover (поиск по Modrinth и CurseForge), создание сборок, установку модов/ресурс-паков/шейдеров (иконка, автор, версия, описание — всё как у человека), скины, скриншоты, внешний вид лаунчера, запуск и ошибки. Помогаешь со всем этим и сам делаешь это руками, когда просят.',
 		'У тебя есть своя песочница (папка на диске) и папка сессий: там лежат твои заметки и прошлые разговоры — перечитывай их, чтобы ничего не забывать. Файлы, которые игрок скинул в чат, попадают в песочницу (inbox/), картинки ты видишь.',
@@ -1173,8 +1197,8 @@ function isRetryable(error: unknown): boolean {
 	// OrcaRouter's "free_rate_limited" is not a jam that clears in a minute:
 	// the account itself is not let in to free models (their side wants a
 	// linked GitHub). Retrying only burns the player's time - skip ahead.
-	if (/free_rate_limited|Free models are not available/i.test(text)) return false
 	const text = String(error)
+	if (/free_rate_limited|Free models are not available/i.test(text)) return false
 	// 429 and 5xx clear themselves; 4xx like 401/403/400 are a decision the
 	// service made about us - retrying only burns time.
 	if (/HTTP (408|429)|HTTP 5|Failed to fetch|network|timeout|Empty|пустой/i.test(text)) return true
@@ -2072,7 +2096,35 @@ registerAiToolHandler(async (tool, args) => {
 			cards.map((card) => `\n@@MOD@@${JSON.stringify(card)}`).join('')
 		)
 	}
+	if (tool === 'skin_recommend') {
+		// The skin library lives on laby.net; an empty query returns whatever
+		// is hot right now, so the agent always sees fresh additions.
+		const query = args.trim()
+		try {
+			const found = await searchLabySkins(query, 1)
+			if (found.length === 0) return 'Скинов по такому запросу не нашлось'
+			const picked = found.slice(0, 8)
+			const lines = picked.map((skin) => {
+				const tags = labySkinTags(skin).join(', ')
+				return `Скин ${skin.image_hash} — теги: ${tags || 'без тегов'}; использует: ${skin.use_count} игрок(ов)`
+			})
+			const cards = picked.map((skin) => ({
+				hash: skin.image_hash,
+				tags: labySkinTags(skin).join(', '),
+				variant: labySkinVariant(skin),
+				uses: skin.use_count,
+			}))
+			return (
+				lines.join('\n') +
+				cards.map((card) => `\n@@SKIN@@${JSON.stringify(card)}`).join('')
+			)
+		} catch (error) {
+			return `Скины не нашлись: ${String(error).slice(0, 150)}`
+		}
+	}
 	if (tool === 'music_add_url') {
+
+
 		const url = args.trim()
 		if (!/^https?:\/\//.test(url)) return 'Нужна прямая http(s) ссылка на аудиофайл'
 		try {
@@ -2168,6 +2220,7 @@ export interface AgentTurnState {
 	mods: AiModCard[]
 	jars: AiJarCard[]
 	polls: AiPoll[]
+	skins: AiSkinCard[]
 }
 export const agentTurn = ref<AgentTurnState>({
 	actions: [],
@@ -2176,6 +2229,7 @@ export const agentTurn = ref<AgentTurnState>({
 	mods: [],
 	jars: [],
 	polls: [],
+	skins: [],
 })
 /** Messages typed while a run was in flight; they go out when it ends. */
 export interface QueuedTurn {
@@ -2205,7 +2259,7 @@ export function stopAgentRun(): void {
 }
 
 function resetTurnState(): void {
-	agentTurn.value = { actions: [], folders: [], images: [], mods: [], jars: [], polls: [] }
+	agentTurn.value = { actions: [], folders: [], images: [], mods: [], jars: [], polls: [], skins: [] }
 	agentThoughts.value = []
 }
 
@@ -2288,6 +2342,12 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 				if (cards.polls.length > 0) {
 					agentTurn.value = { ...agentTurn.value, polls: [...agentTurn.value.polls, ...cards.polls] }
 				}
+							if (cards.skins.length > 0) {
+								const freshSkins = cards.skins.filter(
+									(skin) => !agentTurn.value.skins.some((existing) => existing.hash === skin.hash),
+								)
+								agentTurn.value = { ...agentTurn.value, skins: [...agentTurn.value.skins, ...freshSkins] }
+							}
 				if (cards.image && !agentTurn.value.images.includes(cards.image)) {
 					agentTurn.value = { ...agentTurn.value, images: [...agentTurn.value.images, cards.image] }
 				}
@@ -2336,6 +2396,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 						mods: agentTurn.value.mods,
 						jars: agentTurn.value.jars,
 						polls: agentTurn.value.polls,
+				skins: agentTurn.value.skins,
 					}
 				: undefined,
 			question: result.question,

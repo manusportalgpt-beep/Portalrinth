@@ -19,7 +19,6 @@
 		<AppUpdateButton />
 		<SoundButton />
 		<SpeedTestButton />
-		<CloudWidget v-if="portalrinthFeatures.weather" />
 		<div
 			class="flex border-solid border-surface-5 text-sm font-medium items-center gap-2 py-1.5 px-3 rounded-xl border"
 		>
@@ -161,14 +160,12 @@ import { useRouter } from 'vue-router'
 
 import AppUpdateButton from '@/components/ui/app-update-button/index.vue'
 import DownloadManager from '@/components/ui/download-manager/index.vue'
-import CloudWidget from '@/components/ui/portalrinth-widgets/CloudWidget.vue'
 import SpeedTestButton from '@/components/ui/portalrinth-audio/SpeedTestButton.vue'
 import SoundButton from '@/components/ui/portalrinth-audio/SoundButton.vue'
 import { useAppEvent } from '@/composables/use-app-event'
 import { trackEvent } from '@/helpers/analytics'
 import { get_many as getInstances } from '@/helpers/instance'
 import { startMusic } from '@/helpers/portalrinth-audio'
-import { portalrinthFeatures } from '@/helpers/portalrinth-features'
 import { get_all as getRunningProcesses, kill as killProcess } from '@/helpers/process'
 import type { LoadingBar } from '@/helpers/state'
 import { progress_bars_list } from '@/helpers/state'

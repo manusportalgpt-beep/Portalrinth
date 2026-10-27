@@ -70,7 +70,6 @@ onBeforeUnmount(() => {
 
 <template>
 	<div class="flex min-h-0 flex-col gap-4">
-		<p class="m-0 text-sm text-secondary">{{ formatMessage(messages.description) }}</p>
 		<textarea
 			v-model="text"
 			class="min-h-[16rem] w-full grow resize-y rounded-2xl border-0 bg-surface-3 p-3 text-sm text-contrast outline-none placeholder:text-secondary focus:outline-none"
@@ -83,9 +82,6 @@ onBeforeUnmount(() => {
 			</Button>
 			<span v-if="savedNote" class="text-sm font-semibold text-green">
 				{{ formatMessage(messages.saved) }}
-			</span>
-			<span v-else-if="!text.trim()" class="text-sm text-secondary">
-				{{ formatMessage(messages.empty) }}
 			</span>
 		</div>
 	</div>
