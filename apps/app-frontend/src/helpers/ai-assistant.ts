@@ -1017,6 +1017,33 @@ interface ChatMessagePayload {
 	content: string | unknown[]
 }
 
+/**
+ * An attempt that died on the wire - the ceiling fired, the relay hung up
+ * mid-flight - surfaces as a bare TimeoutError or a "Request canceled"
+ * with no story attached. The player's own Stop must stay distinguishable:
+ * when the caller's signal is intact, the cancel is the channel's doing,
+ * and it is renamed to the honest "did not answer in time" that the
+ * fallback chain knows how to route around.
+ */
+function normalizeAttemptError(
+	providerLabel: string,
+	error: unknown,
+	signal: AbortSignal | undefined,
+	ceilingMs: number,
+): unknown {
+	if (signal?.aborted) return error
+	const name = (error as { name?: string } | null | undefined)?.name
+	const text = String((error as Error)?.message ?? error)
+	if (name === 'TimeoutError' || /cancel|abort|timed?\s?out/i.test(text)) {
+		const wrapped = new Error(
+			`${providerLabel}: ответ не пришёл за ${Math.round(ceilingMs / 1000)} с — канал молчал или оборвался`,
+		) as Error & { name?: string }
+		wrapped.name = 'TimeoutError'
+		return wrapped
+	}
+	return error
+}
+
 async function callProvider(
 	providerId: string,
 	payload: ChatMessagePayload[],
@@ -1044,20 +1071,27 @@ async function callProvider(
 		headers['X-Title'] = 'Portalrinth Launcher'
 	}
 	// A jammed model (free DeepSeek at rush hour, a stalled relay) must not
-	// hang the whole turn: every attempt carries its own 45-second ceiling,
-	// on top of whatever signal the caller holds.
+	// hang the whole turn: every attempt carries its own ceiling, on top of
+	// whatever signal the caller holds. Z.AI in peak hours gets twice the
+	// time - its queue regularly runs past half a minute before answering.
 	const anySignal = (AbortSignal as { any?: (signals: AbortSignal[]) => AbortSignal }).any
+	const attemptCeiling = providerId === 'zai' && zaiPeakHoursNow() ? 60000 : 30000
 	const attemptSignal = signal
 		? anySignal
-			? anySignal([signal, AbortSignal.timeout(30000)])
+			? anySignal([signal, AbortSignal.timeout(attemptCeiling)])
 			: signal
-		: AbortSignal.timeout(30000)
-	const response = await proxiedFetch(baseUrl, {
-		method: 'POST',
-		headers,
-		body: JSON.stringify(body),
-		signal: attemptSignal,
-	})
+		: AbortSignal.timeout(attemptCeiling)
+	let response: Response
+	try {
+		response = await proxiedFetch(baseUrl, {
+			method: 'POST',
+			headers,
+			body: JSON.stringify(body),
+			signal: attemptSignal,
+		})
+	} catch (error) {
+		throw normalizeAttemptError(provider.label, error, signal, attemptCeiling)
+	}
 	if (!response.ok) {
 		let detail = ''
 		try {
@@ -1071,8 +1105,15 @@ async function callProvider(
 		error.status = response.status
 		throw error
 	}
-	const data = (await response.json()) as {
+	let data: {
 		choices?: { message?: { content?: string } }[]
+	}
+	try {
+		data = (await response.json()) as {
+			choices?: { message?: { content?: string } }[]
+		}
+	} catch (error) {
+		throw normalizeAttemptError(provider.label, error, signal, attemptCeiling)
 	}
 	const content = data.choices?.[0]?.message?.content ?? ''
 	if (!content) throw new Error(`${provider.label}: пустой ответ`)
@@ -1456,6 +1497,17 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						}
 											if (isPermanentRefusal(error)) blockProvider(providerId)
 						if (!isRetryable(error)) {
+							// A hung-up or silent channel (TimeoutError, "Request
+							// canceled") is nobody's settings problem: the next provider
+							// in line answers instead, and the second pass returns to
+							// this one after the breather - the turn itself must live.
+							const failureName = (error as { name?: string } | null | undefined)?.name
+							if (
+								failureName === 'TimeoutError' ||
+								/cancel|abort|timed?\s?out|не дождался/i.test(String(error))
+							) {
+								continue
+							}
 							if (
 											providerId === settings.provider &&
 											!(/free_rate_limited|Free models are not available/i.test(String(error)))
@@ -1489,6 +1541,8 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 					const story = primaryFailure || detail || ''
 					const advice = /free_rate_limited|Free models are not available/i.test(story)
 						? 'Бесплатные модели этого провайдера не пускают твой ключ: владельцу аккаунта нужно привязать GitHub на сайте провайдера. Выбери другого провайдера или платную модель в настройках моделей - остальные из цепочки тоже были опрошены.'
+						: /не дождался|TimeoutError|cancel|abort|timed?\s?out/i.test(story)
+						? 'Провайдер не ответил вовремя: канал молчал или оборвался посреди запроса. Подожди минуту и напиши ещё раз — обычно проходит со второй попытки, или выбери другого провайдера в настройках моделей.'
 						: aiSettings.value.provider === 'zai' && zaiPeakHoursNow()
 						? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
 						: 'Подожди минуту и напиши ещё раз, или проверь ключ и модель этого провайдера в настройках моделей.'
