@@ -250,12 +250,19 @@ let fullscreenAdsWindowHold = false
 /**
  * F11 toggles the launcher's own fullscreen, the way every browser and
  * game does it. The window is asked, not the document - Tauri's window
- * fullscreen is the real, borderless kind.
+ * fullscreen is the real, borderless kind. Windows dresses undecorated
+ * windows in an invisible resize frame that comes back around fullscreen
+ * and shows up as black bars - the `refresh_window_frame` command pushes
+ * it off again, right away and once more after the transition settles.
  */
 async function toggleFullscreen() {
         try {
                 const window = getCurrentWindow()
                 await window.setFullscreen(!(await window.isFullscreen()))
+                await invoke('refresh_window_frame').catch(() => {})
+                setTimeout(() => {
+                        void invoke('refresh_window_frame').catch(() => {})
+                }, 350)
         } catch (error) {
                 console.error('Fullscreen не переключился', error)
         }

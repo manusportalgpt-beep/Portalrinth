@@ -9,7 +9,7 @@
 			<GaugeIcon :class="{ 'ai-speed-pulse': state === 'running' }" />
 		</IconButton>
 		<template #popper>
-			<div class="flex w-[17rem] flex-col gap-3 p-1">
+			<div class="flex w-[21rem] flex-col gap-3 p-1">
 				<div class="flex items-center justify-between">
 					<span class="text-sm font-semibold text-contrast">
 						{{ formatMessage(messages.title) }}
@@ -23,7 +23,7 @@
 				</div>
 
 				<!-- Автомобильный счётчик скорости -->
-				<svg viewBox="0 0 220 126" class="mx-auto w-full max-w-[13.5rem]">
+				<svg viewBox="0 0 220 126" class="mx-auto h-auto w-full max-w-[19rem]">
 					<!-- Дорожка: зелёная / жёлтая / красная зоны -->
 					<path :d="paths.zone0" stroke="#34d399" stroke-opacity="0.4" stroke-width="9" fill="none" stroke-linecap="round" />
 					<path :d="paths.zone1" stroke="#fbbf24" stroke-opacity="0.45" stroke-width="9" fill="none" />

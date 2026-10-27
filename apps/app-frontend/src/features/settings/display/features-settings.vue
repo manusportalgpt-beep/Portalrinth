@@ -176,7 +176,7 @@ const messages = defineMessages({
 	weatherDescription: {
 		id: 'app.widgets.weather.description',
 		defaultMessage:
-			'Прозрачная кнопка у звука: иконка явления и градусы по Цельсию (Open-Meteo, без ключа).',
+			'Облачко у иконок сверху: регион игрока и погода. Можно добавить несколько городов и переключаться между ними (Open-Meteo, без ключа).',
 	},
 })
 

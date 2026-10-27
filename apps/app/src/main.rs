@@ -162,6 +162,74 @@ pub use updater_impl::*;
 #[cfg(not(feature = "updater"))]
 pub use updater_impl_noop::*;
 
+/// Opens a plain web window - the built-in DuckDuckGo search and friends.
+/// Built on the Rust side, the way the sign-in window is: the JS
+/// `WebviewWindow` constructor was showing players a window that shut
+/// itself the moment it appeared. A repeated call with the same label
+/// just brings the existing window forward instead of failing.
+#[tauri::command]
+async fn open_web_window(
+    app: tauri::AppHandle,
+    label: String,
+    url: String,
+    title: String,
+) -> api::Result<()> {
+    let parsed: tauri::Url = url
+        .parse()
+        .map_err(|error| anyhow::anyhow!("bad web window url {url}: {error}"))?;
+
+    if let Some(existing) = app.get_webview_window(&label) {
+        let _ = existing.unminimize();
+        let _ = existing.set_focus();
+        return Ok(());
+    }
+
+    tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::External(parsed))
+        .title(title)
+        .inner_size(1100.0, 760.0)
+        .min_inner_size(500.0, 400.0)
+        .center()
+        .build()
+        .context("failed to open web window")?;
+    Ok(())
+}
+
+/// Windows dresses undecorated windows in an invisible resize frame, and
+/// entering or leaving fullscreen makes that frame come back - it shows up
+/// as black bars around the webview. This is the same SWP_FRAMECHANGED
+/// refresh the `window-frame` plugin does at startup, on demand.
+#[tauri::command]
+fn refresh_window_frame(window: tauri::WebviewWindow) -> api::Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        use windows::Win32::UI::WindowsAndMessaging::{
+            SetWindowPos, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+            SWP_NOZORDER,
+        };
+
+        let hwnd = window.hwnd().context("no window handle")?;
+        unsafe {
+            SetWindowPos(
+                hwnd,
+                None,
+                0,
+                0,
+                0,
+                0,
+                SWP_FRAMECHANGED
+                    | SWP_NOACTIVATE
+                    | SWP_NOMOVE
+                    | SWP_NOSIZE
+                    | SWP_NOZORDER,
+            )
+        }
+        .map_err(|error| anyhow::anyhow!("failed to refresh window frame: {error}"))?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = window;
+    Ok(())
+}
+
 // Toggles decorations
 #[tauri::command]
 async fn toggle_decorations(b: bool, window: tauri::Window) -> api::Result<()> {
@@ -519,6 +587,8 @@ fn main() {
             remove_enqueued_update,
             set_restart_after_pending_update,
             toggle_decorations,
+            open_web_window,
+            refresh_window_frame,
             show_window,
             restart_app,
         ]);
@@ -582,14 +652,14 @@ fn main() {
                             }
                         }
 
-						let current_version = &app.package_info().version;
-						let mut version_parts = update.version.split('.');
-						let major = version_parts.next().and_then(|part| part.parse::<u64>().ok());
-						let minor = version_parts.next().and_then(|part| part.parse::<u64>().ok());
-						let is_major_update = major.zip(minor).is_some_and(|version| {
-							version > (current_version.major, current_version.minor)
-						});
-						set_changelog_toast(is_major_update.then(|| update.version.clone()));
+                                                let current_version = &app.package_info().version;
+                                                let mut version_parts = update.version.split('.');
+                                                let major = version_parts.next().and_then(|part| part.parse::<u64>().ok());
+                                                let minor = version_parts.next().and_then(|part| part.parse::<u64>().ok());
+                                                let is_major_update = major.zip(minor).is_some_and(|version| {
+                                                        version > (current_version.major, current_version.minor)
+                                                });
+                                                set_changelog_toast(is_major_update.then(|| update.version.clone()));
                         let update = if should_restart {
                             (**update).clone()
                         } else {

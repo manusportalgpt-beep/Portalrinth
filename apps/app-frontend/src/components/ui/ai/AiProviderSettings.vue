@@ -20,6 +20,8 @@ import {
 } from '@/helpers/ai-assistant'
 
 defineProps<{
+	/** Inside the chat's model popover: only the talking essentials, so
+	 * the popover stays short and the model dropdown is never clipped. */
 	compact?: boolean
 }>()
 
@@ -313,6 +315,8 @@ onMounted(() => {
 					name="ai-model"
 					:options="modelOptions"
 					:model-value="currentModel"
+					:render-up="compact"
+					:max-visible-options="compact ? 6 : undefined"
 					@change="(o) => selectModelLabel(String(o.option))"
 				/>
 				<p class="m-0 text-xs text-secondary">{{ formatMessage(messages.customModelAny) }}</p>
@@ -377,7 +381,7 @@ onMounted(() => {
 			{{ formatMessage(messages.fallback) }}
 		</p>
 
-		<div class="flex flex-col gap-1.5">
+		<div v-if="!compact" class="flex flex-col gap-1.5">
 			<span class="text-sm font-semibold text-primary">
 				{{ formatMessage(messages.imageGroup) }}
 			</span>
@@ -448,7 +452,7 @@ onMounted(() => {
 			</div>
 		</div>
 
-		<div class="ai-skill-section flex flex-col gap-1.5">
+		<div v-if="!compact" class="ai-skill-section flex flex-col gap-1.5">
 			<span class="text-sm font-semibold text-primary">{{ formatMessage(messages.skills) }}</span>
 			<p v-if="skills.length === 0" class="m-0 text-sm text-secondary">
 				{{ formatMessage(messages.skillsEmpty) }}
@@ -472,7 +476,7 @@ onMounted(() => {
 			</div>
 			<p class="m-0 text-xs leading-relaxed text-secondary">{{ formatMessage(messages.skillsHint) }}</p>
 		</div>
-		<div class="ai-bridge-section flex flex-col gap-1.5">
+		<div v-if="!compact" class="ai-bridge-section flex flex-col gap-1.5">
 			<div class="flex items-center justify-between gap-2">
 				<span class="flex items-center gap-1.5 text-sm font-semibold text-primary">
 					<span

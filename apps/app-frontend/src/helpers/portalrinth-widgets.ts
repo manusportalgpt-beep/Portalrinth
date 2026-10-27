@@ -41,15 +41,20 @@ export function weatherLabel(code: number): string {
 }
 
 async function geocodeByIp(): Promise<{ lat: number; lon: number; place: string }> {
-        const attempts: { url: string; pick: (data: any) => { lat: number; lon: number; place: string } | null }[] = [
+        const attempts: {
+                url: string
+                pick: (data: Record<string, unknown>) => { lat: number; lon: number; place: string } | null
+        }[] = [
                 {
                         url: 'https://ipwho.is/',
                         pick: (data) =>
                                 data && data.success !== false && typeof data.latitude === 'number'
                                         ? {
-                                                        lat: data.latitude,
-                                                        lon: data.longitude,
-                                                        place: [data.city, data.country].filter(Boolean).join(', '),
+                                                        lat: Number(data.latitude),
+                                                        lon: Number(data.longitude),
+                                                        place: [data.city, data.country]
+                                                                .filter(Boolean)
+                                                                .join(', '),
                                                 }
                                         : null,
                 },
@@ -98,6 +103,13 @@ async function geocodeByName(query: string): Promise<{ lat: number; lon: number;
         } catch {
                 return null
         }
+}
+
+/** One city, found by name - the cloud widget adds regions with it. */
+export async function searchPlace(
+        query: string,
+): Promise<{ lat: number; lon: number; place: string } | null> {
+        return geocodeByName(query)
 }
 
 export async function fetchWeather(placeQuery?: string, force = false): Promise<WeatherNow> {

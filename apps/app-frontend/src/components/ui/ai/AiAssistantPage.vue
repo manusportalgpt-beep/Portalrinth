@@ -378,9 +378,24 @@ async function openSession(meta: SessionMeta) {
 	}
 }
 
-function startFreshChat() {
+/** The header's "new chat" button: wipes the conversation and starts a
+ * fresh session file. The dead `plusNewChat()` call (a messages key, not
+ * a function) made the button silently do nothing; a running agent is
+ * stopped first, so the button answers every time. */
+async function startFreshChat() {
 	historyOpen.value = false
-	plusNewChat()
+	if (sending.value) stopAgentRun()
+	stopTyping()
+	errorText.value = ''
+	clearAiHistory()
+	historyLoading.value = true
+	try {
+		sessionsList.value = await listSessions(30)
+	} catch {
+		sessionsList.value = []
+	} finally {
+		historyLoading.value = false
+	}
 }
 
 /** The chat never blocks: while Portalus works, a new message quietly lines
@@ -420,13 +435,6 @@ async function send(text?: string) {
 			/* the box just stays */
 		}
 	}
-
-function clearChat() {
-	if (sending.value) return
-	stopTyping()
-	errorText.value = ''
-	clearAiHistory()
-}
 
 function togglePlus() {
 	plusOpen.value = !plusOpen.value
@@ -1085,7 +1093,7 @@ defineExpose({ send })
 					/>
 					<div
 						v-if="modelsOpen"
-						class="ai-menu absolute bottom-full right-0 z-20 mb-2 max-h-[26rem] w-[34rem] overflow-y-auto rounded-2xl border border-solid border-surface-5 bg-surface-2 p-4"
+						class="ai-menu absolute bottom-full right-0 z-20 mb-2 w-[34rem] rounded-2xl border border-solid border-surface-5 bg-surface-2 p-4"
 					>
 						<p class="m-0 mb-3 text-sm font-semibold text-primary">
 							{{ formatMessage(messages.models) }}

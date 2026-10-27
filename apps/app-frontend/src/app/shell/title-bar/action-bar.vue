@@ -19,7 +19,7 @@
 		<AppUpdateButton />
 		<SoundButton />
 		<SpeedTestButton />
-		<WeatherButton v-if="portalrinthFeatures.weather" />
+		<CloudWidget v-if="portalrinthFeatures.weather" />
 		<SearchButton v-if="portalrinthFeatures.search" />
 		<div
 			class="flex border-solid border-surface-5 text-sm font-medium items-center gap-2 py-1.5 px-3 rounded-xl border"
@@ -162,8 +162,8 @@ import { useRouter } from 'vue-router'
 
 import AppUpdateButton from '@/components/ui/app-update-button/index.vue'
 import DownloadManager from '@/components/ui/download-manager/index.vue'
+import CloudWidget from '@/components/ui/portalrinth-widgets/CloudWidget.vue'
 import SearchButton from '@/components/ui/portalrinth-widgets/SearchButton.vue'
-import WeatherButton from '@/components/ui/portalrinth-widgets/WeatherButton.vue'
 import SpeedTestButton from '@/components/ui/portalrinth-audio/SpeedTestButton.vue'
 import SoundButton from '@/components/ui/portalrinth-audio/SoundButton.vue'
 import { useAppEvent } from '@/composables/use-app-event'

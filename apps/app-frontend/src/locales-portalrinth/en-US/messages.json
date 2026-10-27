@@ -2067,6 +2067,21 @@
 		"message": "Weather"
 	},
 	"app.widgets.weather.description": {
-		"message": "A quiet button next to sound: the weather icon and degrees in Celsius (Open-Meteo, keyless)."
+		"message": "A cloud beside the title-bar icons: your region and the weather. Add as many cities as you like and switch between them (Open-Meteo, keyless)."
+	},
+	"app.cloud.my-place": {
+		"message": "My place"
+	},
+	"app.cloud.placeholder": {
+		"message": "Add a city…"
+	},
+	"app.cloud.remove": {
+		"message": "Remove city"
+	},
+	"app.cloud.added": {
+		"message": "City added"
+	},
+	"app.cloud.not-found": {
+		"message": "City not found"
 	}
 }

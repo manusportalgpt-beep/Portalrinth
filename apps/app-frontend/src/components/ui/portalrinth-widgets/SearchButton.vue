@@ -17,8 +17,8 @@
  * other window.
  */
 import { SearchIcon } from '@modrinth/assets'
+import { invoke } from '@tauri-apps/api/core'
 import { defineMessages, IconButton, useVIntl } from '@modrinth/ui'
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 
 import { portalrinthFeatures } from '@/helpers/portalrinth-features'
 
@@ -33,18 +33,15 @@ let counter = 0
 async function openSearch() {
 	if (!portalrinthFeatures.value.search) return
 	counter++
-	const label = counter > 1 ? `-${counter}` : ''
-	const webview = new WebviewWindow(`portalrinth-search${label}`, {
-		url: 'https://duckduckgo.com/?kae=d&k1=-1',
-		title: 'Поиск — Portalrinth',
-		width: 1100,
-		height: 760,
-		center: true,
-		minWidth: 500,
-		minHeight: 400,
-	})
-	webview.once('tauri://error', (error) => {
+	const label = counter > 1 ? `portalrinth-search-${counter}` : 'portalrinth-search'
+	try {
+		await invoke('open_web_window', {
+			label,
+			url: 'https://duckduckgo.com/?kae=d&k1=-1',
+			title: 'Поиск — Portalrinth',
+		})
+	} catch (error) {
 		console.error('Окно поиска не открылось', error)
-	})
+	}
 }
 </script>

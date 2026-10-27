@@ -3687,6 +3687,21 @@
 		"message": "Погода"
 	},
 	"app.widgets.weather.description": {
-		"message": "Прозрачная кнопка у звука: иконка явления и градусы по Цельсию (Open-Meteo, без ключа)."
+		"message": "Облачко у иконок сверху: регион игрока и погода. Можно добавить несколько городов и переключаться между ними (Open-Meteo, без ключа)."
+	},
+	"app.cloud.my-place": {
+		"message": "Моё место"
+	},
+	"app.cloud.placeholder": {
+		"message": "Добавить город…"
+	},
+	"app.cloud.remove": {
+		"message": "Убрать город"
+	},
+	"app.cloud.added": {
+		"message": "Город добавлен"
+	},
+	"app.cloud.not-found": {
+		"message": "Город не нашёлся"
 	}
 }
