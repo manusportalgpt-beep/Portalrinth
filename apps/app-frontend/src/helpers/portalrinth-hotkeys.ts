@@ -30,8 +30,6 @@ export const HOTKEY_ACTIONS: HotkeyActionDef[] = [
         { id: 'page-screenshots', label: 'Экран: Скриншоты', defaultCombo: 'Ctrl+Digit6' },
         { id: 'page-settings', label: 'Экран: Настройки', defaultCombo: 'Ctrl+Digit0' },
         { id: 'new-chat', label: 'Порталус: новый чат', defaultCombo: 'Ctrl+KeyT' },
-        { id: 'browser', label: 'Браузер (отдельное окно)', defaultCombo: 'Ctrl+KeyB' },
-        { id: 'check-updates', label: 'Проверить обновления', defaultCombo: 'Ctrl+Shift+KeyU' },
         { id: 'kill-game', label: 'Закрыть игру', defaultCombo: 'Ctrl+Shift+KeyK' },
         { id: 'fullscreen', label: 'Полный экран', defaultCombo: 'F11' },
 ]

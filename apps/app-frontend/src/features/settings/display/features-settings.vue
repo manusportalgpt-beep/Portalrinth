@@ -151,15 +151,6 @@ const messages = defineMessages({
 		id: 'app.widgets.title',
 		defaultMessage: 'Виджеты и функции',
 	},
-	searchTitle: {
-		id: 'app.widgets.search.title',
-		defaultMessage: 'Поиск в интернете',
-	},
-	searchDescription: {
-		id: 'app.widgets.search.description',
-		defaultMessage:
-			'Кнопка поиска в титл-баре: открывает DuckDuckGo в отдельном окне лаунчера.',
-	},
 	clockTitle: {
 		id: 'app.widgets.clock.title',
 		defaultMessage: 'Часы сверху',
@@ -551,20 +542,6 @@ onBeforeUnmount(() => {
 			{{ formatMessage(messages.widgetsTitle) }}
 		</h2>
 		<div class="mt-4 flex flex-col gap-6">
-			<div class="flex items-center justify-between gap-4">
-				<div>
-					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.searchTitle) }}
-					</h3>
-					<p class="m-0 mt-1">{{ formatMessage(messages.searchDescription) }}</p>
-				</div>
-				<Toggle
-					id="portalrinth-search"
-					v-model="portalrinthFeatures.search"
-					:aria-label="formatMessage(messages.searchTitle)"
-				/>
-			</div>
-
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">

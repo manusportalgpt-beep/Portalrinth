@@ -3703,5 +3703,53 @@
 	},
 	"app.cloud.not-found": {
 		"message": "Город не нашёлся"
+	},
+	"app.settings.tabs.hotkeys": {
+		"message": "Горячие клавиши"
+	},
+	"app.settings.hotkeys.title": {
+		"message": "Горячие клавиши"
+	},
+	"app.settings.hotkeys.note": {
+		"message": "Нажми на сочетание и задай своё. Работает из любого экрана лаунчера (когда курсор не в поле ввода)."
+	},
+	"app.settings.hotkeys.press": {
+		"message": "Нажми сочетание… (Esc — отмена)"
+	},
+	"app.settings.hotkeys.reset": {
+		"message": "Вернуть по умолчанию"
+	},
+	"app.settings.hotkeys.taken": {
+		"message": "Убрано с другой команды"
+	},
+	"app.instance.tab.notes": {
+		"message": "Заметки"
+	},
+	"app.instance.notes.title": {
+		"message": "Заметки"
+	},
+	"app.instance.notes.description": {
+		"message": "Записка к этой сборке: планы, что проверить, адрес сервера. Перед каждым запуском игры она всплывёт на экране."
+	},
+	"app.instance.notes.placeholder": {
+		"message": "Например: не забыть включить шейдеры и зайти на сервер…"
+	},
+	"app.instance.notes.save": {
+		"message": "Сохранить"
+	},
+	"app.instance.notes.saved": {
+		"message": "Сохранено"
+	},
+	"app.instance.notes.empty": {
+		"message": "Пока пусто: запиши что-нибудь - и заметка станет выплывать перед каждым запуском этой сборки."
+	},
+	"app.instance.notes.popup.header": {
+		"message": "Заметка к сборке «{name}»"
+	},
+	"app.instance.notes.popup.never": {
+		"message": "Больше не напоминать"
+	},
+	"app.instance.notes.popup.ok": {
+		"message": "Ок"
 	}
 }

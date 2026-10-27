@@ -2221,5 +2221,35 @@
 	},
 	"app.settings.resource-management.skin-services.nmsr": {
 		"message": "NMSR — the reference renderer, takes any texture hash"
+	},
+	"app.instance.tab.notes": {
+		"message": "Notes"
+	},
+	"app.instance.notes.title": {
+		"message": "Notes"
+	},
+	"app.instance.notes.description": {
+		"message": "A note pinned to this build: plans, things to check, the server address. It pops up on screen before every game launch."
+	},
+	"app.instance.notes.placeholder": {
+		"message": "For example: remember to turn shaders on and join the server…"
+	},
+	"app.instance.notes.save": {
+		"message": "Save"
+	},
+	"app.instance.notes.saved": {
+		"message": "Saved"
+	},
+	"app.instance.notes.empty": {
+		"message": "Nothing yet: write something, and the note will pop up before every launch of this build."
+	},
+	"app.instance.notes.popup.header": {
+		"message": "Note for \"{name}\""
+	},
+	"app.instance.notes.popup.never": {
+		"message": "Never remind me again"
+	},
+	"app.instance.notes.popup.ok": {
+		"message": "OK"
 	}
 }

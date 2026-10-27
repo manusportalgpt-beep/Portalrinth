@@ -145,25 +145,59 @@ let requestId = 0
 const previews = ref<Record<string, string>>({})
 
 /**
- * The preview of a skin: the 3D render the chosen service draws (settings,
- * Resources, "Сервис-скинов"). Nothing has to be downloaded or drawn here,
- * so a page of skins fills in as fast as the pictures arrive, and the
- * webview's own cache keeps the ones it has already shown.
+ * The preview of a skin: drawn right here on a canvas from the skin's own
+ * texture. Remote render services answer a texture hash they have never
+ * seen with a stock Steve or Alex, or with nothing at all - so the grid
+ * trusts only the real texture, the same one the 3D viewer loads in a
+ * couple of seconds. A small queue keeps the fetches civil, and the service
+ * chosen in "Сервис-скинов" stands in only when the canvas could not draw.
  */
-function previewSrc(hash: string) {
-	const remote = skinRenderUrl(hash)
-	if (remote) return previews.value[hash] ?? remote
-	// The chosen service has no render for a bare texture hash - the skin is
-	// drawn right here, so the grid still fills with real previews.
-	drawPreviewLocally(hash)
+function previewSrc(hash: string): string | undefined {
+	queuePreview(hash)
 	return previews.value[hash]
 }
 
-const localPreviewsPending = new Set<string>()
+const previewRequested = new Set<string>()
+const previewQueue: string[] = []
+let previewActive = 0
+const PREVIEW_PARALLEL = 6
+
+/** One texture at a time per lane: a page of skins fills in fast without
+ * flooding the network and slowing every single card down. */
+function queuePreview(hash: string) {
+	if (previewRequested.has(hash)) return
+	previewRequested.add(hash)
+	previewQueue.push(hash)
+	pumpPreviews()
+}
+
+function pumpPreviews() {
+	while (previewActive < PREVIEW_PARALLEL && previewQueue.length > 0) {
+		const hash = previewQueue.shift() as string
+		previewActive += 1
+		labySkinPreview(hash)
+			.then((url) => {
+				previews.value = { ...previews.value, [hash]: url }
+			})
+			.catch(() => {
+				// The texture would not come - the chosen render service takes
+				// the card, and `@error` walks the rest of the chain from there.
+				if (previews.value[hash] === undefined) {
+					const remote = skinRenderUrl(hash, 360, 684)
+					if (remote) previews.value = { ...previews.value, [hash]: remote }
+				}
+			})
+			.finally(() => {
+				previewActive -= 1
+				pumpPreviews()
+			})
+	}
+}
+
 /**
- * The render chain per hash: laby.net straight, then the same render through
- * two image proxies (a lossy route to laby.net does not stop the picture),
- * then minotar's flat body. `@error` walks the chain; the canvas is last.
+ * The render chain per hash: the chosen service straight, then the same
+ * render through two image proxies (a lossy route to laby.net does not stop
+ * the picture), then minotar's flat body. `@error` walks the chain.
  */
 const renderChains = new Map<string, string[]>()
 const renderStep = new Map<string, number>()
@@ -190,34 +224,16 @@ function advanceRender(hash: string): string | null {
 	return step < chain.length ? chain[step] : null
 }
 
-/** Draws a skin on the canvas from its texture, once, whoever asked. */
-function drawPreviewLocally(hash: string) {
-	if (previews.value[hash] || localPreviewsPending.has(hash)) return
-	localPreviewsPending.add(hash)
-	labySkinPreview(hash)
-		.then((url) => {
-			previews.value = { ...previews.value, [hash]: url }
-		})
-		.catch(() => {})
-		.finally(() => {
-			localPreviewsPending.delete(hash)
-		})
-}
-
 /**
- * The render did not come through - some networks drop part of their requests
- * to the render service. Minotar draws a flat body from the bare hash on a
- * host of its own and stands in first; when that fails too, the skin is drawn
- * here on a canvas from its texture, and what even that fails to load is left
- * as it was.
+ * The picture on a card did not come through - some networks drop part of
+ * their requests. The next road in the chain takes the card; when every
+ * road is dead the card stays as it was instead of flickering.
  */
 function onPreviewError(hash: string) {
 	const next = advanceRender(hash)
 	if (next) {
 		previews.value = { ...previews.value, [hash]: next }
-		return
 	}
-	drawPreviewLocally(hash)
 }
 
 async function load(reset: boolean) {

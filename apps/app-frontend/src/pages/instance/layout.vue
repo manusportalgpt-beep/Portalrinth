@@ -98,6 +98,7 @@ import {
 	PlayIcon,
 	PlusIcon,
 	StopCircleIcon,
+	StickyNotePlusIcon,
 	TerminalSquareIcon,
 	UserPlusIcon,
 } from '@modrinth/assets'
@@ -207,6 +208,7 @@ const messages = defineMessages({
 	filesTab: { id: 'app.instance.tab.files', defaultMessage: 'Files' },
 	screenshotsTab: { id: 'app.instance.tab.screenshots', defaultMessage: 'Screenshots' },
 	worldsTab: { id: 'app.instance.tab.worlds', defaultMessage: 'Worlds' },
+	notesTab: { id: 'app.instance.tab.notes', defaultMessage: 'Notes' },
 	logsTab: { id: 'app.instance.tab.logs', defaultMessage: 'Logs' },
 	shareTab: { id: 'app.instance.tab.share', defaultMessage: 'Share' },
 	shortcutCreated: {
@@ -566,6 +568,12 @@ const tabs = computed(() => {
 			icon: GlobeIcon,
 		})
 	}
+
+	instanceTabs.push({
+		label: formatMessage(messages.notesTab),
+		href: `${basePath.value}/notes`,
+		icon: StickyNotePlusIcon,
+	})
 
 	instanceTabs.push({
 		label: formatMessage(messages.logsTab),

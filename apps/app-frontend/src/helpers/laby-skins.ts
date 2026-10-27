@@ -380,9 +380,16 @@ export async function findSimilarLabySkins(
                 }
         }
 
-        const pool = [...candidates.values()].sort((a, b) => b.use_count - a.use_count).slice(0, 96)
-        const scored = await inBatches(pool, 8, async (skin) => {
-                const candidatePixels = await pixelsOf(await labySkinTexture(skin.image_hash))
+        const pool = [...candidates.values()].sort((a, b) => b.use_count - a.use_count).slice(0, 36)
+        const withDeadline = (hash: string) =>
+                Promise.race([
+                        labySkinTexture(hash),
+                        new Promise<Uint8Array>((_, reject) =>
+                                setTimeout(() => reject(new Error('texture too slow')), 8000),
+                        ),
+                ])
+        const scored = await inBatches(pool, 10, async (skin) => {
+                const candidatePixels = await pixelsOf(await withDeadline(skin.image_hash)).catch(() => null)
                 return {
                         skin,
                         score: candidatePixels ? likeness(own.histogram, fingerprint(candidatePixels).histogram) : -1,

@@ -87,6 +87,7 @@ import PortalrinthCrashModal from '@/components/ui/PortalrinthCrashModal.vue'
 import PortalrinthSwipeNavigation from '@/components/ui/PortalrinthSwipeNavigation.vue'
 import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
 import AgentNavNotice from '@/components/ui/ai/AgentNavNotice.vue'
+import NotesLaunchPopup from '@/components/ui/NotesLaunchPopup.vue'
 import SharedInstanceInviteHandler from '@/components/ui/shared-instances/shared-instance-invite-handler/index.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
 import SurveyPopup from '@/components/ui/SurveyPopup.vue'
@@ -1681,13 +1682,6 @@ onMounted(() => {
                 void appSettingsModal.value?.show()
         })
         registerHotkeyHandler('new-chat', () => router.push('/ai'))
-        registerHotkeyHandler('browser', async () => {
-                const { openInBrowserWindow } = await import('@/helpers/portalrinth-browser')
-                await openInBrowserWindow('https://duckduckgo.com/?kae=d&k1=-1', 'Браузер — Portalrinth')
-        })
-        registerHotkeyHandler('check-updates', () => {
-                void checkUpdates()
-        })
         registerHotkeyHandler('kill-game', async () => {
                 try {
                         const helpers = await import('@/helpers/process')
@@ -2815,6 +2809,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
         />
         <SharedInstanceInviteHandler ref="sharedInstanceInviteHandler" />
         <AgentNavNotice />
+        <NotesLaunchPopup />
         <InstallToPlayModal ref="installToPlayModal" :show-external-warnings="false" />
         <UpdateToPlayModal ref="updateToPlayModal" :show-external-warnings="false" />
 </template>

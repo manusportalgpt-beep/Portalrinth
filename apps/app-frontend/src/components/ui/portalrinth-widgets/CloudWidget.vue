@@ -148,7 +148,7 @@ import {
 		XIcon,
 } from '@modrinth/assets'
 import { Button, defineMessages, FloatingMenu, IconButton, Input, useVIntl } from '@modrinth/ui'
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { fetchWeather, searchPlace, type WeatherNow } from '@/helpers/portalrinth-widgets'
 
@@ -342,6 +342,20 @@ function removeRegion(id: string) {
 		persist()
 		void loadActive()
 }
+
+let refreshTimer: ReturnType<typeof setInterval> | undefined
+
+onMounted(() => {
+	void loadActive()
+	// A quiet top-up every ten minutes keeps the degrees honest.
+	refreshTimer = setInterval(() => {
+		void loadActive()
+	}, 10 * 60 * 1000)
+})
+
+onBeforeUnmount(() => {
+	if (refreshTimer) clearInterval(refreshTimer)
+})
 
 function onOpen() {
 		void loadActive()

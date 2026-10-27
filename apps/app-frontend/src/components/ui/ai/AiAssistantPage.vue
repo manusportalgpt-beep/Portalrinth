@@ -689,6 +689,13 @@ const chosenBuildLabel = computed(() => {
 	return found?.name ?? formatMessage(messages.buildNone)
 })
 
+/** The chosen build's own icon, right in the input chip, so the player
+ * always sees which build the agent will work with. */
+const chosenBuildIcon = computed(() => {
+	const found = instances.value.find((instance) => instance.id === chosenInstance.value)
+	return found ? instanceIcon(found.icon_path) : null
+})
+
 /** Picking a build tells the agent where things go; "Без сборки" unbinds. */
 function selectBuild(id: string) {
 	chosenInstance.value = id
@@ -1231,6 +1238,12 @@ defineExpose({ send })
 				/>
 				<div class="relative shrink-0">
 					<button class="ai-model-chip" @click="toggleBuilds">
+						<img
+							v-if="chosenBuildIcon"
+							:src="chosenBuildIcon"
+							alt=""
+							class="size-4 shrink-0 rounded object-cover"
+						/>
 						{{ chosenBuildLabel }}
 						<ChevronDownIcon class="size-3.5 opacity-70" />
 					</button>

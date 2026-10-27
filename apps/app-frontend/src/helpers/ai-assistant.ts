@@ -785,23 +785,24 @@ export async function playerName(): Promise<string> {
 	// `username` field anywhere), so all three get asked and the first real
 	// name wins. An unresolvable name stays empty: a missing name is better
 	// than a placeholder like {{account}} reaching the player.
+	// The account card picks the same way: the system whose default user is
+	// actually set - Microsoft first, then Ely.by, then offline. Taking "the
+	// first account there is" was exactly how the agent greeted the player
+	// by somebody else's name when several accounts existed.
 	try {
-		const { offline_get_default_user, offline_users } = await import('./offline_auth')
-		const offlineId = await offline_get_default_user().catch(() => null)
-		const offline = await offline_users().catch(() => [])
-		const offlineMe = offlineId
-			? offline.find((user) => user.profile?.id === offlineId)
-			: offline[0]
-		if (offlineMe?.profile?.name) playerNameCache = offlineMe.profile.name
+		const id = await get_default_user()
+		const all = await users()
+		const me = id ? all.find((user) => user.profile?.id === id) : undefined
+		if (me?.profile?.name) playerNameCache = me.profile.name
 	} catch {
-		/* offline accounts are optional */
+		/* a Microsoft-less launcher still gets an assistant */
 	}
 	if (!playerNameCache) {
 		try {
 			const { ely_get_default_user, ely_get_users } = await import('./ely_auth')
 			const elyId = await ely_get_default_user().catch(() => null)
 			const ely = await ely_get_users().catch(() => [])
-			const elyMe = elyId ? ely.find((user) => user.profile?.id === elyId) : ely[0]
+			const elyMe = elyId ? ely.find((user) => user.profile?.id === elyId) : undefined
 			if (elyMe?.profile?.name) playerNameCache = elyMe.profile.name
 		} catch {
 			/* Ely.by is optional too */
@@ -809,15 +810,20 @@ export async function playerName(): Promise<string> {
 	}
 	if (!playerNameCache) {
 		try {
-			const id = await get_default_user()
-			const all = await users()
-			const me = id ? all.find((user) => user.profile?.id === id) : all[0]
-			if (me?.profile?.name) playerNameCache = me.profile.name
+			const { offline_get_default_user, offline_users } = await import('./offline_auth')
+			const offlineId = await offline_get_default_user().catch(() => null)
+			const offline = await offline_users().catch(() => [])
+			const offlineMe = offlineId
+				? offline.find((user) => user.profile?.id === offlineId)
+				: undefined
+			if (offlineMe?.profile?.name) playerNameCache = offlineMe.profile.name
 		} catch {
-			/* an offline launcher still gets an assistant */
+			/* offline accounts are optional */
 		}
 	}
 	if (/^\{\{.*\}\}$/.test(playerNameCache)) playerNameCache = ''
+	// An empty answer is not remembered: accounts may still be loading, and
+	// the next turn asks again instead of staying nameless until a restart.
 	return playerNameCache
 }
 
@@ -1018,9 +1024,9 @@ async function callProvider(
 	const anySignal = (AbortSignal as { any?: (signals: AbortSignal[]) => AbortSignal }).any
 	const attemptSignal = signal
 		? anySignal
-			? anySignal([signal, AbortSignal.timeout(45000)])
+			? anySignal([signal, AbortSignal.timeout(30000)])
 			: signal
-		: AbortSignal.timeout(45000)
+		: AbortSignal.timeout(30000)
 	const response = await proxiedFetch(baseUrl, {
 		method: 'POST',
 		headers,
@@ -1077,7 +1083,7 @@ async function callProviderWithRetry(
 	signal?: AbortSignal,
 ): Promise<string> {
 	const peak = providerId === 'zai' && zaiPeakHoursNow()
-	const pauses = peak ? [2500, 6000, 10000, 15000] : [1200, 3000]
+	const pauses = peak ? [2500, 6000] : [900]
 	let lastError: unknown
 	for (let attempt = 0; attempt <= pauses.length; attempt++) {
 		if (attempt > 0) {
@@ -1128,6 +1134,10 @@ function fallbackChain(primary: string): string[] {
 }
 
 function isRetryable(error: unknown): boolean {
+	// A provider that stayed silent for the whole attempt is jammed - waiting
+	// again inside the same jam only burns the player's time, the next
+	// provider in the chain starts instead.
+	if ((error as { name?: string } | null | undefined)?.name === 'TimeoutError') return false
 	const text = String(error)
 	// 429 and 5xx clear themselves; 4xx like 401/403/400 are a decision the
 	// service made about us - retrying only burns time.

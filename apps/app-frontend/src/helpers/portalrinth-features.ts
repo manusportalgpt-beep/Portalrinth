@@ -7,8 +7,6 @@
 import { ref, watch } from 'vue'
 
 export interface PortalrinthFeatures {
-        /** The search button that opens DuckDuckGo in a launcher window. */
-        search: boolean
         /** The clock at the top center of the title bar. */
         clock: boolean
         /** The weather button next to the sound button. */
@@ -20,7 +18,6 @@ export interface PortalrinthFeatures {
 const FEATURES_KEY = 'portalrinth-features'
 
 const DEFAULT_FEATURES: PortalrinthFeatures = {
-        search: true,
         clock: true,
         weather: true,
         aiLinksWindow: false,

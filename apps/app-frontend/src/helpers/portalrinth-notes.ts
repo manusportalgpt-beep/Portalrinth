@@ -1,0 +1,61 @@
+/**
+ * A short note pinned to a build: what the player wants to remember before
+ * playing it - plans, server addresses, a to-do. Kept in localStorage (it
+ * is interface data, not game files). When the game launches and the note
+ * is not empty, it pops up in the middle of the screen - unless the player
+ * asked, once and for all, to never see it again.
+ */
+export interface InstanceNote {
+	text: string
+	neverRemind: boolean
+}
+
+const PREFIX = 'portalrinth-instance-notes:'
+
+function keyOf(instanceId: string): string {
+	return `${PREFIX}${instanceId}`
+}
+
+export function read_instance_note(instanceId: string): InstanceNote {
+	try {
+		const raw = localStorage.getItem(keyOf(instanceId))
+		if (raw) {
+			const parsed = JSON.parse(raw) as Partial<InstanceNote>
+			return {
+				text: typeof parsed.text === 'string' ? parsed.text : '',
+				neverRemind: parsed.neverRemind === true,
+			}
+		}
+	} catch {
+		/* a broken note is the same as no note */
+	}
+	return { text: '', neverRemind: false }
+}
+
+export function read_instance_notes(instanceId: string): string {
+	return read_instance_note(instanceId).text
+}
+
+export function write_instance_notes(instanceId: string, text: string): void {
+	const note = read_instance_note(instanceId)
+	try {
+		localStorage.setItem(keyOf(instanceId), JSON.stringify({ ...note, text }))
+	} catch {
+		/* a full quota should never take the note down */
+	}
+}
+
+export function never_remind_instance_notes(instanceId: string): void {
+	const note = read_instance_note(instanceId)
+	try {
+		localStorage.setItem(keyOf(instanceId), JSON.stringify({ ...note, neverRemind: true }))
+	} catch {
+		/* best effort: a full quota keeps the note, the popup just stays */
+	}
+}
+
+/** Whether launching this build should pop the note up. */
+export function should_show_instance_notes(instanceId: string): boolean {
+	const note = read_instance_note(instanceId)
+	return note.text.trim().length > 0 && !note.neverRemind
+}
