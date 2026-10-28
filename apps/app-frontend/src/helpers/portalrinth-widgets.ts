@@ -8,7 +8,39 @@
  * keyless. Results are cached for half an hour, the widget is a glance, not
  * a live feed.
  */
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
+import { fetch as nativeTauriFetch } from '@tauri-apps/plugin-http'
+
+const WEATHER_UA =
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36 Portalrinth'
+
+/**
+ * Two roads to every weather host at once: the Tauri HTTP client (Rust,
+ * direct) and the WebView's own fetch (goes through the system proxy/VPN,
+ * all of these hosts allow CORS). Whichever answers OK first wins, so a
+ * network that drops one road still gets the weather through the other.
+ */
+async function tauriFetch(url: string, init?: { signal?: AbortSignal }): Promise<Response> {
+        const timeout = init?.signal ?? AbortSignal.timeout(10000)
+        const viaTauri = nativeTauriFetch(url, {
+                signal: timeout,
+                headers: { 'User-Agent': WEATHER_UA, Accept: 'application/json' },
+        }).then((response) => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`)
+                return response
+        })
+        const viaWebView = globalThis
+                .fetch(url, { signal: timeout, headers: { Accept: 'application/json' } })
+                .then((response) => {
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+                        return response
+                })
+        try {
+                return await Promise.any([viaTauri, viaWebView])
+        } catch (error) {
+                const reasons = (error as AggregateError).errors ?? [error]
+                throw new Error(String(reasons[0]))
+        }
+}
 
 export interface WeatherNow {
         /** Celsius, rounded. */
@@ -123,15 +155,21 @@ async function geocodeByIp(): Promise<{ lat: number; lon: number; place: string 
                                         : null,
                 },
         ]
-        for (const attempt of attempts) {
-                try {
-                        const response = await tauriFetch(attempt.url, { signal: AbortSignal.timeout(8000) })
-                        if (!response.ok) continue
-                        const picked = attempt.pick(await response.json())
-                        if (picked) return picked
-                } catch {
-                        /* the next geolocator gets its turn */
-                }
+        // All geolocators are asked at once - the first real answer wins, so
+        // a silent one no longer holds the widget for seconds.
+        try {
+                return await Promise.any(
+                        attempts.map(async (attempt) => {
+                                const response = await tauriFetch(attempt.url, {
+                                        signal: AbortSignal.timeout(8000),
+                                })
+                                const picked = attempt.pick(await response.json())
+                                if (!picked || !Number.isFinite(picked.lat)) throw new Error('no place')
+                                return picked
+                        }),
+                )
+        } catch {
+                /* nobody answered - the timezone below guesses */
         }
         // No geo-IP answered - the timezone still knows roughly where we are.
         const fallback = await geocodeByTimezone()
@@ -272,6 +310,19 @@ function wwoLabel(code: number): string {
         return 'Погода'
 }
 
+/** WWO code into the WMO one the widget icons understand. */
+function wwoToWmo(code: number): number {
+        const label = wwoLabel(code)
+        if (code === 113) return 0
+        if (code === 116) return 2
+        if (code === 119 || code === 122) return 3
+        if (label === 'Туман') return 45
+        if (label.startsWith('Гроза')) return 95
+        if (label === 'Дождь') return 61
+        if (label === 'Снег') return 71
+        return 3
+}
+
 /** "06:54 AM" into minutes of the day; a failed parse keeps the day on. */
 function minutesOfDay(value: string): number | null {
         const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i)
@@ -318,7 +369,7 @@ async function fetchFromWttr(
         const code = Number(current.weatherCode)
         return {
                 temp: Math.round(Number(current.temp_C)),
-                code,
+                code: wwoToWmo(code),
                 label: wwoLabel(code),
                 wind: Math.round(Number(current.windspeedKmph)),
                 windDir: Number(current.winddirDegree),
@@ -349,14 +400,17 @@ export async function fetchWeather(placeQuery?: string, force = false): Promise<
 
         const location = placeQuery ? await geocodeByName(placeQuery) : await geocodeByIp()
         if (!location) throw new Error('Место не нашлось')
+        // Both stations are asked side by side: Open-Meteo is preferred, wttr.in
+        // is already on its way if Open-Meteo is not routed on this network.
+        const openMeteo = fetchFromOpenMeteo(location)
+        const wttr = fetchFromWttr(location.lat, location.lon, location.place)
+        wttr.catch(() => {})
         let weather: WeatherNow
         try {
-                weather = await fetchFromOpenMeteo(location)
+                weather = await openMeteo
         } catch (openMeteoError) {
-                // The first station did not answer - the Russian one gets its turn,
-                // and only when both are down does the error surface.
                 try {
-                        weather = await fetchFromWttr(location.lat, location.lon, location.place)
+                        weather = await wttr
                 } catch {
                         throw openMeteoError
                 }

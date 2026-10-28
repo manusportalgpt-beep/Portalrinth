@@ -5,6 +5,8 @@
  * is not empty, it pops up in the middle of the screen - unless the player
  * asked, once and for all, to never see it again.
  */
+import { portalrinthFeatures } from './portalrinth-features'
+
 export interface InstanceNote {
 	text: string
 	neverRemind: boolean
@@ -54,8 +56,39 @@ export function never_remind_instance_notes(instanceId: string): void {
 	}
 }
 
+/** Builds whose note was muted with «Больше не напоминать». */
+export function muted_instance_notes(): string[] {
+	const ids: string[] = []
+	try {
+		for (let index = 0; index < localStorage.length; index++) {
+			const key = localStorage.key(index)
+			if (!key?.startsWith(PREFIX)) continue
+			const id = key.slice(PREFIX.length)
+			if (read_instance_note(id).neverRemind) ids.push(id)
+		}
+	} catch {
+		/* no storage - nothing is muted */
+	}
+	return ids
+}
+
+/** Brings every muted note back: they pop up before launch again. */
+export function unmute_all_instance_notes(): number {
+	const ids = muted_instance_notes()
+	for (const id of ids) {
+		const note = read_instance_note(id)
+		try {
+			localStorage.setItem(keyOf(id), JSON.stringify({ ...note, neverRemind: false }))
+		} catch {
+			/* best effort */
+		}
+	}
+	return ids.length
+}
+
 /** Whether launching this build should pop the note up. */
 export function should_show_instance_notes(instanceId: string): boolean {
+	if (!portalrinthFeatures.value.notesPopup) return false
 	const note = read_instance_note(instanceId)
 	return note.text.trim().length > 0 && !note.neverRemind
 }

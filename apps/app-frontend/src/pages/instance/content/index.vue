@@ -1774,6 +1774,14 @@ provideContentManager({
 		)
 		await reconcileSharedInstancePublishState()
 	},
+	bulkFreezeItems: async (items: ContentItem[], frozen: boolean) => {
+		await Promise.all(
+			items
+				.filter((item) => !!item.file_path && canMutateContent(item))
+				.map((item) => handleContentFreeze(item, frozen)),
+		)
+	},
+	canFreezeItem: (item: ContentItem) => !!item.file_path && canMutateContent(item),
 	deleteItem: removeMod,
 	bulkDeleteItems: (items: ContentItem[]) =>
 		Promise.all(items.filter(canDeleteContent).map((item) => removeMod(item))).then(() => {}),

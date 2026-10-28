@@ -11,7 +11,6 @@ import {
 	CopyIcon,
 	DownloadIcon,
 	EditIcon,
-	ExternalIcon,
 	FileCodeIcon,
 	FileIcon,
 	FilePlusIcon,

@@ -59,6 +59,9 @@ export interface ContentManagerContext {
 	bulkDeleteItems?: (items: ContentItem[]) => Promise<void>
 	bulkEnableItems?: (items: ContentItem[]) => Promise<void>
 	bulkDisableItems?: (items: ContentItem[]) => Promise<void>
+	/** Freeze (lock to the current version) or unfreeze several rows at once. */
+	bulkFreezeItems?: (items: ContentItem[], frozen: boolean) => Promise<void>
+	canFreezeItem?: (item: ContentItem) => boolean
 	canDeleteItem?: (item: ContentItem) => boolean
 	canToggleItem?: (item: ContentItem) => boolean
 	getDeleteWarning?: (items: ContentItem[]) => ContentActionWarning | null

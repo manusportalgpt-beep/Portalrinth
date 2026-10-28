@@ -674,6 +674,12 @@
   "content.page-layout.browse-content": {
     "defaultMessage": "Найти проекты"
   },
+  "content.page-layout.bulk-freeze": {
+    "defaultMessage": "Заморозить версию"
+  },
+  "content.page-layout.bulk-unfreeze": {
+    "defaultMessage": "Разморозить версию"
+  },
   "content.page-layout.busy-description": {
     "defaultMessage": "Пожалуйста, дождитесь завершения операции перед редактированием."
   },

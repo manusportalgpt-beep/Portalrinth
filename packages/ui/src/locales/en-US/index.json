@@ -755,6 +755,12 @@
   "content.page-layout.browse-content": {
     "defaultMessage": "Browse content"
   },
+  "content.page-layout.bulk-freeze": {
+    "defaultMessage": "Freeze version"
+  },
+  "content.page-layout.bulk-unfreeze": {
+    "defaultMessage": "Unfreeze version"
+  },
   "content.page-layout.busy-description": {
     "defaultMessage": "Please wait for the operation to complete before editing content."
   },

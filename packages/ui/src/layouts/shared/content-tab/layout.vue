@@ -12,6 +12,8 @@ import {
 	FileIcon,
 	FolderOpenIcon,
 	LinkIcon,
+	LockIcon,
+	LockOpenIcon,
 	OrganizationIcon,
 	RefreshCwIcon,
 	SearchIcon,
@@ -76,6 +78,14 @@ const props = withDefaults(
 )
 
 const messages = defineMessages({
+	bulkFreeze: {
+		id: 'content.page-layout.bulk-freeze',
+		defaultMessage: 'Freeze version',
+	},
+	bulkUnfreeze: {
+		id: 'content.page-layout.bulk-unfreeze',
+		defaultMessage: 'Unfreeze version',
+	},
 	loadingContent: {
 		id: 'content.page-layout.loading',
 		defaultMessage: 'Loading content...',
@@ -796,6 +806,29 @@ async function handleToggleEnabledById(id: string, _value: boolean) {
 		await ctx.toggleEnabled(item)
 	} finally {
 		unmarkChanging(id)
+	}
+}
+
+const freezing = ref(false)
+const freezableSelectedItems = computed(() =>
+	selectedItems.value.filter((item) => (ctx.canFreezeItem ? ctx.canFreezeItem(item) : true)),
+)
+const allSelectedFrozen = computed(
+	() =>
+		freezableSelectedItems.value.length > 0 &&
+		freezableSelectedItems.value.every((item) => item.locked),
+)
+
+async function bulkToggleFreeze() {
+	if (!ctx.bulkFreezeItems || freezing.value) return
+	const frozen = !allSelectedFrozen.value
+	const items = freezableSelectedItems.value.filter((item) => !!item.locked !== frozen)
+	if (items.length === 0) return
+	freezing.value = true
+	try {
+		await ctx.bulkFreezeItems(items, frozen)
+	} finally {
+		freezing.value = false
 	}
 }
 
@@ -1522,6 +1555,28 @@ const confirmUnlinkModal = ref<InstanceType<typeof ConfirmUnlinkModal>>()
 			@disable="bulkDisable"
 		>
 			<template #actions>
+				<Button
+					v-if="ctx.bulkFreezeItems && freezableSelectedItems.length > 0"
+					v-tooltip="
+						allSelectedFrozen
+							? formatMessage(messages.bulkUnfreeze)
+							: formatMessage(messages.bulkFreeze)
+					"
+					type="quiet"
+					:disabled="ctx.isBusy.value || freezing"
+					@click="bulkToggleFreeze"
+				>
+					<LockOpenIcon v-if="allSelectedFrozen" />
+					<LockIcon v-else />
+					<span class="bar-label">
+						{{
+							allSelectedFrozen
+								? formatMessage(messages.bulkUnfreeze)
+								: formatMessage(messages.bulkFreeze)
+						}}
+					</span>
+				</Button>
+
 				<Button
 					v-if="hasBulkUpdateSupport && selectedItems.some((m) => m.has_update && !m.locked)"
 					v-tooltip="formatMessage(commonMessages.updateButton)"

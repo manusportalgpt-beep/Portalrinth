@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { StickyNotePlusIcon } from '@modrinth/assets'
 import {
+	Button,
 	defineMessages,
 	injectAuth,
 	injectNotificationManager,
@@ -10,7 +12,7 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import {
@@ -26,6 +28,7 @@ import {
 	browseScrollScope,
 } from '@/helpers/portalrinth-browse.ts'
 import { portalrinthFeatures } from '@/helpers/portalrinth-features'
+import { muted_instance_notes, unmute_all_instance_notes } from '@/helpers/portalrinth-notes'
 import {
 	type AppSettings,
 	appSettingsKeys,
@@ -168,6 +171,19 @@ const messages = defineMessages({
 		id: 'app.features.ai-links.description',
 		defaultMessage:
 			'Внешние ссылки из чата Порталуса открываются в окне лаунчера, а не в браузере системы (по умолчанию выключено).',
+	},
+	notesPopupTitle: {
+		id: 'app.features.notes-popup.title',
+		defaultMessage: 'Заметки перед запуском',
+	},
+	notesPopupDescription: {
+		id: 'app.features.notes-popup.description',
+		defaultMessage:
+			'Заметка сборки всплывает при запуске игры. Включение возвращает и те, что были скрыты кнопкой «Больше не напоминать».',
+	},
+	notesPopupRestore: {
+		id: 'app.features.notes-popup.restore',
+		defaultMessage: 'Вернуть скрытые ({count})',
 	},
 	weatherTitle: {
 		id: 'app.widgets.weather.title',
@@ -329,6 +345,20 @@ onMounted(() => {
 onBeforeUnmount(() => {
 	settingsModal.registerUnsavedChangesController(null)
 })
+
+// Muted build notes: the count shows the restore button, switching the
+// popups on brings every muted note back at once.
+const mutedNotes = ref(muted_instance_notes().length)
+function restoreNotes() {
+	unmute_all_instance_notes()
+	mutedNotes.value = 0
+}
+watch(
+	() => portalrinthFeatures.value.notesPopup,
+	(on) => {
+		if (on) restoreNotes()
+	},
+)
 </script>
 
 <template>
@@ -571,6 +601,27 @@ onBeforeUnmount(() => {
 			</div>
 			<div class="flex items-center justify-between gap-4">
 				<div>
+					<h3 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.notesPopupTitle) }}
+					</h3>
+					<p class="m-0 mt-1">{{ formatMessage(messages.notesPopupDescription) }}</p>
+				</div>
+				<div class="flex shrink-0 items-center gap-3">
+					<Transition name="notes-restore">
+						<Button v-if="mutedNotes > 0 && portalrinthFeatures.notesPopup" type="quiet" @click="restoreNotes">
+							<StickyNotePlusIcon />
+							{{ formatMessage(messages.notesPopupRestore, { count: mutedNotes }) }}
+						</Button>
+					</Transition>
+					<Toggle
+						id="portalrinth-notes-popup"
+						v-model="portalrinthFeatures.notesPopup"
+						:aria-label="formatMessage(messages.notesPopupTitle)"
+					/>
+				</div>
+			</div>
+			<div class="flex items-center justify-between gap-4">
+				<div>
 					<h3 class="m-0 text-sm font-semibold text-contrast">{{ formatMessage(messages.aiLinksTitle) }}</h3>
 					<p class="m-0 mt-1">{{ formatMessage(messages.aiLinksDescription) }}</p>
 				</div>
@@ -583,3 +634,17 @@ onBeforeUnmount(() => {
 		</div>
 	</section>
 </template>
+
+<style scoped>
+.notes-restore-enter-active,
+.notes-restore-leave-active {
+	transition:
+		opacity 0.2s ease,
+		transform 0.2s ease;
+}
+.notes-restore-enter-from,
+.notes-restore-leave-to {
+	opacity: 0;
+	transform: translateX(6px);
+}
+</style>
