@@ -137,6 +137,15 @@ const tabs = [
 	},
 	{
 		name: defineMessage({
+			id: 'app.settings.tabs.changes',
+			defaultMessage: 'Изменения',
+		}),
+		category: tabCategories.system,
+		icon: NewspaperIcon,
+		content: ChangesSettings,
+	},
+	{
+		name: defineMessage({
 			id: 'app.settings.tabs.language',
 			defaultMessage: 'Language',
 		}),
