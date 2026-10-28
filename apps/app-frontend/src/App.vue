@@ -1,5 +1,6 @@
 <script setup>
 import '@/helpers/ai-launcher-tools'
+import '@/helpers/ai-portalus-tools'
 
 import { ModrinthApiError } from '@modrinth/api-client'
 import {
@@ -87,6 +88,7 @@ import PackManifestModal from '@/components/ui/modpack/PackManifestModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
 import NotesLaunchPopup from '@/components/ui/NotesLaunchPopup.vue'
 import ViewportScrollbar from '@/components/ui/portalrinth-widgets/ViewportScrollbar.vue'
+import AiViewerHost from '@/components/ui/ai/AiViewerHost.vue'
 import PortalrinthBackdrop from '@/components/ui/PortalrinthBackdrop.vue'
 import PortalrinthCrashModal from '@/components/ui/PortalrinthCrashModal.vue'
 import PortalrinthSwipeNavigation from '@/components/ui/PortalrinthSwipeNavigation.vue'
@@ -1636,12 +1638,12 @@ onMounted(() => {
 
         // Models write paths loosely - "mods", "browse/mods", "/настройки":
         // every spelling of a real screen lands on it instead of a 404.
-        const normalizeAgentPath = (raw: string): string => {
+        const normalizeAgentPath = (raw) => {
                 let path = raw.trim().replace(/^["'`]+|["'`]+$/g, '')
                 if (!path) return ''
                 if (/^https?:\/\/modrinth\.com\//.test(path)) path = path.replace(/^https?:\/\/modrinth\.com/, '')
                 const bare = path.replace(/^\/+/, '').toLowerCase()
-                const aliases: Record<string, string> = {
+                const aliases = {
                         '': '/',
                         home: '/',
                         главная: '/',
@@ -1672,8 +1674,8 @@ onMounted(() => {
                 if (bare in aliases) return aliases[bare]
                 path = `/${path.replace(/^\/+/, '')}`
                 return path
-                        .replace(/^\/browse\/(mods|modpacks|shaders|resourcepacks|datapacks|plugins)(?=$|[?/])/, (_m, kind: string) => `/browse/${kind.slice(0, -1)}`)
-                        .replace(/^\/(mods|modpacks|shaders|resourcepacks)(?=\?)/, (_m, kind: string) => `/browse/${kind.slice(0, -1)}`)
+                        .replace(/^\/browse\/(mods|modpacks|shaders|resourcepacks|datapacks|plugins)(?=$|[?/])/, (_m, kind) => `/browse/${kind.slice(0, -1)}`)
+                        .replace(/^\/(mods|modpacks|shaders|resourcepacks)(?=\?)/, (_m, kind) => `/browse/${kind.slice(0, -1)}`)
                         .replace(/^\/settings.*$/, 'settings')
         }
 
@@ -2800,6 +2802,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                 }"
         >
                 <ViewportScrollbar />
+                <AiViewerHost />
                 <div class="app-viewport flex-grow router-view">
                         <SurveyPopup />
                         <div

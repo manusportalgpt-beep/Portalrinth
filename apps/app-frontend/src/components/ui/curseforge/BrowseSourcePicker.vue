@@ -18,10 +18,6 @@ const { formatMessage } = useVIntl()
 const messages = defineMessages({
 	label: { id: 'app.browse.source.label', defaultMessage: 'Where to browse' },
 	both: { id: 'app.browse.source.both', defaultMessage: 'Modrinth + CurseForge' },
-	bothHint: {
-		id: 'app.browse.source.both-hint',
-		defaultMessage: 'One list, no repeats - pick the platform on each card',
-	},
 })
 
 const options = computed(() => [
@@ -98,9 +94,6 @@ function pick(value: BrowseMode, close: () => void) {
 					</span>
 					<span class="browse-source-row-text">
 						<span class="browse-source-row-label">{{ option.label }}</span>
-						<span v-if="option.value === 'both'" class="browse-source-row-hint">
-							{{ formatMessage(messages.bothHint) }}
-						</span>
 					</span>
 					<CheckIcon class="browse-source-check" />
 				</button>
@@ -191,12 +184,6 @@ function pick(value: BrowseMode, close: () => void) {
 
 .browse-source-row-label {
 	font-weight: 600;
-}
-
-.browse-source-row-hint {
-	font-size: 0.75rem;
-	color: var(--color-secondary);
-	max-width: 13rem;
 }
 
 .browse-source-check {

@@ -69,6 +69,7 @@ import {
 	zaiPeakHoursLabel,
 } from '@/helpers/ai-assistant'
 import { buildSitePreview } from '@/helpers/ai-launcher-tools'
+import { openImageViewer, openReader } from '@/helpers/ai-reader'
 import {
 	type AttachedFile,
 	attachFromPaths,
@@ -223,7 +224,6 @@ const scrollBox = ref<HTMLElement | null>(null)
 const attachments = ref<AttachedFile[]>([])
 const questionDraft = ref('')
 	const galleryOpen = ref<Record<string, boolean>>({})
-	const zoomedImage = ref('')
 const collapsedCards = ref<Record<string, boolean>>({})
 const jarInstalled = ref<Record<string, boolean>>({})
 const instances = ref<Awaited<ReturnType<typeof listInstances>>>([])
@@ -329,6 +329,18 @@ function actionName(tool: string) {
 		get_page: 'посмотрел, где вы находитесь',
 		web_fetch: 'открыл страницу',
 		web_search: 'поискал в интернете',
+		open_page: 'открыл статью в лаунчере',
+		sandbox_download: 'скачал файл',
+		sandbox_show: 'показал картинку',
+		build_modpack: 'собрал сборку',
+		scaffold: 'создал проект',
+		install_to_instance: 'поставил файл в сборку',
+		launcher_set_gradient: 'сменил градиент',
+		launcher_gradient_animation: 'настроил анимацию градиента',
+		launcher_accent_tint: 'настроил подкраску фона',
+		launcher_appearance: 'посмотрел оформление',
+		launcher_apply_theme: 'применил тему',
+		launcher_save_theme: 'сохранил тему',
 		launcher_set_accent: 'сменил цвет акцента',
 		launcher_set_background: 'поставил фон',
 		launcher_search_mods: 'поискал моды в CF и MR',
@@ -811,6 +823,9 @@ const MODRINTH_LINK = /^https?:\/\/(?:[a-z-]+\.)?modrinth\.com(?:\/|$)/i
  * browser by default, or the launcher's own browser window when the player
  * turned that on in Settings → Функции.
  */
+const FILE_LINK =
+	/\.(zip|jar|7z|rar|exe|msi|dmg|deb|appimage|mp3|ogg|wav|flac|mp4|webm|mkv|mov|pdf|mrpack)(?:$|[?#])/i
+
 async function openLink(url: string) {
 	try {
 		if (MODRINTH_LINK.test(url)) {
@@ -825,6 +840,11 @@ async function openLink(url: string) {
 				url,
 				title: 'Браузер — Portalrinth',
 			})
+			return
+		}
+		// Pages open in the launcher's reader; files and odd schemes go to the system.
+		if (/^https?:\/\//i.test(url) && !FILE_LINK.test(url)) {
+			await openReader(url)
 			return
 		}
 		const { openUrl } = await import('@tauri-apps/plugin-opener')
@@ -1115,7 +1135,7 @@ defineExpose({ send })
 							v-if="message.role === 'assistant' && message.steps?.length"
 							:steps="message.steps"
 							@open-link="openLink"
-							@zoom="(src) => (zoomedImage = src)"
+							@zoom="(src) => openImageViewer(src)"
 						/>
 						<div v-if="message.attachments?.length" class="mb-2 flex flex-wrap gap-2">
 							<template v-for="(file, fileIndex) in message.attachments" :key="fileIndex">
@@ -1123,7 +1143,8 @@ defineExpose({ send })
 									v-if="file.kind === 'image' && file.dataUrl"
 									:src="file.dataUrl"
 									:alt="file.name"
-									class="ai-attach-image"
+									class="ai-attach-image cursor-zoom-in"
+									@click="() => openImageViewer(file.dataUrl!, file.name)"
 								/>
 								<span v-else class="ai-attach-chip">
 									<FileIcon class="size-3.5 shrink-0" />
@@ -1228,7 +1249,12 @@ defineExpose({ send })
 								:key="`img-${imageIndex}`"
 								class="ai-activity-image-wrap"
 							>
-								<img :src="image" class="ai-activity-image" alt="" />
+								<img
+									:src="image"
+									class="ai-activity-image cursor-zoom-in"
+									alt=""
+									@click="() => openImageViewer(image)"
+								/>
 							</span>
 						</div>
 
@@ -1286,7 +1312,7 @@ defineExpose({ send })
 												class="ai-gallery-thumb"
 												loading="lazy"
 												alt=""
-												@click.stop="() => (zoomedImage = shot)"
+												@click.stop="() => openImageViewer(shot)"
 											/>
 										</div>
 									</div>
@@ -1304,7 +1330,8 @@ defineExpose({ send })
 									v-for="wiki in message.activity.wikis as AiWikiCard[]"
 									:key="wiki.url"
 									class="ai-mod-card ai-wiki-card"
-									@click="() => openLink(wiki.url)"
+									title="Читать в лаунчере"
+									@click="() => openReader(wiki.url)"
 								>
 									<img v-if="wiki.image" :src="wiki.image" class="ai-wiki-image" alt="" loading="lazy" />
 									<span v-else class="ai-mod-icon ai-mod-icon-fallback"><BookOpenIcon class="size-5" /></span>
@@ -1313,7 +1340,7 @@ defineExpose({ send })
 										<p class="ai-card-meta">{{ wiki.wiki }}</p>
 										<p v-if="wiki.excerpt" class="ai-card-desc">{{ wiki.excerpt }}</p>
 									</div>
-									<ExternalIcon class="size-4 shrink-0 opacity-60" />
+									<BookOpenIcon class="size-4 shrink-0 opacity-60" />
 								</button>
 							</div>
 						</div>
@@ -1466,9 +1493,6 @@ defineExpose({ send })
 					</div>
 				</div>
 			</Transition>
-			<div v-if="zoomedImage" class="ai-zoom" @click="() => (zoomedImage = '')">
-				<img :src="zoomedImage" class="ai-zoom-image" alt="" />
-			</div>
 
 			<div v-if="sending" class="mb-3 flex justify-start">
 				<div class="ai-bubble ai-bubble-assistant ai-process ai-live-bubble rounded-2xl px-3 py-2.5">
@@ -1478,7 +1502,7 @@ defineExpose({ send })
 						:phase="phaseLabel"
 						default-open
 						@open-link="openLink"
-						@zoom="(src) => (zoomedImage = src)"
+						@zoom="(src) => openImageViewer(src)"
 					/>
 					<p v-if="streaming" class="ai-live-text m-0 whitespace-pre-wrap break-words px-1 text-sm leading-relaxed">{{ streaming }}<span class="ai-caret" /></p>
 				</div>

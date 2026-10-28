@@ -2285,9 +2285,6 @@
 	"app.browse.source.both": {
 		"message": "Modrinth + CurseForge"
 	},
-	"app.browse.source.both-hint": {
-		"message": "Один список без повторов — платформу выбираете на карточке"
-	},
 	"app.browse.card-source.label": {
 		"message": "Откуда установить"
 	},

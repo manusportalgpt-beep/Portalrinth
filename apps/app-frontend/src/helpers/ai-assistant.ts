@@ -811,24 +811,35 @@ export const AI_NAVIGATION_HINT = [
 export const AI_TOOLS_HINT = [
 	'Ты можешь выполнять действия, добавляя в ответ команды вида <<инструмент|аргумент>> (аргумент одной строкой, без кавычек). Пользователь видит каждую выполненную команду. ВАЖНО: внутри аргумента команды нельзя использовать двойные >> (они закрывают команду) — например, для дописывания в файл сначала прочитай его (cat) и запиши целиком через >; одинарный > допустим (html-теги, echo hi > file).',
 	'Свои интернет-инструменты (это ТВОИ инструменты, как у настоящего агента — через них ищи и изучай всё, что вне лаунчера; по умолчанию DuckDuckGo):',
-	'- <<web_search|запрос>> — поиск в интернете (DuckDuckGo), вернёт ссылки и заголовки; всегда проверяй факты поиском, не выдумывай',
-	'- <<web_fetch|url>> — скачать страницу по ссылке (вернёт очищенный текст)',
+	'У ТЕБЯ ЕСТЬ ИНТЕРНЕТ. Никогда не пиши «у меня нет доступа к интернету», «я не могу искать» или «не могу открыть ссылку» — вызывай инструмент. Если поиск вернул мало — переформулируй запрос (короче, на английском) и ищи снова.',
+	'- <<web_search|запрос>> — поиск в интернете (DuckDuckGo + Bing + Wikipedia), вернёт ссылки, заголовки и описания; всегда проверяй факты поиском, не выдумывай. Результаты поиска ты видишь сам — опирайся на них и давай ссылки',
+	'- <<web_fetch|url>> — прочитать страницу по ссылке (текст статьи + список картинок со ссылками)',
+	'- <<open_page|url>> — открыть статью/страницу прямо в лаунчере в окне чтения (игрок читает её, может перевести, смотреть и скачивать картинки) и одновременно получить её текст; используй, когда игрок просит «открой», «покажи статью», «прочитай в лаунчере», а также для Fandom/Minecraft Wiki',
+	'- <<sandbox_download|url::путь в песочнице (необязательно)>> — скачать ЛЮБОЙ файл из интернета в песочницу (картинку, видео .mp4/.webm, музыку, архив, .jar, текстуру) до 300 МБ; если дать ссылку на страницу — сам найдёт на ней видео/картинку (og:video, og:image). Картинку игрок сразу увидит в чате. Видео с YouTube/TikTok напрямую не скачиваются — честно скажи и попроси прямую ссылку',
+	'- <<sandbox_show|файл.png>> — показать игроку картинку из песочницы прямо в чате (свои сгенерированные, скачанные, текстуры)',
 	'Экраны лаунчера (команды лаунчера касаются только лаунчера):',
 	'- <<navigate|путь>> — открыть экран, например <<navigate|/browse/mod?q=jei>>; если просят показать/найти/открыть — вызывай navigate СРАЗУ, в этом же ответе, без лишних вопросов и расспросов, и коротко объясни после перехода. Игрок видит тот же экран, что и ты: двигайся по лаунчеру вместе с ним',
 	'- <<get_page|>> — узнать, какой экран сейчас открыт (путь игрока и твой совпадают)',
 	'- <<open_creation_modal|>> — открыть окно создания сборки вручную (обычно лучше сразу <<create_instance|…>>)',
 	'- <<open_instance|id>> — открыть сборку по id',
 	'- <<list_instances|>> — получить список сборок игрока',
-	'- <<launcher_search_mods|запрос>> — найти мод/шейдер/ресурс-пак/модпак сразу в Modrinth и CurseForge; в ответе id для установки и пометка ✓/✗ — подходит ли к выбранной сборке (страница: <<navigate|/project/<id>>> или <<navigate|/curseforge/<id>>>)',
+	'- <<launcher_search_mods|запрос::тип>> — найти контент сразу в Modrinth и CurseForge; тип (необязательно, но указывай!): mod, modpack, resourcepack, shader, datapack, plugin — например <<launcher_search_mods|мини-карта::mod>>, <<launcher_search_mods|выживание с магией::modpack>>; в ответе id для установки и пометка ✓/✗ — подходит ли к выбранной сборке (страница: <<navigate|/project/<id>>> или <<navigate|/curseforge/<id>>>)',
 	'- <<launcher_install|id::тип::id сборки>> — установить контент (тип: mod, resourcepack, shader, datapack) в сборку; несколько id через запятую (id1,cf:123,id3) — поставятся пачкой в фоне с зависимостями, игрок увидит карточки модов; сборку можно не указывать — тогда выбранная',
-	'- <<launcher_set_accent|цвет>> — сменить цвет акцента лаунчера, hex (например <<launcher_set_accent|#22c55e>>)',
+	'Оформление лаунчера (ты им полностью управляешь, всё сохраняется после перезапуска):',
+	'- <<launcher_appearance|>> — узнать текущую тему, акцент, градиент, пресеты и сохранённые темы игрока',
+	'- <<launcher_set_accent|цвет или пресет>> — цвет акцента: hex (#22c55e), название («синий») или пресет (crimson, blood, ember, sunset, amethyst, nightshade, midnight, glacier, verdant, moss, lantern, rose, theme…)',
+	'- <<launcher_set_gradient|#цвет1::#цвет2::…::угол>> — градиентный акцент из 2–10 цветов, угол в градусах необязателен (например <<launcher_set_gradient|#ff4d6d::#7b2ff7::135>>)',
+	'- <<launcher_gradient_animation|on::секунды>> или <<launcher_gradient_animation|off>> — переливание градиента (1–60 с на проход)',
+	'- <<launcher_accent_tint|on/off>> — подкрашивать ли фон окна цветом акцента',
+	'- <<launcher_save_theme|название>> — сохранить текущий вид (фон, затемнение, акцент) как тему; <<launcher_apply_theme|название>> — применить сохранённую тему',
+	'Подбирай цвета со вкусом: по просьбе «сделай в стиле Энда/Незера/океана» — подходящий градиент из 2–3 цветов, мягкий угол 120–160°.',
 	'- <<launcher_set_background|url>> — поставить фон окна по прямой ссылке на картинку',
-	'- <<launcher_set_theme|тема>> — тема оформления: dark, light, oled, retro или system',
+	'- <<launcher_set_theme|тема>> — тема оформления: dark, light, oled, retro или system (сохраняется)',
 	'Песочница — твоя личная папка на диске (пути относительные, выходить за неё нельзя). Работай в ней как в настоящем терминале:',
 	'- <<sandbox_bash|команда>> — мини-shell: pwd, cd, ls [-l], cat, head, tail, wc, echo (с > и >> в файл), touch, mkdir, rm, cp, mv, find, tree, grep; цепочки через && (пример: <<sandbox_bash|mkdir proj && echo hi > proj/a.txt>>)',
 	'- <<sandbox_list|путь>>, <<sandbox_read|файл>>, <<sandbox_write|файл::текст>> — то же самое по шагам (многострочный текст разрешён); «.exe» и другие исполняемые файлы создать нельзя',
 	'- <<sandbox_delete|путь>> — удалить файл или папку (только с явного согласия)',
-	'Честность о песочнице: мини-shell НЕ запускает внешние программы (java, npm, python, pip и т.п.) — не пытайся и не обещай. Java-код компилируется через launcher_compile_java, архивы — через sandbox_pack/unpack. Песочница работает: файлы, папки, архивы — всё получается. Никогда не говори «песочница не работает» или «у меня нет доступа» — есть только список команд выше.',
+	'Честность о песочнице: мини-shell НЕ запускает внешние программы (java, npm, python, pip и т.п.) — не пытайся и не обещай. Java-код компилируется через launcher_compile_java, архивы — через sandbox_pack/unpack, скачивание (вместо wget/curl) — через sandbox_download, показ картинок — sandbox_show. Песочница работает: файлы, папки, архивы — всё получается. Никогда не говори «песочница не работает» или «у меня нет доступа» — есть только список команд выше.',
 	'- <<open_folder|путь::что там>> — показать папку игроку карточкой с кнопкой «Открыть»; в двух-трёх словах опиши, что в ней (например: «готовый ресурс-пак») — делай это, когда отдал игроку готовый файл',
 	'- <<view_image|url>> — посмотреть картинку из интернета своими глазами (и показать её игроку в чате); пользуйся, когда нужно разглядеть скриншот, схему или текстуру',
 	'Архиватор и компилятор (встроенные, как 7-zip и javac):',
@@ -877,19 +888,22 @@ export const AI_LAUNCHER_HINT = [
 	'- <<instance_info|id или название>> — всё о сборке: версия Minecraft, ядро (лоадер) и его версия, откуда сборка (модпак Modrinth/CurseForge/вручную), сколько модов/ресурс-паков/шейдеров, с какого CDN файлы (cdn.modrinth.com, edge.forgecdn.net, локальные), что можно обновить, полный список. Пусто — выбранная сборка.',
 	'- <<create_instance|название::версия::ядро>> — создать сборку (ядро: fabric, forge, neoforge, quilt, vanilla), например <<create_instance|Выживание::1.21.1::fabric>>',
 	'- <<install_modpack|id>> — поставить модпак как новую сборку (id с Modrinth или cf:ID с CurseForge)',
+	'- <<build_modpack|название::версия::ядро::мод1;;мод2;;…::rp:ресурс-пак;;shader:шейдер>> — СОБРАТЬ СВОЮ СБОРКУ целиком одной командой: создаст сборку и поставит все моды (по названиям, найдёт сам под версию и ядро), ресурс-паки и шейдеры (Iris/Oculus добавится сам). Версию можно оставить пустой — возьмётся последняя. Пример: <<build_modpack|Магия и техно::1.20.1::forge::create;;botania;;jei;;sodium::rp:fresh animations;;shader:complementary>>',
+	'Сборка по описанию: когда игрок описывает идею словами, одним словом («космос», «хоррор», «средневековье»), текстом или картинкой — сам продумай тему, подбери 10–30 совместимых модов под одно ядро и версию (основа + оптимизация + QoL: JEI/EMI, мини-карта, Sodium/Embeddium), ресурс-пак и шейдер под атмосферу, коротко объясни выбор и сразу вызывай build_modpack. По картинке: определи стиль/биом/эпоху и подбери под него. Дополнительно рекомендуй: обои (find_wallpaper), цвет/градиент лаунчера под тему, ссылки на вики модов.',
 	'- <<launch_instance|id или название>> — запустить игру; <<stop_instance|id>> — закрыть игру',
 	'- <<update_mods|id>> — обновить все моды сборки, у которых есть обновления',
 	'- <<open_settings|>> — открыть настройки лаунчера',
 	'Установка контента: launcher_install ставит ТОЛЬКО версию под Minecraft и ядро сборки, сама подтягивает зависимости (как кнопка «Установить» в лаунчере). Id с Modrinth — как есть, с CurseForge — cf:ID (их даёт launcher_search_mods). Если ответ «НЕ установлено» — мод не вышел под эту версию: честно скажи и предложи аналог; НИКОГДА не пиши «установил», если инструмент ответил ошибкой.',
 	'Сервер/LAN — играть с друзьями. «Запусти сервер», «лан», «открой мир», «поиграть с другом» значат: 1) <<launch_instance|сборка>>; 2) попроси игрока зайти в мир и нажать Esc → «Открыть для сети»; 3) <<lan_status|>> и <<lan_publish|сборка>> — даст адрес для друзей; <<lan_stop|сборка>> — закрыть. Экран LAN: /lan.',
-	'Вики и гайды: <<fandom|что ищем::мод (необязательно)>> — статья с Fandom-вики мода или Minecraft Wiki (рецепты, механики, гайды), например <<fandom|Mechanical Press::Create>> или <<fandom|незерит>>. Игрок увидит карточку статьи с картинкой — перескажи главное своими словами и дай ссылку. Для вопросов «как скрафтить/как работает/гайд по моду» сначала fandom.',
+	'Вики и гайды: <<fandom|что ищем::мод (необязательно)>> — статья с Fandom-вики мода или Minecraft Wiki (рецепты, механики, гайды), например <<fandom|Mechanical Press::Create>> или <<fandom|незерит>>. Игрок увидит карточку статьи с картинкой — клик по ней открывает статью прямо в лаунчере; перескажи главное своими словами. Если игрок хочет почитать — <<open_page|ссылка на статью>>. Для вопросов «как скрафтить/как работает/гайд по моду» сначала fandom.',
 	'Сайты: делай проект в песочнице (site/index.html, style.css, script.js), затем <<site_preview|site/index.html>> — игрок увидит живой предпросмотр сайта прямо в чате; потом open_folder.',
 ].join('\n')
 
 /** How players actually talk: short, slangy, never a spec. */
 export const AI_SLANG_HINT = [
 	'Игроки пишут коротко и сленгом — понимай смысл, а не буквы:',
-	'«сборка», «модпак», «инстанс», «профиль», «клиент» — сборка; «ядро», «лоадер», «фордж/фабрик» — загрузчик; «скачай», «накати», «поставь», «закинь», «добавь» — установить; «обнови», «апни», «апдейт» — обновить; «запусти», «кинь в игру», «врубай», «го играть» — launch_instance; «сервер», «лан», «локалка», «с другом», «открой мир» — LAN; «фпс», «лагает», «тормозит», «оптимизация», «буст» — моды оптимизации (Sodium и т.д. под ядро сборки); «шейдеры», «шейдер», «графон» — шейдер + Iris/Oculus; «текстурки», «рп», «ресурспак» — ресурс-пак; «краш», «вылетает», «не запускается» — разбор логов; «мод на …» — найди подходящий.',
+	'ГЛАВНОЕ — различай тип контента по слову: «мод», «моды», «модик», «мод на …» — это МОДЫ (тип mod, экран /browse/mod), а НЕ сборка; «сборка», «модпак», «сборку с модами», «пак модов» — СБОРКА/модпак (тип modpack, /browse/modpack); «ресурс-пак», «текстуры», «рп» — resourcepack (/browse/resourcepack); «шейдеры» — shader (/browse/shader); «датапак» — datapack; «плагин» — plugin. «Найди моды на X» → <<launcher_search_mods|X::mod>>, «найди сборку про X» → <<launcher_search_mods|X::modpack>>. Не путай!',
+	'«инстанс», «профиль», «клиент», «моя сборка» — сборка игрока (инстанс); «ядро», «лоадер», «фордж/фабрик» — загрузчик; «скачай», «накати», «поставь», «закинь», «добавь» — установить; «обнови», «апни», «апдейт» — обновить; «запусти», «кинь в игру», «врубай», «го играть» — launch_instance; «сервер», «лан», «локалка», «с другом», «открой мир» — LAN; «фпс», «лагает», «тормозит», «оптимизация», «буст» — моды оптимизации (Sodium и т.д. под ядро сборки); «шейдеры», «шейдер», «графон» — шейдер + Iris/Oculus; «текстурки», «рп», «ресурспак» — ресурс-пак; «краш», «вылетает», «не запускается» — разбор логов; «мод на …» — найди подходящий.',
 	'Если в просьбе не хватает детали, которую можно взять из контекста (выбранная сборка, её версия и ядро) — бери из контекста и действуй, не переспрашивай.',
 ].join('\n')
 
@@ -897,6 +911,8 @@ export const AI_SKILLS_HINT = [
 	'Ты умеешь создавать контент для Minecraft, сайты, картинки и код на любых языках — всё делаешь файлами в песочнице, а готовый результат отдаёшь архивом и открываешь папку игроку через <<open_folder|путь>>:',
 	'- Ресурс-пак: pack.mcmeta (поле pack_format зависит от версии — если не уверен, уточни через web_search), assets/minecraft/textures/..., модели, звуки (sounds.json). Собери файлы и упакуй в .zip.',
 	'- Шейдеры (OptiFine/Iris): папка shaders/ с вершинными и фрагментными программами (*.vsh, *.fsh, GLSL), composite/final проходы, shaders.properties. Собери и упакуй в .zip.',
+	'Быстрый старт любого проекта: <<scaffold|тип::название::версия::ядро>> — готовая заготовка в песочнице (projects/<имя>/): тип resourcepack, datapack, shader или mod (ядро fabric/forge/neoforge). Для ресурс-пака/датапака/шейдера сразу соберётся правильный .zip (pack.mcmeta в корне, pack_format под версию). Потом дописывай файлы и ставь в сборку.',
+	'- Готовый файл в сборку: <<install_to_instance|файл.zip/.jar или папка::тип::сборка>> — тип mod, resourcepack, shaderpack, datapack; сборку можно не указывать (тогда выбранная); папка сама упакуется в .zip.',
 	'- Моды: Fabric — fabric.mod.json (id, version, entrypoints main/client), код на Java или Kotlin, mixins; Forge — mods.toml; NeoForge — neoforge.mods.toml. Java-код компилируй по-настоящему: <<launcher_compile_java|папка::мод.jar>> (нужен JDK в системе). Если javac нет — собери .jar как zip (это честный мод для ресурсных/клиентских правок) и скажи, что для скомпилированных модов нужен JDK.',
 	'- Датапаки: pack.mcmeta в корне + data/<namespace>/function/*.mcfunction и прочее.',
 	'- Любой другой код и файлы: сайты (html/css/js — потом open_folder), скрипты (Python, Lua, C#...), конфиги, картинки через <<gen_image|описание::файл.png>>.',
@@ -1059,6 +1075,42 @@ function identityLine(identity: PlayerIdentity): string {
 	}
 }
 
+/**
+ * The Modrinth website account (Modrinth sign-in in the launcher) - a
+ * separate thing from the Minecraft accounts above. Without this line the
+ * agent kept saying it "does not see" the account the player is signed in to.
+ */
+let modrinthLineCache = ''
+let modrinthLineAt = 0
+async function modrinthAccountLine(): Promise<string> {
+	if (modrinthLineAt && Date.now() - modrinthLineAt < 30000) return modrinthLineCache
+	let line = ''
+	try {
+		const { get: getModrinthCreds, getAll } = await import('./mr_auth')
+		const creds = await getModrinthCreds().catch(() => null)
+		const all = await getAll().catch(() => [])
+		if (creds?.user_id) {
+			const { get_user } = await import('./cache.js')
+			const user = (await get_user(creds.user_id, 'bypass').catch(() => null)) as {
+				username?: string
+				email?: string
+				created?: string
+				role?: string
+			} | null
+			const nameText = user?.username ? `«${user.username}»` : `id ${creds.user_id}`
+			line = `Аккаунт Modrinth (сайт modrinth.com, вход в лаунчере): выполнен вход как ${nameText}${user?.username ? `, профиль https://modrinth.com/user/${user.username}` : ''}${all.length > 1 ? `; всего аккаунтов Modrinth: ${all.length}` : ''}. Это НЕ игровой аккаунт Minecraft, а аккаунт сайта (подписки, коллекции, свои проекты). Ты его видишь — не говори, что не видишь.`
+		} else {
+			line =
+				'Аккаунт Modrinth (сайт modrinth.com): вход не выполнен. Войти можно в настройках лаунчера или через аватар в боковой панели.'
+		}
+	} catch {
+		line = ''
+	}
+	modrinthLineCache = line
+	modrinthLineAt = Date.now()
+	return line
+}
+
 const MEMORY_FILE = 'memory.md'
 
 /** The agent's notebook, read quietly - an empty notebook is not an error. */
@@ -1086,7 +1138,7 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 				? 'Ты дружелюбен к игроку.'
 				: 'Ты держишься сдержанно, но честно.'
 	const lines = [
-		`Ты — ${name}, ИИ-агент лаунчера Portalrinth (форк Modrinth App) для Minecraft. Твоё имя — Portalus, и игрок обращается к тебе по нему.`,
+		`Ты — ${name}, ИИ-агент лаунчера Portalrinth (форк Modrinth App) для Minecraft. Твоё имя — Portalus (по-русски Порталус): так и представляйся, когда здороваешься или тебя спрашивают «кто ты», и отзывайся на оба варианта.`,
 		warmth,
 		'Общайся как живой игровой приятель: обращайся к игроку по имени его аккаунта, уместный игровой сленг разрешён, канцелярит — нет, грубость и мат — нет.',
 		'НИКОГДА не подставляй заглушки вроде {{account}} или [имя] — если имя игрока есть в контексте, пиши его, а если нет — просто обходись без имени.',
@@ -1158,7 +1210,7 @@ export function buildSmallTalkPrompt(kind: 'tab' | 'mascot', identity?: PlayerId
 				? 'Ты дружелюбен к игроку.'
 				: 'Ты держишься сдержанно, но честно.'
 	const lines = [
-		`Ты — ${name}, ИИ-агент лаунчера Portalrinth (форк Modrinth App) для Minecraft. Твоё имя — Portalus, и игрок обращается к тебе по нему.`,
+		`Ты — ${name}, ИИ-агент лаунчера Portalrinth (форк Modrinth App) для Minecraft. Твоё имя — Portalus (по-русски Порталус): так и представляйся, когда здороваешься или тебя спрашивают «кто ты», и отзывайся на оба варианта.`,
 		warmth,
 		'Общайся как живой игровой приятель: обращайся к игроку по имени его аккаунта, уместный игровой сленг разрешён, канцелярит — нет, грубость и мат — нет.',
 		'НИКОГДА не подставляй заглушки вроде {{account}} или [имя] — если имени нет, просто обходись без имени.',
@@ -1220,6 +1272,8 @@ async function buildLiveContext(): Promise<string> {
 	const lines: string[] = []
 	const who = identityLine(await playerIdentity())
 	if (who) lines.push(who)
+	const modrinth = await modrinthAccountLine()
+	if (modrinth) lines.push(modrinth)
 	const build = readSelectedBuild()
 	if (build) {
 		// The real picture of the build, not just its name: version, loader,
@@ -1780,6 +1834,7 @@ const PARALLEL_TOOLS = new Set([
 	'web_search',
 	'web_fetch',
 	'fandom',
+	'open_page',
 	'view_image',
 	'launcher_search_mods',
 	'list_instances',
@@ -1805,6 +1860,36 @@ const pendingVisionImages: string[] = []
  * reply contained (up to three rounds, so the model can look things up and
  * then answer), and falls across providers when a free limit gets in the way.
  */
+/**
+ * With «Веб-поиск» on, a factual question is searched before the model even
+ * starts: the results land in the prompt and in the chat as a real step, so
+ * the player sees what was found and the model cannot claim it is offline.
+ */
+const PRESEARCH_HINT =
+	/(найди|поищи|загугли|погугли|что такое|кто так|когда|сколько|новост|актуальн|последн|свеж|вышел|выйдет|релиз|где скачать|ссылк|почему|как сделать|как работает|гайд|what|who|when|latest|news)/i
+
+async function presearchFor(request: AiRequest): Promise<string> {
+	if (!aiSettings.value.webSearch) return ''
+	const last = [...(request.messages ?? [])].reverse().find((message) => message.role === 'user')
+	const text = typeof last?.content === 'string' ? last.content.trim() : ''
+	if (text.length < 8 || text.length > 400 || text.includes('<<') || !PRESEARCH_HINT.test(text)) return ''
+	const query = text.replace(/\s+/g, ' ').slice(0, 160)
+	request.onActionStart?.('web_search', query)
+	let result = ''
+	try {
+		result = await Promise.race([
+			webSearch(query),
+			new Promise<string>((resolve) => setTimeout(() => resolve(''), 9000)),
+		])
+	} catch {
+		result = ''
+	}
+	request.onActionDone?.('web_search', query, result || 'Поиск не ответил вовремя')
+	return result
+		? `Предварительный поиск в интернете по сообщению игрока (уже выполнен, игрок его видит; опирайся на него, при нужде ищи ещё):\n${result.slice(0, 3500)}`
+		: ''
+}
+
 export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	const settings = aiSettings.value
 	// The fast lane skips the launcher's documentation, the memory files and
@@ -1820,8 +1905,9 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 		? buildSmallTalkPrompt(request.kind, await playerIdentity())
 		: buildSystemPrompt(request.kind, request.systemExtra) +
 			(await buildLiveContext().then((live) => (live ? `\n${live}` : '')))
+	const presearch = fastPath ? '' : await presearchFor(request)
 	const base: ChatMessagePayload[] = [
-		{ role: 'system', content: system },
+		{ role: 'system', content: presearch ? `${system}\n${presearch}` : system },
 		...(request.messages ?? []),
 	]
 	let rounds = withImages(base, request.images)
@@ -2013,7 +2099,10 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 									noteAgentThought(`→ ${action.tool}: ${cards.text.slice(0, 160)}`)
 								}
 								if (cards.image) seenImages.push(cards.image)
-								const room = action.tool === 'web_fetch' || action.tool === 'fandom' ? 3500 : 1600
+								const room =
+									action.tool === 'web_fetch' || action.tool === 'open_page' || action.tool === 'fandom'
+										? 5000
+										: 1600
 								notes.push(
 									`Результат ${action.tool}(${action.args.slice(0, 300)}): ${cards.text.slice(0, room)}`,
 								)
@@ -2164,82 +2253,180 @@ function unwrapDdgLink(href: string): string {
 interface SearchHit {
 	title: string
 	url: string
+	snippet?: string
 }
+
+const SEARCH_UA =
+	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36'
 
 function parseDdgHtml(html: string): SearchHit[] {
 	const hits: SearchHit[] = []
-	const pattern = /class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g
+	const pattern =
+		/class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>([\s\S]*?)(?=class="result__a"|$)/g
 	let match = pattern.exec(html)
-	while (match && hits.length < 6) {
-		hits.push({ title: stripHtml(match[2]), url: unwrapDdgLink(match[1]) })
+	while (match && hits.length < 8) {
+		const snippet = /class="result__snippet"[^>]*>([\s\S]*?)<\/a>/.exec(match[3])
+		hits.push({
+			title: stripHtml(match[2]),
+			url: unwrapDdgLink(match[1]),
+			snippet: snippet ? stripHtml(snippet[1]).slice(0, 220) : undefined,
+		})
+		match = pattern.exec(html)
+	}
+	return hits
+}
+
+/** DuckDuckGo Lite: a table, links carry class "result-link". */
+function parseDdgLite(html: string): SearchHit[] {
+	const hits: SearchHit[] = []
+	const pattern = /<a[^>]*href="([^"]+)"[^>]*class=['"]result-link['"][^>]*>([\s\S]*?)<\/a>/g
+	let match = pattern.exec(html)
+	while (match && hits.length < 8) {
+		const rest = html.slice(pattern.lastIndex, pattern.lastIndex + 1500)
+		const snippet = /class=['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/.exec(rest)
+		hits.push({
+			title: stripHtml(match[2]),
+			url: unwrapDdgLink(match[1]),
+			snippet: snippet ? stripHtml(snippet[1]).slice(0, 220) : undefined,
+		})
+		match = pattern.exec(html)
+	}
+	return hits
+}
+
+/** Bing hides the target in /ck/a?...&u=a1<base64url>. */
+function unwrapBingLink(href: string): string {
+	const decoded = href.replace(/&amp;/g, '&')
+	const match = /[?&]u=a1([^&]+)/.exec(decoded)
+	if (!match) return decoded
+	try {
+		let b64 = match[1].replace(/-/g, '+').replace(/_/g, '/')
+		while (b64.length % 4) b64 += '='
+		const bytes = Uint8Array.from(atob(b64), (char) => char.charCodeAt(0))
+		return new TextDecoder().decode(bytes)
+	} catch {
+		return decoded
+	}
+}
+
+function parseBing(html: string): SearchHit[] {
+	const hits: SearchHit[] = []
+	const pattern =
+		/<li class="b_algo"[\s\S]*?<h2[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>\s*<\/h2>([\s\S]*?)<\/li>/g
+	let match = pattern.exec(html)
+	while (match && hits.length < 8) {
+		const caption = /<p[^>]*>([\s\S]*?)<\/p>/.exec(match[3])
+		const url = unwrapBingLink(match[1])
+		if (/^https?:\/\//.test(url)) {
+			hits.push({
+				title: stripHtml(match[2]),
+				url,
+				snippet: caption
+					? stripHtml(caption[1])
+							.replace(/&#0?183;|&#32;/g, ' ')
+							.slice(0, 220)
+					: undefined,
+			})
+		}
 		match = pattern.exec(html)
 	}
 	return hits
 }
 
 /**
- * The agent's own web search, structured: DuckDuckGo, asked four ways (the
- * plain HTML endpoint, the same one through a POST, the "lite" mirror, and
- * Bing as the last door), first answer wins. Both the agent's text form and
- * the browser settings page are built on it.
+ * Bot-checked engines sometimes answer with an unrelated "popular" page.
+ * A hit has to mention at least one word of the query, or it is dropped.
  */
-export async function searchWeb(query: string): Promise<{ title: string; url: string }[]> {
-	const attempts: (() => Promise<Response>)[] = [
-		() =>
-			proxiedFetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
-				headers: { Accept: 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-				signal: AbortSignal.timeout(15000),
-			}),
-		() =>
-			proxiedFetch('https://html.duckduckgo.com/html/', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-					Accept: 'text/html',
-					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-				},
-				body: `q=${encodeURIComponent(query)}`,
-				signal: AbortSignal.timeout(15000),
-			}),
-		() =>
-			proxiedFetch(`https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`, {
-				headers: { Accept: 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-				signal: AbortSignal.timeout(15000),
-			}),
+function relevantHits(query: string, hits: SearchHit[]): SearchHit[] {
+	const words = query
+		.toLowerCase()
+		.split(/[^\p{L}\p{N}]+/u)
+		.filter((word) => word.length >= 3)
+		.map((word) => word.slice(0, Math.max(3, word.length - 2)))
+	if (words.length === 0) return hits
+	return hits.filter((hit) => {
+		const hay = `${hit.title} ${hit.snippet ?? ''} ${decodeURIComponentSafe(hit.url)}`.toLowerCase()
+		return words.some((word) => hay.includes(word))
+	})
+}
+
+function decodeURIComponentSafe(value: string): string {
+	try {
+		return decodeURIComponent(value)
+	} catch {
+		return value
+	}
+}
+
+async function searchPage(
+	query: string,
+	url: string,
+	parse: (html: string) => SearchHit[],
+): Promise<SearchHit[]> {
+	const response = await proxiedFetch(url, {
+		headers: {
+			Accept: 'text/html,application/xhtml+xml',
+			'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
+			'User-Agent': SEARCH_UA,
+		},
+		signal: AbortSignal.timeout(12000),
+	})
+	// DuckDuckGo answers 202 with a bot check instead of results.
+	if (response.status !== 200) throw new Error(`HTTP ${response.status}`)
+	const hits = relevantHits(query, parse(await response.text()))
+	if (hits.length === 0) throw new Error('пустая выдача')
+	return hits
+}
+
+async function searchWikipedia(query: string): Promise<SearchHit[]> {
+	const hits: SearchHit[] = []
+	for (const lang of ['ru', 'en']) {
+		const response = await proxiedFetch(
+			`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&format=json&utf8=1&srlimit=5&srsearch=${encodeURIComponent(query)}`,
+			{ signal: AbortSignal.timeout(10000) },
+		)
+		if (!response.ok) continue
+		const data = (await response.json()) as {
+			query?: { search?: { title: string; snippet: string }[] }
+		}
+		for (const item of data.query?.search ?? []) {
+			hits.push({
+				title: item.title,
+				url: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, '_'))}`,
+				snippet: stripHtml(item.snippet).slice(0, 220),
+			})
+		}
+		if (hits.length > 0) break
+	}
+	if (hits.length === 0) throw new Error('пустая выдача')
+	return hits
+}
+
+/**
+ * The agent's own web search. DuckDuckGo often answers bots with a 202
+ * check page, so DuckDuckGo and Bing are asked side by side and the first
+ * real result list wins; DuckDuckGo Lite and Wikipedia are the last doors.
+ * Both the agent's text form and the browser settings page are built on it.
+ */
+export async function searchWeb(query: string): Promise<SearchHit[]> {
+	const q = encodeURIComponent(query)
+	const first = [
+		searchPage(query, `https://html.duckduckgo.com/html/?q=${q}&kl=ru-ru`, parseDdgHtml),
+		searchPage(query, `https://www.bing.com/search?q=${q}&setlang=ru&cc=RU`, parseBing),
 	]
-	attempts.push(() =>
-		proxiedFetch(`https://www.bing.com/search?q=${encodeURIComponent(query)}&setlang=ru`, {
-			headers: {
-				Accept: 'text/html',
-				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-				'Accept-Language': 'ru,en;q=0.8',
-			},
-			signal: AbortSignal.timeout(15000),
-		}).then(async (response) => {
-			if (!response.ok) throw new Error(`HTTP ${response.status}`)
-			const html = await response.text()
-			const hits = [...html.matchAll(/<h2><a href="([^"]+)"[^>]*>([\s\S]*?)<\/a><\/h2>/g)].slice(
-				0,
-				6,
-			)
-			if (hits.length === 0) throw new Error('пустая выдача')
-			return new Response(
-				hits.map((match) => `<a class="result__a" href="${match[1]}">${match[2]}</a>`).join(''),
-				{ status: 200 },
-			)
-		}),
-	)
 	let lastDetail = ''
-	for (const attempt of attempts) {
+	try {
+		return await Promise.any(first)
+	} catch (error) {
+		lastDetail = String((error as AggregateError).errors?.[0] ?? error).slice(0, 120)
+	}
+	for (const attempt of [
+		() => searchPage(query, `https://lite.duckduckgo.com/lite/?q=${q}`, parseDdgLite),
+		() => searchPage(query, `https://www.bing.com/search?q=${q}&setlang=en`, parseBing),
+		() => searchWikipedia(query),
+	]) {
 		try {
-			const response = await attempt()
-			if (!response.ok) {
-				lastDetail = `HTTP ${response.status}`
-				continue
-			}
-			const hits = parseDdgHtml(await response.text())
-			if (hits.length > 0) return hits
-			lastDetail = 'пустая выдача'
+			return await attempt()
 		} catch (error) {
 			lastDetail = String(error).slice(0, 120)
 		}
@@ -2247,13 +2434,22 @@ export async function searchWeb(query: string): Promise<{ title: string; url: st
 	throw new Error(lastDetail || 'Ничего не нашлось')
 }
 
-/** The agent's text view of a search: numbered lines for the model. */
+/** The agent's text view of a search: numbered lines with snippets. */
 async function webSearch(query: string): Promise<string> {
 	try {
 		const hits = await searchWeb(query)
-		return hits.map((hit, index) => `${index + 1}. ${hit.title} — ${hit.url}`).join('\n')
+		return (
+			`Интернет работает — вот настоящая выдача по «${query}»:\n` +
+			hits
+				.map(
+					(hit, index) =>
+						`${index + 1}. ${hit.title} — ${hit.url}${hit.snippet ? `\n   ${hit.snippet}` : ''}`,
+				)
+				.join('\n') +
+			'\nЧтобы прочитать страницу целиком — <<web_fetch|url>>.'
+		)
 	} catch (error) {
-		return `Ничего не нашлось или поиск недоступен (${String(error).slice(0, 120)}). Попробуй переформулировать запрос или открой конкретный сайт через web_fetch`
+		return `Поиск по «${query}» сейчас ничего не вернул (${String(error).slice(0, 120)}). Это сбой выдачи, а не отсутствие интернета: переформулируй запрос короче или открой нужный сайт напрямую через <<web_fetch|url>>.`
 	}
 }
 /** One Modrinth project as a card: search-by-id returns author, icon,
@@ -2339,6 +2535,22 @@ function modrinthLoadersFor(kind: string, loader: string): string[] {
  * that exists" - that is how six mods once "installed" into a pack none of
  * them could run in. CurseForge projects come as cf:<id>.
  */
+/**
+ * What kind of content a word means. Players say «моды», «сборка», «шейдеры»:
+ * a mod is not a modpack, and the search must not mix them up.
+ */
+export function contentTypeOf(raw: string): string {
+	const word = raw.trim().toLowerCase()
+	if (!word) return ''
+	if (/^(mod|mods|мод|моды|модификаци|модик)/.test(word)) return 'mod'
+	if (/^(modpack|pack|сборк|модпак|инстанс|профил)/.test(word)) return 'modpack'
+	if (/^(resource|rp|ресурс|текстур|рп)/.test(word)) return 'resourcepack'
+	if (/^(shader|шейдер|графон)/.test(word)) return 'shader'
+	if (/^(data|датапак|дата)/.test(word)) return 'datapack'
+	if (/^(plugin|плагин)/.test(word)) return 'plugin'
+	return ''
+}
+
 async function installOneProject(
 	projectId: string,
 	kind: string,
@@ -2455,17 +2667,27 @@ async function installOneProject(
 }
 
 registerAiToolHandler(async (tool, args) => {
-	if (tool === 'web_fetch') {
+	if (tool === 'web_fetch' || tool === 'open_page') {
 		const url = args.trim()
 		if (!/^https?:\/\//.test(url)) return 'Нужен полный http(s) адрес'
-		const response = await proxiedFetch(url, {
-			headers: { Accept: 'text/html', 'Accept-Language': 'ru,en;q=0.8' },
-			signal: AbortSignal.timeout(20000),
-		})
-		if (!response.ok) return `Страница не открылась: HTTP ${response.status}`
-		const html = await response.text()
-		const title = /<title[^>]*>([^<]*)<\/title>/i.exec(html)?.[1]?.trim()
-		return `${title ? `«${title}»\n` : ''}${stripHtml(html).slice(0, 6000)}`
+		const { readPage, openReader } = await import('./ai-reader')
+		// open_page shows the page to the player in the launcher's reader too.
+		if (tool === 'open_page') void openReader(url)
+		try {
+			const page = await readPage(url)
+			const pictures = page.images.slice(0, 6)
+			return [
+				`«${page.title}» (${page.site})${tool === 'open_page' ? ' — открыта у игрока в читалке лаунчера' : ''}`,
+				page.text.slice(0, 7000),
+				pictures.length
+					? `Картинки на странице (можно показать через <<view_image|url>> или скачать <<sandbox_download|url::файл>>):\n${pictures.join('\n')}`
+					: '',
+			]
+				.filter(Boolean)
+				.join('\n')
+		} catch (error) {
+			return `Страница не открылась (${String(error).slice(0, 120)}). Попробуй другую ссылку из поиска.`
+		}
 	}
 	if (tool === 'web_search') {
 		const query = args.trim()
@@ -2777,9 +2999,117 @@ registerAiToolHandler(async (tool, args) => {
 			return `Фон не получился: ${String(error).slice(0, 200)}`
 		}
 	}
+	if (tool === 'build_modpack') {
+		const [nameRaw = '', versionRaw = '', loaderRaw = '', modsRaw = '', extrasRaw = ''] = args
+			.split('::')
+			.map((part) => part.trim())
+		const wanted = modsRaw
+			.split(/;;|\n|,(?![^(]*\))/)
+			.map((part) => part.trim())
+			.filter(Boolean)
+			.slice(0, 40)
+		if (wanted.length === 0) {
+			return 'Формат: <<build_modpack|название::версия Minecraft::ядро::мод или запрос 1;;мод 2;;…::ресурс-паки и шейдеры (необязательно)>>'
+		}
+		const loader = (loaderRaw || 'fabric').toLowerCase()
+		let version = versionRaw
+		if (!/^\d+\.\d+(\.\d+)?$/.test(version)) {
+			// "свежая" / пусто: the newest release Minecraft has.
+			try {
+				const response = await proxiedFetch('https://api.modrinth.com/v2/tag/game_version', {
+					signal: AbortSignal.timeout(12000),
+				})
+				const tags = (await response.json()) as { version: string; version_type: string }[]
+				version = tags.find((tag) => tag.version_type === 'release')?.version ?? '1.21.1'
+			} catch {
+				version = '1.21.1'
+			}
+		}
+		const name = nameRaw || `Сборка ${version}`
+		const before = new Set((await list().catch(() => [])).map((instance) => instance.id))
+		const created = await runTool('create_instance', `${name}::${version}::${loader}`)
+		if (/^Не создалась|не знаю|Нужна версия/.test(created)) return created
+		let instanceId = /\(id: ([^)]+)\)/.exec(created)?.[1] ?? ''
+		for (let wait = 0; wait < 40; wait++) {
+			const all = await list().catch(() => [])
+			const found = instanceId
+				? all.find((instance) => instance.id === instanceId)
+				: all.find((instance) => !before.has(instance.id) && instance.name === name)
+			if (found) {
+				instanceId = found.id
+				break
+			}
+			await sleep(1000)
+		}
+		if (!instanceId) return `${created}\nСборка ещё создаётся — поставь моды чуть позже через launcher_install.`
+
+		const facetsFor = (type: string) => {
+			const facets: string[][] = [[`project_type:${type}`], [`versions:${version}`]]
+			if (type === 'mod') facets.push(modrinthLoadersFor('mod', loader).map((item) => `categories:${item}`))
+			return encodeURIComponent(JSON.stringify(facets))
+		}
+		const pick = async (query: string, type: string): Promise<{ id: string; title: string } | null> => {
+			const response = await proxiedFetch(
+				`https://api.modrinth.com/v2/search?limit=1&index=relevance&query=${encodeURIComponent(query)}&facets=${facetsFor(type)}`,
+				{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) },
+			)
+			if (!response.ok) return null
+			const data = (await response.json()) as { hits?: { project_id: string; title: string }[] }
+			const hit = data.hits?.[0]
+			return hit ? { id: hit.project_id, title: hit.title } : null
+		}
+
+		const jobs: { query: string; type: string }[] = wanted.map((query) => ({ query, type: 'mod' }))
+		for (const extra of extrasRaw.split(/;;|\n/).map((part) => part.trim()).filter(Boolean)) {
+			const [maybeType, ...rest] = extra.split(':')
+			const type = rest.length ? contentTypeOf(maybeType) : ''
+			const query = type ? rest.join(':').trim() : extra
+			const resolved = type || (/шейдер|shader/i.test(extra) ? 'shader' : 'resourcepack')
+			jobs.push({ query, type: resolved })
+		}
+		// Shaders need a shader loader in the build.
+		if (jobs.some((job) => job.type === 'shader') && loader !== 'vanilla') {
+			jobs.unshift({ query: /forge/.test(loader) ? 'oculus' : 'iris', type: 'mod' })
+		}
+
+		const done: string[] = []
+		const failed: string[] = []
+		const cards: string[] = []
+		const seen = new Set<string>()
+		for (const job of jobs) {
+			if (playerTookOver()) break
+			try {
+				const hit = await pick(job.query, job.type)
+				if (!hit) {
+					failed.push(`«${job.query}» — нет версии под ${version} ${loader}`)
+					continue
+				}
+				if (seen.has(hit.id)) continue
+				seen.add(hit.id)
+				const kind = job.type === 'shader' ? 'shader' : job.type
+				const result = await installOneProject(hit.id, kind, instanceId)
+				const marker = result.indexOf('@@MOD@@')
+				if (marker >= 0) cards.push(result.slice(marker))
+				done.push(hit.title)
+			} catch (error) {
+				failed.push(`«${job.query}» — ${String(error).replace(/^Error:\s*/, '').slice(0, 120)}`)
+			}
+		}
+		return [
+			`Собрал сборку «${name}» (Minecraft ${version}, ${loader}, id: ${instanceId}).`,
+			done.length ? `Установлено (${done.length}): ${done.join(', ')}.` : 'Ничего не установилось.',
+			failed.length ? `Не подошло: ${failed.join('; ')}. Предложи аналоги.` : '',
+			'Запустить: <<launch_instance|' + instanceId + '>>; открыть: <<navigate|/instance/' + encodeURIComponent(instanceId) + '>>.',
+			...cards,
+		]
+			.filter(Boolean)
+			.join('\n')
+	}
 	if (tool === 'launcher_search_mods') {
-		const query = args.trim()
+		const [queryRaw = '', typeRaw = ''] = args.split('::').map((part) => part.trim())
+		const query = queryRaw
 		if (!query) return 'Пустой запрос'
+		const projectType = contentTypeOf(typeRaw)
 		const lines: string[] = []
 		const cards: AiModCard[] = []
 		// Results are checked against the selected build: the model sees at
@@ -2795,7 +3125,7 @@ registerAiToolHandler(async (tool, args) => {
 		}
 		try {
 			const response = await proxiedFetch(
-				`https://api.modrinth.com/v2/search?limit=6&query=${encodeURIComponent(query)}`,
+				`https://api.modrinth.com/v2/search?limit=6&query=${encodeURIComponent(query)}${projectType ? `&facets=${encodeURIComponent(JSON.stringify([[`project_type:${projectType}`]]))}` : ''}`,
 				{ headers: { Accept: 'application/json' } },
 			)
 			if (response.ok) {
