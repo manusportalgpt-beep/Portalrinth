@@ -11,8 +11,6 @@ export interface PortalrinthFeatures {
         clock: boolean
         /** The weather button next to the sound button. */
         weather: boolean
-        /** AI links open in the launcher's own browser window (off = system browser). */
-        aiLinksWindow: boolean
         /** Build notes pop up when the game launches. */
         notesPopup: boolean
 }
@@ -22,7 +20,6 @@ const FEATURES_KEY = 'portalrinth-features'
 const DEFAULT_FEATURES: PortalrinthFeatures = {
         clock: true,
         weather: true,
-        aiLinksWindow: false,
         notesPopup: true,
 }
 

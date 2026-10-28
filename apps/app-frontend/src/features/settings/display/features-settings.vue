@@ -163,15 +163,6 @@ const messages = defineMessages({
 		defaultMessage:
 			'Время по системному региону в центре титл-бара: солнце днём, луна ночью, рассвет и закат.',
 	},
-	aiLinksTitle: {
-		id: 'app.features.ai-links.title',
-		defaultMessage: 'Ссылки ИИ — во встроенный браузер',
-	},
-	aiLinksDescription: {
-		id: 'app.features.ai-links.description',
-		defaultMessage:
-			'Внешние ссылки из чата Порталуса открываются в окне лаунчера, а не в браузере системы (по умолчанию выключено).',
-	},
 	notesPopupTitle: {
 		id: 'app.features.notes-popup.title',
 		defaultMessage: 'Заметки перед запуском',
@@ -619,17 +610,6 @@ watch(
 						:aria-label="formatMessage(messages.notesPopupTitle)"
 					/>
 				</div>
-			</div>
-			<div class="flex items-center justify-between gap-4">
-				<div>
-					<h3 class="m-0 text-sm font-semibold text-contrast">{{ formatMessage(messages.aiLinksTitle) }}</h3>
-					<p class="m-0 mt-1">{{ formatMessage(messages.aiLinksDescription) }}</p>
-				</div>
-				<Toggle
-					id="portalrinth-ai-links"
-					v-model="portalrinthFeatures.aiLinksWindow"
-					:aria-label="formatMessage(messages.aiLinksTitle)"
-				/>
 			</div>
 		</div>
 	</section>

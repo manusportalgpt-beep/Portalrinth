@@ -33,7 +33,6 @@ import {
 	XIcon,
 } from '@modrinth/assets'
 import { Button, IconButton, Input, useVIntl } from '@modrinth/ui'
-import { invoke } from '@tauri-apps/api/core'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -69,7 +68,7 @@ import {
 	zaiPeakHoursLabel,
 } from '@/helpers/ai-assistant'
 import { buildSitePreview } from '@/helpers/ai-launcher-tools'
-import { openImageViewer, openReader } from '@/helpers/ai-reader'
+import { openImageViewer } from '@/helpers/ai-reader'
 import {
 	type AttachedFile,
 	attachFromPaths,
@@ -821,16 +820,50 @@ function parseSegments(content: string): AiSegment[] {
 }
 
 const MODRINTH_LINK = /^https?:\/\/(?:[a-z-]+\.)?modrinth\.com(?:\/|$)/i
+const CURSEFORGE_LINK =
+	/^https?:\/\/(?:www\.)?curseforge\.com\/minecraft\/(mc-mods|mc-modpacks|texture-packs|mc-shaders|mc-addons)\/([^/?#]+)/i
+
+const CURSEFORGE_TYPES: Record<string, string> = {
+	'mc-addons': 'datapack',
+	'mc-mods': 'mod',
+	'mc-modpacks': 'modpack',
+	'mc-shaders': 'shader',
+	'texture-packs': 'resourcepack',
+}
+
+/** A CurseForge page's slug says nothing about the numeric id the launcher's
+ * page needs: the search answers, and the hit with the same slug carries it.
+ * No match - the link falls through to the system browser. */
+async function resolveCurseforgeProject(slug: string, projectType: string): Promise<string | null> {
+	try {
+		const [{ curseforgeSearch }, { curseforgeSettings }] = await Promise.all([
+			import('@/helpers/curseforge'),
+			import('@/helpers/curseforge-settings'),
+		])
+		if (!curseforgeSettings.value.enabled) return null
+		const results = await curseforgeSearch({
+			query: slug,
+			project_type: projectType,
+			game_versions: [],
+			loaders: [],
+			category_ids: [],
+			sort: 'relevance',
+			offset: 0,
+			limit: 10,
+		})
+		const wanted = slug.toLowerCase()
+		const hit = results.hits.find((hit) => (hit.slug ?? '').toLowerCase() === wanted)
+		return hit ? hit.project_id : null
+	} catch {
+		return null
+	}
+}
 
 /**
- * A link Portalus gave is a door, not a detour: Modrinth pages open right
- * here in the launcher, and everything else follows the toggle - the system
- * browser by default, or the launcher's own browser window when the player
- * turned that on in Settings → Функции.
+ * A link Portalus gave is a door, not a detour: Modrinth and CurseForge mod
+ * pages open right here in the launcher, and everything else opens in the
+ * browser on the PC - the launcher does not show other pages itself.
  */
-const FILE_LINK =
-	/\.(zip|jar|7z|rar|exe|msi|dmg|deb|appimage|mp3|ogg|wav|flac|mp4|webm|mkv|mov|pdf|mrpack)(?:$|[?#])/i
-
 async function openLink(url: string) {
 	try {
 		// Launcher paths ([Сборка](/instance/…), [LAN](/lan)) open right here.
@@ -843,20 +876,18 @@ async function openLink(url: string) {
 			await router.push(path || '/')
 			return
 		}
-		const { portalrinthFeatures } = await import('@/helpers/portalrinth-features')
-		if (portalrinthFeatures.value.aiLinksWindow) {
-			await invoke('open_web_window', {
-				label: 'portalrinth-ai-link',
-				url,
-				title: 'Браузер — Portalrinth',
-			})
-			return
+		const forge = CURSEFORGE_LINK.exec(url)
+		if (forge) {
+			const id = await resolveCurseforgeProject(
+				decodeURIComponent(forge[2]),
+				CURSEFORGE_TYPES[forge[1]] ?? 'mod',
+			)
+			if (id) {
+				await router.push(`/curseforge/${id}`)
+				return
+			}
 		}
-		// Pages open in the launcher's reader; files and odd schemes go to the system.
-		if (/^https?:\/\//i.test(url) && !FILE_LINK.test(url)) {
-			await openReader(url)
-			return
-		}
+		// Everything else opens in the browser on the PC.
 		const { openUrl } = await import('@tauri-apps/plugin-opener')
 		await openUrl(url)
 	} catch {
@@ -1332,8 +1363,8 @@ defineExpose({ send })
 									v-for="wiki in message.activity.wikis as AiWikiCard[]"
 									:key="wiki.url"
 									class="ai-mod-card ai-wiki-card"
-									title="Читать в лаунчере"
-									@click="() => openReader(wiki.url)"
+									title="Открыть в браузере"
+									@click="() => openLink(wiki.url)"
 								>
 									<img v-if="wiki.image" :src="wiki.image" class="ai-wiki-image" alt="" loading="lazy" />
 									<span v-else class="ai-mod-icon ai-mod-icon-fallback"><BookOpenIcon class="size-5" /></span>
