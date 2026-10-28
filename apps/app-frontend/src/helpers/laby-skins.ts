@@ -823,3 +823,98 @@ export async function findSimilarLabySkins(
                 .sort((a, b) => b.skin.use_count - a.skin.use_count)
         return [...good, ...rest].slice(0, limit).map((entry) => entry.skin)
 }
+
+// ---- Skins by nickname ------------------------------------------------------
+
+/** A player's own skin, found by nickname: shown and installed like a library one. */
+export interface NickSkin extends LabySkin {
+        nick: string
+        source: 'mojang' | 'ely'
+        pageUrl: string
+}
+
+function decodeTextures(value: string): { url: string; slim: boolean } | null {
+        try {
+                const data = JSON.parse(atob(value)) as {
+                        textures?: { SKIN?: { url?: string; metadata?: { model?: string } } }
+                }
+                const skin = data.textures?.SKIN
+                if (!skin?.url) return null
+                return { url: skin.url.replace(/^http:/, 'https:'), slim: skin.metadata?.model === 'slim' }
+        } catch {
+                return null
+        }
+}
+
+async function mojangSkin(nick: string): Promise<{ name: string; url: string; slim: boolean } | null> {
+        const profile = await proxiedFetch(
+                `https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(nick)}`,
+                { signal: AbortSignal.timeout(10000) },
+        )
+        if (profile.status === 204 || profile.status === 404) return null
+        if (!profile.ok) throw new Error(`Mojang: ${profile.status}`)
+        const { id, name } = (await profile.json()) as { id: string; name: string }
+        const session = await proxiedFetch(
+                `https://sessionserver.mojang.com/session/minecraft/profile/${id}`,
+                { signal: AbortSignal.timeout(10000) },
+        )
+        if (!session.ok) throw new Error(`Mojang: ${session.status}`)
+        const data = (await session.json()) as { properties?: { name: string; value: string }[] }
+        const textures = data.properties?.find((property) => property.name === 'textures')
+        const skin = textures ? decodeTextures(textures.value) : null
+        return skin ? { name, ...skin } : null
+}
+
+async function elySkin(nick: string): Promise<{ name: string; url: string; slim: boolean } | null> {
+        const response = await proxiedFetch(
+                `https://skinsystem.ely.by/textures/${encodeURIComponent(nick)}`,
+                { signal: AbortSignal.timeout(10000) },
+        )
+        if (!response.ok) return null
+        const text = await response.text()
+        if (!text.trim()) return null
+        const data = JSON.parse(text) as { SKIN?: { url?: string; metadata?: { model?: string } } }
+        if (!data.SKIN?.url) return null
+        return {
+                name: nick,
+                url: data.SKIN.url.replace(/^http:/, 'https:'),
+                slim: data.SKIN.metadata?.model === 'slim',
+        }
+}
+
+/**
+ * The skin a player wears, by nickname: the Mojang account first, then
+ * Ely.by. The texture lands in the same cache the library uses, so the 3D
+ * viewer, the card preview and "Install skin" work on it unchanged.
+ */
+export async function findSkinByNick(nickRaw: string): Promise<NickSkin | null> {
+        const nick = nickRaw.trim()
+        if (!/^[A-Za-z0-9_]{2,16}$/.test(nick)) return null
+        let found: { name: string; url: string; slim: boolean } | null = null
+        let source: NickSkin['source'] = 'mojang'
+        try {
+                found = await mojangSkin(nick)
+        } catch {
+                found = null
+        }
+        if (!found) {
+                source = 'ely'
+                found = await elySkin(nick).catch(() => null)
+        }
+        if (!found) return null
+        const texture = new Uint8Array(await normalize_skin_texture(found.url))
+        const hash = found.url.split('/').pop()?.replace(/\.png$/i, '') || `${source}-${nick.toLowerCase()}`
+        textureCache.set(hash, Promise.resolve(texture))
+        return {
+                image_hash: hash,
+                use_count: 0,
+                tags: found.name,
+                skin_variant: found.slim ? 'SLIM' : 'CLASSIC',
+                nick: found.name,
+                source,
+                pageUrl:
+                        source === 'mojang'
+                                ? `https://namemc.com/profile/${encodeURIComponent(found.name)}`
+                                : `https://ely.by/skins?uploader=${encodeURIComponent(found.name)}`,
+        }
+}

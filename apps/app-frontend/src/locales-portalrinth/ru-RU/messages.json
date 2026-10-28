@@ -3778,5 +3778,35 @@
 	},
 	"app.skin-browse.similar-category": {
 		"message": "Категория: {tags}"
+	},
+	"app.skin-browse.filters": {
+		"message": "Фильтры скинов"
+	},
+	"app.skin-browse.filter-nick": {
+		"message": "По нику"
+	},
+	"app.skin-browse.nick-placeholder": {
+		"message": "Введите ник игрока..."
+	},
+	"app.skin-browse.nick-heading": {
+		"message": "Скин игрока {nick}"
+	},
+	"app.skin-browse.nick-prompt": {
+		"message": "Введите ник в поиск — здесь появится скин этого игрока, и его можно будет применить."
+	},
+	"app.skin-browse.nick-not-found": {
+		"message": "Игрок «{nick}» не найден или у него нет своего скина."
+	},
+	"app.skin-browse.nick-source": {
+		"message": "Скин игрока · {source}"
+	},
+	"app.skin-browse.open-on-namemc": {
+		"message": "Открыть на NameMC"
+	},
+	"app.skin-browse.open-on-ely": {
+		"message": "Открыть на Ely.by"
+	},
+	"app.skin-browse.filter-results": {
+		"message": "Скины: {filter}"
 	}
 }

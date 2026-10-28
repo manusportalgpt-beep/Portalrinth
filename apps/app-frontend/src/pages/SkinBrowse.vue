@@ -15,12 +15,25 @@ import {
 	ShirtIcon,
 	SparklesIcon,
 	SpinnerIcon,
+	TagCategoryCartoonIcon,
+	TagCategoryCrownIcon,
+	TagCategoryFantasyIcon,
+	TagCategoryGamepad2Icon,
+	TagCategoryMobsIcon,
+	TagCategorySkullIcon,
+	TagCategorySwordIcon,
+	TagCategoryThemedIcon,
+	TagCategoryTreePineIcon,
+	UserIcon,
+	UserRoundIcon,
+	UserSearchIcon,
 	XIcon,
 } from '@modrinth/assets'
 import {
 	Button,
 	CapeButton,
 	CapeLikeTextButton,
+	Chips,
 	defineMessages,
 	injectNotificationManager,
 	Input,
@@ -32,11 +45,12 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { type Component, computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import {
 	findSimilarLabySkins,
+	findSkinByNick,
 	isStockLabySkin,
 	LABY_PAGE_SIZE,
 	type LabySkin,
@@ -46,6 +60,7 @@ import {
 	labySkinTags,
 	labySkinTexture,
 	labySkinVariant,
+	type NickSkin,
 	pngDataUrl,
 	remotePreviewDataUrl,
 	searchLabySkins,
@@ -121,7 +136,85 @@ const messages = defineMessages({
 		id: 'app.skin-browse.similar-category',
 		defaultMessage: 'Category: {tags}',
 	},
+	filters: { id: 'app.skin-browse.filters', defaultMessage: 'Skin filters' },
+	byNick: { id: 'app.skin-browse.filter-nick', defaultMessage: 'By nickname' },
+	nickPlaceholder: {
+		id: 'app.skin-browse.nick-placeholder',
+		defaultMessage: 'Enter a player nickname...',
+	},
+	nickHeading: { id: 'app.skin-browse.nick-heading', defaultMessage: 'Skin of {nick}' },
+	nickPrompt: {
+		id: 'app.skin-browse.nick-prompt',
+		defaultMessage: 'Type a nickname into the search — the player’s skin will show up here.',
+	},
+	nickNotFound: {
+		id: 'app.skin-browse.nick-not-found',
+		defaultMessage: 'No player “{nick}” found, or the player has no skin of their own.',
+	},
+	nickSource: {
+		id: 'app.skin-browse.nick-source',
+		defaultMessage: 'Player skin · {source}',
+	},
+	openOnNameMc: { id: 'app.skin-browse.open-on-namemc', defaultMessage: 'Open on NameMC' },
+	openOnEly: { id: 'app.skin-browse.open-on-ely', defaultMessage: 'Open on Ely.by' },
+	filterResults: {
+		id: 'app.skin-browse.filter-results',
+		defaultMessage: 'Skins: {filter}',
+	},
 })
+
+// ---- Filters --------------------------------------------------------------
+//
+// One chip at a time: a laby.net tag narrows the list, "By nickname" turns
+// the search box into a nickname box that finds that very player's skin.
+
+interface SkinFilter {
+	id: string
+	label: string
+	icon: Component
+	/** The laby.net tag the filter searches by; none for the nickname mode. */
+	tag?: string
+}
+
+const NICK_FILTER = 'nick'
+const SKIN_FILTERS: SkinFilter[] = [
+	{ id: NICK_FILTER, label: '', icon: UserSearchIcon },
+	{ id: 'boy', label: 'Boy', icon: UserIcon, tag: 'boy' },
+	{ id: 'girl', label: 'Girl', icon: UserRoundIcon, tag: 'girl' },
+	{ id: 'anime', label: 'Anime', icon: TagCategoryCartoonIcon, tag: 'anime' },
+	{ id: 'cute', label: 'Cute', icon: TagCategoryThemedIcon, tag: 'cute' },
+	{ id: 'knight', label: 'Knight', icon: TagCategorySwordIcon, tag: 'knight' },
+	{ id: 'royal', label: 'King', icon: TagCategoryCrownIcon, tag: 'king' },
+	{ id: 'demon', label: 'Demon', icon: TagCategorySkullIcon, tag: 'demon' },
+	{ id: 'magic', label: 'Wizard', icon: TagCategoryFantasyIcon, tag: 'wizard' },
+	{ id: 'animal', label: 'Animal', icon: TagCategoryMobsIcon, tag: 'animal' },
+	{ id: 'gamer', label: 'Gamer', icon: TagCategoryGamepad2Icon, tag: 'gamer' },
+	{ id: 'christmas', label: 'Christmas', icon: TagCategoryTreePineIcon, tag: 'christmas' },
+]
+
+const filterId = ref<string | null>(
+	typeof route.query.filter === 'string' &&
+		SKIN_FILTERS.some((filter) => filter.id === route.query.filter)
+		? route.query.filter
+		: null,
+)
+const activeFilter = computed(() => SKIN_FILTERS.find((filter) => filter.id === filterId.value))
+const nickMode = computed(() => filterId.value === NICK_FILTER)
+const filterLabel = (filter: SkinFilter) =>
+	filter.id === NICK_FILTER ? formatMessage(messages.byNick) : filter.label
+
+/** What laby.net is asked for: the typed words plus the chosen tag. */
+const effectiveQuery = () => [activeFilter.value?.tag ?? '', query.value.trim()].filter(Boolean).join(' ')
+
+const nickResult = ref<NickSkin | null>(null)
+const nickSearched = ref('')
+
+function syncRoute() {
+	const next: Record<string, string> = {}
+	if (query.value.trim()) next.q = query.value.trim()
+	if (filterId.value) next.filter = filterId.value
+	router.replace({ query: next })
+}
 
 const tabs = computed(() => [
 	{ label: formatMessage(messages.modpacks), href: '/browse/modpack' },
@@ -416,8 +509,34 @@ const visibleSkins = computed(() =>
 	skins.value.filter((skin) => !previewGaveUp.value.has(skin.image_hash)),
 )
 
+async function loadNick(id: number) {
+	const nick = query.value.trim()
+	nickSearched.value = nick
+	nickResult.value = null
+	skins.value = []
+	hasMore.value = false
+	failed.value = false
+	if (!nick) {
+		loading.value = false
+		return
+	}
+	loading.value = true
+	try {
+		const found = await findSkinByNick(nick)
+		if (id !== requestId) return
+		nickResult.value = found
+		skins.value = found ? [found] : []
+		refocusQueue()
+	} catch {
+		if (id === requestId) skins.value = []
+	} finally {
+		if (id === requestId) loading.value = false
+	}
+}
+
 async function load(reset: boolean) {
 	const id = ++requestId
+	if (nickMode.value) return loadNick(id)
 	if (reset) {
 		page.value = 1
 		buffer = []
@@ -426,7 +545,7 @@ async function load(reset: boolean) {
 	}
 	loading.value = true
 	failed.value = false
-	const q = query.value
+	const q = effectiveQuery()
 	const p = page.value
 	// A page the player has already seen comes off the shelf first: the grid
 	// is full the moment the tab opens, no waiting for the network.
@@ -513,10 +632,27 @@ let searchTimer: ReturnType<typeof setTimeout> | undefined
 watch(query, (value) => {
 	similarMode.value = false
 	clearTimeout(searchTimer)
-	searchTimer = setTimeout(() => {
-		router.replace({ query: value.trim() ? { q: value.trim() } : {} })
-		load(true)
-	}, 350)
+	searchTimer = setTimeout(
+		() => {
+			void value
+			syncRoute()
+			load(true)
+		},
+		nickMode.value ? 500 : 350,
+	)
+})
+
+watch(filterId, (value, old) => {
+	similarMode.value = false
+	clearTimeout(searchTimer)
+	// A nickname and a search for skins are different words: switching
+	// into or out of the nickname mode starts the box afresh.
+	if ((value === NICK_FILTER) !== (old === NICK_FILTER) && query.value) {
+		query.value = ''
+		return
+	}
+	syncRoute()
+	load(true)
 })
 
 async function loadSimilarToReference() {
@@ -543,12 +679,20 @@ async function loadSimilarToReference() {
 function showAll() {
 	similarSkinReference.value = null
 	similarMode.value = false
-	router.replace({ query: {} })
+	syncRoute()
 	load(true)
 }
 
 const heading = computed(() => {
 	if (similarMode.value) return formatMessage(messages.similarToYours)
+	if (nickMode.value) {
+		return nickResult.value
+			? formatMessage(messages.nickHeading, { nick: nickResult.value.nick })
+			: formatMessage(messages.byNick)
+	}
+	if (activeFilter.value && !query.value.trim()) {
+		return formatMessage(messages.filterResults, { filter: activeFilter.value.label })
+	}
 	if (query.value.trim()) return formatMessage(messages.results, { query: query.value.trim() })
 	return formatMessage(messages.popular)
 })
@@ -697,6 +841,13 @@ async function install() {
 	}
 }
 
+const isNickSkin = (skin: LabySkin | null): skin is NickSkin =>
+	Boolean(skin && 'nick' in skin && (skin as NickSkin).nick)
+
+function openSkinPage(skin: LabySkin) {
+	void openUrl(isNickSkin(skin) ? skin.pageUrl : labySkinPageUrl(skin.image_hash))
+}
+
 function tagsOf(skin: LabySkin) {
 	return labySkinTags(skin).slice(0, 4).join(', ')
 }
@@ -710,14 +861,27 @@ const usesFormatter = new Intl.NumberFormat()
 
 		<Input
 			v-model="query"
-			:icon="SearchIcon"
 			type="text"
 			autocomplete="off"
-			:placeholder="formatMessage(messages.searchPlaceholder)"
+			:icon="nickMode ? UserSearchIcon : SearchIcon"
+			:placeholder="formatMessage(nickMode ? messages.nickPlaceholder : messages.searchPlaceholder)"
 			clearable
 			wrapper-class="w-full"
 			size="large"
 			@clear="query = ''"
+		/>
+
+		<Chips
+			v-model="filterId"
+			:items="SKIN_FILTERS.map((filter) => filter.id)"
+			:format-label="(id) => filterLabel(SKIN_FILTERS.find((filter) => filter.id === id)!)"
+			:format-icon="(id) => SKIN_FILTERS.find((filter) => filter.id === id)?.icon"
+			:never-empty="false"
+			:capitalize="false"
+			hide-checkmark-icon
+			size="small"
+			:aria-label="formatMessage(messages.filters)"
+			class="skin-browse-filters"
 		/>
 
 		<div class="mt-2 flex flex-wrap items-center justify-between gap-2">
@@ -727,7 +891,7 @@ const usesFormatter = new Intl.NumberFormat()
 					<XIcon /> {{ formatMessage(messages.backToAll) }}
 				</Button>
 				<Pagination
-					v-else-if="skins.length > 0"
+					v-else-if="skins.length > 0 && !nickMode"
 					:page="page"
 					:count="pageCount"
 					class="ml-auto"
@@ -758,7 +922,14 @@ const usesFormatter = new Intl.NumberFormat()
 			v-else-if="!loading && skins.length === 0"
 			class="rounded-2xl border border-solid border-surface-5 bg-surface-3 px-6 py-10 text-center text-secondary"
 		>
-			{{ formatMessage(messages.nothingFound) }}
+			<template v-if="nickMode && !nickSearched">
+				<UserSearchIcon class="mx-auto mb-2 block size-7 opacity-70" />
+				{{ formatMessage(messages.nickPrompt) }}
+			</template>
+			<template v-else-if="nickMode">
+				{{ formatMessage(messages.nickNotFound, { nick: nickSearched }) }}
+			</template>
+			<template v-else>{{ formatMessage(messages.nothingFound) }}</template>
 		</div>
 
 		<div v-else class="skin-browse-grid">
@@ -777,7 +948,7 @@ const usesFormatter = new Intl.NumberFormat()
 			<SpinnerIcon class="size-6 animate-spin text-secondary" />
 		</div>
 		<div
-			v-else-if="!similarMode && skins.length > 0"
+			v-else-if="!similarMode && !nickMode && skins.length > 0"
 			class="flex items-center justify-end gap-3 py-2"
 		>
 			<Pagination :page="page" :count="pageCount" @switch-page="switchPage" />
@@ -827,7 +998,16 @@ const usesFormatter = new Intl.NumberFormat()
 
 			<div class="flex min-w-52 w-full flex-col gap-4">
 				<div class="text-sm text-secondary">
-					{{ formatMessage(messages.uses, { count: usesFormatter.format(current.use_count) }) }}
+					<template v-if="isNickSkin(current)">
+						{{
+							formatMessage(messages.nickSource, {
+								source: current.source === 'mojang' ? 'Minecraft' : 'Ely.by',
+							})
+						}}
+					</template>
+					<template v-else>
+						{{ formatMessage(messages.uses, { count: usesFormatter.format(current.use_count) }) }}
+					</template>
 				</div>
 
 				<div class="grid grid-cols-2 gap-2">
@@ -936,9 +1116,18 @@ const usesFormatter = new Intl.NumberFormat()
 				<Button
 					v-if="current"
 					type="outlined"
-					@click="openUrl(labySkinPageUrl(current.image_hash))"
+					@click="openSkinPage(current)"
 				>
-					<ExternalIcon /> {{ formatMessage(messages.openOnLaby) }}
+					<ExternalIcon />
+					{{
+						formatMessage(
+							isNickSkin(current)
+								? current.source === 'mojang'
+									? messages.openOnNameMc
+									: messages.openOnEly
+								: messages.openOnLaby,
+						)
+					}}
 				</Button>
 				<Button
 					type="colored"
@@ -960,6 +1149,32 @@ const usesFormatter = new Intl.NumberFormat()
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
 	gap: 0.75rem;
+}
+
+.skin-browse-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+}
+
+.skin-browse-filters :deep(.btn) {
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--color-raised-bg) 55%, transparent);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	transition:
+		background-color 0.2s ease,
+		color 0.2s ease,
+		transform 0.15s ease;
+}
+
+.skin-browse-filters :deep(.btn:active) {
+	transform: scale(0.96);
+}
+
+.skin-browse-filters :deep(.btn.selected) {
+	background: color-mix(in srgb, var(--color-brand) 22%, transparent);
+	color: var(--color-contrast);
 }
 
 .skin-browse-similar {
