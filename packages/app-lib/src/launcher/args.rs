@@ -110,6 +110,16 @@ pub fn get_class_paths(
                 return None;
             }
 
+            let has_natives = library
+                .natives
+                .as_ref()
+                .is_some_and(|natives| !natives.is_empty());
+            if has_natives
+                && library.natives_os_key_and_classifiers(java_arch).is_none()
+            {
+                return None;
+            }
+
             if library.is_local() {
                 return Some(get_local_lib_path(
                     local_libraries_path,

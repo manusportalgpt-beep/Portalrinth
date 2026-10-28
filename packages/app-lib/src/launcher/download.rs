@@ -938,6 +938,20 @@ pub async fn download_libraries(
                 return Ok(());
             }
 
+            let has_natives = library
+                .natives
+                .as_ref()
+                .is_some_and(|natives| !natives.is_empty());
+            if has_natives
+                && library.natives_os_key_and_classifiers(java_arch).is_none()
+            {
+                tracing::trace!(
+                    "Skipped incompatible native library {}",
+                    &library.name
+                );
+                return Ok(());
+            }
+
             // When a library has natives, we only need to download such natives, as PrismLauncher does
             if let Some((os_key, classifiers)) =
                 library.natives_os_key_and_classifiers(java_arch)
