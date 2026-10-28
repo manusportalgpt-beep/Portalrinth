@@ -134,6 +134,7 @@ const TOOLS: Record<string, ToolMeta> = {
 	session_read: { title: 'Прошлая сессия', icon: HistoryIcon },
 	skill_save: { title: 'Новый навык', icon: LightBulbIcon },
 	show_poll: { title: 'Опрос', icon: ListBulletedIcon },
+	task_start: { title: 'Новая задача', icon: BoxPlusIcon },
 	ask_user: { title: 'Вопрос', icon: MessageIcon },
 	open_folder: { title: 'Папка', icon: FolderOpenIcon },
 	music_add_url: { title: 'Трек в плейлист', icon: MusicIcon },

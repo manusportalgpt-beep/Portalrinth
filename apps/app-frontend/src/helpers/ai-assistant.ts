@@ -465,6 +465,109 @@ export interface AiStep {
 	image?: string
 }
 
+/** A craft the agent can build with its own hands in the sandbox. */
+export type AiTaskKind = 'mod' | 'shader' | 'resourcepack' | 'datapack'
+
+/** A tracked creation task: the chat draws its stages live while Portalus works. */
+export interface AiTask {
+	kind: AiTaskKind
+	title: string
+	stages: { label: string; done: boolean }[]
+}
+
+export const TASK_KIND_LABELS: Record<AiTaskKind, string> = {
+	mod: 'Мод',
+	shader: 'Шейдер',
+	resourcepack: 'Ресурс-пак',
+	datapack: 'Датапак',
+}
+
+/** The stages of each craft, in the order the player watches them happen. */
+const TASK_PIPELINES: Record<AiTaskKind, string[]> = {
+	mod: ['План работ', 'Структура проекта', 'Код мода', 'Компиляция .jar', 'Готовый файл игроку'],
+	shader: [
+		'План работ',
+		'Структура шейдерпака',
+		'Шейдеры (GLSL)',
+		'Упаковка .zip',
+		'Готовый файл игроку',
+	],
+	resourcepack: [
+		'План работ',
+		'Структура пака',
+		'Текстуры и модели',
+		'Упаковка .zip',
+		'Готовый файл игроку',
+	],
+	datapack: [
+		'План работ',
+		'Структура датапака',
+		'Функции и данные',
+		'Упаковка .zip',
+		'Готовый файл игроку',
+	],
+}
+
+function taskPipeline(kind: AiTaskKind): AiTask['stages'] {
+	return TASK_PIPELINES[kind].map((label) => ({ label, done: false }))
+}
+
+/** Reads `<<task_start|тип::название>>`; an unknown word falls back to mod. */
+function taskFromArgs(args: string): AiTask {
+	const [typeRaw = '', title = ''] = args.split('::').map((part) => part.trim())
+	const kind: AiTaskKind = /шейдер|shader/i.test(typeRaw)
+		? 'shader'
+		: /датапак|datapack/i.test(typeRaw)
+			? 'datapack'
+			: /ресурс|resource|текстур/i.test(typeRaw)
+				? 'resourcepack'
+				: 'mod'
+	return { kind, title: title.slice(0, 60) || TASK_KIND_LABELS[kind], stages: taskPipeline(kind) }
+}
+
+/** A request that clearly asks to build something with its own hands - so
+ * the stage card shows up even if the model forgets to announce the task. */
+export function detectTaskKind(text: string): AiTaskKind | null {
+	const t = text.toLowerCase()
+	if (/модпак|сборк|плагин/.test(t)) return null
+	if (!/(сдела|созда|напиши|сгенерируй|замути|намути|запили|смастери|свари)/.test(t)) return null
+	if (/шейдер/.test(t)) return 'shader'
+	if (/датапак/.test(t)) return 'datapack'
+	if (/ресурс-пак|ресурспак|текстур-пак/.test(t)) return 'resourcepack'
+	if (/(^|[^а-яё])(мод|моды|модик)([^а-яё]|$)/.test(t)) return 'mod'
+	return null
+}
+
+/** Ticks the task's stages off as the tools do the actual work: any step
+ * closes the plan, writes and scaffolds build the structure, then code,
+ * then packing and the hand-over to the player. */
+function progressTask(task: AiTask, tool: string, args: string): AiTask {
+	const index = task.stages.findIndex((stage) => !stage.done)
+	if (index < 0) return task
+	const bash = tool === 'sandbox_bash' ? args.toLowerCase() : ''
+	let hit = false
+	if (index === 0) hit = true
+	else if (index === 1)
+		hit =
+			tool === 'scaffold' ||
+			tool === 'sandbox_list' ||
+			tool === 'sandbox_write' ||
+			tool === 'sandbox_unpack' ||
+			(bash ? /mkdir|touch|tree|cp\s|mv\s|echo|unzip|unrar|>/.test(bash) : false)
+	else if (index === 2)
+		hit =
+			tool === 'sandbox_write' ||
+			tool === 'sandbox_download' ||
+			tool === 'gen_image' ||
+			tool === 'sandbox_unpack' ||
+			(bash ? /echo|>|cp\s|mv\s|unzip|unrar/.test(bash) : false)
+	else if (index === 3) hit = tool === 'launcher_compile_java' || tool === 'sandbox_pack'
+	else hit = tool === 'open_folder' || tool === 'install_to_instance' || tool === 'launcher_install'
+	if (!hit) return task
+	const stages = task.stages.map((stage, i) => (i === index ? { ...stage, done: true } : stage))
+	return { ...task, stages }
+}
+
 export interface AiMessage {
 	role: 'user' | 'assistant' | 'note'
 	content: string
@@ -486,6 +589,8 @@ export interface AiMessage {
 	question?: AiQuestion
 	/** How the reply came about, step by step. */
 	steps?: AiStep[]
+	/** The craft task this reply carried out, with its finished stages. */
+	task?: AiTask
 }
 
 const HISTORY_KEY = 'portalrinth-ai-history'
@@ -913,6 +1018,7 @@ export const AI_SLANG_HINT = [
 ].join('\n')
 
 export const AI_SKILLS_HINT = [
+	'ЛЮБУЮ постройку (мод, шейдер, ресурс-пак, датапак) начинай с объявления задачи: <<task_start|тип::Название>> (тип: mod, shader, resourcepack, datapack), например <<task_start|mod::Лесоповал>> — игрок увидит живую карточку этапов; без неё карточка не появится.',
 	'Ты умеешь создавать контент для Minecraft, сайты, картинки и код на любых языках — всё делаешь файлами в песочнице, а готовый результат отдаёшь архивом и открываешь папку игроку через <<open_folder|путь>>:',
 	'- Ресурс-пак: pack.mcmeta (поле pack_format зависит от версии — если не уверен, уточни через web_search), assets/minecraft/textures/..., модели, звуки (sounds.json). Собери файлы и упакуй в .zip.',
 	'- Шейдеры (OptiFine/Iris): папка shaders/ с вершинными и фрагментными программами (*.vsh, *.fsh, GLSL), composite/final проходы, shaders.properties. Собери и упакуй в .zip.',
@@ -925,6 +1031,22 @@ export const AI_SKILLS_HINT = [
 	'Большие проекты: сначала осмотрись (<<sandbox_bash|tree>> или ls), потом читай файлы по одному и частями (head/tail), план работ держи в memory_write — не пытайся прочитать всё сразу и ничего не теряй между шагами.',
 	'Если знаний не хватает (версии, форматы, API) — сначала web_search, потом пиши код. Не выдумывай несуществующие API: проверяй.',
 ].join('\n')
+
+/**
+ * The craft school: how Portalus actually builds mods, shaders, resource
+ * packs and datapacks with its own hands in the sandbox - exact file formats,
+ * load order, packing and honest limits. Read only when needed? No - these
+ * are the moves it keeps forgetting under pressure.
+ */
+export const AI_CRAFT_HINT = [
+	'Крафт — твой главный талант. Учись работать в песочнице как мастер: сначала осмотрись (<<sandbox_bash|tree>> или ls), план на 3-4 шага скажи игроку одной строкой, потом делай файл за файлом, каждый длинный файл — <<sandbox_write|файл::текст>> целиком (помни: внутри аргумента команды двойных >> не бывает — дописывать в файл можно только прочитав его и записав заново). Перед правкой всегда cat файл. JSON после записи перечитай и проверь запятые. Имена файлов и папок — латиницей без пробелов.',
+	'МОД (Fabric): корень проекта — fabric.mod.json рядом с папкой src/main/java. fabric.mod.json: {"schemaVersion":1, "id":"латиница_низкий_регистр", "version":"1.0.0", "name":"Имя", "entrypoints":{"main":["пакет.Класс"]}, "depends":{"fabricloader":">=0.15", "minecraft":"~1.21.1"}}. Класс implements ModInitializer, метод onInitialize — точка входа. Хуки в чужой код — Mixins (mixins.<id>.json + поле "mixins"). Forge — mods.toml в src/main/resources/META-INF, NeoForge — neoforge.mods.toml. Java 17 для MC 1.17-1.20.4, Java 21 для 1.20.5+. Скомпилируй: <<launcher_compile_java|папка::мод.jar>>; если javac в системе нет — собери .jar как zip через sandbox_pack и честно скажи, что для скомпилированного мода нужен JDK.',
+	'ШЕЙДЕР (Iris/OptiFine): в корне архива папка shaders/ с программами: gbuffers_terrain.vsh/.fsh (мир), gbuffers_textured (частицы), composite.fsh и final.fsh (пост-обработка: туман, тон, блум). shaders.properties — настройки и профили. Юниформы бери готовые: gbufferModelView, worldTime, cameraPosition, texcoord. GLSL #version 120-330: каждую скобку и точку с запятой проверяй — от опечатки шейдер не загрузится. pack.mcmeta в корне добавь.',
+	'РЕСУРС-ПАК: pack.mcmeta {"pack":{"pack_format":N, "description":"..."}} — N из твоей таблицы pack_format под версию игрока; assets/minecraft/textures/block|item/*.png, models/, sounds/ + sounds.json, lang/ru_ru.json и en_us.json (там, где переименования). Текстуры 16x16 — <<gen_image|описание::файл.png>> или нарисуй сам по пикселям через sandbox_write (PNG писать байтами нельзя — бери gen_image или проси картинку у игрока). Анимация текстуры — вертикальная полоса кадров + .mcmeta с frames рядом.',
+	'ДАТАПАК: pack.mcmeta (pack_format ДАТАПАКОВ, он другой!) + data/<namespace>/function/*.mcfunction (команды БЕЗ слэша), автозапуск через data/minecraft/tags/function/tick.json и load.json (в 1.21+ tags/function, раньше tags/functions — в файле перечисли свои функции). Рецепты data/<ns>/recipe/*.json, лут data/<ns>/loot_table/*.json, достижения advancement/. Название namespace — латиница.',
+	'Проверка и выдача: собрал — <<sandbox_pack|имя.zip::папка>> (или <<launcher_compile_java|>> для мода), проверь содержимое архива <<sandbox_unpack|имя.zip::проверка>> и ls проверка, потом <<open_folder|путь::что внутри>> и предложи: «Поставить в сборку?» — по да: <<install_to_instance|файл::тип::сборка>>. pack.mcmeta и манифесты должны лежать В КОРНЕ архива, не во вложенной папке — это самая частая ошибка, всегда проверяй распаковкой.',
+	'Честность о возможностях: java ты компилируешь, но не запускаешь; python/npm/go не существуют для тебя — код проверяй чтением, а не исполнением; протестировать мод по-настоящему можно только установкой в сборку игроком. Никогда не обещай «протестировал и работает» — говори «собрал, проверь в игре».',
+]
 
 /**
  * The long-term knowledge base: what the agent knows cold, so it answers
@@ -1160,6 +1282,7 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 		AI_LAUNCHER_HINT,
 		AI_SLANG_HINT,
 		AI_SKILLS_HINT,
+		AI_CRAFT_HINT,
 		AI_KNOWLEDGE_HINT,
 	]
 	const skills = (settings.skills ?? []).filter((skill) => skill.on && skill.text.trim())
@@ -1877,7 +2000,8 @@ async function presearchFor(request: AiRequest): Promise<string> {
 	if (!aiSettings.value.webSearch) return ''
 	const last = [...(request.messages ?? [])].reverse().find((message) => message.role === 'user')
 	const text = typeof last?.content === 'string' ? last.content.trim() : ''
-	if (text.length < 8 || text.length > 400 || text.includes('<<') || !PRESEARCH_HINT.test(text)) return ''
+	if (text.length < 8 || text.length > 400 || text.includes('<<') || !PRESEARCH_HINT.test(text))
+		return ''
 	const query = text.replace(/\s+/g, ' ').slice(0, 160)
 	request.onActionStart?.('web_search', query)
 	let result = ''
@@ -2111,7 +2235,9 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 								}
 								if (cards.image) seenImages.push(cards.image)
 								const room =
-									action.tool === 'web_fetch' || action.tool === 'open_page' || action.tool === 'fandom'
+									action.tool === 'web_fetch' ||
+									action.tool === 'open_page' ||
+									action.tool === 'fandom'
 										? 5000
 										: action.tool === 'web_search'
 											? 3500
@@ -2750,6 +2876,14 @@ async function installOneProject(
 }
 
 registerAiToolHandler(async (tool, args) => {
+	if (tool === 'task_start') {
+		const task = taskFromArgs(args)
+		return `Задача объявлена: ${TASK_KIND_LABELS[task.kind]} «${task.title}». Игрок видит карточку этапов: ${task.stages
+			.map((stage) => stage.label)
+			.join(
+				' → ',
+			)}. Веди работу по этапам: файлы в песочнице, затем упаковка (sandbox_pack) или компиляция (launcher_compile_java) и выдача (open_folder / install_to_instance).`
+	}
 	if (tool === 'web_fetch' || tool === 'open_page') {
 		const url = args.trim()
 		if (!/^https?:\/\//.test(url)) return 'Нужен полный http(s) адрес'
@@ -3128,14 +3262,19 @@ registerAiToolHandler(async (tool, args) => {
 			}
 			await sleep(1000)
 		}
-		if (!instanceId) return `${created}\nСборка ещё создаётся — поставь моды чуть позже через launcher_install.`
+		if (!instanceId)
+			return `${created}\nСборка ещё создаётся — поставь моды чуть позже через launcher_install.`
 
 		const facetsFor = (type: string) => {
 			const facets: string[][] = [[`project_type:${type}`], [`versions:${version}`]]
-			if (type === 'mod') facets.push(modrinthLoadersFor('mod', loader).map((item) => `categories:${item}`))
+			if (type === 'mod')
+				facets.push(modrinthLoadersFor('mod', loader).map((item) => `categories:${item}`))
 			return encodeURIComponent(JSON.stringify(facets))
 		}
-		const pick = async (query: string, type: string): Promise<{ id: string; title: string } | null> => {
+		const pick = async (
+			query: string,
+			type: string,
+		): Promise<{ id: string; title: string } | null> => {
 			const response = await proxiedFetch(
 				`https://api.modrinth.com/v2/search?limit=1&index=relevance&query=${encodeURIComponent(query)}&facets=${facetsFor(type)}`,
 				{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) },
@@ -3147,7 +3286,10 @@ registerAiToolHandler(async (tool, args) => {
 		}
 
 		const jobs: { query: string; type: string }[] = wanted.map((query) => ({ query, type: 'mod' }))
-		for (const extra of extrasRaw.split(/;;|\n/).map((part) => part.trim()).filter(Boolean)) {
+		for (const extra of extrasRaw
+			.split(/;;|\n/)
+			.map((part) => part.trim())
+			.filter(Boolean)) {
 			const [maybeType, ...rest] = extra.split(':')
 			const type = rest.length ? contentTypeOf(maybeType) : ''
 			const query = type ? rest.join(':').trim() : extra
@@ -3179,14 +3321,22 @@ registerAiToolHandler(async (tool, args) => {
 				if (marker >= 0) cards.push(result.slice(marker))
 				done.push(hit.title)
 			} catch (error) {
-				failed.push(`«${job.query}» — ${String(error).replace(/^Error:\s*/, '').slice(0, 120)}`)
+				failed.push(
+					`«${job.query}» — ${String(error)
+						.replace(/^Error:\s*/, '')
+						.slice(0, 120)}`,
+				)
 			}
 		}
 		return [
 			`Собрал сборку «${name}» (Minecraft ${version}, ${loader}, id: ${instanceId}).`,
 			done.length ? `Установлено (${done.length}): ${done.join(', ')}.` : 'Ничего не установилось.',
 			failed.length ? `Не подошло: ${failed.join('; ')}. Предложи аналоги.` : '',
-			'Запустить: <<launch_instance|' + instanceId + '>>; открыть: <<navigate|/instance/' + encodeURIComponent(instanceId) + '>>.',
+			'Запустить: <<launch_instance|' +
+				instanceId +
+				'>>; открыть: <<navigate|/instance/' +
+				encodeURIComponent(instanceId) +
+				'>>.',
 			...cards,
 		]
 			.filter(Boolean)
@@ -3410,6 +3560,8 @@ export interface AgentTurnState {
 	skins: AiSkinCard[]
 	wikis: AiWikiCard[]
 	sites: AiSiteCard[]
+	/** The craft task in flight, with its stages ticked off live. */
+	task: AiTask | null
 }
 export const agentTurn = ref<AgentTurnState>({
 	actions: [],
@@ -3422,6 +3574,7 @@ export const agentTurn = ref<AgentTurnState>({
 	skins: [],
 	wikis: [],
 	sites: [],
+	task: null,
 })
 /** Messages typed while a run was in flight; they go out when it ends. */
 export interface QueuedTurn {
@@ -3566,6 +3719,7 @@ function resetTurnState(): void {
 		skins: [],
 		wikis: [],
 		sites: [],
+		task: null,
 	}
 	agentThoughts.value = []
 }
@@ -3576,6 +3730,15 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 	agentStreaming.value = ''
 	resetTurnState()
 	errorOnTurn.value = ''
+	// A clear build request lights the stage card up before the model even
+	// speaks: if it announces the task itself, its title takes over.
+	const seedKind = detectTaskKind(text)
+	if (seedKind) {
+		agentTurn.value = {
+			...agentTurn.value,
+			task: { kind: seedKind, title: TASK_KIND_LABELS[seedKind], stages: taskPipeline(seedKind) },
+		}
+	}
 	const controller = new AbortController()
 	runController = controller
 
@@ -3646,6 +3809,9 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 				// round, drawn in the steps - not a reply half-written.
 				agentStreaming.value = ''
 				stepStart(tool, args)
+				if (tool === 'task_start') {
+					agentTurn.value = { ...agentTurn.value, task: taskFromArgs(args) }
+				}
 			},
 			onActionDone: (tool, args, result2) => {
 				agentPhase.value = 'working'
@@ -3710,6 +3876,12 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 							.catch(() => {})
 					}
 				}
+				if (agentTurn.value.task && tool !== 'task_start') {
+					agentTurn.value = {
+						...agentTurn.value,
+						task: progressTask(agentTurn.value.task, tool, args),
+					}
+				}
 				if (tool === 'open_folder') {
 					const separator = args.indexOf('::')
 					const path = (separator < 0 ? args : args.slice(0, separator)).trim()
@@ -3751,6 +3923,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 				: undefined,
 			question: result.question,
 			steps: settledSteps(),
+			task: agentTurn.value.task ?? undefined,
 		}
 		agentPhase.value = 'speaking'
 		// A reply that already streamed onto the screen is not typed out a
@@ -3778,6 +3951,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 				content: '⏹ Остановлено. Скажи, когда продолжить — или просто напиши следующее сообщение.',
 				ts: Date.now(),
 				steps: settledSteps(),
+				task: agentTurn.value.task ?? undefined,
 			})
 		} else {
 			const detail = String((error as Error)?.message ?? error)
@@ -3787,6 +3961,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 				content: `Не вышло: ${detail}`,
 				ts: Date.now(),
 				steps: settledSteps(),
+				task: agentTurn.value.task ?? undefined,
 			})
 		}
 	} finally {
