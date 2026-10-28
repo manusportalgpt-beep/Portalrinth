@@ -272,15 +272,6 @@ const tabs = [
 		icon: GlobeIcon,
 		content: ConnectionsSettings,
 	},
-	{
-		name: defineMessage({
-			id: 'app.settings.tabs.changes',
-			defaultMessage: 'Изменения',
-		}),
-		category: tabCategories.system,
-		icon: NewspaperIcon,
-		content: ChangesSettings,
-	},
 ]
 
 const availableTabs = computed(() =>

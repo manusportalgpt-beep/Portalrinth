@@ -23,8 +23,8 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .build()
 }
 
-/// Big enough for any wallpaper, small enough not to stall the window.
-const MAX_BYTES: u64 = 32 * 1024 * 1024;
+/// Big enough for any wallpaper, even a long video.
+const MAX_BYTES: u64 = 300 * 1024 * 1024;
 
 async fn stored_path() -> Result<std::path::PathBuf> {
     let state = theseus::State::get().await?;
