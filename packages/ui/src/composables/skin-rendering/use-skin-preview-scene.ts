@@ -56,15 +56,13 @@ function configureSkinPreviewMesh(mesh: THREE.Mesh) {
 	materials.forEach((material) => {
 		if (!(material instanceof THREE.MeshStandardMaterial) || material.name === 'cape') return
 
-		// Cutout instead of blending, so the layers are never re-sorted while
-		// the model turns (that is what made the texture flicker).
-		material.transparent = false
+		material.transparent = isSkinLayer
 		material.alphaTest = 0.1
 		material.depthTest = true
 		material.depthWrite = true
 		material.polygonOffset = isSkinLayer
 		material.polygonOffsetFactor = isSkinLayer ? SKIN_LAYER_DEPTH_BIAS : 0
-		material.polygonOffsetUnits = isSkinLayer ? SKIN_LAYER_DEPTH_BIAS * 4 : 0
+		material.polygonOffsetUnits = isSkinLayer ? SKIN_LAYER_DEPTH_BIAS : 0
 		material.needsUpdate = true
 	})
 }

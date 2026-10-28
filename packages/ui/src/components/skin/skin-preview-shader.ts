@@ -1,5 +1,15 @@
 import * as THREE from 'three'
 
+type DamageFlashMaterial = THREE.MeshStandardMaterial & {
+	userData: THREE.MeshStandardMaterial['userData'] & {
+		damageFlashShader?: THREE.Shader
+		damageFlashShaderInstalled?: boolean
+	}
+}
+
+const DAMAGE_FLASH_COLOR = new THREE.Color(0xbd2f2f)
+const DAMAGE_FLASH_SHADER_KEY = 'skin-preview-damage-flash'
+
 export function createRadialSpotlightShader() {
 	return {
 		uniforms: {
@@ -46,13 +56,60 @@ export function createRadialSpotlightShader() {
 	}
 }
 
-/**
- * Reverted: the damage-flash shader patched every skin material's program
- * through `onBeforeCompile`, and the patched programs came out wrong on
- * some machines - the player model rendered with a rainbow sheen over its
- * texture. The flash is gone; the model keeps its plain materials.
- */
-export function syncDamageFlashShader(
-	_scene: THREE.Object3D | null,
-	_intensity: number,
-): void {}
+function installDamageFlashShader(material: THREE.MeshStandardMaterial, intensity: number) {
+	const damageMaterial = material as DamageFlashMaterial
+
+	if (damageMaterial.userData.damageFlashShaderInstalled) {
+		return
+	}
+
+	const previousOnBeforeCompile = material.onBeforeCompile.bind(material)
+	const previousCustomProgramCacheKey = material.customProgramCacheKey.bind(material)
+
+	material.onBeforeCompile = (shader, renderer) => {
+		previousOnBeforeCompile(shader, renderer)
+
+		shader.uniforms.uDamageFlashIntensity = { value: intensity }
+		shader.uniforms.uDamageFlashColor = { value: DAMAGE_FLASH_COLOR }
+		shader.fragmentShader = shader.fragmentShader.replace(
+			'#include <common>',
+			'#include <common>\nuniform float uDamageFlashIntensity;\nuniform vec3 uDamageFlashColor;',
+		)
+		shader.fragmentShader = shader.fragmentShader.replace(
+			'#include <dithering_fragment>',
+			'gl_FragColor.rgb = mix(gl_FragColor.rgb, uDamageFlashColor, uDamageFlashIntensity * gl_FragColor.a);\n#include <dithering_fragment>',
+		)
+
+		damageMaterial.userData.damageFlashShader = shader
+	}
+
+	material.customProgramCacheKey = () =>
+		`${previousCustomProgramCacheKey()}|${DAMAGE_FLASH_SHADER_KEY}`
+	damageMaterial.userData.damageFlashShaderInstalled = true
+	material.needsUpdate = true
+}
+
+function syncDamageFlashMaterial(material: THREE.MeshStandardMaterial, intensity: number) {
+	installDamageFlashShader(material, intensity)
+
+	const shader = (material as DamageFlashMaterial).userData.damageFlashShader
+	if (shader) {
+		shader.uniforms.uDamageFlashIntensity.value = intensity
+	}
+}
+
+export function syncDamageFlashShader(scene: THREE.Object3D | null, intensity: number) {
+	if (!scene) return
+
+	scene.traverse((object) => {
+		const mesh = object as THREE.Mesh
+		if (!mesh.isMesh || !mesh.material) return
+
+		const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+		materials.forEach((material) => {
+			if (!(material instanceof THREE.MeshStandardMaterial) || material.name === 'cape') return
+
+			syncDamageFlashMaterial(material, intensity)
+		})
+	})
+}

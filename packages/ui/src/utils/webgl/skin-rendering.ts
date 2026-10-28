@@ -153,26 +153,6 @@ function setCommonMaterialProperties(mat: THREE.MeshStandardMaterial): void {
 	}
 }
 
-/**
- * The outer layer sits barely proud of the base skin; at a distance the depth
- * buffer could not tell the two apart and they fought (Z-fighting). A constant
- * bias always draws the layer in front.
- */
-function setLayerDepthBias(mat: THREE.MeshStandardMaterial, isSkinLayer: boolean): void {
-	const factor = isSkinLayer ? -1 : 0
-	const units = isSkinLayer ? -4 : 0
-	if (
-		mat.polygonOffset !== isSkinLayer ||
-		mat.polygonOffsetFactor !== factor ||
-		mat.polygonOffsetUnits !== units
-	) {
-		mat.polygonOffset = isSkinLayer
-		mat.polygonOffsetFactor = factor
-		mat.polygonOffsetUnits = units
-		mat.needsUpdate = true
-	}
-}
-
 export function applyTexture(model: THREE.Object3D, texture: THREE.Texture): void {
 	model.traverse((child) => {
 		if ((child as THREE.Mesh).isMesh) {
@@ -189,15 +169,10 @@ export function applyTexture(model: THREE.Object3D, texture: THREE.Texture): voi
 							flatShading: true,
 							side: isSkinLayer ? THREE.DoubleSide : THREE.FrontSide,
 							toneMapped: false,
-							// Cutout, not blending: a transparent outer layer is re-sorted
-							// against the other parts every frame, and while the model turns
-							// that order flips back and forth - the hat, sleeves and jacket
-							// flickered through the base skin. alphaTest cuts the holes.
-							transparent: false,
+							transparent: isSkinLayer,
 						})
 
 						setCommonMaterialProperties(mat)
-						setLayerDepthBias(mat, isSkinLayer)
 
 						if (mapNeedsUpdate || propertiesNeedUpdate) {
 							mat.needsUpdate = true

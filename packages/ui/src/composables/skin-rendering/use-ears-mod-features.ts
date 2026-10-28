@@ -1902,11 +1902,6 @@ function addEmissiveBodyOverlays(
 		}
 
 		const material = makeFeatureMaterial(texture, true)
-		// Same geometry as the part it glows on: pulled toward the camera so the
-		// two never fight over the same depth.
-		material.polygonOffset = true
-		material.polygonOffsetFactor = -2
-		material.polygonOffsetUnits = -8
 		resources.featureMaterials.add(material)
 		const overlay = new THREE.Mesh(mesh.geometry, material)
 		overlay.name = `${EARS_OVERLAY_PREFIX}:${mesh.name}`
