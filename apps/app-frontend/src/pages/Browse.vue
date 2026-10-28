@@ -12,12 +12,17 @@ import {
 	SettingsIcon,
 	SpinnerIcon,
 } from '@modrinth/assets'
-import type { BrowseInstallContentType, CardAction, ProjectType, Tags } from '@modrinth/ui'
+import type {
+	BrowseInstallContentType,
+	CardAction,
+	CardSources,
+	ProjectType,
+	Tags,
+} from '@modrinth/ui'
 import {
 	BrowsePageLayout,
 	BrowseSidebar,
 	Button,
-	Chips,
 	commonMessages,
 	ContextMenu,
 	CreationFlowModal,
@@ -43,6 +48,7 @@ import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import type { LocationQuery } from 'vue-router'
 import { useRoute, useRouter } from 'vue-router'
 
+import BrowseSourcePicker from '@/components/ui/curseforge/BrowseSourcePicker.vue'
 import { useAppServerBrowse } from '@/composables/browse/use-app-server-browse'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
@@ -55,6 +61,7 @@ import {
 	get_version_many,
 } from '@/helpers/cache.js'
 import {
+	type BrowseMode,
 	type BrowseSource,
 	CURSEFORGE_PROJECT_TYPES,
 	curseforgeCategoriesQueryOptions,
@@ -676,6 +683,10 @@ const messages = defineMessages({
 		id: 'search.filter.locked.instance.sync',
 		defaultMessage: 'Sync with instance',
 	},
+	cardSourceLabel: {
+		id: 'app.browse.card-source.label',
+		defaultMessage: 'Install from',
+	},
 	browseSourceLabel: {
 		id: 'app.browse.source.label',
 		defaultMessage: 'Where to browse',
@@ -700,20 +711,21 @@ const projectType = ref<ProjectType>(route.params.projectType as ProjectType)
 // Portalrinth's own: CurseForge as a second place to browse. Only offered when
 // the build has a key, only for the project types CurseForge has, and never
 // while adding to a server, whose flow is Modrinth's from end to end.
-const BROWSE_SOURCES: BrowseSource[] = ['modrinth', 'curseforge']
-const browseSourceIcon = (source: BrowseSource) =>
-	source === 'curseforge' ? CurseForgeIcon : ModrinthBrandIcon
-const browseSource = ref<BrowseSource>(
-	curseforgeSettings.enabled &&
-		(route.query.src === 'cf' ||
-			(route.query.src === undefined && curseforgeSettings.defaultSource === 'curseforge'))
-		? 'curseforge'
-		: 'modrinth',
-)
+// 'both' lists Modrinth and CurseForge together, without repeats: a project
+// on both is one card with a toggle for where to install it from.
+function initialBrowseSource(): BrowseMode {
+	if (!curseforgeSettings.enabled) return 'modrinth'
+	const src = route.query.src
+	if (src === 'all') return 'both'
+	if (src === 'cf') return 'curseforge'
+	if (src === 'mr') return 'modrinth'
+	return curseforgeSettings.defaultSource
+}
+const browseSource = ref<BrowseMode>(initialBrowseSource())
 /** The source in the URL; only the one that is not the default is written. */
-function sourceQuery(source: BrowseSource) {
+function sourceQuery(source: BrowseMode) {
 	if (source === curseforgeSettings.defaultSource) return undefined
-	return source === 'curseforge' ? 'cf' : 'mr'
+	return source === 'both' ? 'all' : source === 'curseforge' ? 'cf' : 'mr'
 }
 // Offered whenever CurseForge is on, key or no key: without one, picking it
 // says where to put one instead of the switch never showing at all.
@@ -724,6 +736,10 @@ const curseforgeOffered = computed(
 		(CURSEFORGE_PROJECT_TYPES as readonly string[]).includes(projectType.value),
 )
 const isCurseforge = computed(() => curseforgeOffered.value && browseSource.value === 'curseforge')
+/** Both at once; without a key it is Modrinth alone. */
+const isCombined = computed(
+	() => curseforgeOffered.value && browseSource.value === 'both' && curseforgeKeyAvailable.value,
+)
 /** CurseForge is picked but there is nothing to ask it with. */
 const curseforgeNeedsKey = computed(() => isCurseforge.value && !curseforgeKeyAvailable.value)
 const settingsActions = injectSettingsActions()
@@ -739,7 +755,7 @@ const isCurseforgeFilterType = (id: string) =>
 const curseforgeCategoriesQuery = useQuery(
 	computed(() => ({
 		...curseforgeCategoriesQueryOptions(projectType.value),
-		enabled: isCurseforge.value,
+		enabled: isCurseforge.value || isCombined.value,
 	})),
 )
 // CurseForge's own categories, with their own names and pictures, in the
@@ -767,9 +783,16 @@ const browseTags: Ref<Tags> = computed(() =>
 		: tags.value,
 )
 
-function formatBrowseSource(source: BrowseSource) {
-	return source === 'curseforge' ? 'CurseForge' : 'Modrinth'
-}
+/** Names compared loosely: case, spaces and punctuation aside. */
+const looseName = (value: string | null | undefined) =>
+	(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '')
+
+/**
+ * When both are listed, the CurseForge copy of each Modrinth card's project
+ * (found by slug or by name and author), and which of the two to install.
+ */
+const combinedTwins = shallowRef(new Map<string, Labrinth.Search.v3.ResultSearchProject>())
+const pickedSource = ref<Record<string, BrowseSource>>({})
 
 function resetInstanceContext() {
 	debugLog('instance context removed, resetting')
@@ -1053,6 +1076,11 @@ function getCardActions(
 		return getCurseforgeCardActions(result, currentProjectType)
 	}
 
+	const twin = isCombined.value ? combinedTwins.value.get(result.project_id) : undefined
+	if (twin && pickedSource.value[result.project_id] === 'curseforge') {
+		return getCurseforgeCardActions(twin, currentProjectType)
+	}
+
 	const projectResult = result as Labrinth.Search.v3.ResultSearchProject & {
 		installed?: boolean
 		installing?: boolean
@@ -1285,6 +1313,44 @@ function getCurseforgeCardActions(
 	]
 }
 
+/**
+ * The platform toggle on a card while both are listed: two icons when the
+ * project is on both, a badge when it is on just one.
+ */
+function getCardSources(result: Labrinth.Search.v3.ResultSearchProject): CardSources | null {
+	if (!isCombined.value || projectType.value === 'server') return null
+	const modrinth = {
+		key: 'modrinth',
+		label: 'Modrinth',
+		icon: ModrinthBrandIcon,
+		iconClass: 'text-[#1bd96a]',
+	}
+	const curseforge = {
+		key: 'curseforge',
+		label: 'CurseForge',
+		icon: CurseForgeIcon,
+		iconClass: 'text-[#f16436]',
+	}
+	const label = formatMessage(messages.cardSourceLabel)
+	if (isCurseforgeId(result.project_id)) {
+		return { label, options: [{ ...curseforge, active: true, onSelect: () => {} }] }
+	}
+	if (!combinedTwins.value.has(result.project_id)) {
+		return { label, options: [{ ...modrinth, active: true, onSelect: () => {} }] }
+	}
+	const picked = pickedSource.value[result.project_id] ?? 'modrinth'
+	const select = (source: BrowseSource) => () => {
+		pickedSource.value = { ...pickedSource.value, [result.project_id]: source }
+	}
+	return {
+		label,
+		options: [
+			{ ...modrinth, active: picked === 'modrinth', onSelect: select('modrinth') },
+			{ ...curseforge, active: picked === 'curseforge', onSelect: select('curseforge') },
+		],
+	}
+}
+
 /** Loads a CurseForge project's page ahead of a click on its card. */
 // Only a card the pointer rests on is loaded ahead, not every card it crosses.
 let hoverPrefetchTimer: ReturnType<typeof setTimeout> | undefined
@@ -1325,9 +1391,10 @@ function onSearchResultsInstalled(ids: string[]) {
  * since CurseForge only understands a game version and loaders. What comes
  * back is already in Labrinth's search-hit shape, so the cards cannot tell.
  */
-async function searchCurseforge(requestParams: string) {
+async function searchCurseforge(requestParams: string, combined = false) {
+	const nothing = { projectHits: [], serverHits: [], total_hits: 0, per_page: 20 }
 	if (!curseforgeKeyAvailable.value) {
-		return { projectHits: [], serverHits: [], total_hits: 0, per_page: 20 }
+		return nothing
 	}
 	const params = new URLSearchParams(requestParams.replace(/^\?/, ''))
 	const provided = combinedProvidedFilters.value.filter(
@@ -1341,10 +1408,32 @@ async function searchCurseforge(requestParams: string) {
 	].filter((filter) => !filter.negative)
 	const optionsOf = (...types: string[]) =>
 		filters.filter((filter) => types.includes(filter.type)).map((filter) => filter.option)
-	const categoryIds = filters
-		.filter((filter) => filter.type.startsWith('category_'))
-		.map((filter) => curseforgeCategories.value.find((c) => c.name === filter.option)?.id)
+	const categoryFilters = filters.filter((filter) => filter.type.startsWith('category_'))
+	// Listed together, the filters are Modrinth's: categories are matched to
+	// CurseForge's by name, and a filter CurseForge cannot apply leaves it out
+	// rather than letting it answer unfiltered.
+	if (combined) {
+		const allFilters = [
+			...searchState.currentFilters.value.filter(
+				(filter) => !provided.some((p) => p.type === filter.type),
+			),
+			...provided,
+		]
+		if (allFilters.some((filter) => filter.negative || !isCurseforgeFilterType(filter.type))) {
+			return nothing
+		}
+	}
+	const categoryIds = categoryFilters
+		.map(
+			(filter) =>
+				curseforgeCategories.value.find((c) =>
+					combined ? looseName(c.name) === looseName(filter.option) : c.name === filter.option,
+				)?.id,
+		)
 		.filter((id): id is number => id !== undefined)
+	if (combined && categoryIds.length < categoryFilters.length) {
+		return nothing
+	}
 
 	const query = {
 		query: params.get('query'),
@@ -1388,10 +1477,65 @@ async function searchCurseforge(requestParams: string) {
 	}
 }
 
+/**
+ * Both at once: the two answer side by side, a project on both is one card
+ * (Modrinth's, with a toggle for where to install it from), and the rest
+ * take turns so neither is buried under the other.
+ */
+async function searchCombined(requestParams: string) {
+	const [modrinth, curseforge] = await Promise.all([
+		searchModrinth(requestParams),
+		searchCurseforge(requestParams, true).catch((err) => {
+			debugLog('curseforge search failed in combined mode', err)
+			return { projectHits: [], serverHits: [], total_hits: 0, per_page: 20 }
+		}),
+	])
+	const twins = new Map<string, Labrinth.Search.v3.ResultSearchProject>()
+	const bySlug = new Map<string, Labrinth.Search.v3.ResultSearchProject>()
+	const byName = new Map<string, Labrinth.Search.v3.ResultSearchProject>()
+	for (const hit of modrinth.projectHits) {
+		if (hit.slug) bySlug.set(looseName(hit.slug), hit)
+		byName.set(looseName(hit.name), hit)
+	}
+	const onlyCurseforge: Labrinth.Search.v3.ResultSearchProject[] = []
+	for (const hit of curseforge.projectHits) {
+		const name = byName.get(looseName(hit.name))
+		const match =
+			(hit.slug ? bySlug.get(looseName(hit.slug)) : undefined) ??
+			(name && looseName(name.author) === looseName(hit.author) ? name : undefined) ??
+			name
+		if (match && !twins.has(match.project_id)) {
+			twins.set(match.project_id, hit)
+		} else if (!match) {
+			onlyCurseforge.push(hit)
+		}
+	}
+	const merged: Labrinth.Search.v3.ResultSearchProject[] = []
+	const length = Math.max(modrinth.projectHits.length, onlyCurseforge.length)
+	for (let i = 0; i < length; i++) {
+		if (modrinth.projectHits[i]) merged.push(modrinth.projectHits[i])
+		if (onlyCurseforge[i]) merged.push(onlyCurseforge[i])
+	}
+	combinedTwins.value = new Map([...combinedTwins.value, ...twins])
+	return {
+		projectHits: merged,
+		serverHits: [],
+		total_hits: Math.max(modrinth.total_hits, curseforge.total_hits),
+		per_page: modrinth.per_page,
+	}
+}
+
 async function search(requestParams: string) {
 	if (isCurseforge.value) {
 		return await searchCurseforge(requestParams)
 	}
+	if (isCombined.value && projectType.value !== 'server') {
+		return await searchCombined(requestParams)
+	}
+	return await searchModrinth(requestParams)
+}
+
+async function searchModrinth(requestParams: string) {
 	debugLog('searching v3', requestParams)
 	const isServer = projectType.value === 'server'
 
@@ -1477,7 +1621,7 @@ const browsePageSizeOptions = computed(() => {
 	sizes.add(browsePageSize.value)
 	const sorted = [...sizes].sort((a, b) => a - b)
 	// CurseForge hands out at most 50 results a page.
-	return isCurseforge.value ? sorted.filter((size) => size <= 50) : sorted
+	return isCurseforge.value || isCombined.value ? sorted.filter((size) => size <= 50) : sorted
 })
 
 const searchState = useBrowseSearch({
@@ -1526,12 +1670,15 @@ watch(
 	{ deep: true },
 )
 
-watch(browseSource, async (source) => {
-	// The two have different categories, so none carries over; and pages do
-	// not line up between them, so a switch starts from the top.
-	searchState.currentFilters.value = searchState.currentFilters.value.filter(
-		(filter) => !filter.type.startsWith('category_'),
-	)
+watch(browseSource, async (source, previous) => {
+	// CurseForge's categories are its own, so none carries over to or from it
+	// (listing both uses Modrinth's); and pages do not line up between them,
+	// so a switch starts from the top.
+	if (source === 'curseforge' || previous === 'curseforge') {
+		searchState.currentFilters.value = searchState.currentFilters.value.filter(
+			(filter) => !filter.type.startsWith('category_'),
+		)
+	}
 	await searchState.setPage(1)
 	// The search only reruns by itself when its request changes, and the
 	// source is not part of the request, so it is rerun here.
@@ -1700,6 +1847,7 @@ provideBrowseManager({
 	showProjectTypeTabs: computed(() => !isServerContext.value),
 	variant: 'app',
 	getCardActions,
+	getCardSources,
 	installContext,
 	providedFilters: combinedProvidedFilters,
 	hideInstalled: computed({
@@ -1759,17 +1907,7 @@ provideBrowseManager({
 	<div class="flex flex-col gap-2 p-6">
 		<BrowsePageLayout>
 			<template v-if="curseforgeOffered" #tabs-end>
-				<Chips
-					v-model="browseSource"
-					:items="BROWSE_SOURCES"
-					:format-label="formatBrowseSource"
-					:format-icon="browseSourceIcon"
-					hide-checkmark-icon
-					:capitalize="false"
-					:aria-label="formatMessage(messages.browseSourceLabel)"
-					size="small"
-					never-empty
-				/>
+				<BrowseSourcePicker v-model="browseSource" />
 			</template>
 			<template v-if="curseforgeNeedsKey" #results-replacement>
 				<div

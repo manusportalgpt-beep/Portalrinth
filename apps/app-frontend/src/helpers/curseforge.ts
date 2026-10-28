@@ -26,6 +26,8 @@ export const CURSEFORGE_PROJECT_TYPES = [
 ] as const
 
 export type BrowseSource = 'modrinth' | 'curseforge'
+/** Where Discover lists from: one of the two, or both at once. */
+export type BrowseMode = BrowseSource | 'both'
 
 /** Whether CurseForge is offered: there is a key and it is not turned off. */
 export function curseforgeEnabled(): boolean {

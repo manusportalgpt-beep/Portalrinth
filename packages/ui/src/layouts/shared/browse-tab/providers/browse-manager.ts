@@ -9,6 +9,7 @@ import type {
 	BrowseInstallContext,
 	BrowseSearchResponse,
 	CardAction,
+	CardSources,
 	ServerModpackContent,
 } from '../types'
 
@@ -63,6 +64,8 @@ export interface BrowseManagerContext {
 		result: Labrinth.Search.v3.ResultSearchProject,
 		projectType: string,
 	) => CardAction[]
+	/** The platform toggle or badge drawn before a card's actions. */
+	getCardSources?: (result: Labrinth.Search.v3.ResultSearchProject) => CardSources | null
 
 	installContext?: ComputedRef<BrowseInstallContext | null>
 	providedFilters?: ComputedRef<FilterValue[]>

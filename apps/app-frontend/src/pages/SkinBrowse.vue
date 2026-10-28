@@ -36,12 +36,12 @@ import { useRoute, useRouter } from 'vue-router'
 
 import {
 	findSimilarLabySkins,
+	isStockLabySkin,
 	LABY_PAGE_SIZE,
 	type LabySkin,
 	labySkinPageUrl,
-	labySkinRenderSources,
-	minotarBodyUrl,
 	labySkinPreview,
+	labySkinRenderSources,
 	remotePreviewDataUrl,
 	labySkinTags,
 	labySkinTexture,
@@ -52,7 +52,6 @@ import {
 	similarSkinReference,
 } from '@/helpers/laby-skins'
 import { add_and_equip_custom_skin, type Cape, get_available_capes } from '@/helpers/skins'
-import { skinRenderUrl } from '@/helpers/skin-render-service'
 import { playSoundEffect } from '@/helpers/portalrinth-sfx'
 import { type BreadcrumbDefinition, injectBreadcrumbManager } from '@/shared/breadcrumbs'
 
@@ -162,7 +161,8 @@ let requestId = 0
 // refreshes behind it. The page to come downloads itself in the background.
 
 const UI_PAGE_SIZE = 55
-const PAGE_CACHE_KEY = 'portalrinth-skinbrowse-pages'
+// v2: the popular list no longer carries Mojang's stock skins.
+const PAGE_CACHE_KEY = 'portalrinth-skinbrowse-pages-v2'
 const PAGE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000
 const PAGE_CACHE_LIMIT = 80
 
@@ -218,7 +218,9 @@ async function ensureBuffer(q: string, need: number, id: number): Promise<void> 
 			const found = await searchLabySkins(q, labyPagesLoaded + 1)
 			if (id !== requestId) return
 			labyPagesLoaded += 1
-			buffer = [...buffer, ...found]
+			// The popular list opens with Mojang's stock skins in both arm
+			// widths - they live under "Default skins" already.
+			buffer = [...buffer, ...(q.trim() ? found : found.filter((skin) => !isStockLabySkin(skin)))]
 			if (found.length < LABY_PAGE_SIZE) labyDone = true
 		} catch (error) {
 			// laby.net caps the deep pages (offset past ~1500 answers 401):
@@ -242,8 +244,10 @@ function updateHasMore(p: number) {
 	hasMore.value = !labyDone || buffer.length > p * UI_PAGE_SIZE
 }
 
-/** Grid previews, drawn on a canvas from each skin's own texture. */
+/** Grid previews, drawn in 3D on a canvas from each skin's own texture. */
 const previews = ref<Record<string, string>>({})
+/** Arm width per hash, so the 3D preview draws slim arms slim. */
+const variants = new Map<string, LabySkin['skin_variant']>()
 
 /**
  * The preview of a skin: drawn right here on a canvas from the skin's own
@@ -253,9 +257,10 @@ const previews = ref<Record<string, string>>({})
  * couple of seconds. A small queue keeps the fetches civil, and the service
  * chosen in "Сервис-скинов" stands in only when the canvas could not draw.
  */
-function previewSrc(hash: string): string | undefined {
-	queuePreview(hash)
-	return previews.value[hash]
+function previewSrc(skin: LabySkin): string | undefined {
+	variants.set(skin.image_hash, skin.skin_variant)
+	queuePreview(skin.image_hash)
+	return previews.value[skin.image_hash]
 }
 
 const previewRequested = new Set<string>()
@@ -283,7 +288,7 @@ function pumpPreviews() {
 	}
 }
 
-const PREVIEW_CEILING_MS = 15000
+const PREVIEW_CEILING_MS = 12000
 
 /** A ceiling for one preview attempt: a host that never answers must not
  * hold a queue lane forever - the rest of the page would starve behind it.
@@ -311,7 +316,11 @@ function withCeiling<T>(task: Promise<T>, ms: number): Promise<T> {
  * only then the plain image chain for `@error` to walk. */
 async function fillPreview(hash: string): Promise<void> {
 	try {
-		const url = await withCeiling(labySkinPreview(hash), PREVIEW_CEILING_MS)
+		const variant = variants.get(hash)
+		const url = await withCeiling(
+			labySkinPreview(hash, variant === 'SLIM' ? 'SLIM' : variant ? 'CLASSIC' : undefined),
+			PREVIEW_CEILING_MS,
+		)
 		if (previews.value[hash] === undefined) {
 			previews.value = { ...previews.value, [hash]: url }
 		}
@@ -328,8 +337,7 @@ async function fillPreview(hash: string): Promise<void> {
 		/* the app-client roads are out too - the webview chain is left */
 	}
 	if (previews.value[hash] !== undefined) return
-	const remote = skinRenderUrl(hash, 360, 684)
-	if (remote) previews.value = { ...previews.value, [hash]: remote }
+	previews.value = { ...previews.value, [hash]: renderChain(hash)[0] }
 }
 
 /** The page on screen is served first: hashes queued for other pages step
@@ -346,9 +354,11 @@ function refocusQueue() {
 }
 
 /**
- * The render chain per hash: the chosen service straight, then the same
- * render through two image proxies (a lossy route to laby.net does not stop
- * the picture), then minotar's flat body. `@error` walks the chain.
+ * The render chain per hash, the last resort when the texture itself will
+ * not come: laby.net's own render straight, then through two image proxies
+ * (a lossy route to laby.net does not stop the picture). Only laby.net knows
+ * its hashes - the other services answer them with a stock Alex or Steve.
+ * `@error` walks the chain.
  */
 const renderChains = new Map<string, string[]>()
 const renderStep = new Map<string, number>()
@@ -356,12 +366,7 @@ const renderStep = new Map<string, number>()
 function renderChain(hash: string): string[] {
 	let chain = renderChains.get(hash)
 	if (!chain) {
-		const primary = skinRenderUrl(hash, 360, 684)
-		chain = [
-			...(primary ? [primary] : []),
-			...labySkinRenderSources(hash, 360, 684),
-			minotarBodyUrl(hash, 640),
-		]
+		chain = labySkinRenderSources(hash, 360, 684)
 		renderChains.set(hash, chain)
 		renderStep.set(hash, 0)
 	}
@@ -375,11 +380,6 @@ function advanceRender(hash: string): string | null {
 	return step < chain.length ? chain[step] : null
 }
 
-/**
- * The picture on a card did not come through - some networks drop part of
- * their requests. The next road in the chain takes the card; when every
- * road is dead the card stays as it was instead of flickering.
- */
 /**
  * The picture on a card did not come through - some networks drop part of
  * their requests. The next road in the chain takes the card; when every
@@ -510,7 +510,7 @@ async function loadSimilarToReference() {
 	hasMore.value = false
 	skins.value = []
 	try {
-		const found = await findSimilarLabySkins({ texture: reference.texture }, 42)
+		const found = await findSimilarLabySkins({ texture: reference.texture }, 48)
 		if (id !== requestId) return
 		skins.value = found
 		refocusQueue()
@@ -553,6 +553,8 @@ const current = ref<LabySkin | null>(null)
 const currentTexture = ref('')
 /** The render of the open skin, shown when its texture will not come. */
 const currentRender = ref('')
+/** The live 3D model is drawn - the stand-in picture fades out. */
+const modelReady = ref(false)
 const crouching = ref(false)
 const layersHidden = ref(false)
 const walking = ref(false)
@@ -594,12 +596,10 @@ async function select(skin: LabySkin) {
 	const id = ++viewerRequest
 	current.value = skin
 	currentTexture.value = ''
-	renderChains.set(
-		skin.image_hash,
-		[...labySkinRenderSources(skin.image_hash, 640, 1152), minotarBodyUrl(skin.image_hash, 1024)],
-	)
-	renderStep.set(skin.image_hash, 0)
-	currentRender.value = renderChain(skin.image_hash)[0]
+	modelReady.value = false
+	// The card's own 3D preview stands in at once while the texture for the
+	// live model arrives - usually a few dozen milliseconds, from the shelf.
+	currentRender.value = previews.value[skin.image_hash] ?? ''
 	similar.value = []
 	similarPage.value = 1
 	try {
@@ -607,9 +607,13 @@ async function select(skin: LabySkin) {
 		if (id !== viewerRequest) return
 		currentTexture.value = pngDataUrl(texture)
 	} catch {
-		// The texture would not come. The render above stands in for the model
-		// instead of a spinner that never ends; installing stays disabled, as
-		// it needs the texture itself.
+		// The texture would not come. A render stands in for the model instead
+		// of a spinner that never ends; installing stays disabled, as it needs
+		// the texture itself.
+		if (id === viewerRequest && !currentRender.value) {
+			renderStep.set(skin.image_hash, 0)
+			currentRender.value = renderChain(skin.image_hash)[0]
+		}
 	}
 	loadSimilar(skin, id)
 }
@@ -630,20 +634,12 @@ async function loadSimilar(skin: LabySkin, id: number) {
 	}
 }
 
-/** The render in the viewer failed as well: walk the same chain, canvas last. */
+/** The stand-in picture in the viewer failed: walk the render chain. */
 function onRenderError() {
 	const skin = current.value
 	if (!skin) return
 	const next = advanceRender(skin.image_hash)
-	if (next) {
-		currentRender.value = next
-		return
-	}
-	labySkinPreview(skin.image_hash)
-		.then((url) => {
-			if (!currentTexture.value) currentRender.value = url
-		})
-		.catch(() => {})
+	if (next) currentRender.value = next
 }
 
 function open(skin: LabySkin) {
@@ -743,7 +739,7 @@ const usesFormatter = new Intl.NumberFormat()
 			<SkinButton
 				v-for="skin in visibleSkins"
 				:key="skin.image_hash"
-				:forward-image-src="previewSrc(skin.image_hash)"
+				:forward-image-src="previewSrc(skin)"
 				:selected="false"
 				:tooltip="tagsOf(skin) || undefined"
 				@error="onPreviewError(skin.image_hash)"
@@ -778,7 +774,21 @@ const usesFormatter = new Intl.NumberFormat()
 		</template>
 
 		<div v-if="current" class="flex flex-col gap-6 md:flex-row">
-			<div class="h-[25rem] w-[16rem] min-w-[16rem] flex-shrink-0 md:self-center">
+			<div class="relative h-[25rem] w-[16rem] min-w-[16rem] flex-shrink-0 md:self-center">
+				<!-- The card's 3D picture holds the place at once; the live model
+				     fades in over it and the picture steps aside. -->
+				<div
+					v-if="currentRender"
+					class="skin-browse-standin pointer-events-none absolute inset-0 flex items-center justify-center"
+					:class="{ 'skin-browse-standin--hidden': modelReady }"
+				>
+					<img
+						:src="currentRender"
+						alt=""
+						class="max-h-[88%] max-w-full object-contain [image-rendering:pixelated]"
+						@error="onRenderError"
+					/>
+				</div>
 				<SkinPreviewRenderer
 					v-if="currentTexture"
 					:texture-src="currentTexture"
@@ -789,20 +799,10 @@ const usesFormatter = new Intl.NumberFormat()
 					:hide-layers="layersHidden"
 					framing="modal"
 					:initial-rotation="Math.PI / 8"
-					class="h-full w-full"
+					class="relative h-full w-full"
+					@ready="modelReady = true"
 				/>
-				<div
-					v-else-if="currentRender"
-					class="flex h-full w-full items-center justify-center"
-				>
-					<img
-						:src="currentRender"
-						alt=""
-						class="max-h-full max-w-full object-contain"
-						@error="onRenderError"
-					/>
-				</div>
-				<div v-else class="flex h-full w-full items-center justify-center">
+				<div v-else-if="!currentRender" class="flex h-full w-full items-center justify-center">
 					<SpinnerIcon class="size-6 animate-spin text-secondary" />
 				</div>
 			</div>
@@ -875,7 +875,7 @@ const usesFormatter = new Intl.NumberFormat()
 						<SkinButton
 							v-for="skin in similarPaged"
 							:key="skin.image_hash"
-							:forward-image-src="previewSrc(skin.image_hash)"
+							:forward-image-src="previewSrc(skin)"
 							:selected="false"
 							:tooltip="tagsOf(skin) || undefined"
 							@error="onPreviewError(skin.image_hash)"
@@ -948,6 +948,14 @@ const usesFormatter = new Intl.NumberFormat()
 	display: grid;
 	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: 0.625rem;
+}
+
+.skin-browse-standin {
+	transition: opacity 0.35s ease;
+}
+
+.skin-browse-standin--hidden {
+	opacity: 0;
 }
 
 .skin-browse-button--active {

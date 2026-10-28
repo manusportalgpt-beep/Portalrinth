@@ -210,6 +210,8 @@ const props = withDefaults(
 
 const emit = defineEmits<{
 	earsFeaturesDetected: [detected: boolean]
+	/** The model is drawn and fading in - a stand-in picture can step aside. */
+	ready: []
 }>()
 
 const skinPreviewContainer = useTemplateRef<HTMLElement>('skinPreviewContainer')
@@ -405,6 +407,9 @@ const rendererDpr: [number, number] = [1, 1.5]
 const radialSpotlightShader = createRadialSpotlightShader()
 const isReady = computed(() => isModelLoaded.value && isTextureLoaded.value && hasResolvedFit.value)
 const { isPreviewVisible, showLoading } = useSkinPreviewLoading(isReady)
+watch(isPreviewVisible, (visible) => {
+	if (visible) emit('ready')
+})
 
 onMounted(observeSubtitleElement)
 

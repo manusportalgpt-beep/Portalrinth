@@ -195,14 +195,36 @@ watchEffect(() => {
 	border-top-left-radius: var(--radius-xl);
 }
 
-:root.portalrinth-backdrop-active .sidebar-enabled .browse-install-header {
-	border-top-right-radius: var(--radius-xl);
-}
+/* Its right end is square: it meets the scrollbar's strip, which is painted
+   in the bar's own dark (below), and the page's arc is drawn by the page
+   itself past that strip. A rounded tip here left a light notch between the
+   bar and the strip. */
 
 /* The scrollbar runs down the page's right edge, past the pinned bar; its
    track keeps the bar's own dark, so the bar's rounded tip is not cut off by
    a lighter strip. */
 :root.portalrinth-backdrop-active .app-viewport::-webkit-scrollbar-track {
+	background: color-mix(in srgb, var(--color-bg) var(--portalrinth-header-shade, 60%), transparent);
+}
+
+/* A page too short to scroll has no track to paint: the strip beside the
+   pinned bar takes the bar's dark from the page's own background instead,
+   as high as the bar (the height comes from the bar itself). */
+:root.portalrinth-backdrop-active .app-viewport:has(.browse-install-header) {
+	background-image: linear-gradient(
+		color-mix(in srgb, var(--color-bg) var(--portalrinth-header-shade, 60%), transparent),
+		color-mix(in srgb, var(--color-bg) var(--portalrinth-header-shade, 60%), transparent)
+	);
+	background-origin: border-box;
+	background-position: right top;
+	background-repeat: no-repeat;
+	background-size: 16px var(--browse-install-header-height, 0px);
+}
+
+/* The little cap at the scrollbar's top (the arc's room, global.scss) is the
+   strip's own part - left transparent it was the light gap in the bar's
+   top-right corner. */
+:root.portalrinth-backdrop-active .app-viewport::-webkit-scrollbar-button:single-button:vertical:decrement {
 	background: color-mix(in srgb, var(--color-bg) var(--portalrinth-header-shade, 60%), transparent);
 }
 

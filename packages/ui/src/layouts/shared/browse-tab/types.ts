@@ -59,6 +59,27 @@ export interface CardAction {
 	onClick: () => void | Promise<void>
 }
 
+/**
+ * Where a card's project can be installed from, when Discover lists two
+ * platforms at once. Two options draw a small toggle before the install
+ * button (pick the one to install from); a single option draws a badge
+ * naming the only platform the project is on.
+ */
+export interface CardSourceOption {
+	key: string
+	label: string
+	icon: Component
+	/** Icon colour, so each platform keeps its own. */
+	iconClass?: string
+	active: boolean
+	onSelect: () => void
+}
+
+export interface CardSources {
+	label: string
+	options: CardSourceOption[]
+}
+
 export interface ServerModpackContent {
 	name: string
 	icon?: string

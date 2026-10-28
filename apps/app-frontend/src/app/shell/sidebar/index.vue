@@ -15,6 +15,7 @@ import { SIDEBAR_MOTION_MS } from '@/helpers/portalrinth-sidebar-motion'
 import { injectOnboardingChecklist } from '@/providers/onboarding-checklist'
 
 import Promotion from './promotion.vue'
+import RailMirror from './rail-mirror.vue'
 
 const props = defineProps<{
 	credentials: ModrinthCredentials | null | undefined
@@ -252,7 +253,7 @@ const messages = defineMessages({
 			looking for, then who I am adding - each naming itself on hover, because
 			a column of unlabelled symbols is a puzzle rather than a summary.
 		-->
-		<div v-if="!open" class="flex grow flex-col items-center gap-1 py-2">
+		<div v-if="!open" class="flex min-h-0 grow flex-col items-center gap-1 py-2">
 			<!--
 				The account is the head itself, square as a Minecraft head is, and
 				it is the way back: pressing it unfolds the panel. It is the first
@@ -287,6 +288,12 @@ const messages = defineMessages({
 			>
 				<UserPlusIcon />
 			</IconButton>
+
+			<!--
+				Portalrinth: the page's own side panel - filters, links, members -
+				drawn as icons, so the fold does not take them away.
+			-->
+			<RailMirror :active="!open" class="shrink grow-0 basis-auto" />
 
 			<!--
 				The friends, and the line that divides them. The line above the ones

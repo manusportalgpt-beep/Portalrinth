@@ -18,7 +18,9 @@ import { labySkinRenderUrl, minotarBodyUrl, nmsrBodyUrl, skinrenderBodyUrl, vzge
 
 export type SkinRenderService = 'vzge' | 'laby' | 'skinrender' | 'nmsr' | 'crafty' | 'mcskin' | 'minotar'
 
-const STORAGE_KEY = 'portalrinth-skin-render-service'
+// The key carries a version: the move to SkinRender.dev as the default
+// resets an older choice once, after that the player's pick sticks again.
+const STORAGE_KEY = 'portalrinth-skin-render-service-v2'
 
 function storedService(): SkinRenderService {
         try {

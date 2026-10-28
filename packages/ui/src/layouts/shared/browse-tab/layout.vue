@@ -18,6 +18,7 @@ import { useStickyObserver } from '#ui/composables/sticky-observer'
 import { commonMessages, formatProjectTypeSentence } from '#ui/utils/common-messages'
 import type { SortType } from '#ui/utils/search'
 
+import CardSourcePicker from './components/CardSourcePicker.vue'
 import SelectedProjectsFloatingBar from './components/SelectedProjectsFloatingBar.vue'
 import BrowseInstallHeader from './header.vue'
 import { injectBrowseManager } from './providers/browse-manager'
@@ -60,6 +61,26 @@ const { isStuck: isInstallHeaderStuck } = useStickyObserver(
 	stickyInstallHeaderRef,
 	'BrowseInstallHeader',
 )
+
+/**
+ * The pinned bar's height, handed to the scrolling page it sits in: the
+ * scrollbar's strip beside the bar is painted in the bar's own dark that
+ * high, so the bar's right end never shows a light gap - not even while the
+ * page is too short to scroll and there is no track to paint.
+ */
+watchEffect((onCleanup) => {
+	const element = stickyInstallHeaderRef.value
+	const viewport = element?.closest<HTMLElement>('.app-viewport')
+	if (!element || !viewport || typeof ResizeObserver === 'undefined') return
+	const observer = new ResizeObserver(() => {
+		viewport.style.setProperty('--browse-install-header-height', `${element.offsetHeight}px`)
+	})
+	observer.observe(element)
+	onCleanup(() => {
+		observer.disconnect()
+		viewport.style.removeProperty('--browse-install-header-height')
+	})
+})
 
 const sortOptions = computed<ComboboxOption<SortType>[]>(() =>
 	ctx.effectiveSortTypes.value.map((st) => ({
@@ -171,7 +192,7 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 	<template v-if="ctx.installContext?.value && ctx.variant !== 'web'">
 		<div
 			ref="stickyInstallHeaderRef"
-			class="browse-install-header sticky top-0 z-20 -mx-6 -mr-[1rem] -mt-6 mb-4 rounded-tl-[--radius-xl] rounded-tr-[--radius-xl] border-0 border-b border-solid bg-surface-1 pl-6 pr-[2.5rem] py-4 border-surface-5"
+			class="browse-install-header sticky top-0 z-20 -mx-6 -mr-[1rem] -mt-6 mb-4 rounded-tl-[--radius-xl] border-0 border-b border-solid bg-surface-1 pl-6 pr-[2.5rem] py-4 border-surface-5"
 			:class="[isInstallHeaderStuck ? 'border-t' : '']"
 		>
 			<BrowseInstallHeader />
@@ -443,6 +464,10 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 				>
 					<template v-if="ctx.getCardActions?.(result, ctx.projectType.value)?.length" #actions>
 						<div class="flex gap-2">
+							<CardSourcePicker
+								v-if="ctx.getCardSources?.(result)"
+								:sources="ctx.getCardSources(result)!"
+							/>
 							<template
 								v-for="action in ctx.getCardActions(result, ctx.projectType.value)"
 								:key="action.key"
