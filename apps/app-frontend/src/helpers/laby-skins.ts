@@ -190,12 +190,59 @@ export async function labySkinTexture(hash: string): Promise<Uint8Array> {
         await new Promise((resolve) => setTimeout(resolve, 700))
         for (const source of sources) {
                 try {
+                        return new Uint8Array(await viaApp(source))
+                } catch (error) {
+                        lastError = error
+                }
+                try {
                         return new Uint8Array(await viaBrowser(source))
                 } catch (error) {
                         lastError = error
                 }
         }
         throw lastError ?? new Error(`The skin texture ${hash} could not be loaded`)
+}
+
+/**
+ * The last road for a preview: the render chain fetched by the app's own
+ * client - the one that follows the system proxy and knows no CORS - each
+ * answer checked for a real PNG and turned into a data URL. A card the
+ * webview's network starves still fills through here.
+ */
+export async function remotePreviewDataUrl(hash: string): Promise<string> {
+        const vzge = vzgeBodyUrl(hash, 512)
+        const direct = labySkinRenderUrl(hash, 360, 684)
+        const wsrv = (url: string) =>
+                `https://wsrv.nl/?url=${encodeURIComponent(url)}&output=png`
+        const weserv = (url: string) =>
+                `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=png`
+        const sources = [
+                vzge,
+                direct,
+                skinrenderBodyUrl(hash, 512),
+                nmsrBodyUrl(hash, 360, 684),
+                minotarBodyUrl(hash, 640),
+                wsrv(direct),
+                weserv(direct),
+                wsrv(vzge),
+        ]
+        let lastError: unknown
+        for (const source of sources) {
+                try {
+                        const response = await proxiedFetch(source, {
+                                method: 'GET',
+                                headers: { Accept: 'image/png,image/*' },
+                        })
+                        if (!response.ok) throw new Error(`render: ${response.status}`)
+                        const bytes = new Uint8Array(await response.arrayBuffer())
+                        // A real render is never tiny; an error page is.
+                        if (bytes.length < 512) throw new Error('render too small')
+                        return pngDataUrl(bytes)
+                } catch (error) {
+                        lastError = error
+                }
+        }
+        throw lastError ?? new Error(`no render road for ${hash}`)
 }
 
 export function pngDataUrl(png: Uint8Array) {

@@ -42,6 +42,7 @@ import {
 	labySkinRenderSources,
 	minotarBodyUrl,
 	labySkinPreview,
+	remotePreviewDataUrl,
 	labySkinTags,
 	labySkinTexture,
 	labySkinVariant,
@@ -260,7 +261,7 @@ function previewSrc(hash: string): string | undefined {
 const previewRequested = new Set<string>()
 const previewQueue: string[] = []
 let previewActive = 0
-const PREVIEW_PARALLEL = 6
+const PREVIEW_PARALLEL = 10
 
 /** One texture at a time per lane: a page of skins fills in fast without
  * flooding the network and slowing every single card down. */
@@ -275,22 +276,72 @@ function pumpPreviews() {
 	while (previewActive < PREVIEW_PARALLEL && previewQueue.length > 0) {
 		const hash = previewQueue.shift() as string
 		previewActive += 1
-		labySkinPreview(hash)
-			.then((url) => {
-				previews.value = { ...previews.value, [hash]: url }
-			})
-			.catch(() => {
-				// The texture would not come - the chosen render service takes
-				// the card, and `@error` walks the rest of the chain from there.
-				if (previews.value[hash] === undefined) {
-					const remote = skinRenderUrl(hash, 360, 684)
-					if (remote) previews.value = { ...previews.value, [hash]: remote }
-				}
-			})
-			.finally(() => {
-				previewActive -= 1
-				pumpPreviews()
-			})
+		void fillPreview(hash).finally(() => {
+			previewActive -= 1
+			pumpPreviews()
+		})
+	}
+}
+
+const PREVIEW_CEILING_MS = 15000
+
+/** A ceiling for one preview attempt: a host that never answers must not
+ * hold a queue lane forever - the rest of the page would starve behind it.
+ * The attempt that outlives the ceiling may still land later on its own;
+ * its picture is welcome whenever it arrives. */
+function withCeiling<T>(task: Promise<T>, ms: number): Promise<T> {
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => reject(new Error('preview ceiling')), ms)
+		task.then(
+			(value) => {
+				clearTimeout(timer)
+				resolve(value)
+			},
+			(error) => {
+				clearTimeout(timer)
+				reject(error)
+			},
+		)
+	})
+}
+
+/** One lane of the preview queue: the canvas first (racing every texture
+ * road under a ceiling), then the render chain fetched by the app's own
+ * client - the one that follows the system proxy and knows no CORS - and
+ * only then the plain image chain for `@error` to walk. */
+async function fillPreview(hash: string): Promise<void> {
+	try {
+		const url = await withCeiling(labySkinPreview(hash), PREVIEW_CEILING_MS)
+		if (previews.value[hash] === undefined) {
+			previews.value = { ...previews.value, [hash]: url }
+		}
+		return
+	} catch {
+		/* the canvas road is out - the render roads take over */
+	}
+	if (previews.value[hash] !== undefined) return
+	try {
+		const url = await remotePreviewDataUrl(hash)
+		previews.value = { ...previews.value, [hash]: url }
+		return
+	} catch {
+		/* the app-client roads are out too - the webview chain is left */
+	}
+	if (previews.value[hash] !== undefined) return
+	const remote = skinRenderUrl(hash, 360, 684)
+	if (remote) previews.value = { ...previews.value, [hash]: remote }
+}
+
+/** The page on screen is served first: hashes queued for other pages step
+ * aside and re-queue the moment their card renders again - a flip to the
+ * next page never waits behind the tail of the previous one. */
+function refocusQueue() {
+	const wanted = new Set(visibleSkins.value.map((skin) => skin.image_hash))
+	for (let i = previewQueue.length - 1; i >= 0; i--) {
+		if (!wanted.has(previewQueue[i])) {
+			previewRequested.delete(previewQueue[i])
+			previewQueue.splice(i, 1)
+		}
 	}
 }
 
@@ -384,6 +435,7 @@ async function load(reset: boolean) {
 		skins.value = cached
 		updateHasMore(p)
 		loading.value = false
+		refocusQueue()
 		void refreshPage(q, p, id)
 		void preloadNext(q, p)
 		return
@@ -393,6 +445,7 @@ async function load(reset: boolean) {
 		if (id !== requestId) return
 		skins.value = list
 		updateHasMore(p)
+		refocusQueue()
 		if (list.length > 0) writePageCache(q, p, list)
 		void preloadNext(q, p)
 	} catch {
@@ -460,6 +513,7 @@ async function loadSimilarToReference() {
 		const found = await findSimilarLabySkins({ texture: reference.texture }, 42)
 		if (id !== requestId) return
 		skins.value = found
+		refocusQueue()
 	} catch {
 		if (id === requestId) failed.value = true
 	} finally {
