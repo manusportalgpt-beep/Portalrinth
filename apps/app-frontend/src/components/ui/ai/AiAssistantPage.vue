@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import {
 	ArrowUpIcon,
-	BrainCogIcon,
+	CheckIcon,
 	ChevronDownIcon,
 	ClipboardCopyIcon,
+	CopyIcon,
 	EditIcon,
 	ExternalIcon,
+	FileCodeIcon,
 	FileIcon,
+	FilePlusIcon,
 	FolderOpenIcon,
 	HistoryIcon,
 	PlusIcon,
 	RefreshCwIcon,
 	StopCircleIcon,
+	TerminalSquareIcon,
 	TrashIcon,
 	XIcon,
 } from '@modrinth/assets'
@@ -21,12 +25,12 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import AiProviderSettings from '@/components/ui/ai/AiProviderSettings.vue'
+import AiSteps from '@/components/ui/ai/AiSteps.vue'
 import {
 	agentBusy,
 	agentPhase,
 	agentQueue,
 	agentStreaming,
-	agentThoughts,
 	agentTurn,
 	type AiFolderCard,
 	aiHistory,
@@ -45,6 +49,7 @@ import {
 	sendAgentMessage,
 	setSelectedBuild,
 	stopAgentRun,
+	stripLooseCommands,
 	zaiPeakHoursLabel,
 } from '@/helpers/ai-assistant'
 import {
@@ -195,7 +200,6 @@ const input = ref('')
 const sending = agentBusy
 const streaming = agentStreaming
 const errorText = ref('')
-const processOpen = ref(true)
 const plusOpen = ref(false)
 const modelsOpen = ref(false)
 const scrollBox = ref<HTMLElement | null>(null)
@@ -238,18 +242,39 @@ const lastQuestion = computed(() => {
 	return null
 })
 
-/** The thinking box shows roughly eight lines, then scrolls - and it is
- * transparent on purpose: thoughts float in the bubble, not in a panel. */
-const thoughtBox = ref<HTMLElement | null>(null)
+/** Long code in a reply starts folded to its first lines; the fold is
+ * remembered per block while the page is open. */
+const CODE_FOLD_LINES = 16
+const codeOpen = ref<Record<string, boolean>>({})
+const copiedCode = ref('')
 
-watch(
-	() => agentThoughts.value.length,
-	async () => {
-		await nextTick()
-		const box = thoughtBox.value
-		if (box) box.scrollTop = box.scrollHeight
-	},
-)
+function codeFolded(key: string, lines: number) {
+	return lines > CODE_FOLD_LINES && !codeOpen.value[key]
+}
+
+function toggleCode(key: string, lines: number) {
+	codeOpen.value = { ...codeOpen.value, [key]: codeFolded(key, lines) }
+}
+
+function linesWord(count: number) {
+	const mod10 = count % 10
+	const mod100 = count % 100
+	if (mod10 === 1 && mod100 !== 11) return 'строка'
+	if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'строки'
+	return 'строк'
+}
+
+async function copyCode(key: string, code: string) {
+	try {
+		await navigator.clipboard.writeText(code)
+		copiedCode.value = key
+		setTimeout(() => {
+			if (copiedCode.value === key) copiedCode.value = ''
+		}, 1400)
+	} catch {
+		/* the clipboard can be refused */
+	}
+}
 
 function stopTyping() {
 	streaming.value = ''
@@ -615,8 +640,9 @@ function parseSegments(content: string): AiSegment[] {
 			const lang = newline >= 0 ? block.slice(0, newline).trim() : ''
 			const code = newline >= 0 ? block.slice(newline + 1) : block
 			segments.push({ kind: 'code', lang, lines: code.replace(/\n+$/, '').split('\n') })
-		} else if (block.trim()) {
-			segments.push({ kind: 'text', parts: splitLinks(block) })
+		} else {
+			const prose = stripLooseCommands(block).replace(/\n{3,}/g, '\n\n')
+			if (prose.trim()) segments.push({ kind: 'text', parts: splitLinks(prose) })
 		}
 	}
 	return segments
@@ -930,6 +956,12 @@ defineExpose({ send })
 						class="ai-bubble max-w-[85%] rounded-2xl px-4 py-2.5"
 						:class="message.role === 'user' ? 'ai-bubble-user' : 'ai-bubble-assistant'"
 					>
+						<AiSteps
+							v-if="message.role === 'assistant' && message.steps?.length"
+							:steps="message.steps"
+							@open-link="openLink"
+							@zoom="(src) => (zoomedImage = src)"
+						/>
 						<div v-if="message.attachments?.length" class="mb-2 flex flex-wrap gap-2">
 							<template v-for="(file, fileIndex) in message.attachments" :key="fileIndex">
 								<img
@@ -947,8 +979,39 @@ defineExpose({ send })
 						</div>
 						<template v-if="parseSegments(message.content).length > 0">
 							<template v-for="(segment, segmentIndex) in parseSegments(message.content)" :key="`seg-${segmentIndex}`">
-								<div v-if="segment.kind === 'code'" class="ai-code-block">
-									<p class="ai-code-head m-0">{{ segment.lang || 'код' }}</p>
+								<div
+									v-if="segment.kind === 'code'"
+									class="ai-code-block"
+									:class="{ 'ai-code-block--folded': codeFolded(`${index}-${segmentIndex}`, segment.lines.length) }"
+								>
+									<div class="ai-code-head">
+										<FileCodeIcon class="size-3.5 shrink-0" />
+										<span class="grow truncate">{{ segment.lang || 'код' }}</span>
+										<span class="ai-code-count">{{ segment.lines.length }} {{ linesWord(segment.lines.length) }}</span>
+										<button
+											v-tooltip="'Скопировать'"
+											type="button"
+											class="ai-code-btn"
+											aria-label="Скопировать"
+											@click="() => copyCode(`${index}-${segmentIndex}`, segment.lines.join('\n'))"
+										>
+											<CheckIcon v-if="copiedCode === `${index}-${segmentIndex}`" class="size-3.5 text-green" />
+											<CopyIcon v-else class="size-3.5" />
+										</button>
+										<button
+											v-if="segment.lines.length > CODE_FOLD_LINES"
+											v-tooltip="codeFolded(`${index}-${segmentIndex}`, segment.lines.length) ? 'Развернуть' : 'Свернуть'"
+											type="button"
+											class="ai-code-btn"
+											:aria-label="codeFolded(`${index}-${segmentIndex}`, segment.lines.length) ? 'Развернуть' : 'Свернуть'"
+											@click="() => toggleCode(`${index}-${segmentIndex}`, segment.lines.length)"
+										>
+											<ChevronDownIcon
+												class="size-3.5 transition-transform duration-300"
+												:class="{ 'rotate-180': !codeFolded(`${index}-${segmentIndex}`, segment.lines.length) }"
+											/>
+										</button>
+									</div>
 									<pre class="ai-code-pre m-0"><code><span
 										v-for="(line, lineIndex) in segment.lines"
 										:key="lineIndex"
@@ -956,6 +1019,15 @@ defineExpose({ send })
 										:class="{ 'ai-code-animated': aiSettings.chatEffects }"
 										:style="{ animationDelay: `${Math.min(lineIndex * 70, 2800)}ms` }"
 									>{{ line }}</span></code></pre>
+									<button
+										v-if="codeFolded(`${index}-${segmentIndex}`, segment.lines.length)"
+										type="button"
+										class="ai-code-more"
+										@click="() => toggleCode(`${index}-${segmentIndex}`, segment.lines.length)"
+									>
+										Показать всё · {{ segment.lines.length }} {{ linesWord(segment.lines.length) }}
+										<ChevronDownIcon class="size-3.5" />
+									</button>
 								</div>
 								<p v-else class="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed"><template
 									v-for="(part, partIndex) in segment.parts"
@@ -974,20 +1046,23 @@ defineExpose({ send })
 
 						<div v-if="message.activity" class="ai-activity">
 							<span v-if="message.activity.commands > 0" class="ai-activity-chip">
-								⚙ {{ message.activity.commands }} {{ formatMessage(messages.commands) }}
+								<TerminalSquareIcon class="size-3.5" />
+								{{ message.activity.commands }} {{ formatMessage(messages.commands) }}
 							</span>
 							<span
 								v-for="file in message.activity.filesCreated"
 								:key="`c-${file}`"
 								class="ai-activity-chip ai-activity-created"
 							>
-								＋ {{ formatMessage(messages.filesCreated) }}: {{ file }}
+								<FilePlusIcon class="size-3.5" />
+								{{ formatMessage(messages.filesCreated) }}: {{ file }}
 							</span>
 							<span
 								v-for="change in message.activity.filesChanged"
 								:key="`m-${change.path}`"
 								class="ai-activity-chip ai-activity-changed"
 							>
+								<EditIcon class="size-3.5" />
 								{{ formatMessage(messages.filesChanged) }}: {{ change.path }}
 								<span class="text-green">+{{ change.added }}</span>/<span class="text-red">
 									−{{ change.removed }}</span
@@ -1137,7 +1212,7 @@ defineExpose({ send })
 								</div>
 							</div>
 						</div>
-						<div v-if="message.actions?.length" class="mt-1.5 flex flex-wrap gap-1">
+						<div v-if="message.actions?.length && !message.steps?.length" class="mt-1.5 flex flex-wrap gap-1">
 							<span v-for="action in message.actions" :key="action" class="ai-action-chip">
 								{{ actionName(action) }}
 							</span>
@@ -1187,44 +1262,16 @@ defineExpose({ send })
 			</div>
 
 			<div v-if="sending" class="mb-3 flex justify-start">
-				<div class="ai-bubble ai-bubble-assistant ai-process rounded-2xl px-4 py-2.5">
-					<button
-						class="ai-process-toggle"
-						:aria-expanded="processOpen"
-						@click="processOpen = !processOpen"
-					>
-						<BrainCogIcon class="size-4 shrink-0 text-brand" />
-						<span class="grow text-left">{{ formatMessage(messages.processTitle) }}</span>
-						<span class="ai-process-phase">{{ phaseLabel }}</span>
-						<ChevronDownIcon
-							class="size-3.5 opacity-70 transition-transform"
-							:class="{ '-rotate-90': !processOpen }"
-						/>
-					</button>
-					<div v-if="processOpen" class="ai-process-body">
-						<div ref="thoughtBox" class="ai-thoughts">
-							<p
-								v-for="(thought, thoughtIndex) in agentThoughts"
-								:key="thoughtIndex"
-								class="ai-thought"
-							>
-								{{ thought }}
-							</p>
-							<span v-if="agentThoughts.length === 0" class="ai-typing">
-								<span /><span /><span />
-								{{ phaseLabel }}
-							</span>
-						</div>
-						<div v-if="agentTurn.actions.length > 0" class="mt-1 flex flex-wrap gap-1">
-							<span
-								v-for="action in agentTurn.actions"
-								:key="action"
-								class="ai-action-chip ai-action-chip-live"
-							>
-								{{ actionName(action) }}
-							</span>
-						</div>
-					</div>
+				<div class="ai-bubble ai-bubble-assistant ai-process ai-live-bubble rounded-2xl px-3 py-2.5">
+					<AiSteps
+						:steps="agentTurn.steps"
+						live
+						:phase="phaseLabel"
+						default-open
+						@open-link="openLink"
+						@zoom="(src) => (zoomedImage = src)"
+					/>
+					<p v-if="streaming" class="ai-live-text m-0 whitespace-pre-wrap break-words px-1 text-sm leading-relaxed">{{ streaming }}<span class="ai-caret" /></p>
 				</div>
 			</div>
 			<div v-else-if="streaming" class="mb-3 flex justify-start">
@@ -1957,11 +2004,46 @@ defineExpose({ send })
 	overflow: hidden;
 }
 
+.ai-code-block {
+	position: relative;
+}
+
 .ai-code-head {
-	padding: 0.25rem 0.625rem;
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.25rem 0.35rem 0.25rem 0.625rem;
 	font-size: 0.6875rem;
 	color: var(--color-secondary);
 	border-bottom: 1px solid var(--surface-5);
+}
+
+.ai-code-count {
+	flex-shrink: 0;
+	font-variant-numeric: tabular-nums;
+	opacity: 0.8;
+}
+
+.ai-code-btn {
+	display: grid;
+	place-items: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	flex-shrink: 0;
+	padding: 0;
+	border: none;
+	border-radius: 0.4rem;
+	background: transparent;
+	color: var(--color-secondary);
+	cursor: pointer;
+	transition:
+		background-color 0.18s ease,
+		color 0.18s ease;
+}
+
+.ai-code-btn:hover {
+	background: color-mix(in srgb, var(--color-contrast) 8%, transparent);
+	color: var(--color-contrast);
 }
 
 .ai-code-pre {
@@ -1970,6 +2052,67 @@ defineExpose({ send })
 	font-family: var(--monospace, monospace);
 	font-size: 0.75rem;
 	line-height: 1.45;
+	max-height: 60rem;
+	transition: max-height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Folded: the first lines, fading out under a button for the rest. */
+.ai-code-block--folded .ai-code-pre {
+	max-height: 15rem;
+	overflow: hidden;
+	mask-image: linear-gradient(to bottom, #000 55%, transparent);
+}
+
+.ai-code-more {
+	position: absolute;
+	left: 50%;
+	bottom: 0.5rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.3rem 0.75rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--color-button-bg) 80%, transparent);
+	backdrop-filter: blur(10px);
+	color: var(--color-contrast);
+	font: inherit;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	cursor: pointer;
+	transform: translateX(-50%);
+	transition:
+		background-color 0.18s ease,
+		transform 0.18s ease;
+}
+
+.ai-code-more:hover {
+	background: var(--color-button-bg-hover, var(--color-button-bg));
+	transform: translateX(-50%) translateY(-1px);
+}
+
+.ai-live-bubble {
+	min-width: min(34rem, 100%);
+}
+
+.ai-live-text {
+	margin-top: 0.15rem;
+}
+
+.ai-caret {
+	display: inline-block;
+	width: 2px;
+	height: 1em;
+	margin-left: 2px;
+	vertical-align: text-bottom;
+	background: var(--color-brand);
+	animation: ai-caret-blink 1s steps(2) infinite;
+}
+
+@keyframes ai-caret-blink {
+	50% {
+		opacity: 0;
+	}
 }
 
 .ai-code-line {

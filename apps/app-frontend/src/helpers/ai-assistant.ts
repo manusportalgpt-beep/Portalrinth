@@ -327,6 +327,34 @@ export interface AiFolderCard {
 	description?: string
 }
 
+/**
+ * One step of a reply, as the chat draws it: a thought between tool rounds,
+ * or one tool call with what went in and what came out. Kept on the message
+ * so a finished reply can still be unfolded and read step by step.
+ */
+export interface AiStepSource {
+	title: string
+	url: string
+}
+
+export interface AiStep {
+	id: string
+	kind: 'thought' | 'tool'
+	tool?: string
+	args?: string
+	/** A thought's words. */
+	text?: string
+	status: 'running' | 'done' | 'error'
+	startedAt: number
+	endedAt?: number
+	/** What the tool answered, cleaned of card markers and cut short. */
+	output?: string
+	/** Pages a search found or a fetch opened. */
+	sources?: AiStepSource[]
+	/** The picture gen_image drew or view_image looked at. */
+	image?: string
+}
+
 export interface AiMessage {
 	role: 'user' | 'assistant' | 'note'
 	content: string
@@ -346,6 +374,8 @@ export interface AiMessage {
 	attachments?: AttachedFile[]
 	/** A question the assistant wants answered before it goes on. */
 	question?: AiQuestion
+	/** How the reply came about, step by step. */
+	steps?: AiStep[]
 }
 
 const HISTORY_KEY = 'portalrinth-ai-history'
@@ -450,7 +480,48 @@ export function parseActions(text: string): ParsedReply {
 		actions.push({ tool: match[1], args: args.trim() })
 	}
 	cleaned += text.slice(cursor)
+	// Models now and then drop a bracket or two: a line that is nothing but
+	// `gen_image|...` (or `<gen_image|...>`) with a tool the agent really has
+	// is still a command - run, not printed into the chat as protocol.
+	const known = knownTools()
+	cleaned = cleaned.replace(LOOSE_ACTION_LINE, (line, tool: string, args: string) => {
+		if (!known.has(tool)) return line
+		actions.push({ tool, args: args.trim() })
+		return ''
+	})
 	return { text: cleaned.trim(), actions }
+}
+
+const LOOSE_ACTION_LINE = /^[ \t`]*<{0,2}([a-z_]+)\|([^\n]*?)>{0,2}[ \t`]*$/gm
+let knownToolNames: Set<string> | null = null
+/** Every tool the prompt teaches, read off the prompt itself. */
+function knownTools(): Set<string> {
+	if (!knownToolNames) {
+		knownToolNames = new Set(
+			[...`${AI_TOOLS_HINT}\n${AI_SKILLS_HINT}`.matchAll(/<<([a-z_]+)\|/g)].map(
+				(match) => match[1],
+			),
+		)
+		knownToolNames.add('celebrate')
+	}
+	return knownToolNames
+}
+
+/** Lines that are only a command the model mistyped, out of shown prose. */
+export function stripLooseCommands(text: string): string {
+	const known = knownTools()
+	return text.replace(LOOSE_ACTION_LINE, (line, tool: string) => (known.has(tool) ? '' : line))
+}
+
+/** The part of a reply in flight that is prose: commands are protocol. */
+export function visibleReplyText(full: string): string {
+	const cut = full.indexOf('<<')
+	const prose = cut >= 0 ? full.slice(0, cut) : full
+	const known = knownTools()
+	return prose
+		.replace(LOOSE_ACTION_LINE, (line, tool: string) => (known.has(tool) ? '' : line))
+		.replace(/\n{3,}/g, '\n\n')
+		.trimEnd()
 }
 
 // ---- Rich cards ------------------------------------------------------------
@@ -1370,6 +1441,10 @@ export interface AiRequest {
 	signal?: AbortSignal
 	/** The last handler wins; here it lets a caller see raw tool activity. */
 	onActionDone?: (tool: string, args: string, result: string) => void
+	/** A tool call is about to run - the chat draws it as a running step. */
+	onActionStart?: (tool: string, args: string) => void
+	/** The model's own words in a round that goes on to use tools. */
+	onThought?: (text: string) => void
 	/** Live text as it is generated, so the chat can draw the reply in flight. */
 	onDelta?: (chunk: string, full: string) => void
 	/** Small talk: pocket prompt, short ceiling, no tool catalogue. */
@@ -1550,6 +1625,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						const parsed = parseActions(raw)
 						if (parsed.text.trim()) {
 							noteAgentThought(parsed.text.slice(0, 400))
+							if (parsed.actions.length > 0) request.onThought?.(parsed.text.trim())
 						}
 						// The quick budget is spent: no more model calls, and no
 						// launcher actions either - a turn out of clock leaves
@@ -1610,6 +1686,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 									activity: sandboxStatsSnapshot(),
 								}
 							}
+							request.onActionStart?.(action.tool, action.args)
 							const result = await runTool(action.tool, action.args)
 							doneActions.push(action.tool)
 							request.onActionDone?.(action.tool, action.args, result)
@@ -2467,6 +2544,7 @@ export const agentPhase = ref<AgentPhase>('thinking')
 /** What the run in flight has done so far: the chat shows it live. */
 export interface AgentTurnState {
 	actions: string[]
+	steps: AiStep[]
 	folders: AiFolderCard[]
 	images: string[]
 	mods: AiModCard[]
@@ -2476,6 +2554,7 @@ export interface AgentTurnState {
 }
 export const agentTurn = ref<AgentTurnState>({
 	actions: [],
+	steps: [],
 	folders: [],
 	images: [],
 	mods: [],
@@ -2505,6 +2584,110 @@ function noteAgentThought(line: string): void {
 
 let runController: AbortController | null = null
 
+// ---- Steps of the run in flight ---------------------------------------------
+
+let stepSeq = 0
+const FAILED_RESULT =
+	/^(Ошибка|Не вышло|Не удалось|Нужен|Нужна|Пустая|Пустой|Картинка не|Инструмент \S+ недоступен|Ничего не нашлось|Укажите|Опиши|CogView не)/i
+const SEARCH_LINE = /^\d+\.\s+(.+?)\s+—\s+(https?:\/\/\S+)\s*$/
+
+function updateSteps(change: (steps: AiStep[]) => AiStep[]): void {
+	agentTurn.value = { ...agentTurn.value, steps: change(agentTurn.value.steps) }
+}
+
+function stepThought(text: string): void {
+	const now = Date.now()
+	updateSteps((steps) => [
+		...steps,
+		{
+			id: `t${now}-${stepSeq++}`,
+			kind: 'thought',
+			text: text.slice(0, 1200),
+			status: 'done',
+			startedAt: now,
+			endedAt: now,
+		},
+	])
+}
+
+function stepStart(tool: string, args: string): void {
+	updateSteps((steps) => [
+		...steps,
+		{
+			id: `s${Date.now()}-${stepSeq++}`,
+			kind: 'tool',
+			tool,
+			args: args.slice(0, 6000),
+			status: 'running',
+			startedAt: Date.now(),
+		},
+	])
+}
+
+/** Closes the newest running step of this tool; returns its id. */
+function stepDone(tool: string, args: string, text: string): string | null {
+	const steps = agentTurn.value.steps
+	let index = -1
+	for (let i = steps.length - 1; i >= 0; i--) {
+		if (steps[i].kind === 'tool' && steps[i].tool === tool && steps[i].status === 'running') {
+			index = i
+			break
+		}
+	}
+	const output = text.trim()
+	let sources: AiStepSource[] | undefined
+	if (tool === 'web_search') {
+		sources = output
+			.split('\n')
+			.map((line) => SEARCH_LINE.exec(line.trim()))
+			.filter((match): match is RegExpExecArray => !!match)
+			.map((match) => ({ title: match[1], url: match[2] }))
+	} else if (tool === 'web_fetch' || tool === 'view_image') {
+		const url = args.trim()
+		if (/^https?:\/\//.test(url)) sources = [{ title: url, url }]
+	}
+	const finished: Partial<AiStep> = {
+		status: FAILED_RESULT.test(output) ? 'error' : 'done',
+		endedAt: Date.now(),
+		output: output.slice(0, 3000),
+		...(sources?.length ? { sources } : {}),
+	}
+	if (index < 0) {
+		const id = `s${Date.now()}-${stepSeq++}`
+		updateSteps((list) => [
+			...list,
+			{
+				id,
+				kind: 'tool',
+				tool,
+				args: args.slice(0, 6000),
+				startedAt: Date.now(),
+				...finished,
+			} as AiStep,
+		])
+		return id
+	}
+	const id = steps[index].id
+	updateSteps((list) => list.map((step) => (step.id === id ? { ...step, ...finished } : step)))
+	return id
+}
+
+function stepImage(id: string, image: string): void {
+	updateSteps((list) => list.map((step) => (step.id === id ? { ...step, image } : step)))
+}
+
+/** The steps as they are kept on the finished message: small, and closed. */
+function settledSteps(): AiStep[] | undefined {
+	const now = Date.now()
+	const steps = agentTurn.value.steps.map((step) => ({
+		...step,
+		output: step.output?.slice(0, 1500),
+		status: step.status === 'running' ? ('error' as const) : step.status,
+		endedAt: step.endedAt ?? now,
+	}))
+	return steps.length > 0 ? steps : undefined
+}
+
 /** The Stop button: ends the run the moment it is pressed. */
 export function stopAgentRun(): void {
 	runController?.abort()
@@ -2513,6 +2696,7 @@ export function stopAgentRun(): void {
 function resetTurnState(): void {
 	agentTurn.value = {
 		actions: [],
+		steps: [],
 		folders: [],
 		images: [],
 		mods: [],
@@ -2590,11 +2774,19 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 			onDelta: (_chunk, full) => {
 				if (full) streamedAny = true
 				agentPhase.value = 'speaking'
-				const cut = full.indexOf('<<')
-				agentStreaming.value = cut >= 0 ? full.slice(0, cut).trimEnd() : full
+				agentStreaming.value = visibleReplyText(full)
+			},
+			onThought: (thought) => stepThought(thought),
+			onActionStart: (tool, args) => {
+				agentPhase.value = 'working'
+				// What streamed before the command is now a thought of this
+				// round, drawn in the steps - not a reply half-written.
+				agentStreaming.value = ''
+				stepStart(tool, args)
 			},
 			onActionDone: (tool, args, result2) => {
 				agentPhase.value = 'working'
+				const stepId = stepDone(tool, args, extractCards(result2).text)
 				if (!agentTurn.value.actions.includes(tool)) {
 					agentTurn.value = {
 						...agentTurn.value,
@@ -2634,15 +2826,12 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 					agentTurn.value = { ...agentTurn.value, images: [...agentTurn.value.images, cards.image] }
 				}
 				if (tool === 'gen_image') {
+					// The picture lives on its step, where it was drawn - not a
+					// second time in the row of images under the reply.
 					const name = result2.match(/картинка (\S+) \(/)?.[1] ?? ''
-					if (name) {
+					if (name && stepId) {
 						void sandboxReadDataUrl(name)
-							.then((url) => {
-								agentTurn.value = {
-									...agentTurn.value,
-									images: [...agentTurn.value.images, url],
-								}
-							})
+							.then((url) => stepImage(stepId, url))
 							.catch(() => {})
 					}
 				}
@@ -2684,6 +2873,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 					}
 				: undefined,
 			question: result.question,
+			steps: settledSteps(),
 		}
 		agentPhase.value = 'speaking'
 		// A reply that already streamed onto the screen is not typed out a
@@ -2710,6 +2900,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 				role: 'assistant',
 				content: '⏹ Остановлено. Скажи, когда продолжить — или просто напиши следующее сообщение.',
 				ts: Date.now(),
+				steps: settledSteps(),
 			})
 		} else {
 			const detail = String((error as Error)?.message ?? error)
@@ -2718,6 +2909,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 				role: 'assistant',
 				content: `Не вышло: ${detail}`,
 				ts: Date.now(),
+				steps: settledSteps(),
 			})
 		}
 	} finally {
