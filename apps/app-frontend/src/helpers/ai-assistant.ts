@@ -1398,6 +1398,7 @@ async function callProvider(
 	signal?: AbortSignal,
 	onDelta?: (chunk: string, full: string) => void,
 	fastPath = false,
+	ceilingMs?: number,
 ): Promise<string> {
 	const settings = aiSettings.value
 	const provider = providerById(providerId)
@@ -1455,9 +1456,7 @@ async function callProvider(
 	// queue regularly runs past half a minute before answering.
 	const attemptCeiling = fastPath
 		? 15000
-		: providerId === 'zai' && zaiPeakHoursNow()
-			? 60000
-			: 30000
+		: Math.max(ceilingMs ?? 0, providerId === 'zai' && zaiPeakHoursNow() ? 60000 : 30000)
 	const attemptSignal = composeSignals(signal, attemptCeiling)
 	let response: Response
 	try {
@@ -1665,6 +1664,7 @@ async function callProviderWithRetry(
 	signal?: AbortSignal,
 	onDelta?: (chunk: string, full: string) => void,
 	fastPath = false,
+	ceilingMs?: number,
 ): Promise<string> {
 	const peak = providerId === 'zai' && zaiPeakHoursNow() && !fastPath
 	// Small talk never waits out a queue: no retries at all - one attempt
@@ -1680,7 +1680,7 @@ async function callProviderWithRetry(
 			}
 		}
 		try {
-			return await callProvider(providerId, payload, signal, onDelta, fastPath)
+			return await callProvider(providerId, payload, signal, onDelta, fastPath, ceilingMs)
 		} catch (error) {
 			lastError = error
 			if (signal?.aborted) throw error
@@ -1999,6 +1999,12 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 								turnSignal,
 								request.onDelta,
 								fastPath,
+								// Rounds after tools carry the search results in the
+								// payload and the model composes the answer from them:
+								// the default 30s ceiling kept killing these calls, and
+								// the next provider restarted the turn from scratch -
+								// the long silence after a search.
+								round > 0 ? 45000 : undefined,
 							)
 						} catch (error) {
 							// A model without vision answers 400 to image parts: drop them
@@ -2107,7 +2113,9 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 								const room =
 									action.tool === 'web_fetch' || action.tool === 'open_page' || action.tool === 'fandom'
 										? 5000
-										: 1600
+										: action.tool === 'web_search'
+											? 3500
+											: 1600
 								notes.push(
 									`Результат ${action.tool}(${action.args.slice(0, 300)}): ${cards.text.slice(0, room)}`,
 								)
@@ -2449,7 +2457,32 @@ async function searchWikipedia(query: string): Promise<SearchHit[]> {
  * real result list wins; DuckDuckGo Lite and Wikipedia are the last doors.
  * Both the agent's text form and the browser settings page are built on it.
  */
+/**
+ * Search answers live for ten minutes: when a provider times out and the
+ * chain restarts the turn, the engines are not asked the same question all
+ * over again - the repeat search was the other half of the long silence
+ * after a search.
+ */
+const SEARCH_CACHE_TTL = 10 * 60 * 1000
+const searchCache = new Map<string, { hits: SearchHit[]; at: number }>()
+
+function searchCacheKey(query: string): string {
+	return query.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
 export async function searchWeb(query: string): Promise<SearchHit[]> {
+	const cached = searchCache.get(searchCacheKey(query))
+	if (cached && Date.now() - cached.at <= SEARCH_CACHE_TTL) return cached.hits
+	if (cached) searchCache.delete(searchCacheKey(query))
+	const hits = await searchWebFresh(query)
+	if (hits.length > 0) {
+		searchCache.set(searchCacheKey(query), { hits, at: Date.now() })
+		if (searchCache.size > 20) searchCache.delete(searchCache.keys().next().value as string)
+	}
+	return hits
+}
+
+async function searchWebFresh(query: string): Promise<SearchHit[]> {
 	const q = encodeURIComponent(query)
 	const first = [
 		searchPage(query, `https://html.duckduckgo.com/html/?q=${q}&kl=ru-ru`, parseDdgHtml),
@@ -2494,7 +2527,9 @@ async function webSearch(query: string): Promise<string> {
 						`${index + 1}. ${hit.title} — ${hit.url}${hit.snippet ? `\n   ${hit.snippet}` : ''}`,
 				)
 				.join('\n') +
-			'\nЧтобы прочитать страницу целиком — <<web_fetch|url>>.'
+			(hits.length >= 3 && hits.some((hit) => (hit.snippet ?? '').length > 80)
+				? '\nЭтих данных обычно достаточно — читай страницу целиком (<<web_fetch|url>>) только если без неё не ответить.'
+				: '\nЧтобы прочитать страницу целиком — <<web_fetch|url>>.')
 		)
 	} catch (error) {
 		return `Поиск по «${query}» сейчас ничего не вернул (${String(error).slice(0, 120)}). Это сбой выдачи, а не отсутствие интернета: переформулируй запрос короче или открой нужный сайт напрямую через <<web_fetch|url>>.`
