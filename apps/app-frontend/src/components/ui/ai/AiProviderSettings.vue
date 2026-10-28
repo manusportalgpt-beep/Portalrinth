@@ -45,10 +45,6 @@ const messages = {
 		defaultMessage: 'Адрес (OpenAI-совместимый)',
 	},
 	customModel: { id: 'app.ai.settings.custommodel', defaultMessage: 'Имя модели' },
-	customModelAny: {
-		id: 'app.ai.settings.custom-model-any',
-		defaultMessage: 'Своя модель (id с сайта провайдера — там их намного больше):',
-	},
 	noteFree: {
 		id: 'app.ai.settings.note.free',
 		defaultMessage:
@@ -117,16 +113,10 @@ const modelOptions = computed(() => {
 	return provider.value.models.map((m) => m.label)
 })
 
-const modelLabelById = computed(() => {
-	const map: Record<string, string> = {}
-	for (const m of provider.value.models) map[m.id] = m.label
-	return map
-})
-
 const currentModel = computed(() => {
 	if (provider.value.id === 'custom') return aiSettings.value.customModel
 	const id = chosenModel(aiSettings.value, provider.value.id)
-	return modelLabelById.value[id] ?? id
+	return provider.value.models.find((m) => m.id === id)?.label ?? id
 })
 
 function selectModelLabel(label: string) {
@@ -168,25 +158,6 @@ const customModelName = computed({
 	set: (value: string) => {
 		aiSettings.value.customModel = value
 		saveAiSettings()
-	},
-})
-
-/** Any model of the chosen provider, typed by hand - the catalogues here show
- * only a fraction of what each service actually serves. */
-const overrideModel = computed({
-	get: () => aiSettings.value.models[aiSettings.value.provider] ?? '',
-	set: (value: string) => {
-		const trimmed = value.trim()
-		if (trimmed) {
-			saveAiSettings({
-				models: { ...aiSettings.value.models, [aiSettings.value.provider]: trimmed },
-			})
-		} else {
-			// Destructuring instead of delete: the lint forbids dynamic deletion.
-			const { [aiSettings.value.provider]: removed, ...rest } = aiSettings.value.models
-			void removed
-			saveAiSettings({ models: rest })
-		}
 	},
 })
 
@@ -289,7 +260,9 @@ onMounted(() => {
 <template>
 	<div class="flex flex-col" :class="compact ? 'gap-3' : 'gap-4'">
 		<div class="flex flex-col gap-1.5">
-			<span class="text-sm font-semibold text-primary">{{ formatMessage(messages.workGroup) }}</span>
+			<span class="text-sm font-semibold text-primary">{{
+				formatMessage(messages.workGroup)
+			}}</span>
 			<div class="flex flex-wrap gap-2">
 				<button
 					v-for="p in AI_PROVIDERS"
@@ -326,12 +299,6 @@ onMounted(() => {
 					:render-up="compact"
 					:max-visible-options="compact ? 6 : undefined"
 					@change="(o) => selectModelLabel(String(o.option))"
-				/>
-				<p class="m-0 text-xs text-secondary">{{ formatMessage(messages.customModelAny) }}</p>
-				<Input
-					v-model="overrideModel"
-					autocomplete="off"
-					:placeholder="provider.models[0]?.id ?? 'model-id'"
 				/>
 			</div>
 			<div v-if="provider.needsKey" class="flex flex-col gap-1.5">
@@ -448,7 +415,9 @@ onMounted(() => {
 					@click="runConnectionTest"
 				>
 					{{
-						testState === 'running' ? formatMessage(messages.testRunning) : formatMessage(messages.test)
+						testState === 'running'
+							? formatMessage(messages.testRunning)
+							: formatMessage(messages.test)
 					}}
 				</button>
 				<span v-if="testState === 'ok'" class="ai-test-dot ai-test-ok">
@@ -478,11 +447,17 @@ onMounted(() => {
 			<div class="flex flex-col gap-1.5">
 				<Input v-model="newSkillName" :placeholder="formatMessage(messages.skillName)" />
 				<Input v-model="newSkillText" :placeholder="formatMessage(messages.skillText)" />
-				<Button size="sm" :disabled="!newSkillName.trim() || !newSkillText.trim()" @click="addSkill">
+				<Button
+					size="sm"
+					:disabled="!newSkillName.trim() || !newSkillText.trim()"
+					@click="addSkill"
+				>
 					{{ formatMessage(messages.skillAdd) }}
 				</Button>
 			</div>
-			<p class="m-0 text-xs leading-relaxed text-secondary">{{ formatMessage(messages.skillsHint) }}</p>
+			<p class="m-0 text-xs leading-relaxed text-secondary">
+				{{ formatMessage(messages.skillsHint) }}
+			</p>
 		</div>
 		<div v-if="!compact" class="ai-bridge-section flex flex-col gap-1.5">
 			<div class="flex items-center justify-between gap-2">
@@ -495,12 +470,20 @@ onMounted(() => {
 					/>
 					{{ formatMessage(messages.bridge) }}
 					<span class="text-xs font-normal text-secondary">
-						{{ bridgeInfo ? formatMessage(messages.bridgeRunning) : formatMessage(messages.bridgeIdle) }}
+						{{
+							bridgeInfo
+								? formatMessage(messages.bridgeRunning)
+								: formatMessage(messages.bridgeIdle)
+						}}
 					</span>
 				</span>
 				<div class="flex gap-2">
 					<Button v-if="bridgeInfo" size="sm" @click="copyBridgeDetails">
-						{{ bridgeCopied ? formatMessage(messages.bridgeCopied) : formatMessage(messages.bridgeCopy) }}
+						{{
+							bridgeCopied
+								? formatMessage(messages.bridgeCopied)
+								: formatMessage(messages.bridgeCopy)
+						}}
 					</Button>
 					<Button
 						size="sm"
@@ -508,7 +491,9 @@ onMounted(() => {
 						:disabled="bridgeToggling"
 						@click="toggleBridge"
 					>
-						{{ bridgeInfo ? formatMessage(messages.bridgeStop) : formatMessage(messages.bridgeStart) }}
+						{{
+							bridgeInfo ? formatMessage(messages.bridgeStop) : formatMessage(messages.bridgeStart)
+						}}
 					</Button>
 				</div>
 			</div>

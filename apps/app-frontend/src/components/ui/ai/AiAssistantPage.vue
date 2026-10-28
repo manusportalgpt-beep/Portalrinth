@@ -2,43 +2,44 @@
 import {
 	ArrowUpIcon,
 	BrainCogIcon,
-	ClipboardCopyIcon,
 	ChevronDownIcon,
+	ClipboardCopyIcon,
+	EditIcon,
 	ExternalIcon,
 	FileIcon,
 	FolderOpenIcon,
-	EditIcon,
 	HistoryIcon,
 	PlusIcon,
+	RefreshCwIcon,
 	StopCircleIcon,
 	TrashIcon,
 	XIcon,
-	RefreshCwIcon,
 } from '@modrinth/assets'
 import { Button, IconButton, Input, useVIntl } from '@modrinth/ui'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import AiProviderSettings from '@/components/ui/ai/AiProviderSettings.vue'
 import {
-	type AiFolderCard,
-	type AiJarCard,
-	type AiMessage,
-	type AiModCard,
-	type AiSkinCard,
 	agentBusy,
 	agentPhase,
 	agentQueue,
 	agentStreaming,
 	agentThoughts,
 	agentTurn,
+	type AiFolderCard,
 	aiHistory,
+	type AiJarCard,
+	type AiMessage,
+	type AiModCard,
 	aiSettings,
+	type AiSkinCard,
+	chosenModel,
 	clearAiHistory,
 	errorOnTurn,
-	providerById,
 	noteAgentNavigation,
+	providerById,
 	queuedUserMessage,
 	readSelectedBuild,
 	sendAgentMessage,
@@ -46,26 +47,26 @@ import {
 	stopAgentRun,
 	zaiPeakHoursLabel,
 } from '@/helpers/ai-assistant'
-import { add_and_equip_custom_skin } from '@/helpers/skins'
-import { labySkinPreview, labySkinTexture } from '@/helpers/laby-skins'
-import { skinRenderUrl } from '@/helpers/skin-render-service'
-import { getInstanceIconUrl, list as listInstances } from '@/helpers/instance'
 import {
-	attachFromPaths,
 	type AttachedFile,
+	attachFromPaths,
 	currentSessionId,
 	deleteSessionForever,
 	formatSize,
 	listSessions,
 	listTrashedSessions,
-	type SessionMeta,
 	readLatestSession,
 	readSession,
 	restoreSession,
 	sandboxAbsolutePath,
 	sandboxReveal,
+	type SessionMeta,
 	trashSession,
 } from '@/helpers/ai-sandbox'
+import { getInstanceIconUrl, list as listInstances } from '@/helpers/instance'
+import { labySkinPreview, labySkinTexture } from '@/helpers/laby-skins'
+import { skinRenderUrl } from '@/helpers/skin-render-service'
+import { add_and_equip_custom_skin } from '@/helpers/skins'
 
 const { formatMessage } = useVIntl()
 
@@ -221,7 +222,10 @@ const modelChipLabel = computed(() => {
 	if (provider?.id === 'custom') {
 		return aiSettings.value.customModel || 'Своя модель'
 	}
-	const stored = aiSettings.value.models[provider?.id ?? ''] ?? provider?.models[0]?.id ?? ''
+	// The chip shows what actually goes on the wire: a stored id that left
+	// the catalogue is silently replaced by chosenModel(), and the label
+	// must not claim the retired model while another one answers.
+	const stored = chosenModel(aiSettings.value, provider?.id ?? '')
 	return provider?.models.find((m) => m.id === stored)?.label ?? stored
 })
 

@@ -1,23 +1,28 @@
 /**
  * Portalrinth's own: the AI assistant. One brain for two faces - the chat tab
- * and the mascot - with a registry of providers (several of them free, some
- * reachable from Russia without a VPN), a shared conversation, and a small
+ * and the mascot - with a registry of providers (free tiers that answer from
+ * Russia without a VPN, GLM by default), a shared conversation, and a small
  * action protocol the model can use to drive the launcher itself.
  *
  * Every provider here speaks the OpenAI chat-completions shape, because all of
  * the services worth using either speak it natively or ship a compatibility
- * endpoint (Gemini, YandexGPT). Replies are not streamed: the launcher's HTTP
- * goes through the proxy-aware client, and the interface animates the answer
- * in with a typewriter instead.
+ * endpoint. Replies stream in as they are written; the typewriter stays only
+ * as a fallback for providers that answer with one buffered JSON object.
+ * Small talk (greetings, thanks) takes a fast lane with a pocket prompt, so
+ * free models answer in seconds.
  */
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { ref } from 'vue'
 
-import { list } from './instance'
-import { add_project_from_version, type DownloadReason } from './instance'
-import { proxiedFetch } from './proxy-fetch'
-
+import { addCustomAccentColor, setCustomAccentColor } from '../composables/use-accent'
+import { useTheme } from '../composables/use-theme'
 import {
 	type AttachedFile,
+	formatSize,
+	inboxSave,
+	readSessionsOverview,
+	resetSandboxStats,
 	sandboxBash,
 	sandboxCompileJava,
 	sandboxDelete,
@@ -31,23 +36,18 @@ import {
 	sandboxWrite,
 	sandboxWriteBinary,
 	saveSession,
-	readSessionsOverview,
 	startNewSession,
-	resetSandboxStats,
-	inboxSave,
-	formatSize,
 } from './ai-sandbox'
-import { get_default_user, users } from './auth'
-import { addMusicFromUrl } from './portalrinth-audio'
-import { fetchWeather } from './portalrinth-widgets'
-import { labySkinTags, labySkinVariant, searchLabySkins } from './laby-skins'
-import { addCustomAccentColor, setCustomAccentColor } from '../composables/use-accent'
-import { setBackgroundFromPath } from './portalrinth-background'
-import { searchCurseforge } from './curseforge-api'
 import { bytesToBase64 } from './ai-sandbox'
-import { useTheme } from '../composables/use-theme'
-import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
+import { get_default_user, users } from './auth'
+import { searchCurseforge } from './curseforge-api'
+import { list } from './instance'
+import { add_project_from_version, type DownloadReason } from './instance'
+import { labySkinTags, labySkinVariant, searchLabySkins } from './laby-skins'
+import { addMusicFromUrl } from './portalrinth-audio'
+import { setBackgroundFromPath } from './portalrinth-background'
+import { fetchWeather } from './portalrinth-widgets'
+import { proxiedFetch } from './proxy-fetch'
 
 export interface AiModelOption {
 	id: string
@@ -73,10 +73,28 @@ export interface AiProvider {
 }
 
 /**
- * The catalogue. Free tiers first: Pollinations needs no key at all, which is
- * why it is the default - the assistant works the moment the launcher does.
+ * The catalogue: free models only, and providers that answer from Russia
+ * without a VPN. GLM (Z.AI) leads - it is the default brain. Paid and
+ * trial-credit services are deliberately absent: the assistant must never
+ * surprise the player with a bill. A saved choice of a provider that left
+ * the catalogue is migrated in readSettings(), and chosenModel() only ever
+ * returns ids from this list - a stale or paid model id never reaches the
+ * wire.
  */
 export const AI_PROVIDERS: AiProvider[] = [
+	{
+		id: 'zai',
+		label: 'Z.AI (GLM)',
+		baseUrl: 'https://api.z.ai/api/paas/v4/chat/completions',
+		needsKey: true,
+		keyUrl: 'https://z.ai/model-api',
+		models: [
+			{ id: 'glm-4.5-flash', label: 'GLM 4.5 Flash (самая быстрая)' },
+			{ id: 'glm-4.7-flash', label: 'GLM 4.7 Flash (умнее)' },
+		],
+		note: 'Бесплатные GLM-модели, работают из России. У 4.5 Flash размышления отключены, 4.7 Flash думает всегда, но умнее. Ключ — бесплатно на z.ai/model-api.',
+		fromRussia: true,
+	},
 	{
 		id: 'pollinations',
 		label: 'Pollinations',
@@ -86,21 +104,8 @@ export const AI_PROVIDERS: AiProvider[] = [
 			{ id: 'openai', label: 'GPT' },
 			{ id: 'openai-fast', label: 'GPT быстрый' },
 		],
-		note: 'Ключ не нужен. Бесплатно отвечает GPT (модель openai-fast, «openai» — её псевдоним). Любую другую модель можно вписать вручную, но анонимно пускают только к GPT.',
+		note: 'Ключ не нужен — работает сразу. Анонимный лимит: 1 ответ в 30 секунд на IP, так что это запасной вариант, а не основной.',
 		fromRussia: true,
-	},
-	{
-		id: 'orcarouter',
-		label: 'OrcaRouter',
-		baseUrl: 'https://api.orcarouter.ai/v1/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://orcarouter.ai',
-		models: [
-			{ id: 'orcarouter/auto', label: 'Авто-выбор' },
-			{ id: 'deepseek/deepseek-v4-flash-free', label: 'DeepSeek V4 Flash (free)' },
-			{ id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
-		],
-		note: 'Шлюз к десяткам провайдеров под одним ключом (id вида openai/gpt-5.1, anthropic/claude-sonnet-5 — любой можно вписать вручную). Есть бесплатные модели.',
 	},
 	{
 		id: 'openrouter',
@@ -109,165 +114,13 @@ export const AI_PROVIDERS: AiProvider[] = [
 		needsKey: true,
 		keyUrl: 'https://openrouter.ai/keys',
 		models: [
-			{ id: 'deepseek/deepseek-chat-v3.1:free', label: 'DeepSeek V3.1' },
-			{ id: 'qwen/qwen3-coder:free', label: 'Qwen3 Coder' },
-			{ id: 'z-ai/glm-4.5-air:free', label: 'GLM 4.5 Air' },
-			{ id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B' },
-			{ id: 'mistralai/mistral-small-3.2-24b-instruct:free', label: 'Mistral Small 3.2' },
-			{ id: 'google/gemma-3-27b-it:free', label: 'Gemma 3 27B' },
-			{ id: 'moonshotai/kimi-k2:free', label: 'Kimi K2' },
+			{ id: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: 'Nemotron 3 Ultra (умная)' },
+			{ id: 'google/gemma-4-31b-it:free', label: 'Gemma 4 31B' },
+			{ id: 'nvidia/nemotron-3.5-lightning:free', label: 'Nemotron 3.5 Lightning (быстрая)' },
+			{ id: 'cohere/north-mini-code:free', label: 'North Mini Code (код)' },
 		],
-		note: 'Много бесплатных моделей под одним ключом. Обычно доступен из России.',
+		note: 'Бесплатные модели под одним ключом — состав меняется, актуальные всегда с суффиксом :free. Обычно доступен из России.',
 		fromRussia: true,
-	},
-	{
-		id: 'groq',
-		label: 'Groq',
-		baseUrl: 'https://api.groq.com/openai/v1/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://console.groq.com/keys',
-		models: [
-			{ id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
-			{ id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B' },
-			{ id: 'qwen/qwen3-32b', label: 'Qwen3 32B' },
-			{ id: 'gemma2-9b-it', label: 'Gemma2 9B' },
-		],
-		note: 'Щедрый бесплатный лимит и очень быстрые ответы.',
-	},
-	{
-		id: 'cerebras',
-		label: 'Cerebras',
-		baseUrl: 'https://api.cerebras.ai/v1/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://cloud.cerebras.ai',
-		models: [
-			{ id: 'llama-3.3-70b', label: 'Llama 3.3 70B' },
-			{ id: 'qwen-3-32b', label: 'Qwen3 32B' },
-			{ id: 'gpt-oss-120b', label: 'GPT-OSS 120B' },
-		],
-		note: 'Бесплатный тариф с самым быстрым железом.',
-	},
-	{
-		id: 'mistral',
-		label: 'Mistral',
-		baseUrl: 'https://api.mistral.ai/v1/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://console.mistral.ai/api-keys',
-		models: [
-			{ id: 'mistral-small-latest', label: 'Mistral Small' },
-			{ id: 'open-mistral-nemo', label: 'Mistral Nemo' },
-		],
-		note: 'Бесплатный тариф лаборатории Mistral.',
-	},
-	{
-		id: 'gemini',
-		label: 'Google Gemini',
-		baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://aistudio.google.com/apikey',
-		models: [
-			{ id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-			{ id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
-		],
-		note: 'Бесплатный ключ из AI Studio. Из России без VPN обычно недоступен.',
-	},
-	{
-		id: 'zai',
-		label: 'Z.AI (GLM)',
-		baseUrl: 'https://api.z.ai/api/paas/v4/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://z.ai/model-api',
-		models: [
-			{ id: 'glm-5.3-flash', label: 'GLM 5.3 Flash' },
-			{ id: 'glm-4.7-flash', label: 'GLM 4.7 Flash' },
-			{ id: 'glm-4.5-flash', label: 'GLM 4.5 Flash' },
-			{ id: 'glm-4.5-air', label: 'GLM 4.5 Air' },
-		],
-		note: 'GLM 5.3/4.7/4.5 Flash бесплатны, доступны из России и очень добротные.',
-		fromRussia: true,
-	},
-	{
-		id: 'yandex',
-		label: 'YandexGPT',
-		baseUrl: 'https://openai.api.yandex.net/v1/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://yandex.cloud/ru/services/ai-studio',
-		authScheme: 'api-key',
-		models: [
-			{ id: 'yandexgpt-lite', label: 'YandexGPT Lite' },
-			{ id: 'yandexgpt', label: 'YandexGPT Pro' },
-		],
-		note: 'Работает из России напрямую, ключ из Yandex Cloud.',
-		fromRussia: true,
-	},
-	{
-		id: 'gigachat',
-		label: 'GigaChat',
-		baseUrl: 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://developers.sber.ru/gigachat',
-		models: [{ id: 'GigaChat-2', label: 'GigaChat 2' }],
-		note: 'Работает из России. Понадобится свежий access-токен из личного кабинета разработчика.',
-		fromRussia: true,
-	},
-	{
-		id: 'deepseek',
-		label: 'DeepSeek',
-		baseUrl: 'https://api.deepseek.com/v1/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://platform.deepseek.com/api_keys',
-		models: [{ id: 'deepseek-chat', label: 'DeepSeek V3' }],
-		note: 'Платный, но очень дешёвый и умный.',
-	},
-	{
-		id: 'github-models',
-		label: 'GitHub Models',
-		baseUrl: 'https://models.github.ai/inference/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://github.com/settings/tokens',
-		models: [
-			{ id: 'openai/gpt-4.1-mini', label: 'GPT 4.1 Mini' },
-			{ id: 'openai/gpt-4o-mini', label: 'GPT 4o Mini' },
-			{ id: 'meta/Llama-3.3-70B-Instruct', label: 'Llama 3.3 70B' },
-		],
-		note: 'Бесплатный дневной лимит запросов с обычным токеном GitHub.',
-	},
-	{
-		id: 'nvidia',
-		label: 'NVIDIA NIM',
-		baseUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://build.nvidia.com',
-		models: [
-			{ id: 'meta/llama-3.3-70b-instruct', label: 'Llama 3.3 70B' },
-			{ id: 'qwen/qwen2.5-coder-32b-instruct', label: 'Qwen2.5 Coder 32B' },
-			{ id: 'deepseek-ai/deepseek-r1', label: 'DeepSeek R1' },
-		],
-		note: 'Бесплатные кредиты каждому новому ключу на build.nvidia.com.',
-	},
-	{
-		id: 'together',
-		label: 'Together AI',
-		baseUrl: 'https://api.together.xyz/v1/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://api.together.ai/settings/api-keys',
-		models: [
-			{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free', label: 'Llama 3.3 70B Turbo' },
-			{ id: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free', label: 'DeepSeek R1 Distill 70B' },
-		],
-		note: 'Бесплатные Turbo-модели под своим ключом.',
-	},
-	{
-		id: 'cohere',
-		label: 'Cohere',
-		baseUrl: 'https://api.cohere.ai/compatibility/v1/chat/completions',
-		needsKey: true,
-		keyUrl: 'https://dashboard.cohere.com/api-keys',
-		models: [
-			{ id: 'command-r7b-12-2024', label: 'Command R7B' },
-			{ id: 'command-r-08-2024', label: 'Command R' },
-		],
-		note: 'Пробные ключи бесплатны и без привязки карты.',
 	},
 	{
 		id: 'custom',
@@ -275,7 +128,7 @@ export const AI_PROVIDERS: AiProvider[] = [
 		baseUrl: '',
 		needsKey: false,
 		models: [],
-		note: 'Любой OpenAI-совместимый сервер: LM Studio, Ollama, свой шлюз.',
+		note: 'Локальные модели (LM Studio, Ollama) — бесплатно, всё считается на твоём компьютере.',
 	},
 ]
 
@@ -315,7 +168,7 @@ export interface AiSettings {
 const SETTINGS_KEY = 'portalrinth-ai-settings'
 
 const DEFAULT_SETTINGS: AiSettings = {
-	provider: 'pollinations',
+	provider: 'zai',
 	models: {},
 	keys: {},
 	customBaseUrl: '',
@@ -335,6 +188,13 @@ function readSettings(): AiSettings {
 		const raw = localStorage.getItem(SETTINGS_KEY)
 		if (!raw) return { ...DEFAULT_SETTINGS }
 		const settings = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+		// The catalogue only serves free providers now: a player still pointing
+		// at one that left (paid or unreachable from Russia) is moved to GLM or -
+		// when there is no Z.AI key yet - to the keyless fallback, so the
+		// assistant keeps working without a single settings screen.
+		if (!providerById(settings.provider)) {
+			settings.provider = settings.keys.zai ? 'zai' : 'pollinations'
+		}
 		// The agent got its true name: anyone still carrying the old
 		// placeholder is moved over once, without touching a custom name.
 		if (settings.mascotName === 'Крафт') {
@@ -395,7 +255,10 @@ export function chosenModel(settings: AiSettings, providerId: string): string {
 	const provider = providerById(providerId)
 	if (providerId === 'custom') return settings.customModel || 'default'
 	const stored = settings.models[providerId]
-	if (stored) return stored
+	// The allowlist: only ids from the catalogue ever reach the wire. A stored
+	// choice that left the list (a removed paid model) quietly falls back to
+	// the provider's default - the player never sends a paid id by accident.
+	if (stored && provider?.models.some((model) => model.id === stored)) return stored
 	return provider?.models[0]?.id ?? 'default'
 }
 
@@ -527,8 +390,13 @@ export function clearAiHistory() {
  * Actions travel inside the model's text as `<<tool|arguments>>`. A pipe
  * keeps the grammar one line long; JSON in a fenced block asked models for
  * punctuation they rarely all agreed on.
+ *
+ * The argument may contain single `>` characters (HTML tags, `echo hi > file`)
+ * - only the exact `>>` pair closes a command. Double `>>` inside an argument
+ * is the one thing the grammar cannot express, so the tools hint asks the
+ * model to avoid it.
  */
-const ACTION_PATTERN = /<<([a-z_]+)\|([^>]*)>>/g
+const ACTION_PATTERN = /<<([a-z_]+)\|((?:(?!>>)[\s\S])*)>>/g
 
 export type AiToolHandler = (tool: string, args: string) => Promise<string> | string
 
@@ -562,10 +430,26 @@ export interface ParsedReply {
 
 export function parseActions(text: string): ParsedReply {
 	const actions: { tool: string; args: string }[] = []
-	const cleaned = text.replace(ACTION_PATTERN, (_match, tool: string, args: string) => {
-		actions.push({ tool, args: args.trim() })
-		return ''
-	})
+	let cleaned = ''
+	let cursor = 0
+	ACTION_PATTERN.lastIndex = 0
+	for (let match = ACTION_PATTERN.exec(text); match; match = ACTION_PATTERN.exec(text)) {
+		cleaned += text.slice(cursor, match.index)
+		cursor = ACTION_PATTERN.lastIndex
+		let args = match[2]
+		// HTML args end with a tag: `...<p>Привет</p>>>` is args ending in
+		// `>` plus the `>>` terminator, and a plain regex match eats that
+		// last `>` - in a run of `>` the final two are the terminator, the
+		// rest belong to the args, so they are stitched back on and consumed.
+		const run = /^>+/.exec(text.slice(cursor))
+		if (run) {
+			args += run[0]
+			cursor += run[0].length
+			ACTION_PATTERN.lastIndex = cursor
+		}
+		actions.push({ tool: match[1], args: args.trim() })
+	}
+	cleaned += text.slice(cursor)
 	return { text: cleaned.trim(), actions }
 }
 
@@ -718,7 +602,7 @@ export const AI_NAVIGATION_HINT = [
 ].join('\n')
 
 export const AI_TOOLS_HINT = [
-	'Ты можешь выполнять действия, добавляя в ответ команды вида <<инструмент|аргумент>> (аргумент одной строкой, без кавычек). Пользователь видит каждую выполненную команду.',
+	'Ты можешь выполнять действия, добавляя в ответ команды вида <<инструмент|аргумент>> (аргумент одной строкой, без кавычек). Пользователь видит каждую выполненную команду. ВАЖНО: внутри аргумента команды нельзя использовать двойные >> (они закрывают команду) — например, для дописывания в файл сначала прочитай его (cat) и запиши целиком через >; одинарный > допустим (html-теги, echo hi > file).',
 	'Свои интернет-инструменты (это ТВОИ инструменты, как у настоящего агента — через них ищи и изучай всё, что вне лаунчера; по умолчанию DuckDuckGo):',
 	'- <<web_search|запрос>> — поиск в интернете (DuckDuckGo), вернёт ссылки и заголовки; всегда проверяй факты поиском, не выдумывай',
 	'- <<web_fetch|url>> — скачать страницу по ссылке (вернёт очищенный текст)',
@@ -751,7 +635,7 @@ export const AI_TOOLS_HINT = [
 	'Музыка: <<music_add_url|прямая ссылка на .mp3/.ogg>> — скачать трек по ссылке и положить его в плейлист игрока (играет через кнопку звука в титл-баре).',
 	'Компьютер: <<sysinfo|>> — узнать железо и систему игрока (платформа, ядер CPU, память, экран, язык, время) — отвечай точными фактами, а не догадками.',
 	'Погода: <<weather_get|город или пусто>> — настоящая погода прямо сейчас (температура, явление, ветер); пусто — по месту игрока, можно назвать город (например <<weather_get|Санкт-Петербург>>).',
-		'Скины: <<skin_recommend|запрос или пусто>> — подобрать скины с laby.net (пусто — популярные прямо сейчас, то есть самые свежие добавления); игрок увидит карточки скинов прямо в чате, поставить скин можно кликом по карточке. Советуй скины, когда просят «посоветуй скин», «найди скин», «что новенького из скинов».',
+	'Скины: <<skin_recommend|запрос или пусто>> — подобрать скины с laby.net (пусто — популярные прямо сейчас, то есть самые свежие добавления); игрок увидит карточки скинов прямо в чате, поставить скин можно кликом по карточке. Советуй скины, когда просят «посоветуй скин», «найди скин», «что новенького из скинов».',
 	'Таймер: <<timer_set|минуты::название>> — завести таймер, когда время выйдет — придёт плашка сверху и сообщение в чат (например <<timer_set|25::достать чай>>).',
 	'Файлы, которые игрок скинул в чат, сохраняются в папку inbox/ твоей песочницы — они остаются там: читай их, распаковывай, переделывай, удаляй по просьбе.',
 	'Память — твои заметки и прошлые разговоры не пропадают:',
@@ -913,10 +797,67 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 }
 
 /**
- * The part of the prompt that changes every few turns: who is playing and
- * what the notebook remembers. Kept separate so the static half above stays
- * cheap for providers that bill the system message as regular tokens.
+ * The fast lane for small talk. A whole-message whitelist, not a fuzzy guess:
+ * «Привет!» takes it, «Привет, создай файл» does not, and a reply to a
+ * pending agent question never does - the task behind the question keeps
+ * its full toolset. Matched turns go out with a pocket system prompt and no
+ * tool catalogue at all: the model has nothing to read but the greeting, so
+ * free models answer in seconds instead of chewing through thousands of
+ * tokens of launcher documentation before saying hello.
  */
+const SIMPLE_CHAT_PATTERN =
+	/^(прив+ет|прив|приветствую|здравствуй(те)?|здаров|здорово|хай|хеллоу|хелло|hello|hi|hey|ку|кку|доброе утро|добрый день|добрый вечер|доброй ночи|спасибо|спс|спасиб|благодарю|thanks|thank you|ок|окей|хорошо|ладно|понял|понятно|ага|угу|как дела|как ты|как жизнь|что делаешь|чем занимаешься|ты тут|ты здесь|ты живой|норм|нормально|прекрасно|отлично|супер|класс|круто|молодец|красава)[!.,:;) ]*$/i
+
+/** True for plain small talk that needs neither tools nor the big prompt. */
+export function isSimpleChat(text: string): boolean {
+	const trimmed = text.trim()
+	if (trimmed.length > 100) return false
+	return SIMPLE_CHAT_PATTERN.test(trimmed)
+}
+
+/**
+ * The pocket system prompt for small talk: the same personality and the same
+ * standing skills, minus every hint the model only needs for real work. The
+ * player name rides along so the greeting still feels personal.
+ */
+export function buildSmallTalkPrompt(kind: 'tab' | 'mascot', playerName?: string): string {
+	const settings = aiSettings.value
+	const name = settings.mascotName || 'Portalus'
+	const affection = Math.max(0, Math.min(100, settings.affection))
+	const warmth =
+		affection > 70
+			? 'Ты очень привязан к игроку и даёшь это понять.'
+			: affection > 40
+				? 'Ты дружелюбен к игроку.'
+				: 'Ты держишься сдержанно, но честно.'
+	const lines = [
+		`Ты — ${name}, ИИ-агент лаунчера Portalrinth (форк Modrinth App) для Minecraft. Твоё имя — Portalus, и игрок обращается к тебе по нему.`,
+		warmth,
+		'Общайся как живой игровой приятель: обращайся к игроку по имени его аккаунта, уместный игровой сленг разрешён, канцелярит — нет, грубость и мат — нет.',
+		'НИКОГДА не подставляй заглушки вроде {{account}} или [имя] — если имени нет, просто обходись без имени.',
+		'Отвечай на языке пользователя. БУДЬ КРАТКОК: 1–3 предложения максимум. Никаких вступлений, никаких встречных вопросов без крайней необходимости.',
+		'Это простое сообщение (приветствие/благодарность/болтовня): ответь сразу обычным текстом, БЕЗ команд <<...>> и без инструментов — так быстрее всего.',
+		'Твой создатель — Portalrolls. Если игрока зовут Portalrolls — перед тобой она, создатель: обращайся тепло, уважительно и без формальностей.',
+	]
+	if (playerName) {
+		lines.push(
+			`Имя игрока: ${playerName}. Обращайся к нему по имени — в приветствии, без фанатизма.`,
+		)
+	}
+	const skills = (settings.skills ?? []).filter((skill) => skill.on && skill.text.trim())
+	if (skills.length > 0) {
+		lines.push(
+			'Установленные навыки (игрок поставил их сам - следуй им):\n' +
+				skills.map((skill) => `- ${skill.name}: ${skill.text}`).join('\n'),
+		)
+	}
+	if (kind === 'mascot') {
+		lines.push(
+			'Ты живёшь в интерфейсе лаунчера как маленький маскот. Ответ должен быть очень коротким: одно-два предложения, максимум.',
+		)
+	}
+	return lines.join('\n')
+}
 /** The memory of the build the player picked for the agent ("Без сборки"
  * is no build at all): read by the context builder, written by the picker. */
 const SELECTED_BUILD_KEY = 'portalrinth-ai-selected-build'
@@ -947,6 +888,9 @@ export function setSelectedBuild(build: SelectedBuild | null): void {
 }
 
 async function buildLiveContext(): Promise<string> {
+	// The part of the prompt that changes every few turns: who is playing and
+	// what the notebook remembers. Kept separate so the static half above stays
+	// cheap for providers that bill the system message as regular tokens.
 	const lines: string[] = []
 	const who = await playerName()
 	if (who) {
@@ -1048,6 +992,8 @@ async function callProvider(
 	providerId: string,
 	payload: ChatMessagePayload[],
 	signal?: AbortSignal,
+	onDelta?: (chunk: string, full: string) => void,
+	fastPath = false,
 ): Promise<string> {
 	const settings = aiSettings.value
 	const provider = providerById(providerId)
@@ -1055,32 +1001,57 @@ async function callProvider(
 	const baseUrl = providerId === 'custom' ? settings.customBaseUrl : provider.baseUrl
 	if (!baseUrl) throw new Error('Укажите адрес своего сервера в настройках')
 	const key = settings.keys[providerId] ?? ''
-	if (provider.needsKey && !key) throw new Error(`Нужен API-ключ провайдера ${provider.label}`)
+	if (provider.needsKey && !key) {
+		const error = new Error(`Нужен API-ключ провайдера ${provider.label}`) as Error & {
+			name?: string
+			missingKey?: boolean
+		}
+		// A provider without its key is not a failure to report and retry: the
+		// chain moves on to the next candidate, and the final message tells the
+		// player exactly where to paste the key.
+		error.name = 'MissingKeyError'
+		;(error as Error & { missingKey?: boolean }).missingKey = true
+		throw error
+	}
 	const headers: Record<string, string> = { 'Content-Type': 'application/json' }
 	if (key) {
 		if (provider.authScheme === 'api-key') headers.Authorization = `Api-Key ${key}`
 		else headers.Authorization = `Bearer ${key}`
 	}
+	const model = chosenModel(settings, providerId)
 	const body: Record<string, unknown> = {
-		model: chosenModel(settings, providerId),
+		model,
 		messages: payload,
 		temperature: 0.6,
-		max_tokens: 2048,
+		// Small talk never needs a lecture back; real work keeps the headroom.
+		max_tokens: fastPath ? 256 : 2048,
+		stream: Boolean(onDelta),
 	}
 	if (providerId === 'openrouter') {
 		headers['X-Title'] = 'Portalrinth Launcher'
 	}
+	if (providerId === 'zai') {
+		// GLM's reasoning is the quiet speed killer: 4.5 Flash can switch it
+		// off entirely (instant answers), while 4.7/5.x Flash always think -
+		// those get the lightest effort the API allows. Peak-hour GLM stays
+		// usable only with these knobs set.
+		if (/^glm-4\.5-flash/.test(model)) {
+			body.thinking = { type: 'disabled' }
+		} else if (/^glm-(4\.7|5\.)/.test(model)) {
+			body.reasoning_effort = 'low'
+		}
+	}
 	// A jammed model (free DeepSeek at rush hour, a stalled relay) must not
 	// hang the whole turn: every attempt carries its own ceiling, on top of
-	// whatever signal the caller holds. Z.AI in peak hours gets twice the
-	// time - its queue regularly runs past half a minute before answering.
-	const anySignal = (AbortSignal as { any?: (signals: AbortSignal[]) => AbortSignal }).any
-	const attemptCeiling = providerId === 'zai' && zaiPeakHoursNow() ? 60000 : 30000
-	const attemptSignal = signal
-		? anySignal
-			? anySignal([signal, AbortSignal.timeout(attemptCeiling)])
-			: signal
-		: AbortSignal.timeout(attemptCeiling)
+	// whatever signal the caller holds. Small talk gets a short one - there
+	// is nothing to think about. Z.AI in peak hours gets extra time - its
+	// queue regularly runs past half a minute before answering.
+	const attemptCeiling = fastPath
+		? 15000
+		: providerId === 'zai' && zaiPeakHoursNow()
+			? 60000
+			: 30000
+	const attemptSignal = composeSignals(signal, attemptCeiling)
 	let response: Response
 	try {
 		response = await proxiedFetch(baseUrl, {
@@ -1105,6 +1076,17 @@ async function callProvider(
 		error.status = response.status
 		throw error
 	}
+	// Streaming: the answer is drawn as it is written. The same request stays a
+	// regular completion when the caller asked for no deltas or the transport
+	// handed back a buffered body - the JSON is then read from the very same
+	// response, no second request is ever fired.
+	if (onDelta && response.body) {
+		const content = await readStreamedContent(response, onDelta)
+		if (content !== null) {
+			if (!content) throw new Error(`${provider.label}: пустой ответ`)
+			return content
+		}
+	}
 	let data: {
 		choices?: { message?: { content?: string } }[]
 	}
@@ -1118,6 +1100,133 @@ async function callProvider(
 	const content = data.choices?.[0]?.message?.content ?? ''
 	if (!content) throw new Error(`${provider.label}: пустой ответ`)
 	return content
+}
+
+/**
+ * Combines the caller's signal with a timeout into one: whichever fires first
+ * aborts the attempt. The old shortcut - picking the caller's signal when
+ * AbortSignal.any was missing - silently dropped the timeout for a whole
+ * class of browsers; this composition never does.
+ */
+function composeSignals(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
+	const controller = new AbortController()
+	const timer = setTimeout(() => controller.abort(), timeoutMs)
+	const stop = () => {
+		clearTimeout(timer)
+	}
+	if (signal) {
+		if (signal.aborted) {
+			clearTimeout(timer)
+			controller.abort(signal.reason)
+			return controller.signal
+		}
+		signal.addEventListener(
+			'abort',
+			() => {
+				stop()
+				controller.abort(signal.reason)
+			},
+			{ once: true },
+		)
+	}
+	controller.signal.addEventListener('abort', stop, { once: true })
+	return controller.signal
+}
+
+/**
+ * Reads an OpenAI-compatible SSE stream, feeding each content delta to the
+ * caller as it lands. Handles events split across chunks, multi-byte UTF-8
+ * split across chunk borders (TextDecoder with stream: true) and the choice
+ * of some servers to answer a streaming request with plain JSON: null means
+ * "not a stream after all", and the caller reads the same response as JSON.
+ */
+async function readStreamedContent(
+	response: Response,
+	onDelta: (chunk: string, full: string) => void,
+): Promise<string | null> {
+	const contentType = (response.headers.get('content-type') ?? '').toLowerCase()
+	if (contentType.includes('application/json')) return null
+	const reader = response.body.getReader()
+	const decoder = new TextDecoder()
+	let buffer = ''
+	let raw = ''
+	let full = ''
+	// A stream that simply ends without [DONE] or a finish_reason was cut
+	// off mid-generation: such text is shown but never trusted as a
+	// completed answer, so no launcher action runs out of it.
+	let sawTerminal = false
+	const takeLine = (line: string) => {
+		const trimmed = line.trim()
+		if (!trimmed.startsWith('data:')) return
+		const data = trimmed.slice(5).trim()
+		if (data === '[DONE]') {
+			sawTerminal = true
+			return
+		}
+		if (!data) return
+		try {
+			const parsed = JSON.parse(data) as {
+				choices?: {
+					delta?: { content?: string }
+					message?: { content?: string }
+					finish_reason?: string | null
+				}[]
+			}
+			const choice = parsed.choices?.[0]
+			if (choice?.finish_reason) sawTerminal = true
+			const piece = choice?.delta?.content ?? choice?.message?.content
+			if (piece) {
+				full += piece
+				onDelta(piece, full)
+			}
+		} catch {
+			/* a half-formed event slips back into the buffer next round */
+		}
+	}
+	try {
+		for (;;) {
+			const { done, value } = await reader.read()
+			if (done) break
+			const decoded = decoder.decode(value, { stream: true })
+			raw += decoded
+			buffer += decoded
+			// SSE events end with a newline; a chunk may end mid-event, so the
+			// tail stays buffered until its terminator arrives.
+			const lines = buffer.split('\n')
+			buffer = lines.pop() ?? ''
+			for (const line of lines) takeLine(line)
+		}
+		// The last event may arrive without a trailing newline - a stream that
+		// ends flush against its final data line still gets read.
+		takeLine(buffer)
+		buffer = ''
+		if (full && !sawTerminal) {
+			throw new Error('поток оборвался после части ответа')
+		}
+	} catch (error) {
+		// A broken stream is a failed answer, not a finished one: partial
+		// words already drawn stay on the screen, but the turn itself must
+		// fail - running launcher actions out of a cut-off generation is how
+		// half-written files appear. The words the player already saw are
+		// kept only by the caller, never returned as a completed reply.
+		if ((error as { name?: string })?.name !== 'AbortError') {
+			throw new Error(`поток оборвался${full ? ' после части ответа' : ' до ответа'}`)
+		}
+		throw error
+	}
+	if (!full && raw.trim().startsWith('{')) {
+		// The server ignored stream:true and answered one buffered JSON object -
+		// the body is already consumed, so it is parsed here, not re-fetched.
+		try {
+			const parsed = JSON.parse(raw) as {
+				choices?: { message?: { content?: string } }[]
+			}
+			return parsed.choices?.[0]?.message?.content ?? ''
+		} catch {
+			/* falls through to the empty answer below */
+		}
+	}
+	return full
 }
 
 /** A signal-aware sleep, used to pace requests so free tiers stay happy. */
@@ -1147,9 +1256,13 @@ async function callProviderWithRetry(
 	providerId: string,
 	payload: ChatMessagePayload[],
 	signal?: AbortSignal,
+	onDelta?: (chunk: string, full: string) => void,
+	fastPath = false,
 ): Promise<string> {
-	const peak = providerId === 'zai' && zaiPeakHoursNow()
-	const pauses = peak ? [2500, 6000] : [900]
+	const peak = providerId === 'zai' && zaiPeakHoursNow() && !fastPath
+	// Small talk never waits out a queue: no retries at all - one attempt
+	// per provider, the chain moves on at once.
+	const pauses = fastPath ? [] : peak ? [2500, 6000] : [900]
 	let lastError: unknown
 	for (let attempt = 0; attempt <= pauses.length; attempt++) {
 		if (attempt > 0) {
@@ -1160,7 +1273,7 @@ async function callProviderWithRetry(
 			}
 		}
 		try {
-			return await callProvider(providerId, payload, signal)
+			return await callProvider(providerId, payload, signal, onDelta, fastPath)
 		} catch (error) {
 			lastError = error
 			if (signal?.aborted) throw error
@@ -1195,36 +1308,37 @@ const BLOCK_TTL = 10 * 60 * 1000
 const blockedProviders = new Map<string, number>()
 
 function blockProvider(providerId: string): void {
-        blockedProviders.set(providerId, Date.now())
+	blockedProviders.set(providerId, Date.now())
 }
 
 function providerBlocked(providerId: string): boolean {
-        const at = blockedProviders.get(providerId)
-        if (!at) return false
-        if (Date.now() - at > BLOCK_TTL) {
-                blockedProviders.delete(providerId)
-                return false
-        }
-        return true
+	const at = blockedProviders.get(providerId)
+	if (!at) return false
+	if (Date.now() - at > BLOCK_TTL) {
+		blockedProviders.delete(providerId)
+		return false
+	}
+	return true
 }
 
 /** A permanent no from a provider: exactly what the block list is for. */
 function isPermanentRefusal(error: unknown): boolean {
-        const status = (error as Error & { status?: number }).status
-        if (status === 401 || status === 403) return true
-        return /free_rate_limited|Free models are not available/i.test(String(error))
+	const status = (error as Error & { status?: number }).status
+	if (status === 401 || status === 403) return true
+	return /free_rate_limited|Free models are not available/i.test(String(error))
 }
 /** Providers the launcher can fall back to when the chosen one is out of
  * free minutes: first the keyless one, then any free-tier provider that has
- * a key saved. */
+ * a key saved. Only catalogue members - the chain never reaches for a
+ * provider the player cannot use for free. */
 function fallbackChain(primary: string): string[] {
 	const chain = [primary]
-	for (const candidate of ['pollinations', 'openrouter', 'zai', 'groq']) {
+	for (const candidate of ['pollinations', 'openrouter', 'zai']) {
 		if (candidate === primary) continue
 		const provider = providerById(candidate)
 		if (!provider) continue
 		if (provider.needsKey && !aiSettings.value.keys[candidate]) continue
-			if (providerBlocked(candidate)) continue
+		if (providerBlocked(candidate)) continue
 		chain.push(candidate)
 	}
 	return chain
@@ -1256,6 +1370,10 @@ export interface AiRequest {
 	signal?: AbortSignal
 	/** The last handler wins; here it lets a caller see raw tool activity. */
 	onActionDone?: (tool: string, args: string, result: string) => void
+	/** Live text as it is generated, so the chat can draw the reply in flight. */
+	onDelta?: (chunk: string, full: string) => void
+	/** Small talk: pocket prompt, short ceiling, no tool catalogue. */
+	fastPath?: boolean
 }
 
 export interface AiResult {
@@ -1273,10 +1391,7 @@ export interface AiResult {
 }
 
 /** Builds the messages payload, attaching images to the newest user turn. */
-function withImages(
-	messages: ChatMessagePayload[],
-	images?: AttachedFile[],
-): ChatMessagePayload[] {
+function withImages(messages: ChatMessagePayload[], images?: AttachedFile[]): ChatMessagePayload[] {
 	if (!images || images.length === 0) return messages
 	const withParts = messages.map((message, index) => {
 		if (index !== messages.length - 1 || message.role !== 'user') return message
@@ -1321,16 +1436,35 @@ const pendingVisionImages: string[] = []
  */
 export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	const settings = aiSettings.value
-	const live = await buildLiveContext()
-	const system =
-		buildSystemPrompt(request.kind, request.systemExtra) +
-		(live ? `\n${live}` : '')
+	// The fast lane skips the launcher's documentation, the memory files and
+	// the sessions overview: a greeting needs none of them, and reading them
+	// costs seconds the player watches a spinner.
+	const fastPath =
+		Boolean(request.fastPath) &&
+		!(request.images && request.images.length > 0) &&
+		(request.messages ?? []).every(
+			(message) => typeof message.content !== 'string' || !message.content.includes('<<'),
+		)
+	const system = fastPath
+		? buildSmallTalkPrompt(request.kind, await playerName())
+		: buildSystemPrompt(request.kind, request.systemExtra) +
+			(await buildLiveContext().then((live) => (live ? `\n${live}` : '')))
 	const base: ChatMessagePayload[] = [
 		{ role: 'system', content: system },
 		...(request.messages ?? []),
 	]
 	let rounds = withImages(base, request.images)
 	const hasImages = rounds !== base
+	// The transcript lives outside the provider loop: actions already executed
+	// and their results stay in the context when the chain moves to the next
+	// provider, so a fallback never repeats a file write or an install.
+	let payload = rounds
+
+	// The fast lane runs on a clock of its own: 25 seconds for the whole
+	// turn, provider switches included. When it expires the honest error
+	// comes at once - a greeting is not worth more waiting than that.
+	const turnSignal = fastPath ? composeSignals(request.signal, 25000) : request.signal
+	const turnAborted = () => turnSignal?.aborted === true && !request.signal?.aborted
 
 	resetSandboxStats()
 	beginAgentRun()
@@ -1346,12 +1480,16 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	// random fallback tripped last.
 	let primaryFailure = ''
 	const fallbackTag = () =>
-	failedProviderLabel && providerTried !== failedProviderLabel
-	? `${failedProviderLabel} не ответил${failedDetail ? `: ${failedDetail}` : ''} — ответил ${providerById(providerTried)?.label ?? providerTried}`
-	: ''
+		failedProviderLabel && providerTried !== failedProviderLabel
+			? `${failedProviderLabel} не ответил${failedDetail ? `: ${failedDetail}` : ''} — ответил ${providerById(providerTried)?.label ?? providerTried}`
+			: ''
 
 	try {
-		for (let pass = 0; pass < 2; pass++) {
+		// Small talk gets one pass over the chain: the second one exists to
+		// wait out free-tier hiccups, and a greeting is not worth a minute of
+		// retries - a fallback provider answering now beats the chosen one
+		// answering later.
+		for (let pass = 0; pass < (fastPath ? 1 : 2); pass++) {
 			if (pass > 0) {
 				// Every provider had its turn and failed with retryable trouble: a
 				// short breather, then one more round over the same chain - free
@@ -1365,8 +1503,9 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 			}
 			const chain = fallbackChain(settings.provider)
 			for (const providerId of chain) {
+				if (turnAborted())
+					throw new Error('Быстрый ответ не уложился в 25 секунд — провайдеры молчат')
 				providerTried = providerId
-				let payload = rounds
 				try {
 					for (let round = 0; round < 4; round++) {
 						if (playerTookOver()) {
@@ -1383,7 +1522,13 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						let raw: string
 						try {
 							agentPhase.value = 'thinking'
-							raw = await callProviderWithRetry(providerId, payload, request.signal)
+							raw = await callProviderWithRetry(
+								providerId,
+								payload,
+								turnSignal,
+								request.onDelta,
+								fastPath,
+							)
 						} catch (error) {
 							// A model without vision answers 400 to image parts: drop them
 							// once and answer from the text alone.
@@ -1391,7 +1536,13 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 							if (hasImages && status === 400 && payload === rounds) {
 								rounds = withoutImages(base)
 								payload = rounds
-								raw = await callProviderWithRetry(providerId, payload, request.signal)
+								raw = await callProviderWithRetry(
+									providerId,
+									payload,
+									turnSignal,
+									request.onDelta,
+									fastPath,
+								)
 							} else {
 								throw error
 							}
@@ -1399,6 +1550,12 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						const parsed = parseActions(raw)
 						if (parsed.text.trim()) {
 							noteAgentThought(parsed.text.slice(0, 400))
+						}
+						// The quick budget is spent: no more model calls, and no
+						// launcher actions either - a turn out of clock leaves
+						// nothing running behind it.
+						if (turnAborted()) {
+							throw new Error('Быстрый ответ не уложился в 25 секунд — провайдеры молчат')
 						}
 						const askAction = parsed.actions.find((action) => action.tool === 'ask_user')
 						if (askAction) {
@@ -1419,7 +1576,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 								},
 							}
 						}
-						if (parsed.actions.length === 0 || round === 3) {
+						if (parsed.actions.length === 0) {
 							// A model that only shouted commands and never spoke still owes
 							// the player words - summarize what was done instead of silence.
 							const silent = !parsed.text.trim()
@@ -1440,13 +1597,15 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						const seenImages: string[] = []
 						for (const action of parsed.actions.slice(0, 6)) {
 							if (playerTookOver()) {
-								notes.push('Игрок сам перешёл на другой экран - он передумал. Немедленно прекрати действия по этому запросу и попрощайся.')
+								notes.push(
+									'Игрок сам перешёл на другой экран - он передумал. Немедленно прекрати действия по этому запросу и попрощайся.',
+								)
 								return {
 									content:
 										'Остановился: ты ушёл на другой экран, так что я решил, что ты передумал. Скажи, если продолжить.',
 									provider: providerTried,
-								model: chosenModel(settings, providerTried),
-								...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
+									model: chosenModel(settings, providerTried),
+									...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
 									actions: doneActions,
 									activity: sandboxStatsSnapshot(),
 								}
@@ -1462,7 +1621,10 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 							notes.push(`Результат ${action.tool}(${action.args}): ${cards.text.slice(0, 1200)}`)
 						}
 						const noteText = notes.join('\n') + '\nПродолжи ответ пользователю.'
-						const queuedImages = seenImages.length > 0 ? seenImages : pendingVisionImages.splice(0, pendingVisionImages.length)
+						const queuedImages =
+							seenImages.length > 0
+								? seenImages
+								: pendingVisionImages.splice(0, pendingVisionImages.length)
 						const noteMessage: ChatMessagePayload =
 							queuedImages.length > 0
 								? {
@@ -1474,79 +1636,101 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 									}
 								: { role: 'user', content: noteText }
 						pendingVisionImages.length = 0
-						payload = [
-							...payload,
-							{ role: 'assistant', content: raw },
-							noteMessage,
-						]
+						payload = [...payload, { role: 'assistant', content: raw }, noteMessage]
 						// A breath between tool rounds keeps anonymous free tiers
 						// from answering 429 in the middle of a task - kept short,
 						// the player is waiting.
 						await sleep(300, request.signal)
+						// The last round's actions did run - the player gets an honest
+						// "limit reached" instead of a silent drop or a fifth model
+						// call the round loop was never meant to make.
+						if (round === 3) {
+							const text = parsed.text.trim()
+							return {
+								content: text
+									? `${text} (Лимит действий за ход достигнут — напиши «продолжай», чтобы я закончил.)`
+									: `Достиг лимита раундов: выполнил ${doneActions.length} действий. Напиши «продолжай», чтобы я закончил.`,
+								provider: providerTried,
+								model: chosenModel(settings, providerTried),
+								...(fallbackTag() ? { fallbackNote: fallbackTag() } : {}),
+								actions: doneActions,
+								activity: sandboxStatsSnapshot(),
+							}
+						}
 					}
-					} catch (error) {
-						lastError = error
-						if (request.signal?.aborted) throw error
-						if (providerId === settings.provider && !primaryFailure) {
-							// The player's own choice failed: its story leads the report.
-							primaryFailure = String((error as Error)?.message ?? error).slice(0, 200)
-						}
-						if (!failedProviderLabel) {
-							failedProviderLabel = providerById(providerId)?.label ?? providerId
-							failedDetail = String((error as Error)?.message ?? error).slice(0, 140)
-						}
-											if (isPermanentRefusal(error)) blockProvider(providerId)
-						if (!isRetryable(error)) {
-							// A hung-up or silent channel (TimeoutError, "Request
-							// canceled") is nobody's settings problem: the next provider
-							// in line answers instead, and the second pass returns to
-							// this one after the breather - the turn itself must live.
-							const failureName = (error as { name?: string } | null | undefined)?.name
-							if (
-								failureName === 'TimeoutError' ||
-								/cancel|abort|timed?\s?out|не дождался/i.test(String(error))
-							) {
-								continue
-							}
-							if (
-											providerId === settings.provider &&
-											!(/free_rate_limited|Free models are not available/i.test(String(error)))
-										) {
-								// A hard no from the chosen provider (a bad key, a 403, a
-								// missing model) is worth telling immediately and clearly,
-								// with the peak-hours hint when it applies.
-								const label = providerById(providerId)?.label ?? providerId
-								const advice =
-									providerId === 'zai' && zaiPeakHoursNow()
-									? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
-									: 'Проверь этот провайдер в настройках моделей, или подожди минуту и напиши ещё раз.'
-								throw new Error(`${label} не ответил: ${String((error as Error)?.message ?? error).slice(0, 200)}. ${advice}`)
-							}
-							// A fallback that hard-fails is simply skipped - the next
-							// one in line still gets its chance.
+				} catch (error) {
+					lastError = error
+					if (request.signal?.aborted) throw error
+					if ((error as Error & { missingKey?: boolean }).missingKey) {
+						// A provider without its key is skipped, not fatal: the
+						// chain's next candidate answers, and the final message
+						// tells the player exactly where to paste the key.
+						continue
+					}
+					if (providerId === settings.provider && !primaryFailure) {
+						// The player's own choice failed: its story leads the report.
+						primaryFailure = String((error as Error)?.message ?? error).slice(0, 200)
+					}
+					if (!failedProviderLabel) {
+						failedProviderLabel = providerById(providerId)?.label ?? providerId
+						failedDetail = String((error as Error)?.message ?? error).slice(0, 140)
+					}
+					if (isPermanentRefusal(error)) blockProvider(providerId)
+					if (!isRetryable(error)) {
+						// A hung-up or silent channel (TimeoutError, "Request
+						// canceled") is nobody's settings problem: the next provider
+						// in line answers instead, and the second pass returns to
+						// this one after the breather - the turn itself must live.
+						const failureName = (error as { name?: string } | null | undefined)?.name
+						if (
+							failureName === 'TimeoutError' ||
+							/cancel|abort|timed?\s?out|не дождался/i.test(String(error))
+						) {
 							continue
 						}
+						if (
+							providerId === settings.provider &&
+							!/free_rate_limited|Free models are not available/i.test(String(error))
+						) {
+							// A hard no from the chosen provider (a bad key, a 403, a
+							// missing model) is worth telling immediately and clearly,
+							// with the peak-hours hint when it applies.
+							const label = providerById(providerId)?.label ?? providerId
+							const advice =
+								providerId === 'zai' && zaiPeakHoursNow()
+									? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
+									: 'Проверь этот провайдер в настройках моделей, или подожди минуту и напиши ещё раз.'
+							throw new Error(
+								`${label} не ответил: ${String((error as Error)?.message ?? error).slice(0, 200)}. ${advice}`,
+							)
+						}
+						// A fallback that hard-fails is simply skipped - the next
+						// one in line still gets its chance.
+						continue
 					}
+				}
 			}
 		}
 	} finally {
 		endAgentRun()
 	}
-		const detail = lastError ? String((lastError as Error)?.message ?? lastError) : ''
-		// The chosen provider's own failure leads; whatever the fallbacks did
-		// afterwards is context, not the headline - the player picked the
-		// first one, so its story is the one that answers "why did it fail".
-		const headline = primaryFailure || detail || 'Ни один провайдер не ответил'
-		const label = providerById(aiSettings.value.provider)?.label ?? aiSettings.value.provider
-					const story = primaryFailure || detail || ''
-					const advice = /free_rate_limited|Free models are not available/i.test(story)
-						? 'Бесплатные модели этого провайдера не пускают твой ключ: владельцу аккаунта нужно привязать GitHub на сайте провайдера. Выбери другого провайдера или платную модель в настройках моделей - остальные из цепочки тоже были опрошены.'
-						: /не дождался|TimeoutError|cancel|abort|timed?\s?out/i.test(story)
-						? 'Провайдер не ответил вовремя: канал молчал или оборвался посреди запроса. Подожди минуту и напиши ещё раз — обычно проходит со второй попытки, или выбери другого провайдера в настройках моделей.'
-						: aiSettings.value.provider === 'zai' && zaiPeakHoursNow()
-						? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
-						: 'Подожди минуту и напиши ещё раз, или проверь ключ и модель этого провайдера в настройках моделей.'
-		throw new Error(`${label} не ответил: ${headline || 'ни один канал не ответил'}. ${advice}`)
+	const detail = lastError ? String((lastError as Error)?.message ?? lastError) : ''
+	// The chosen provider's own failure leads; whatever the fallbacks did
+	// afterwards is context, not the headline - the player picked the
+	// first one, so its story is the one that answers "why did it fail".
+	const headline = primaryFailure || detail || 'Ни один провайдер не ответил'
+	const label = providerById(aiSettings.value.provider)?.label ?? aiSettings.value.provider
+	const story = primaryFailure || detail || ''
+	const advice = /Нужен API-ключ/i.test(story)
+		? 'У основного провайдера не указан API-ключ — открой панель моделей (чип модели в чате) и вставь бесплатный ключ, или выбери провайдера без ключа (Pollinations).'
+		: /free_rate_limited|Free models are not available/i.test(story)
+			? 'Бесплатные модели этого провайдера не пускают твой ключ (иногда нужен привязанный GitHub-аккаунт на сайте провайдера). Выбери другого провайдера в настройках моделей - остальные из цепочки тоже были опрошены.'
+			: /не дождался|TimeoutError|cancel|abort|timed?\s?out/i.test(story)
+				? 'Провайдер не ответил вовремя: канал молчал или оборвался посреди запроса. Подожди минуту и напиши ещё раз — обычно проходит со второй попытки, или выбери другого провайдера в настройках моделей.'
+				: aiSettings.value.provider === 'zai' && zaiPeakHoursNow()
+					? 'Сейчас часы пик Z.AI (10:00–22:00 по Пекину), сервер занят, но запросы проходят — обычно хватает минуты терпения.'
+					: 'Подожди минуту и напиши ещё раз, или проверь ключ и модель этого провайдера в настройках моделей.'
+	throw new Error(`${label} не ответил: ${headline || 'ни один канал не ответил'}. ${advice}`)
 }
 
 // ---- Tool implementations ------------------------------------------------
@@ -1635,7 +1819,10 @@ export async function searchWeb(query: string): Promise<{ title: string; url: st
 		}).then(async (response) => {
 			if (!response.ok) throw new Error(`HTTP ${response.status}`)
 			const html = await response.text()
-			const hits = [...html.matchAll(/<h2><a href="([^"]+)"[^>]*>([\s\S]*?)<\/a><\/h2>/g)].slice(0, 6)
+			const hits = [...html.matchAll(/<h2><a href="([^"]+)"[^>]*>([\s\S]*?)<\/a><\/h2>/g)].slice(
+				0,
+				6,
+			)
 			if (hits.length === 0) throw new Error('пустая выдача')
 			return new Response(
 				hits.map((match) => `<a class="result__a" href="${match[1]}">${match[2]}</a>`).join(''),
@@ -1675,10 +1862,13 @@ async function webSearch(query: string): Promise<string> {
 async function fetchModrinthCard(projectId: string): Promise<AiModCard | null> {
 	try {
 		const facets = encodeURIComponent(JSON.stringify([[`project_id:${projectId}`]]))
-		const response = await proxiedFetch(`https://api.modrinth.com/v2/search?limit=1&facets=${facets}`, {
-			headers: { Accept: 'application/json' },
-			signal: AbortSignal.timeout(10000),
-		})
+		const response = await proxiedFetch(
+			`https://api.modrinth.com/v2/search?limit=1&facets=${facets}`,
+			{
+				headers: { Accept: 'application/json' },
+				signal: AbortSignal.timeout(10000),
+			},
+		)
 		if (!response.ok) return null
 		const data = (await response.json()) as {
 			hits?: {
@@ -1824,14 +2014,18 @@ registerAiToolHandler(async (tool, args) => {
 		const file = separator < 0 ? '' : args.slice(separator + 2).trim()
 		if (!prompt) return 'Опиши, что нарисовать'
 		const name = file || `image-${Date.now()}.png`
-		if (!/\.(png|jpg|jpeg|webp)$/i.test(name)) return 'Имя файла должно заканчиваться на .png, .jpg или .webp'
+		if (!/\.(png|jpg|jpeg|webp)$/i.test(name))
+			return 'Имя файла должно заканчиваться на .png, .jpg или .webp'
 		try {
 			const size = name.match(/(\d+)x(\d+)/i)
 			const width = Math.min(1024, Math.max(256, Number(size?.[1]) || 1024))
 			const height = Math.min(1024, Math.max(256, Number(size?.[2]) || 1024))
 			let bytes: Uint8Array
 			const imageProvider = aiSettings.value.imageProvider || 'pollinations'
-			const zaiKey = imageProvider === 'zai' ? (aiSettings.value.imageKeys.zai ?? aiSettings.value.keys.zai ?? '') : ''
+			const zaiKey =
+				imageProvider === 'zai'
+					? (aiSettings.value.imageKeys.zai ?? aiSettings.value.keys.zai ?? '')
+					: ''
 			if (imageProvider === 'zai' && zaiKey) {
 				const response = await proxiedFetch('https://api.z.ai/api/paas/v4/images/generations', {
 					method: 'POST',
@@ -1878,7 +2072,10 @@ registerAiToolHandler(async (tool, args) => {
 			)
 			if (!response.ok) return `Обои не нашлись: HTTP ${response.status}`
 			const data = (await response.json()) as { data?: { path?: string }[] }
-			const hits = (data.data ?? []).map((hit) => hit.path).filter(Boolean).slice(0, 6)
+			const hits = (data.data ?? [])
+				.map((hit) => hit.path)
+				.filter(Boolean)
+				.slice(0, 6)
 			if (hits.length === 0) return 'Ничего не нашлось - попробуй другой запрос'
 			return [
 				`Нашёл обои по запросу «${query}» (покажи лучшие через view_image и предложи поставить на фон):`,
@@ -1934,7 +2131,9 @@ registerAiToolHandler(async (tool, args) => {
 			}
 			version = typeof manifest.version === 'string' ? manifest.version : ''
 			if (typeof manifest.icon === 'string' && manifest.icon) {
-				iconDataUrl = await sandboxReadDataUrl(`${parts[0]}/${manifest.icon}`).catch(() => undefined)
+				iconDataUrl = await sandboxReadDataUrl(`${parts[0]}/${manifest.icon}`).catch(
+					() => undefined,
+				)
 			}
 		} catch {
 			/* not a fabric mod or no manifest - the card ships without extras */
@@ -1949,10 +2148,14 @@ registerAiToolHandler(async (tool, args) => {
 	}
 	if (tool === 'launcher_install') {
 		const parts = args.split('::').map((part) => part.trim())
-		const projectIds = (parts[0] ?? '').split(',').map((id) => id.trim()).filter(Boolean)
+		const projectIds = (parts[0] ?? '')
+			.split(',')
+			.map((id) => id.trim())
+			.filter(Boolean)
 		const kind = (parts[1] ?? 'mod').toLowerCase()
 		const instanceId = parts[2] ?? ''
-		if (projectIds.length === 0) return 'Укажите id проекта (из launcher_search_mods или /project/<id>)'
+		if (projectIds.length === 0)
+			return 'Укажите id проекта (из launcher_search_mods или /project/<id>)'
 		if (!['mod', 'resourcepack', 'shader', 'datapack'].includes(kind)) {
 			return 'Тип бывает: mod, resourcepack, shader, datapack (сборки ставятся через open_creation_modal)'
 		}
@@ -2011,7 +2214,10 @@ registerAiToolHandler(async (tool, args) => {
 		return sandboxDelete(args.trim())
 	}
 	if (tool === 'sandbox_pack') {
-		const parts = args.split('::').map((part) => part.trim()).filter(Boolean)
+		const parts = args
+			.split('::')
+			.map((part) => part.trim())
+			.filter(Boolean)
 		if (parts.length < 2) {
 			return 'Формат: <<sandbox_pack|архив.zip::путь1::путь2>>'
 		}
@@ -2042,9 +2248,7 @@ registerAiToolHandler(async (tool, args) => {
 		}
 		const appended = `${previous}${previous && !previous.endsWith('\n') ? '\n' : ''}- ${note}\n`
 		const trimmed =
-			appended.length > 4000
-				? `…(старое обрезано)\n${appended.slice(-4000)}`
-				: appended
+			appended.length > 4000 ? `…(старое обрезано)\n${appended.slice(-4000)}` : appended
 		return sandboxWrite(MEMORY_FILE, trimmed)
 	}
 	if (tool === 'session_list') return readSessionsOverview()
@@ -2066,7 +2270,9 @@ registerAiToolHandler(async (tool, args) => {
 			const response = await proxiedFetch(url)
 			if (!response.ok) return `Фон не скачался: HTTP ${response.status}`
 			const kind = (response.headers.get('content-type') ?? 'image/png').split('/')[1] ?? 'png'
-			const safeKind = /png|jpe?g|webp|gif|avif|bmp/.test(kind) ? kind.replace('jpeg', 'jpg') : 'png'
+			const safeKind = /png|jpe?g|webp|gif|avif|bmp/.test(kind)
+				? kind.replace('jpeg', 'jpg')
+				: 'png'
 			const bytes = new Uint8Array(await response.arrayBuffer())
 			if (bytes.length > 25 * 1024 * 1024) return 'Картинка больше 25 МБ'
 			const path = await writeSandboxBinary(`background.${safeKind}`, bytes)
@@ -2145,10 +2351,7 @@ registerAiToolHandler(async (tool, args) => {
 			/* a missing key is the ordinary case */
 		}
 		if (lines.length === 0) return 'Ничего не нашлось'
-		return (
-			lines.join('\n') +
-			cards.map((card) => `\n@@MOD@@${JSON.stringify(card)}`).join('')
-		)
+		return lines.join('\n') + cards.map((card) => `\n@@MOD@@${JSON.stringify(card)}`).join('')
 	}
 	if (tool === 'skin_recommend') {
 		// The skin library lives on laby.net; an empty query returns whatever
@@ -2168,17 +2371,12 @@ registerAiToolHandler(async (tool, args) => {
 				variant: labySkinVariant(skin),
 				uses: skin.use_count,
 			}))
-			return (
-				lines.join('\n') +
-				cards.map((card) => `\n@@SKIN@@${JSON.stringify(card)}`).join('')
-			)
+			return lines.join('\n') + cards.map((card) => `\n@@SKIN@@${JSON.stringify(card)}`).join('')
 		} catch (error) {
 			return `Скины не нашлись: ${String(error).slice(0, 150)}`
 		}
 	}
 	if (tool === 'music_add_url') {
-
-
 		const url = args.trim()
 		if (!/^https?:\/\//.test(url)) return 'Нужна прямая http(s) ссылка на аудиофайл'
 		try {
@@ -2313,7 +2511,15 @@ export function stopAgentRun(): void {
 }
 
 function resetTurnState(): void {
-	agentTurn.value = { actions: [], folders: [], images: [], mods: [], jars: [], polls: [], skins: [] }
+	agentTurn.value = {
+		actions: [],
+		folders: [],
+		images: [],
+		mods: [],
+		jars: [],
+		polls: [],
+		skins: [],
+	}
 	agentThoughts.value = []
 }
 
@@ -2362,6 +2568,17 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 			content: message.content,
 		}))
 	const images = files.filter((file) => file.kind === 'image')
+	// The fast lane: a plain greeting with nothing attached and no question
+	// from the agent pending goes out with the pocket prompt, so it comes
+	// back in seconds instead of after a full launcher briefing.
+	const lastAssistant = [...aiHistory.value]
+		.reverse()
+		.find((message) => message.role === 'assistant')
+	const fastPath = files.length === 0 && isSimpleChat(text) && !lastAssistant?.question
+	// Live text: the reply is drawn as the model writes it. Tool commands
+	// stay hidden while streaming - everything from the first << is
+	// protocol, not prose for the player.
+	let streamedAny = false
 
 	try {
 		const result = await aiComplete({
@@ -2369,6 +2586,13 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 			messages: payload,
 			images,
 			signal: controller.signal,
+			fastPath,
+			onDelta: (_chunk, full) => {
+				if (full) streamedAny = true
+				agentPhase.value = 'speaking'
+				const cut = full.indexOf('<<')
+				agentStreaming.value = cut >= 0 ? full.slice(0, cut).trimEnd() : full
+			},
 			onActionDone: (tool, args, result2) => {
 				agentPhase.value = 'working'
 				if (!agentTurn.value.actions.includes(tool)) {
@@ -2382,7 +2606,8 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 					const fresh = cards.mods.filter(
 						(mod) =>
 							!agentTurn.value.mods.some(
-								(existing) => existing.source === mod.source && existing.projectId === mod.projectId,
+								(existing) =>
+									existing.source === mod.source && existing.projectId === mod.projectId,
 							),
 					)
 					agentTurn.value = { ...agentTurn.value, mods: [...agentTurn.value.mods, ...fresh] }
@@ -2394,14 +2619,17 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 					agentTurn.value = { ...agentTurn.value, jars: [...agentTurn.value.jars, ...fresh] }
 				}
 				if (cards.polls.length > 0) {
-					agentTurn.value = { ...agentTurn.value, polls: [...agentTurn.value.polls, ...cards.polls] }
+					agentTurn.value = {
+						...agentTurn.value,
+						polls: [...agentTurn.value.polls, ...cards.polls],
+					}
 				}
-							if (cards.skins.length > 0) {
-								const freshSkins = cards.skins.filter(
-									(skin) => !agentTurn.value.skins.some((existing) => existing.hash === skin.hash),
-								)
-								agentTurn.value = { ...agentTurn.value, skins: [...agentTurn.value.skins, ...freshSkins] }
-							}
+				if (cards.skins.length > 0) {
+					const freshSkins = cards.skins.filter(
+						(skin) => !agentTurn.value.skins.some((existing) => existing.hash === skin.hash),
+					)
+					agentTurn.value = { ...agentTurn.value, skins: [...agentTurn.value.skins, ...freshSkins] }
+				}
 				if (cards.image && !agentTurn.value.images.includes(cards.image)) {
 					agentTurn.value = { ...agentTurn.value, images: [...agentTurn.value.images, cards.image] }
 				}
@@ -2441,6 +2669,8 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 			content: result.content,
 			ts: Date.now(),
 			provider: result.provider,
+			model: result.model,
+			...(result.fallbackNote ? { fallbackNote: result.fallbackNote } : {}),
 			actions: result.actions,
 			activity: result.activity
 				? {
@@ -2450,13 +2680,16 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 						mods: agentTurn.value.mods,
 						jars: agentTurn.value.jars,
 						polls: agentTurn.value.polls,
-				skins: agentTurn.value.skins,
+						skins: agentTurn.value.skins,
 					}
 				: undefined,
 			question: result.question,
 		}
 		agentPhase.value = 'speaking'
-		if (aiSettings.value.chatEffects) {
+		// A reply that already streamed onto the screen is not typed out a
+		// second time - the typewriter is only for providers that answer
+		// with one buffered JSON object.
+		if (aiSettings.value.chatEffects && !streamedAny) {
 			await typeOut(result.content)
 			pushAiMessage(done)
 		} else {
