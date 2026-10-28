@@ -26,6 +26,7 @@ import {
 	Input,
 	NavTabs,
 	NewModal,
+	Pagination,
 	SkinButton,
 	SkinPreviewRenderer,
 	useVIntl,
@@ -42,17 +43,17 @@ import {
 	labySkinPageUrl,
 	labySkinPreview,
 	labySkinRenderSources,
-	remotePreviewDataUrl,
 	labySkinTags,
 	labySkinTexture,
 	labySkinVariant,
 	pngDataUrl,
+	remotePreviewDataUrl,
 	searchLabySkins,
 	similarSkinCategory,
 	similarSkinReference,
 } from '@/helpers/laby-skins'
-import { add_and_equip_custom_skin, type Cape, get_available_capes } from '@/helpers/skins'
 import { playSoundEffect } from '@/helpers/portalrinth-sfx'
+import { add_and_equip_custom_skin, type Cape, get_available_capes } from '@/helpers/skins'
 import { type BreadcrumbDefinition, injectBreadcrumbManager } from '@/shared/breadcrumbs'
 
 const { formatMessage } = useVIntl()
@@ -484,6 +485,24 @@ async function preloadNext(q: string, p: number) {
 	}
 }
 
+/**
+ * laby.net never says how many pages there are, so the page strip counts the
+ * pages known so far: every page seen, plus the next one while there is more.
+ * It looks and works exactly like the strip on the other Discover tabs.
+ */
+const furthestPage = ref(1)
+watch(page, (value) => {
+	if (value > furthestPage.value) furthestPage.value = value
+})
+const pageCount = computed(() =>
+	Math.max(furthestPage.value, page.value + (hasMore.value ? 1 : 0)),
+)
+
+function switchPage(p: number) {
+	goTo(p)
+	document.querySelector('.app-viewport')?.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 function goTo(p: number) {
 	if (p < 1 || loading.value || p === page.value) return
 	page.value = p
@@ -707,6 +726,13 @@ const usesFormatter = new Intl.NumberFormat()
 				<Button v-if="similarMode" type="outlined" @click="showAll">
 					<XIcon /> {{ formatMessage(messages.backToAll) }}
 				</Button>
+				<Pagination
+					v-else-if="skins.length > 0"
+					:page="page"
+					:count="pageCount"
+					class="ml-auto"
+					@switch-page="switchPage"
+				/>
 			</div>
 		</div>
 
@@ -752,17 +778,9 @@ const usesFormatter = new Intl.NumberFormat()
 		</div>
 		<div
 			v-else-if="!similarMode && skins.length > 0"
-			class="flex items-center justify-center gap-3 py-2"
+			class="flex items-center justify-end gap-3 py-2"
 		>
-			<Button type="outlined" :disabled="loading || page <= 1" @click="goTo(page - 1)">
-				<ChevronLeftIcon />
-			</Button>
-			<span class="text-sm tabular-nums text-secondary">
-				{{ formatMessage(hasMore ? messages.page : messages.pageLast, { page }) }}
-			</span>
-			<Button type="outlined" :disabled="loading || !hasMore" @click="goTo(page + 1)">
-				<ChevronRightIcon />
-			</Button>
+			<Pagination :page="page" :count="pageCount" @switch-page="switchPage" />
 		</div>
 	</div>
 

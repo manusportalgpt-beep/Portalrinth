@@ -2,119 +2,143 @@
 
 <div align="center">
 
-[![Release](https://img.shields.io/github/v/release/Everelsu/Portalrinth?include_prereleases&style=for-the-badge&logo=github&logoColor=white&label=Release&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/releases)
-[![Downloads](https://img.shields.io/github/downloads/Everelsu/Portalrinth/total?style=for-the-badge&logo=github&logoColor=white&label=Downloads&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/releases)
-[![License](https://img.shields.io/badge/License-GPL--3.0-ac51fb?style=for-the-badge&logo=gnu&logoColor=white&labelColor=16181c)](apps/app/LICENSE)
-[![Stars](https://img.shields.io/github/stars/Everelsu/Portalrinth?style=for-the-badge&logo=github&logoColor=white&label=Stars&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/stargazers)
+[![Release](https://img.shields.io/github/v/release/manusportalgpt-beep/Portalrinth?style=for-the-badge&logo=github&logoColor=white&label=Релиз&labelColor=16181c&color=ac51fb)](https://github.com/manusportalgpt-beep/Portalrinth/releases)
+[![Downloads](https://img.shields.io/github/downloads/manusportalgpt-beep/Portalrinth/total?style=for-the-badge&logo=github&logoColor=white&label=Загрузки&labelColor=16181c&color=ac51fb)](https://github.com/manusportalgpt-beep/Portalrinth/releases)
+[![License](https://img.shields.io/badge/Лицензия-GPL--3.0-ac51fb?style=for-the-badge&logo=gnu&logoColor=white&labelColor=16181c)](apps/app/LICENSE)
 
 [English](README.md) · **Русский**
 
-**Ely.by, офлайн-аккаунты и паки с CurseForge — в том же Modrinth App, к которому ты привык.**
+**Лаунчер Minecraft на основе Modrinth App: Modrinth и CurseForge в одном списке, скины, LAN через интернет, ИИ-помощник и аккаунты Microsoft, Ely.by и оффлайн.**
 
-🌙 Форк Modrinth App, который понимает Ely.by, ставит паки с CurseForge и возвращает скины всем игрокам на офлайн-серверах 🚀
+<a href="https://github.com/manusportalgpt-beep/Portalrinth/releases/latest"><img src=".github/assets/readme/download-windows.ru.svg" alt="Скачать для Windows" height="56"/></a>
+<a href="https://github.com/manusportalgpt-beep/Portalrinth/releases/latest"><img src=".github/assets/readme/download-macos.ru.svg" alt="Скачать для macOS" height="56"/></a>
+<a href="https://github.com/manusportalgpt-beep/Portalrinth/releases/latest"><img src=".github/assets/readme/download-linux.ru.svg" alt="Скачать для Linux" height="56"/></a>
 
-<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-windows.ru.svg" alt="Скачать для Windows" height="56"/></a>
-<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-macos.ru.svg" alt="Скачать для macOS" height="56"/></a>
-<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-linux.ru.svg" alt="Скачать для Linux" height="56"/></a>
-
-[Список изменений](https://everelsu.github.io/Portalrinth/) · [Релизы](https://github.com/Everelsu/Portalrinth/releases) · [Issues](https://github.com/Everelsu/Portalrinth/issues) · [Обсуждения](https://github.com/Everelsu/Portalrinth/discussions) · [Оригинал](https://github.com/modrinth/code)
+[Релизы](https://github.com/manusportalgpt-beep/Portalrinth/releases) · [Issues](https://github.com/manusportalgpt-beep/Portalrinth/issues) · [Noctrinth](https://github.com/Everelsu/Noctrinth) · [Modrinth](https://github.com/modrinth/code)
 
 </div>
 
 ---
 
+## Что это
+
+Portalrinth — настольный лаунчер Minecraft. В основе Modrinth App и его форк Noctrinth, поверх — собственные возможности Portalrinth. Интерфейс на русском, с полупрозрачными панелями с размытием поверх фона, который можно поставить свой.
+
+## Обзор: Modrinth и CurseForge
+
+<div align="center">
+<img src=".github/assets/screenshots/discover-modpacks.png" alt="Обзор сборок с сортировкой, количеством на странице и пагинацией" width="100%"/>
+<br/><sub>Обзор сборок: сортировка, количество на странице, страницы, установка в один клик</sub>
+</div>
+
+- Разделы: сборки, моды, наборы ресурсов, наборы данных, шейдеры, серверы и скины.
+- Источник выбирается одной кнопкой: Modrinth, CurseForge или оба сразу. В режиме «оба» список общий и без повторов, а на карточке проекта, который есть на обеих платформах, можно выбрать, откуда ставить.
+- Проекты CurseForge ставятся прямо в сборку, файлы распознаются по отпечатку и обновляются.
+- Перевод описаний встроенным переводчиком (Google, или DeepL со своим ключом).
+- В свёрнутой боковой панели фильтры показываются иконками; там же кнопки «Открыть фильтры», «Скрывать установленные» и «Сбросить фильтры».
+
+<div align="center">
+<img src=".github/assets/screenshots/platform-picker.png" alt="Меню выбора платформы: Modrinth, Modrinth + CurseForge, CurseForge" width="380"/>
+<br/><sub>Выбор платформы</sub>
+</div>
+
+## Скины
+
+<div align="center">
+<img src=".github/assets/screenshots/skins-discover.png" alt="Каталог популярных скинов с поиском" width="100%"/>
+<br/><sub>Каталог скинов: поиск, популярные, страницы</sub>
+</div>
+
+- Каталог популярных скинов (laby.net) с поиском и страницами — как в остальных разделах Обзора.
+- 3D-превью: модель поворачивается, ходит, приседает, внешний слой можно скрыть. Можно примерить плащ.
+- Похожие скины к выбранному, без стандартных Стива и Алекс.
+- Скин ставится на аккаунт в одно нажатие.
+- Аккаунты Microsoft, Ely.by и оффлайн. На оффлайн-серверах лаунчер находит скины игроков по нику на Ely.by и в Mojang.
+
+## LAN через интернет
+
+<div align="center">
+<img src=".github/assets/screenshots/lan.png" alt="Страница LAN" width="100%"/>
+<br/><sub>LAN: открытый в игре мир становится доступен друзьям через интернет</sub>
+</div>
+
+- Мир, открытый в Minecraft для сети, можно отдать друзьям через интернет — без проброса портов.
+- Видно, кто подключён и в каком режиме идёт игра.
+- Для аккаунтов Ely.by токен обновляется сам.
+
+## ИИ-помощник
+
+<div align="center">
+<img src=".github/assets/screenshots/ai-assistant.png" alt="ИИ-помощник" width="100%"/>
+<br/><sub>ИИ-помощник работает прямо в лаунчере</sub>
+</div>
+
+- Отвечает про моды, сборки, скины и ошибки, а действия выполняет сам: ищет и ставит моды в выбранную сборку (только совместимые версии, с зависимостями), создаёт сборки, ставит модпаки, обновляет моды, запускает игру и открывает LAN.
+- Видит сборку целиком: версию Minecraft, ядро и его версию, источник и обновления.
+- Гайды с Fandom и Minecraft Wiki показывает карточками, умеет писать код и делать сайты с предпросмотром.
+- Команды через «/», режимы «Веб-поиск» и «Глубокое мышление», работа с картинками.
+- Бесплатные модели: GLM (по умолчанию), Kilo, OVH, OpenRouter, Pollinations; DeepSeek, Kimi и другие через бесплатный ключ NVIDIA. Если одна модель не отвечает, помощник переключается на следующую.
+- Помнит разговоры между чатами. Пока он работает, панель с ходом работы видна справа от часов на любой странице.
+
+## Сборки
+
+<div align="center">
+<table>
+<tr>
+<td width="50%"><img src=".github/assets/screenshots/instance-log.png" alt="Журнал сборки с найденной причиной ошибки" width="100%"/><br/><sub>Журнал: лаунчер сам находит вероятную причину сбоя</sub></td>
+<td width="50%"><img src=".github/assets/screenshots/instance-notes.png" alt="Заметки сборки" width="100%"/><br/><sub>Заметки к сборке</sub></td>
+</tr>
+</table>
+</div>
+
+- Вкладки сборки: контент, файлы, миры, заметки, журнал и доступ.
+- Журнал с поиском и фильтром по уровню. Лаунчер находит вероятную причину сбоя и показывает строку, где она видна.
+- Заметки к сборке и напоминание о них при запуске.
+- Установка модпаков CurseForge `.zip`: в очереди, с докачкой и чистым откатом при ошибке.
+- Импорт из Modrinth App, Prism, MultiMC, ATLauncher, GDLauncher и CurseForge.
+- Чистый запуск без модов и запуск второй копии сборки под другим аккаунтом.
+
 ## Скриншоты
 
 <div align="center">
-<table>
-<tr>
-<td width="62%"><img src=".github/assets/screenshots/ely-by-skins.png" alt="Сохранённые скины аккаунта Ely.by в выборе скина" width="100%"/><br/><sub>Скины Ely.by — надеть и загрузить прямо из лаунчера</sub></td>
-<td width="38%"><img src=".github/assets/screenshots/accounts.png" alt="Окно добавления аккаунта: Microsoft, Ely.by или офлайн" width="100%"/><br/><sub>Microsoft, Ely.by или просто ник</sub></td>
-</tr>
-</table>
+<img src=".github/assets/screenshots/screenshot-viewer.png" alt="Просмотр скриншота" width="100%"/>
+<br/><sub>Просмотр скриншотов: масштаб, редактирование, копирование, папка, фон лаунчера, удаление</sub>
 </div>
 
-## Зачем нужен Portalrinth
+- Скриншоты всех сборок в одном месте, с плавным переключением.
+- Редактор с инструментами, включая «Заливку».
+- Любой скриншот можно сделать фоном лаунчера.
 
-Modrinth App — действительно хороший лаунчер, но он умеет входить только через Microsoft, ставить только `.mrpack` с самого Modrinth и показывает рекламу. Если ты играешь через Ely.by или на офлайн-серверах, держишь полку зипов с CurseForge или сидишь за заблокированным подключением, приходится держать второй лаунчер ради этих пробелов. Portalrinth закрывает их в том же приложении и идёт за оригиналом релиз в релиз.
+## Остальное
 
-## Что добавляет Portalrinth
+- Шапка окна: часы, погода, тест скорости интернета, музыкальный плеер с визуализатором.
+- Свой цвет акцента (цветовой круг) и градиент на выбранных вкладках.
+- Прокси для всех запросов лаунчера.
+- Без рекламы.
+- Настройки → «Изменения»: проверка обновлений, автоустановка новой версии при запуске и списки изменений Portalrinth, Noctrinth и Modrinth App с переводом.
 
-### Аккаунты и скины
+## Установка и обновления
 
-- **Аккаунты Ely.by** — вход через страницу самого Ely.by, запуск через authlib-injector; скины можно смотреть, надевать, загружать и удалять в той же сетке, что и у аккаунта Microsoft
-- **Офлайн-аккаунты** — просто ник, для одиночной игры и офлайн-серверов; на нём виден плащ, который у этого ника есть в OptiFine, LabyMod, MinecraftCapes или SkinMC
-- **Скины для всех игроков** — офлайн-серверы не передают скины, и все ходят Стивами; лаунчер ищет каждого по нику у Ely.by и Mojang, без модов с обеих сторон
-- **Две копии одной сборки** — запуск уже запущенной сборки вторым аккаунтом, у каждой копии своя консоль
+Скачайте установщик для своей системы из [последнего релиза](https://github.com/manusportalgpt-beep/Portalrinth/releases/latest).
 
-<div align="center"><img src=".github/assets/screenshots/skin-preview.gif" alt="Превью скина поворачивается, ник остаётся над головой" width="280"/><br/><sub>Ник поворачивается вместе с моделью, как табличка</sub></div>
+| Система | Файл                                |
+| ------- | ----------------------------------- |
+| Windows | Установщик `x64-setup.exe` (NSIS)   |
+| macOS   | `universal.dmg` (Intel и Apple Silicon) |
+| Linux   | `.AppImage` или `.deb`              |
 
-### Сборки и контент
-
-- **Установка модпаков CurseForge из `.zip`** — в очереди, с возобновлением, с чистым откатом при ошибке и с иконкой самого пака
-- **CurseForge-сборки приезжают целиком** — импорт докачивает моды, которых не хватает в папке, и подписывает каждый файл CurseForge настоящим названием, автором и иконкой
-- **Миграция из Modrinth App** — баннер предлагает перенести сборки: все разом или выборочно, с опцией удалить их из источника
-- **Язык поиска по библиотеке** — `@sodium` находит сборки с модом, `#shader` фильтрует по типу, `!outdated` по состоянию, а `-` переворачивает условие
-- **Современная Java для 1.7.10** — один клик ставит lwjgl3ify или Cleanroom вместе с патчами лаунчера, ещё один всё возвращает
-- **Видеокарта для каждой Java** на Windows — для ноутбуков, где игра запускается не на той GPU
-- **Анимированные иконки** — GIF остаётся анимированным в библиотеке и переживает экспорт в `.mrpack`
-
-<div align="center"><img src=".github/assets/screenshots/library-search.gif" alt="Ввод @sodium в поиск библиотеки оставляет только сборки с Sodium" width="100%"/><br/><sub><code>@sodium</code> оставляет в библиотеке только сборки с ним</sub></div>
-
-### Вокруг приложения
-
-- **Перевод описаний** — Google Translate или DeepL со своим ключом, с возвратом к оригиналу одной кнопкой
-- **Пресеты акцента** — девять цветов для всего интерфейса, заставки, иконок окна и панели задач, с необязательной подкраской фона
-- **Жесты тачпада** — два пальца вбок листают назад и вперёд, как в Chrome
-- **Коллекции и отслеживаемые проекты**, а также **уведомления Modrinth** — прямо в приложении
-- **Прокси** — один URL (`http://`, `https://`, `socks5://`, `socks5h://`) для всех запросов лаунчера, для регионов, где Modrinth заблокирован
-- **Без рекламы** — реклама, окно согласия и допродажи Modrinth отключены
-
-<div align="center">
-<table>
-<tr>
-<td width="50%"><img src=".github/assets/screenshots/translate.gif" alt="Описание китайского модпака перетекает в английский и обратно" width="100%"/><br/><sub>Китайское описание — по-английски и обратно</sub></td>
-<td width="50%"><img src=".github/assets/screenshots/accents.gif" alt="Переключение девяти пресетов акцента перекрашивает окно настроек" width="100%"/><br/><sub>Девять акцентов, применяются сразу по клику</sub></td>
-</tr>
-</table>
-</div>
-
-## Начало работы
-
-### Установка
-
-Возьми установщик для своей платформы из [последнего релиза](https://github.com/Everelsu/Portalrinth/releases/latest):
-
-| Платформа | Примечание                            |
-| --------- | ------------------------------------- |
-| Windows   | Установщик (NSIS)                     |
-| macOS     | Универсальный — Intel и Apple Silicon |
-| Linux     | Собран на Ubuntu 22.04                |
-
-Обновления подписаны и доставляются автоматически через GitHub Releases — переустанавливать не нужно.
-
-> [!NOTE]
-> Пре-релизные сборки (`0.21.10-beta.1` и подобные) **не** раздаются авто-обновлением. Ставь их вручную; при выходе соответствующего стабильного релиза приложение подхватит его как обычное обновление.
-
-### Перенос инстансов
-
-Уже на Modrinth App? Открой Portalrinth, и баннер предложит импортировать всё найденное. Хочешь выбрать сам? **Создать инстанс → Импорт** покажет Modrinth App рядом с Prism, MultiMC, ATLauncher, GDLauncher и CurseForge.
+Лаунчер сам проверяет релизы на GitHub: новая версия определяется по тегу и по названию релиза (например, `v0.22.0+4`). Если в настройках включено «Ставить обновления сразу», новая версия ставится при запуске лаунчера. Пока идёт игра, обновление не ставится.
 
 ## Сборка из исходников
 
-Нужны [Node.js](https://nodejs.org/) ≥ 24.15, [pnpm](https://pnpm.io/), [Rust](https://www.rust-lang.org/tools/install) и [зависимости Tauri](https://v2.tauri.app/start/prerequisites/).
+Нужны [Node.js](https://nodejs.org/) 24.15 или новее, [pnpm](https://pnpm.io/), [Rust](https://www.rust-lang.org/tools/install) и [зависимости Tauri](https://v2.tauri.app/start/prerequisites/).
 
 ```bash
 pnpm install
-```
-
-Скопируй шаблон окружения в `packages/app-lib/`, затем запусти десктоп-приложение с горячей перезагрузкой:
-
-```bash
 pnpm app:dev
 ```
 
-Перед тем как открыть pull request, прогони проверки фронтенда:
+Перед pull request:
 
 ```bash
 pnpm prepr:frontend:app
@@ -122,34 +146,15 @@ pnpm prepr:frontend:app
 
 ## Структура репозитория
 
-Это монорепозиторий оригинального Modrinth, поэтому в нём куда больше, чем лаунчер — здесь же сайт, backend API и общие библиотеки. Portalrinth поставляет именно десктоп-приложение.
-
-| Путь                                | Что это                                                   |
-| ----------------------------------- | --------------------------------------------------------- |
-| `apps/app`                          | Оболочка Tauri — Rust-команды, окно и настройки апдейтера |
-| `apps/app-frontend`                 | UI лаунчера (Vue 3), список изменений и локали Portalrinth  |
-| `packages/app-lib`                  | Ядро лаунчера — аккаунты, инстансы, установки, импорт     |
-| `packages/ui`                       | Общая библиотека Vue-компонентов                          |
-| `apps/frontend`, `apps/labrinth`, … | Сайт и backend Modrinth, перенесены из оригинала          |
-
-Для архитектуры и инфраструктуры, не специфичной для форка, справочником остаётся [оригинальный репозиторий](https://github.com/modrinth/code).
-
-## Отношения с оригиналом
-
-Portalrinth синхронизируется с [modrinth/code](https://github.com/modrinth/code) и привязывает свою версию к версии оригинала один в один: если у Modrinth `0.21.9`, у Portalrinth тоже `0.21.9`. Там, где обе стороны реализуют одно и то же, побеждает вариант оригинала, а вариант форка удаляется. Так ушли общий профиль `options.txt`, своя вкладка скриншотов и свой кэш загрузок: синхронизация настроек, страница «Скриншоты» и хранилище контента из оригинала делают то же самое лучше.
-
-Исправление между релизами оригинала выходит микропатчем (`0.21.6+1`) — установки на этой версии получают его как обычное обновление. Тестовые сборки выходят пре-релизами (`0.21.10-beta.1`), которые сортируются выше текущего стабильного релиза и ниже следующего, так что тестеры сразу переходят на настоящий релиз, как только он выходит.
-
-## Участие в разработке
-
-Баг-репорты и pull request'ы приветствуются — начни с [открытия issue](https://github.com/Everelsu/Portalrinth/issues).
-
-Нашёл баг, который не специфичен для Portalrinth? Ему место [в оригинале](https://github.com/modrinth/code/issues) — исправление там получат все, и оно придёт в этот форк при следующей синхронизации.
-
-Если Portalrinth оказался полезен, [поставь звезду](https://github.com/Everelsu/Portalrinth/stargazers).
+| Путь                | Что это                                                   |
+| ------------------- | --------------------------------------------------------- |
+| `apps/app`          | Оболочка Tauri: команды на Rust, окно, обновления         |
+| `apps/app-frontend` | Интерфейс лаунчера (Vue 3), ИИ-помощник, переводы         |
+| `packages/app-lib`  | Ядро лаунчера: аккаунты, сборки, установка, импорт        |
+| `packages/ui`       | Общая библиотека компонентов                              |
 
 ## Лицензия
 
-Десктоп-приложение распространяется под [GPL-3.0](apps/app/LICENSE). У остальных пакетов свои лицензии — см. файл `LICENSE` в каждом из них и [COPYING.md](COPYING.md) для подробностей.
+Приложение распространяется под [GPL-3.0](apps/app/LICENSE). У остальных пакетов свои лицензии — см. файл `LICENSE` в каждом и [COPYING.md](COPYING.md).
 
-Брендинг Modrinth принадлежит Rinth, Inc. и здесь не используется — у Portalrinth свой. Portalrinth — независимый форк, не связанный с Rinth, Inc. и не одобренный ею.
+Portalrinth — независимый проект на основе [Noctrinth](https://github.com/Everelsu/Noctrinth) и [Modrinth App](https://github.com/modrinth/code). Он не связан с Rinth, Inc. и не одобрен ею; товарные знаки Modrinth принадлежат Rinth, Inc.

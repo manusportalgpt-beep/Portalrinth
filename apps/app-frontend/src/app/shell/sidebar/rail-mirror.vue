@@ -7,12 +7,27 @@
  * itself on hover; pressing it presses the real one, so the page cannot tell
  * the difference and nothing has to be taught about the rail.
  */
-import { nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
+import { EyeOffIcon, FilterIcon, FilterXIcon, ToggleRightIcon } from '@modrinth/assets'
+import { computed, nextTick, onBeforeUnmount, shallowRef, watch } from 'vue'
 
 const props = defineProps<{
 	/** Whether the rail is showing; nothing is watched while it is not. */
 	active: boolean
 }>()
+
+const emit = defineEmits<{
+	/** Whether the page has a side panel to show; the rail swaps its own buttons for it. */
+	present: [value: boolean]
+	unfold: []
+}>()
+
+type MirrorSwitch = {
+	id: number
+	label: string
+	active: boolean
+	hidesInstalled: boolean
+	el: HTMLElement
+}
 
 type MirrorItem = {
 	id: number
@@ -30,6 +45,16 @@ const CANDIDATES =
 const MAX_ITEMS = 120
 
 const groups = shallowRef<MirrorGroup[]>([])
+/** The panel's toggles ("Hide installed" and the like): they have no icon of their own. */
+const switches = shallowRef<MirrorSwitch[]>([])
+const anyActive = computed(() =>
+	groups.value.some((group) => group.items.some((item) => item.active)),
+)
+watch(
+	() => groups.value.length > 0 || switches.value.length > 0,
+	(value) => emit('present', value),
+	{ immediate: true },
+)
 
 let observer: MutationObserver | null = null
 let frame = 0
@@ -96,8 +121,30 @@ function collect() {
 	const root = target()
 	if (!root) {
 		groups.value = []
+		switches.value = []
 		return
 	}
+	const toggles: MirrorSwitch[] = []
+	for (const el of root.querySelectorAll<HTMLElement>('[role="switch"]')) {
+		if ((el as HTMLButtonElement).disabled || hiddenWithin(el, root)) continue
+		const label = (
+			el.getAttribute('aria-label') ||
+			el.closest('label')?.textContent ||
+			el.parentElement?.textContent ||
+			''
+		)
+			.replace(/\s+/g, ' ')
+			.trim()
+		if (!label) continue
+		toggles.push({
+			id: idOf(el),
+			label,
+			active: el.getAttribute('aria-checked') === 'true',
+			hidesInstalled: /установл|installed/i.test(label),
+			el,
+		})
+	}
+	switches.value = toggles
 	const byGroup = new Map<HTMLElement, MirrorItem[]>()
 	let count = 0
 	for (const el of root.querySelectorAll<HTMLElement>(CANDIDATES)) {
@@ -111,6 +158,7 @@ function collect() {
 		// Section headers and their fold arrows are the panel's own furniture.
 		if (el.querySelector('h1, h2, h3, h4, h5, h6, .transition-transform')) continue
 		if ((el as HTMLButtonElement).disabled) continue
+		if (el.getAttribute('role') === 'switch') continue
 		if (hiddenWithin(el, root)) continue
 		const icon =
 			el.querySelector<SVGElement>('svg:not(.filter-action-icon)') ??
@@ -170,6 +218,7 @@ watch(
 		} else {
 			stop()
 			groups.value = []
+			switches.value = []
 		}
 	},
 	{ immediate: true },
@@ -177,13 +226,65 @@ watch(
 
 onBeforeUnmount(stop)
 
-function press(item: MirrorItem) {
+function press(item: { el: HTMLElement }) {
 	if (item.el.isConnected) item.el.click()
+}
+
+/** Turns every chosen filter off again, one real click each. */
+function resetFilters() {
+	for (const group of groups.value) {
+		for (const item of group.items) if (item.active) press(item)
+	}
 }
 </script>
 
 <template>
-	<div v-if="groups.length" class="rail-mirror">
+	<div v-if="groups.length || switches.length" class="rail-mirror">
+		<!--
+			The rail's own buttons for a page with a side panel: open the panel,
+			its toggles, and a way to clear what is chosen - instead of the
+			account and the friends, which have nothing to do with filtering.
+		-->
+		<div class="rail-mirror__group">
+			<button
+				v-tooltip.left="'Открыть фильтры'"
+				type="button"
+				class="rail-mirror__item"
+				aria-label="Открыть фильтры"
+				@click="emit('unfold')"
+			>
+				<span class="rail-mirror__icon"><FilterIcon /></span>
+			</button>
+			<button
+				v-for="toggle in switches"
+				:key="toggle.id"
+				v-tooltip.left="toggle.label"
+				type="button"
+				role="switch"
+				class="rail-mirror__item"
+				:class="{ 'rail-mirror__item--active': toggle.active }"
+				:aria-label="toggle.label"
+				:aria-checked="toggle.active"
+				@click="press(toggle)"
+			>
+				<span class="rail-mirror__icon">
+					<EyeOffIcon v-if="toggle.hidesInstalled" />
+					<ToggleRightIcon v-else />
+				</span>
+			</button>
+			<Transition name="rail-mirror-group">
+				<button
+					v-if="anyActive"
+					v-tooltip.left="'Сбросить фильтры'"
+					type="button"
+					class="rail-mirror__item"
+					aria-label="Сбросить фильтры"
+					@click="resetFilters"
+				>
+					<span class="rail-mirror__icon"><FilterXIcon /></span>
+				</button>
+			</Transition>
+		</div>
 		<TransitionGroup name="rail-mirror-group" tag="div" class="rail-mirror__groups">
 			<div v-for="group in groups" :key="group.id" class="rail-mirror__group">
 				<button
@@ -233,6 +334,20 @@ function press(item: MirrorItem) {
 
 .rail-mirror::-webkit-scrollbar {
 	display: none;
+}
+
+.rail-mirror > .rail-mirror__group {
+	padding-top: 0.25rem;
+}
+
+.rail-mirror > .rail-mirror__group + .rail-mirror__groups::before {
+	content: '';
+	display: block;
+	width: 1.5rem;
+	height: 2px;
+	margin: 0.5rem auto 0;
+	border-radius: 999px;
+	background: var(--brand-gradient-border, var(--surface-5));
 }
 
 .rail-mirror__groups {

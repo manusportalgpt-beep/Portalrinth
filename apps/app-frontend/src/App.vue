@@ -86,6 +86,7 @@ import UpdateToPlayModal from '@/components/ui/modal/UpdateToPlayModal.vue'
 import PackManifestModal from '@/components/ui/modpack/PackManifestModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
 import NotesLaunchPopup from '@/components/ui/NotesLaunchPopup.vue'
+import ViewportScrollbar from '@/components/ui/portalrinth-widgets/ViewportScrollbar.vue'
 import PortalrinthBackdrop from '@/components/ui/PortalrinthBackdrop.vue'
 import PortalrinthCrashModal from '@/components/ui/PortalrinthCrashModal.vue'
 import PortalrinthSwipeNavigation from '@/components/ui/PortalrinthSwipeNavigation.vue'
@@ -148,6 +149,11 @@ import { prefetchRouteChunks, startProjectHoverPrefetch } from '@/helpers/portal
 import { installSoundEffects } from '@/helpers/portalrinth-sfx'
 import { markSidebarMoving } from '@/helpers/portalrinth-sidebar-motion'
 import { cacheSplashCubeChoice } from '@/helpers/portalrinth-splash-cube'
+import {
+        registerLauncherUpdater,
+        startupLauncherUpdate,
+        updateSettings as launcherUpdateSettings,
+} from '@/helpers/portalrinth-updates'
 import { markThemeSettled, revealMainWindow } from '@/helpers/portalrinth-window-reveal'
 import { mergeUrlQuery, parseModrinthLink } from '@/helpers/project-links.ts'
 import { proxiedFetch as tauriFetch } from '@/helpers/proxy-fetch'
@@ -2124,10 +2130,33 @@ function showDelayedUpdatePopup() {
         markAppUpdatePopupShown(update.version, stage)
 }
 
+// Portalrinth: the first check after start-up installs a found update at
+// once when "install at once" is on (Settings → Changes); later checks only
+// download it and offer it, as before.
+let firstUpdateCheck = true
+let installWhenDownloaded = false
+let githubUpdatesStarted = false
+
+async function gameIsRunning() {
+        try {
+                const running = await invoke('plugin:process|process_get_all')
+                return Array.isArray(running) && running.length > 0
+        } catch {
+                return false
+        }
+}
+
 async function checkUpdates() {
         if (!(await areUpdatesEnabled())) {
                 console.log('Skipping update check as updates are disabled in this build or environment')
                 updatesEnabled.value = false
+
+                // No native updater in this build: the GitHub releases are read
+                // instead (by tag and by name), and the installer is fetched.
+                if (!githubUpdatesStarted && !isDevEnvironment.value) {
+                        githubUpdatesStarted = true
+                        startupLauncherUpdate().catch((error) => console.warn('GitHub update check failed', error))
+                }
 
                 if (os.value === 'Linux' && !isDevEnvironment.value) {
                         checkLinuxUpdates()
@@ -2175,7 +2204,13 @@ async function checkUpdates() {
                 console.log(`Update ${update.version} is available.`)
 
                 metered.value = await isNetworkMetered()
-                if (!metered.value) {
+                const installNow =
+                        firstUpdateCheck && launcherUpdateSettings.autoInstall && !(await gameIsRunning())
+                if (installNow) {
+                        console.log('Installing update at start-up')
+                        installWhenDownloaded = true
+                        downloadUpdate(update)
+                } else if (!metered.value) {
                         console.log('Starting download of update')
                         downloadUpdate(update)
                 } else {
@@ -2189,6 +2224,7 @@ async function checkUpdates() {
 
         try {
                 await performCheck()
+                firstUpdateCheck = false
         } catch (error) {
                 // Losing a check must not lose the schedule with it: an unreachable
                 // manifest used to end the polling until the next launch.
@@ -2372,6 +2408,11 @@ async function downloadUpdate(versionToDownload) {
                                 unlistenUpdateDownload = null
                                 console.log('Finished downloading!')
                                 markAppUpdateActionable(versionToDownload.version, 'downloaded')
+                                if (installWhenDownloaded) {
+                                        installWhenDownloaded = false
+                                        void installUpdate()
+                                        return
+                                }
                                 scheduleDelayedUpdatePopup()
                         })
                         .catch((e) => {
@@ -2413,7 +2454,32 @@ async function installUpdate() {
 setAppUpdateActions({
         download: downloadAvailableUpdate,
         install: installUpdate,
-        changelog: () => openUrl('https://everelsu.github.io/Portalrinth/changelog/'),
+        changelog: () => appSettingsModal.value?.showChanges(),
+})
+
+registerLauncherUpdater({
+        quit: () => handleClose(),
+        nativeCheck: async () => {
+                if (!(await areUpdatesEnabled())) return null
+                const update = await invoke('plugin:updater|check')
+                if (!update) return null
+                if (update.version !== availableUpdate.value?.version) {
+                        appUpdateDownload.progress.value = 0
+                        finishedDownloading.value = false
+                        downloading.value = false
+                        updateDownloadFailed.value = false
+                        availableUpdate.value = update
+                }
+                return update.version
+        },
+        nativeInstall: async () => {
+                if (finishedDownloading.value) {
+                        await installUpdate()
+                        return
+                }
+                installWhenDownloaded = true
+                if (!downloading.value) await downloadUpdate(availableUpdate.value)
+        },
 })
 
 async function openModrinthProjectLinkInApp(parsed) {
@@ -2733,6 +2799,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                         'disable-advanced-rendering': !appTheme.advancedRendering,
                 }"
         >
+                <ViewportScrollbar />
                 <div class="app-viewport flex-grow router-view">
                         <SurveyPopup />
                         <div
@@ -2998,7 +3065,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
         transition: border-top-right-radius 0.42s var(--nm-sheet);
         overflow: auto;
         overflow-x: hidden;
-        scrollbar-gutter: stable;
+        /* No gutter: the page reaches the rounded edge, and the scrollbar is
+           drawn over it (ViewportScrollbar) instead of eating a strip. */
+        scrollbar-width: none;
+}
+
+.app-viewport::-webkit-scrollbar {
+        display: none;
 }
 
 .app-contents::before {

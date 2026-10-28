@@ -106,6 +106,8 @@ function showFindFriendsModal() {
  * not overlaps it.
  */
 const open = computed(() => !collapsed.value)
+/** The folded rail is showing a page's side panel (filters and so on). */
+const pageHasPanel = ref(false)
 const friends = ref<InstanceType<typeof FriendsList> | null>(null)
 const scrollContainer = ref<HTMLElement | null>(null)
 const scrollViewport = ref<HTMLElement | null>(null)
@@ -260,6 +262,7 @@ const messages = defineMessages({
 				thing on the rail because it is the first thing the panel shows
 				when it opens.
 			-->
+			<template v-if="!pageHasPanel">
 			<IconButton
 				v-tooltip="formatMessage(messages.playingAs)"
 				:label="formatMessage(messages.playingAs)"
@@ -288,12 +291,19 @@ const messages = defineMessages({
 			>
 				<UserPlusIcon />
 			</IconButton>
+			</template>
 
 			<!--
 				Portalrinth: the page's own side panel - filters, links, members -
-				drawn as icons, so the fold does not take them away.
+				drawn as icons, so the fold does not take them away. While a page
+				has one, its buttons take the place of the account and the friends.
 			-->
-			<RailMirror :active="!open" class="shrink grow-0 basis-auto" />
+			<RailMirror
+				:active="!open"
+				class="shrink grow-0 basis-auto"
+				@present="(value) => (pageHasPanel = value)"
+				@unfold="unfold"
+			/>
 
 			<!--
 				The friends, and the line that divides them. The line above the ones
@@ -302,7 +312,10 @@ const messages = defineMessages({
 				direction. With nobody in, the one line is grey: it divides
 				nothing, and says so.
 			-->
-			<div v-if="railFriends.length > 0" class="mt-2 flex w-full flex-col items-center gap-1.5">
+			<div
+				v-if="!pageHasPanel && railFriends.length > 0"
+				class="mt-2 flex w-full flex-col items-center gap-1.5"
+			>
 				<div
 					class="h-0.5 w-6 rounded-full"
 					:class="railOnline.length > 0 ? 'bg-green-500' : 'bg-surface-5'"

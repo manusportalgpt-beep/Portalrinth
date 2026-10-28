@@ -145,15 +145,6 @@ a {
 	background-clip: content-box;
 }
 
-/* The page's scrollbar opens into the pinned bar's rounded tip at the top
-   right, leaving the arc unpainted behind it. An invisible top cap pushes
-   the track and the thumb below the arc, so the tip always stays filled
-   with the bar's own translucency. */
-.app-viewport::-webkit-scrollbar-button:single-button:vertical:decrement {
-	height: var(--radius-xl);
-	background: transparent;
-}
-
 .highlighted {
 	box-shadow: 0 0 1rem var(--color-brand) !important;
 }

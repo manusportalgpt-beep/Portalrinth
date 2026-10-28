@@ -3479,6 +3479,9 @@
 	"app.ai.skills.add": {
 		"message": "Установить скилл"
 	},
+	"app.settings.tabs.changes": {
+		"message": "Изменения"
+	},
 	"app.settings.tabs.connections": {
 		"message": "Подключения"
 	},

@@ -2,14 +2,16 @@
 import {
 	CodeIcon,
 	CoffeeIcon,
-	GlobeIcon,
 	CurseForgeIcon,
 	EyeOffIcon,
 	GaugeIcon,
+	GlobeIcon,
 	HeartHandshakeIcon,
+	KeyboardIcon,
 	LanguagesIcon,
 	LightBulbIcon,
 	ModrinthIcon,
+	NewspaperIcon,
 	PaintbrushIcon,
 	RefreshCwIcon,
 	Settings2Icon,
@@ -19,7 +21,6 @@ import {
 	Volume2Icon,
 	WindowIcon,
 	WrenchIcon,
-	KeyboardIcon,
 } from '@modrinth/assets'
 import {
 	commonMessages,
@@ -53,9 +54,10 @@ import WindowSettings from '@/features/settings/instance-defaults/window-setting
 import type { InstanceDefaultsTab } from '@/features/settings/settings-actions'
 import SyncingSettings from '@/features/settings/syncing/syncing-settings.vue'
 import AiAssistantSettings from '@/features/settings/system/ai-assistant-settings.vue'
+import ChangesSettings from '@/features/settings/system/ChangesSettings.vue'
 import ConnectionsSettings from '@/features/settings/system/connections-settings.vue'
-import HotkeysSettings from '@/features/settings/system/hotkeys-settings.vue'
 import CurseforgeSettings from '@/features/settings/system/CurseforgeSettings.vue'
+import HotkeysSettings from '@/features/settings/system/hotkeys-settings.vue'
 import ResourceManagementSettings from '@/features/settings/system/resource-management-settings/index.vue'
 import TroubleshootingSettings from '@/features/settings/system/troubleshooting-settings.vue'
 import { appSettingsKeys, appSettingsQueryOptions, set } from '@/helpers/settings.ts'
@@ -261,6 +263,15 @@ const tabs = [
 		icon: GlobeIcon,
 		content: ConnectionsSettings,
 	},
+	{
+		name: defineMessage({
+			id: 'app.settings.tabs.changes',
+			defaultMessage: 'Изменения',
+		}),
+		category: tabCategories.system,
+		icon: NewspaperIcon,
+		content: ChangesSettings,
+	},
 ]
 
 const availableTabs = computed(() =>
@@ -369,8 +380,17 @@ function showCurseforge(): void {
 	modal.value?.show()
 }
 
+function showChanges(): void {
+	const tabIndex = availableTabs.value.findIndex((tab) => tab.content === ChangesSettings)
+	if (tabIndex >= 0) {
+		modal.value?.setTab(tabIndex)
+	}
+	modal.value?.show()
+}
+
 defineExpose({
 	show,
+	showChanges,
 	showProfile,
 	showFeatureFlags,
 	showSyncedOptions,

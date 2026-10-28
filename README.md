@@ -2,119 +2,143 @@
 
 <div align="center">
 
-[![Release](https://img.shields.io/github/v/release/Everelsu/Portalrinth?include_prereleases&style=for-the-badge&logo=github&logoColor=white&label=Release&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/releases)
-[![Downloads](https://img.shields.io/github/downloads/manusportalgpt-beep/Portalrinth/total?style=for-the-badge&logo=github&logoColor=white&label=Downloads&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/releases)
+[![Release](https://img.shields.io/github/v/release/manusportalgpt-beep/Portalrinth?style=for-the-badge&logo=github&logoColor=white&label=Release&labelColor=16181c&color=ac51fb)](https://github.com/manusportalgpt-beep/Portalrinth/releases)
+[![Downloads](https://img.shields.io/github/downloads/manusportalgpt-beep/Portalrinth/total?style=for-the-badge&logo=github&logoColor=white&label=Downloads&labelColor=16181c&color=ac51fb)](https://github.com/manusportalgpt-beep/Portalrinth/releases)
 [![License](https://img.shields.io/badge/License-GPL--3.0-ac51fb?style=for-the-badge&logo=gnu&logoColor=white&labelColor=16181c)](apps/app/LICENSE)
-[![Stars](https://img.shields.io/github/stars/Everelsu/Portalrinth?style=for-the-badge&logo=github&logoColor=white&label=Stars&labelColor=16181c&color=ac51fb)](https://github.com/Everelsu/Portalrinth/stargazers)
 
 **English** · [Русский](README.ru.md)
 
-**Ely.by, offline accounts and CurseForge packs, in the Modrinth App you already know.**
+**A Minecraft launcher based on Modrinth App: Modrinth and CurseForge in one list, skins, LAN over the internet, an AI assistant, and Microsoft, Ely.by and offline accounts.**
 
-🌙 A Modrinth App fork that speaks Ely.by, installs CurseForge packs and gives every player on an offline server their skin 🚀
+<a href="https://github.com/manusportalgpt-beep/Portalrinth/releases/latest"><img src=".github/assets/readme/download-windows.svg" alt="Download for Windows" height="56"/></a>
+<a href="https://github.com/manusportalgpt-beep/Portalrinth/releases/latest"><img src=".github/assets/readme/download-macos.svg" alt="Download for macOS" height="56"/></a>
+<a href="https://github.com/manusportalgpt-beep/Portalrinth/releases/latest"><img src=".github/assets/readme/download-linux.svg" alt="Download for Linux" height="56"/></a>
 
-<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-windows.svg" alt="Download for Windows" height="56"/></a>
-<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-macos.svg" alt="Download for macOS" height="56"/></a>
-<a href="https://github.com/Everelsu/Portalrinth/releases/latest"><img src=".github/assets/readme/download-linux.svg" alt="Download for Linux" height="56"/></a>
-
-[Changelog](https://everelsu.github.io/Portalrinth/) · [Releases](https://github.com/Everelsu/Portalrinth/releases) · [Issues](https://github.com/Everelsu/Portalrinth/issues) · [Discussions](https://github.com/Everelsu/Portalrinth/discussions) · [Upstream](https://github.com/modrinth/code)
+[Releases](https://github.com/manusportalgpt-beep/Portalrinth/releases) · [Issues](https://github.com/manusportalgpt-beep/Portalrinth/issues) · [Noctrinth](https://github.com/Everelsu/Noctrinth) · [Modrinth](https://github.com/modrinth/code)
 
 </div>
 
 ---
 
+## About
+
+Portalrinth is a desktop Minecraft launcher. It is built on Modrinth App and its fork Noctrinth, with Portalrinth's own features on top. The interface is in Russian and uses translucent blurred panels over a background you can replace with your own.
+
+## Discover: Modrinth and CurseForge
+
+<div align="center">
+<img src=".github/assets/screenshots/discover-modpacks.png" alt="Modpack browser with sorting, page size and pagination" width="100%"/>
+<br/><sub>Modpack browser: sorting, page size, pages, one-click install</sub>
+</div>
+
+- Sections: modpacks, mods, resource packs, data packs, shaders, servers and skins.
+- One button switches the source: Modrinth, CurseForge, or both. In "both" mode the list is merged without duplicates, and for a project available on both platforms you choose where to install it from.
+- CurseForge projects install directly into an instance; files are recognised by fingerprint and can be updated.
+- Descriptions can be translated with the built-in translator (Google, or DeepL with your own key).
+- When the sidebar is collapsed, filters are shown as icons, together with "Open filters", "Hide installed" and "Reset filters" buttons.
+
+<div align="center">
+<img src=".github/assets/screenshots/platform-picker.png" alt="Platform menu: Modrinth, Modrinth + CurseForge, CurseForge" width="380"/>
+<br/><sub>Platform picker</sub>
+</div>
+
+## Skins
+
+<div align="center">
+<img src=".github/assets/screenshots/skins-discover.png" alt="Popular skins catalogue with search" width="100%"/>
+<br/><sub>Skin catalogue: search, popular skins, pages</sub>
+</div>
+
+- A catalogue of popular skins (laby.net) with search and pagination, like the other Discover sections.
+- 3D preview: the model rotates, walks and crouches, the outer layer can be hidden, and capes can be tried on.
+- Similar skins for the selected one, without the default Steve and Alex.
+- Apply a skin to your account in one click.
+- Microsoft, Ely.by and offline accounts. On offline-mode servers the launcher finds player skins by nickname on Ely.by and Mojang.
+
+## LAN over the internet
+
+<div align="center">
+<img src=".github/assets/screenshots/lan.png" alt="LAN page" width="100%"/>
+<br/><sub>LAN: a world opened to LAN in game becomes reachable for friends over the internet</sub>
+</div>
+
+- Share a world opened to LAN with friends over the internet, without port forwarding.
+- See who is connected and which game mode is running.
+- Ely.by account tokens are refreshed automatically.
+
+## AI assistant
+
+<div align="center">
+<img src=".github/assets/screenshots/ai-assistant.png" alt="AI assistant" width="100%"/>
+<br/><sub>The AI assistant works inside the launcher</sub>
+</div>
+
+- Answers questions about mods, modpacks, skins and errors, and performs actions itself: finds and installs mods into the selected instance (compatible versions only, with dependencies), creates instances, installs modpacks, updates mods, launches the game and opens LAN.
+- Sees the whole instance: Minecraft version, loader and its version, source and available updates.
+- Shows Fandom and Minecraft Wiki guides as cards, writes code and builds websites with a live preview.
+- Slash commands, "Web search" and "Deep thinking" modes, image input.
+- Free models: GLM (default), Kilo, OVH, OpenRouter, Pollinations; DeepSeek, Kimi and others through a free NVIDIA key. If one model does not respond, the assistant falls back to the next one.
+- Remembers context across chats. While it works, a progress panel is shown to the right of the clock on every page.
+
+## Instances
+
+<div align="center">
+<table>
+<tr>
+<td width="50%"><img src=".github/assets/screenshots/instance-log.png" alt="Instance log with a detected crash cause" width="100%"/><br/><sub>Log: the launcher finds the likely cause of a crash</sub></td>
+<td width="50%"><img src=".github/assets/screenshots/instance-notes.png" alt="Instance notes" width="100%"/><br/><sub>Instance notes</sub></td>
+</tr>
+</table>
+</div>
+
+- Instance tabs: content, files, worlds, notes, log and access.
+- Log with search and level filters. The launcher detects the likely cause of a crash and points to the line that shows it.
+- Per-instance notes with a reminder on launch.
+- CurseForge `.zip` modpack installs: queued, resumable, with a clean rollback on failure.
+- Import from Modrinth App, Prism, MultiMC, ATLauncher, GDLauncher and CurseForge.
+- Clean launch without mods, and a second copy of an instance under another account.
+
 ## Screenshots
 
 <div align="center">
-<table>
-<tr>
-<td width="62%"><img src=".github/assets/screenshots/ely-by-skins.png" alt="An Ely.by account's saved skins in the skin selector" width="100%"/><br/><sub>Ely.by skins, worn and uploaded from the launcher</sub></td>
-<td width="38%"><img src=".github/assets/screenshots/accounts.png" alt="The add-account dialog offering Microsoft, Ely.by and offline accounts" width="100%"/><br/><sub>Microsoft, Ely.by or just a name</sub></td>
-</tr>
-</table>
+<img src=".github/assets/screenshots/screenshot-viewer.png" alt="Screenshot viewer" width="100%"/>
+<br/><sub>Screenshot viewer: zoom, edit, copy, open folder, set as launcher background, delete</sub>
 </div>
 
-## Why Portalrinth
+- Screenshots from all instances in one place, with smooth navigation.
+- Built-in editor with tools including "Fill".
+- Any screenshot can become the launcher background.
 
-The Modrinth App is a genuinely good launcher, but it only knows Microsoft accounts, only installs Modrinth's own `.mrpack` files, and shows you ads while you browse. If you play on Ely.by or offline servers, keep a shelf of CurseForge zips, or sit behind a blocked connection, you end up running a second launcher to cover the gaps. Portalrinth covers them in the same app, and follows upstream release for release.
+## Other features
 
-## What Portalrinth adds
+- Title bar: clock, weather, internet speed test, music player with a visualiser.
+- Custom accent colour (colour wheel) and a gradient on selected tabs.
+- Proxy for all launcher requests.
+- No ads.
+- Settings → "Changes": update check, automatic install of the newest version on start, and changelogs for Portalrinth, Noctrinth and Modrinth App with translation.
 
-### Accounts and skins
+## Installation and updates
 
-- **Ely.by accounts**: sign in through Ely.by's own page, launch through authlib-injector, and browse, wear, upload and delete skins in the same grid the Microsoft account uses
-- **Offline accounts**: just a name, for singleplayer and offline-mode servers, wearing the cape that name has on OptiFine, LabyMod, MinecraftCapes or SkinMC
-- **Skins for every player**: offline servers send no skins, so everyone is Steve. The launcher looks each player up by name on Ely.by and Mojang, with no mod on either side
-- **Two copies of one instance**: launch a running instance again as another account, each copy with its own console
+Download the installer for your system from the [latest release](https://github.com/manusportalgpt-beep/Portalrinth/releases/latest).
 
-<div align="center"><img src=".github/assets/screenshots/skin-preview.gif" alt="The skin preview turning, with the nametag staying above the head" width="280"/><br/><sub>The nametag turns with the model like a sign</sub></div>
+| System  | File                                    |
+| ------- | --------------------------------------- |
+| Windows | `x64-setup.exe` installer (NSIS)        |
+| macOS   | `universal.dmg` (Intel and Apple Silicon) |
+| Linux   | `.AppImage` or `.deb`                   |
 
-### Instances and content
+The launcher checks GitHub releases on its own: a new version is detected by both the release tag and the release name (for example `v0.22.0+4`). With "Install updates right away" enabled, the newest version is installed when the launcher starts. Updates are never installed while the game is running.
 
-- **CurseForge modpack `.zip` install**: queued, resumable, rolled back cleanly on failure, with the pack's own icon
-- **CurseForge instances that arrive whole**: an import fetches the mods the folder is missing, and names every CurseForge file with its real title, author and icon
-- **Modrinth App migration**: a banner offers to bring Modrinth App instances over, all or hand-picked, optionally removing them from the source
-- **Library search language**: `@sodium` finds instances with a mod, `#shader` filters by type, `!outdated` by state, and `-` flips a term
-- **Modern Java for 1.7.10**: one click installs lwjgl3ify or Cleanroom with the launcher-side patches, and one click undoes it
-- **A graphics adapter per Java runtime** on Windows, for laptops that start the game on the wrong GPU
-- **Animated icons**: a GIF stays animated in the library and survives an `.mrpack` export
+## Building from source
 
-<div align="center"><img src=".github/assets/screenshots/library-search.gif" alt="Typing @sodium into the library search narrows it to instances with Sodium" width="100%"/><br/><sub><code>@sodium</code> narrows the library to instances that have it</sub></div>
-
-### Around the app
-
-- **Description translation**: Google Translate, or DeepL with your own key, switched back to the original with one button
-- **Accent presets**: nine colours for the whole interface, the splash screen, the window and taskbar icons, optionally tinting the backgrounds too
-- **Touchpad navigation**: two fingers sideways go back and forward, the way Chrome does
-- **Collections and followed projects**, and **Modrinth notifications**, built into the app
-- **Proxy**: one URL (`http://`, `https://`, `socks5://`, `socks5h://`) for every launcher request, for regions where Modrinth is blocked
-- **No ads**: Modrinth's ads, consent popup and upsells are switched off
-
-<div align="center">
-<table>
-<tr>
-<td width="50%"><img src=".github/assets/screenshots/translate.gif" alt="A Chinese modpack description washing over into English and back" width="100%"/><br/><sub>A Chinese description, in English and back</sub></td>
-<td width="50%"><img src=".github/assets/screenshots/accents.gif" alt="Clicking through the nine accent presets recolours the settings window" width="100%"/><br/><sub>Nine accents, applied as you click</sub></td>
-</tr>
-</table>
-</div>
-
-## Get started
-
-### Install
-
-Grab the installer for your platform from the [latest release](https://github.com/Everelsu/Portalrinth/releases/latest):
-
-| Platform | Notes                               |
-| -------- | ----------------------------------- |
-| Windows  | Installer (NSIS)                    |
-| macOS    | Universal — Intel and Apple Silicon |
-| Linux    | Built on Ubuntu 22.04               |
-
-Updates are signed and delivered automatically through GitHub Releases — no reinstalling.
-
-> [!NOTE]
-> Pre-release builds (`0.21.10-beta.1` and similar) are **not** served to the auto-updater. Install them by hand; the app will pick up the matching stable release as a normal update once it ships.
-
-### Bring your instances over
-
-Already on the Modrinth App? Open Portalrinth and a banner offers to import everything it finds. Prefer to choose? **Create instance → Import** lists Modrinth App next to Prism, MultiMC, ATLauncher, GDLauncher and CurseForge.
-
-## Build from source
-
-Requires [Node.js](https://nodejs.org/) ≥ 24.15, [pnpm](https://pnpm.io/), [Rust](https://www.rust-lang.org/tools/install), and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
+Requires [Node.js](https://nodejs.org/) 24.15 or newer, [pnpm](https://pnpm.io/), [Rust](https://www.rust-lang.org/tools/install) and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 ```bash
 pnpm install
-```
-
-Copy the environment template in `packages/app-lib/`, then start the desktop app with hot reload:
-
-```bash
 pnpm app:dev
 ```
 
-Before opening a pull request, run the frontend checks:
+Before opening a pull request:
 
 ```bash
 pnpm prepr:frontend:app
@@ -122,34 +146,15 @@ pnpm prepr:frontend:app
 
 ## Repository layout
 
-This is the upstream Modrinth monorepo, so it carries far more than the launcher — the website, the backend API and the shared libraries all live here. Portalrinth ships the desktop app.
-
-| Path                                | What it is                                             |
-| ----------------------------------- | ------------------------------------------------------ |
-| `apps/app`                          | Tauri shell — Rust commands, window and updater config |
-| `apps/app-frontend`                 | Desktop UI (Vue 3), Portalrinth's changelog and locales  |
-| `packages/app-lib`                  | Launcher core — accounts, instances, installs, imports |
-| `packages/ui`                       | Shared Vue component library                           |
-| `apps/frontend`, `apps/labrinth`, … | Modrinth's website and backend, carried from upstream  |
-
-For architecture and infrastructure that isn't fork-specific, the [upstream repository](https://github.com/modrinth/code) remains the reference.
-
-## Relationship with upstream
-
-Portalrinth syncs with [modrinth/code](https://github.com/modrinth/code) and pins its version to upstream's exactly: when Modrinth is on `0.21.9`, so is Portalrinth. Where both sides implement the same thing, upstream's version wins and the fork's is dropped. That is how the fork's shared `options.txt` profile, screenshots tab and download cache went: upstream's settings sync, Screenshots page and content store do the same jobs better.
-
-A fix between upstream releases ships as a micropatch (`0.21.6+1`), which installs already on that version take as a normal update. Test builds ship as pre-releases (`0.21.10-beta.1`), which sort above the current stable and below the next one, so testers roll onto the real release the moment it lands.
-
-## Contributing
-
-Bug reports and pull requests are welcome — [open an issue](https://github.com/Everelsu/Portalrinth/issues) to start.
-
-Found a bug that isn't Portalrinth-specific? It belongs [upstream](https://github.com/modrinth/code/issues); fixing it there means everyone gets it, and it reaches this fork on the next sync.
-
-If Portalrinth helped you, [give it a star](https://github.com/Everelsu/Portalrinth/stargazers).
+| Path                | Contents                                                  |
+| ------------------- | --------------------------------------------------------- |
+| `apps/app`          | Tauri shell: Rust commands, window, updates               |
+| `apps/app-frontend` | Launcher UI (Vue 3), AI assistant, translations           |
+| `packages/app-lib`  | Launcher core: accounts, instances, installs, import      |
+| `packages/ui`       | Shared component library                                  |
 
 ## License
 
-The desktop app is licensed under [GPL-3.0](apps/app/LICENSE). Other packages carry their own licenses — see the `LICENSE` file in each, and [COPYING.md](COPYING.md) for details.
+The app is licensed under [GPL-3.0](apps/app/LICENSE). Other packages have their own licenses; see the `LICENSE` file in each package and [COPYING.md](COPYING.md).
 
-Modrinth branding is the property of Rinth, Inc. and is not used here; Portalrinth ships its own. Portalrinth is an independent fork and is not affiliated with or endorsed by Rinth, Inc.
+Portalrinth is an independent project based on [Noctrinth](https://github.com/Everelsu/Noctrinth) and [Modrinth App](https://github.com/modrinth/code). It is not affiliated with or endorsed by Rinth, Inc.; Modrinth trademarks belong to Rinth, Inc.
