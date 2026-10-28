@@ -30,12 +30,16 @@
 					<path :d="paths.zone2" stroke="#f87171" stroke-opacity="0.45" stroke-width="9" fill="none" stroke-linecap="round" />
 					<!-- Пройденный путь -->
 					<path
-						v-if="needlePct > 0.004"
 						:d="progressPath"
+						pathLength="1"
+						stroke-dasharray="1 1"
+						:stroke-dashoffset="1 - needlePct"
+						:stroke-opacity="needlePct > 0.004 ? 1 : 0"
 						stroke="var(--color-brand)"
 						stroke-width="4"
 						fill="none"
 						stroke-linecap="round"
+						class="speed-progress"
 					/>
 					<!-- Деления -->
 					<g v-for="(tick, i) in ticks" :key="`t${i}`" stroke="currentColor" :stroke-opacity="tick.major ? 0.55 : 0.25" :stroke-width="tick.major ? 2 : 1">
@@ -54,7 +58,7 @@
 						{{ tick.labelText }}
 					</text>
 					<!-- Стрелка -->
-					<g class="speed-needle" :style="{ transform: `rotate(${needleAngle}deg)` }">
+					<g class="speed-needle" :style="{ transform: `rotate(${needleAngle.toFixed(2)}deg)` }">
 						<line x1="110" y1="105" x2="30" y2="105" stroke="var(--color-brand)" stroke-width="3" stroke-linecap="round" />
 						<line x1="110" y1="105" x2="52" y2="105" stroke="var(--color-brand)" stroke-width="6" stroke-linecap="round" />
 					</g>
@@ -100,9 +104,8 @@
  */
 import { GaugeIcon } from '@modrinth/assets'
 import { Button, defineMessages, FloatingMenu, IconButton, useVIntl } from '@modrinth/ui'
-import { computed, ref } from 'vue'
-
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
+import { computed, onBeforeUnmount, ref } from 'vue'
 
 const { formatMessage } = useVIntl()
 
@@ -128,7 +131,9 @@ const scaleIdx = ref(0)
 const needlePct = ref(0)
 
 const scaleMax = computed(() => SCALE_STEPS[scaleIdx.value])
-const mbpsLabel = computed(() => mbps.value.toFixed(1))
+/** What the digits show: eased toward the measured speed every frame. */
+const shownMbps = ref(0)
+const mbpsLabel = computed(() => shownMbps.value.toFixed(1))
 const pingLabel = computed(() => String(ping.value))
 const needleAngle = computed(() => needlePct.value * 180)
 
@@ -150,7 +155,56 @@ const paths = computed(() => ({
 	zone2: arcPath(R, 324, 359),
 }))
 
-const progressPath = computed(() => arcPath(R, 180, 180 + needlePct.value * 180))
+// One fixed arc; the filled part is drawn with a dash offset, so the path
+// never has to be rebuilt while the needle moves.
+const progressPath = arcPath(R, 180, 359.99)
+
+// ---- Smooth needle -----------------------------------------------------------
+//
+// Network chunks arrive in uneven bursts. Writing every burst straight into the
+// gauge made it stutter (a CSS transition restarted on each update). Now the
+// stream only stores a target; one requestAnimationFrame loop glides the
+// needle and the digits toward it with a damped spring - 60 fps, no jitter.
+
+let targetMbps = 0
+let velocity = 0
+let frame = 0
+let lastFrame = 0
+
+function animate(time: number) {
+	const dt = Math.min(0.05, lastFrame ? (time - lastFrame) / 1000 : 0.016)
+	lastFrame = time
+	const target = Math.min(1, targetMbps / scaleMax.value)
+	const stiffness = 90
+	const damping = 2 * Math.sqrt(stiffness) * 0.9
+	velocity += ((target - needlePct.value) * stiffness - velocity * damping) * dt
+	needlePct.value = Math.max(0, Math.min(1.02, needlePct.value + velocity * dt))
+	shownMbps.value += (targetMbps - shownMbps.value) * Math.min(1, dt * 9)
+	const settled =
+		Math.abs(target - needlePct.value) < 0.0008 &&
+		Math.abs(velocity) < 0.001 &&
+		Math.abs(targetMbps - shownMbps.value) < 0.05
+	if (settled && state.value !== 'running') {
+		needlePct.value = target
+		shownMbps.value = targetMbps
+		frame = 0
+		lastFrame = 0
+		return
+	}
+	frame = requestAnimationFrame(animate)
+}
+
+function kick() {
+	if (!frame) {
+		lastFrame = 0
+		frame = requestAnimationFrame(animate)
+	}
+}
+
+onBeforeUnmount(() => {
+	if (frame) cancelAnimationFrame(frame)
+	frame = 0
+})
 
 function tickLabel(value: number): string {
 	if (value < 1000) return String(Math.round(value))
@@ -184,7 +238,8 @@ function fitScale() {
 	while (scaleIdx.value < SCALE_STEPS.length - 1 && mbps.value / scaleMax.value > 0.85) {
 		scaleIdx.value++
 	}
-	needlePct.value = Math.min(1, mbps.value / scaleMax.value)
+	targetMbps = mbps.value
+	kick()
 }
 
 async function measurePing(): Promise<number> {
@@ -205,7 +260,8 @@ async function runTest() {
 	mbps.value = 0
 	ping.value = 0
 	scaleIdx.value = 0
-	needlePct.value = 0
+	targetMbps = 0
+	kick()
 	try {
 		ping.value = await measurePing()
 		const bytes = 26_000_000
@@ -220,6 +276,7 @@ async function runTest() {
 		if (response.body) {
 			const reader = response.body.getReader()
 			const samples: { t: number; b: number }[] = [{ t: started, b: 0 }]
+			let lastReport = 0
 			for (;;) {
 				const { done, value } = await reader.read()
 				if (done) break
@@ -229,7 +286,9 @@ async function runTest() {
 				while (samples.length > 2 && now - samples[0].t > 900) samples.shift()
 				const dt = (now - samples[0].t) / 1000
 				const db = received - samples[0].b
-				if (dt > 0.2) {
+				// Report at most ~8 times a second; the frame loop does the rest.
+				if (dt > 0.2 && now - lastReport > 120) {
+					lastReport = now
 					mbps.value = Math.round(((db * 8) / dt / 1_000_000) * 10) / 10
 					fitScale()
 				}
@@ -249,6 +308,8 @@ async function runTest() {
 		state.value = 'done'
 	} catch {
 		state.value = 'fail'
+		targetMbps = 0
+		kick()
 	}
 }
 
@@ -260,7 +321,11 @@ function onOpen() {
 <style scoped>
 .speed-needle {
 	transform-origin: 110px 105px;
-	transition: transform 0.55s cubic-bezier(0.3, 1.25, 0.5, 1);
+	will-change: transform;
+}
+
+.speed-progress {
+	transition: stroke-opacity 0.2s ease;
 }
 
 .ai-speed-pulse {
@@ -280,10 +345,6 @@ function onOpen() {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.speed-needle {
-		transition: none;
-	}
-
 	.ai-speed-pulse {
 		animation: none;
 	}

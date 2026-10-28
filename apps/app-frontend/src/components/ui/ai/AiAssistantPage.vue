@@ -1,19 +1,33 @@
 <script setup lang="ts">
 import {
 	ArrowUpIcon,
+	BookOpenIcon,
+	BrainCogIcon,
 	CheckIcon,
 	ChevronDownIcon,
 	ClipboardCopyIcon,
+	CodeIcon,
+	CompassIcon,
 	CopyIcon,
+	DownloadIcon,
 	EditIcon,
 	ExternalIcon,
 	FileCodeIcon,
 	FileIcon,
 	FilePlusIcon,
 	FolderOpenIcon,
+	GlobeIcon,
 	HistoryIcon,
+	HistoryIcon as MemoryIcon,
+	ImageIcon,
+	MonitorIcon,
+	PackageIcon,
+	PlayIcon,
 	PlusIcon,
 	RefreshCwIcon,
+	SearchIcon,
+	ServerIcon,
+	SparklesIcon,
 	StopCircleIcon,
 	TerminalSquareIcon,
 	TrashIcon,
@@ -39,6 +53,7 @@ import {
 	type AiModCard,
 	aiSettings,
 	type AiSkinCard,
+	type AiWikiCard,
 	chosenModel,
 	clearAiHistory,
 	errorOnTurn,
@@ -46,12 +61,14 @@ import {
 	providerById,
 	queuedUserMessage,
 	readSelectedBuild,
+	saveAiSettings,
 	sendAgentMessage,
 	setSelectedBuild,
 	stopAgentRun,
 	stripLooseCommands,
 	zaiPeakHoursLabel,
 } from '@/helpers/ai-assistant'
+import { buildSitePreview } from '@/helpers/ai-launcher-tools'
 import {
 	type AttachedFile,
 	attachFromPaths,
@@ -575,6 +592,144 @@ async function send(text?: string) {
 
 function togglePlus() {
 	plusOpen.value = !plusOpen.value
+}
+
+// ---- Modes: web search and deep thinking ---------------------------------
+
+function toggleWebSearch() {
+	saveAiSettings({ webSearch: !aiSettings.value.webSearch })
+}
+
+function toggleDeepThink() {
+	saveAiSettings({ deepThink: !aiSettings.value.deepThink })
+}
+
+// ---- Slash commands ----------------------------------------------------------
+//
+// "/" at the start of the input opens the command list: ready-made tasks and
+// the player's installed skills. A command either fills the input with a
+// prompt to finish ("/сайт " → "Сделай сайт: ") or, when it is a whole task
+// on its own, sends right away.
+
+interface SlashCommand {
+	id: string
+	label: string
+	hint: string
+	icon: unknown
+	text: string
+	/** Sends at once - the command is a complete request by itself. */
+	send?: boolean
+	action?: () => void
+}
+
+const builtInCommands = computed<SlashCommand[]>(() => [
+	{ id: 'мод', label: 'мод', hint: 'найти и поставить мод в сборку', icon: DownloadIcon, text: 'Найди и поставь в мою сборку мод: ' },
+	{ id: 'сборка', label: 'сборка', hint: 'всё о выбранной сборке', icon: PackageIcon, text: 'Расскажи всё о моей сборке: версия, ядро и его версия, моды, источники, обновления, проблемы.', send: true },
+	{ id: 'оптимизация', label: 'оптимизация', hint: 'поднять FPS под эту сборку', icon: SparklesIcon, text: 'Подбери и поставь оптимизацию под мою сборку — проверь совместимость с тем, что уже стоит.', send: true },
+	{ id: 'шейдеры', label: 'шейдеры', hint: 'шейдеры под сборку и ПК', icon: MonitorIcon, text: 'Подбери шейдеры под мою сборку и мой ПК и поставь их.', send: true },
+	{ id: 'обнови', label: 'обнови', hint: 'обновить все моды', icon: RefreshCwIcon, text: 'Обнови все моды в моей сборке.', send: true },
+	{ id: 'играть', label: 'играть', hint: 'запустить сборку', icon: PlayIcon, text: 'Запусти мою сборку.', send: true },
+	{ id: 'лан', label: 'лан', hint: 'сервер для друзей (LAN)', icon: ServerIcon, text: 'Запусти мою сборку и открой мир для друзей (LAN).', send: true },
+	{ id: 'вики', label: 'вики', hint: 'гайд с Fandom / Minecraft Wiki', icon: BookOpenIcon, text: 'Найди гайд на вики: ' },
+	{ id: 'поиск', label: 'поиск', hint: 'найти в интернете', icon: SearchIcon, text: 'Найди в интернете: ' },
+	{ id: 'сайт', label: 'сайт', hint: 'сделать сайт с предпросмотром', icon: CompassIcon, text: 'Сделай сайт: ' },
+	{ id: 'код', label: 'код', hint: 'написать код в песочнице', icon: CodeIcon, text: 'Напиши код: ' },
+	{ id: 'картинка', label: 'картинка', hint: 'нарисовать изображение', icon: ImageIcon, text: 'Нарисуй: ' },
+	{ id: 'память', label: 'память', hint: 'что я о тебе помню', icon: MemoryIcon, text: 'Что ты обо мне помнишь? Перечитай заметки.', send: true },
+	{ id: 'новый', label: 'новый', hint: 'начать новый чат', icon: PlusIcon, text: '', action: () => void startFreshChat() },
+])
+
+const skillCommands = computed<SlashCommand[]>(() =>
+	(aiSettings.value.skills ?? [])
+		.filter((skill) => skill.on && skill.name.trim())
+		.map((skill) => ({
+			id: `skill-${skill.name}`,
+			label: skill.name.trim().toLowerCase().replace(/\s+/g, '-'),
+			hint: `навык: ${skill.text.slice(0, 60)}`,
+			icon: SparklesIcon,
+			text: `Используй навык «${skill.name}»: `,
+		})),
+)
+
+const slashQuery = computed(() => {
+	const match = /^\/([^\s]*)$/.exec(input.value)
+	return match ? match[1].toLowerCase() : null
+})
+const slashIndex = ref(0)
+const slashDismissed = ref(false)
+const slashOptions = computed(() => {
+	const query = slashQuery.value
+	if (query === null) return []
+	return [...builtInCommands.value, ...skillCommands.value].filter(
+		(command) => command.label.startsWith(query) || command.hint.toLowerCase().includes(query),
+	)
+})
+const slashOpen = computed(() => !slashDismissed.value && slashOptions.value.length > 0)
+watch(slashQuery, () => {
+	slashIndex.value = 0
+	slashDismissed.value = false
+})
+
+function pickSlash(command: SlashCommand) {
+	if (command.action) {
+		input.value = ''
+		command.action()
+		return
+	}
+	if (command.send) {
+		input.value = ''
+		void send(command.text)
+		return
+	}
+	input.value = command.text
+	void nextTick(() => {
+		const el = inputEl.value as HTMLTextAreaElement | null
+		el?.focus()
+		el?.setSelectionRange(command.text.length, command.text.length)
+	})
+}
+
+function onInputKeydown(event: KeyboardEvent) {
+	if (!slashOpen.value) return
+	const count = slashOptions.value.length
+	if (event.key === 'ArrowDown') {
+		event.preventDefault()
+		slashIndex.value = (slashIndex.value + 1) % count
+	} else if (event.key === 'ArrowUp') {
+		event.preventDefault()
+		slashIndex.value = (slashIndex.value - 1 + count) % count
+	} else if (event.key === 'Tab') {
+		event.preventDefault()
+		pickSlash(slashOptions.value[slashIndex.value])
+	} else if (event.key === 'Escape') {
+		event.preventDefault()
+		slashDismissed.value = true
+	}
+}
+
+function openSlashFromMenu() {
+	plusOpen.value = false
+	input.value = '/'
+	void nextTick(() => (inputEl.value as HTMLTextAreaElement | null)?.focus())
+}
+
+function onEnter() {
+	if (slashOpen.value) {
+		pickSlash(slashOptions.value[slashIndex.value])
+		return
+	}
+	void send()
+}
+
+// ---- Site preview ------------------------------------------------------------
+
+const sitePreview = ref<{ title: string; html: string } | null>(null)
+async function openSite(path: string, title: string) {
+	try {
+		sitePreview.value = { title, html: await buildSitePreview(path) }
+	} catch {
+		errorText.value = `Не открылся ${path}`
+	}
 }
 
 async function plusAttach() {
@@ -1139,6 +1294,46 @@ defineExpose({ send })
 							</div>
 						</div>
 
+						<div v-if="message.activity?.wikis?.length" class="ai-cards">
+							<button class="ai-cards-toggle" @click="() => toggleCardGroup(`w-${index}`)">
+								<span>Вики · {{ message.activity.wikis.length }}</span>
+								<ChevronDownIcon class="size-3.5 transition-transform" :class="{ '-rotate-90': collapsedCards[`w-${index}`] }" />
+							</button>
+							<div v-if="!collapsedCards[`w-${index}`]" class="flex flex-col gap-1.5">
+								<button
+									v-for="wiki in message.activity.wikis as AiWikiCard[]"
+									:key="wiki.url"
+									class="ai-mod-card ai-wiki-card"
+									@click="() => openLink(wiki.url)"
+								>
+									<img v-if="wiki.image" :src="wiki.image" class="ai-wiki-image" alt="" loading="lazy" />
+									<span v-else class="ai-mod-icon ai-mod-icon-fallback"><BookOpenIcon class="size-5" /></span>
+									<div class="min-w-0 grow text-left">
+										<p class="ai-card-title">{{ wiki.title }}</p>
+										<p class="ai-card-meta">{{ wiki.wiki }}</p>
+										<p v-if="wiki.excerpt" class="ai-card-desc">{{ wiki.excerpt }}</p>
+									</div>
+									<ExternalIcon class="size-4 shrink-0 opacity-60" />
+								</button>
+							</div>
+						</div>
+
+						<div v-if="message.activity?.sites?.length" class="flex flex-col gap-1.5">
+							<button
+								v-for="site in message.activity.sites"
+								:key="site.path"
+								class="ai-mod-card ai-site-card"
+								@click="() => openSite(site.path, site.title)"
+							>
+								<span class="ai-mod-icon ai-mod-icon-fallback ai-site-glyph"><CompassIcon class="size-5" /></span>
+								<div class="min-w-0 grow text-left">
+									<p class="ai-card-title">{{ site.title || 'Сайт' }}</p>
+									<p class="ai-card-meta">Предпросмотр сайта · {{ site.path }}</p>
+								</div>
+								<PlayIcon class="size-4 shrink-0 opacity-70" />
+							</button>
+						</div>
+
 												<div v-if="message.activity?.skins?.length" class="ai-cards">
 							<button class="ai-cards-toggle" @click="() => toggleCardGroup(`s-${index}`)">
 								<span>{{ formatMessage(messages.skinsTitle) }} · {{ message.activity.skins.length }}</span>
@@ -1257,6 +1452,20 @@ defineExpose({ send })
 				</div>
 			</template>
 
+			<Transition name="ai-site">
+				<div v-if="sitePreview" class="ai-site-overlay" @click.self="sitePreview = null">
+					<div class="ai-site-window">
+						<div class="ai-site-bar">
+							<CompassIcon class="size-4 shrink-0" />
+							<span class="min-w-0 grow truncate font-semibold">{{ sitePreview.title }}</span>
+							<button class="ai-error-btn" aria-label="Закрыть" @click="sitePreview = null">
+								<XIcon class="size-4" />
+							</button>
+						</div>
+						<iframe class="ai-site-frame" sandbox="allow-scripts" :srcdoc="sitePreview.html" title="Предпросмотр сайта" />
+					</div>
+				</div>
+			</Transition>
 			<div v-if="zoomedImage" class="ai-zoom" @click="() => (zoomedImage = '')">
 				<img :src="zoomedImage" class="ai-zoom-image" alt="" />
 			</div>
@@ -1329,6 +1538,28 @@ defineExpose({ send })
 				</span>
 			</div>
 
+			<Transition name="ai-slash">
+				<div v-if="slashOpen" class="ai-slash" role="listbox" aria-label="Команды">
+					<p class="ai-slash-title">Команды и навыки</p>
+					<button
+						v-for="(command, commandIndex) in slashOptions"
+						:key="command.id"
+						type="button"
+						role="option"
+						class="ai-slash-item"
+						:class="{ 'ai-slash-item--active': commandIndex === slashIndex }"
+						:aria-selected="commandIndex === slashIndex"
+						@mouseenter="slashIndex = commandIndex"
+						@mousedown.prevent="() => pickSlash(command)"
+					>
+						<span class="ai-slash-icon"><component :is="command.icon" class="size-4" /></span>
+						<span class="ai-slash-name">/{{ command.label }}</span>
+						<span class="ai-slash-hint">{{ command.hint }}</span>
+						<span v-if="command.send" class="ai-slash-tag">сразу</span>
+					</button>
+					<p class="ai-slash-foot">↑↓ — выбор · Enter/Tab — выбрать · Esc — закрыть</p>
+				</div>
+			</Transition>
 			<div
 				class="ai-input-row flex items-center gap-2 rounded-3xl bg-surface-2 p-2"
 			>
@@ -1353,7 +1584,44 @@ defineExpose({ send })
 							<FileIcon class="size-4" />
 							{{ formatMessage(messages.plusAttach) }}
 						</button>
+						<div class="ai-menu-sep" />
+						<button class="ai-menu-item" role="switch" :aria-checked="aiSettings.webSearch" @click="toggleWebSearch">
+							<GlobeIcon class="size-4" />
+							<span class="grow text-left">Веб-поиск</span>
+							<span class="ai-switch" :class="{ 'ai-switch--on': aiSettings.webSearch }" />
+						</button>
+						<button class="ai-menu-item" role="switch" :aria-checked="aiSettings.deepThink" @click="toggleDeepThink">
+							<BrainCogIcon class="size-4" />
+							<span class="grow text-left">Глубокое мышление</span>
+							<span class="ai-switch" :class="{ 'ai-switch--on': aiSettings.deepThink }" />
+						</button>
+						<div class="ai-menu-sep" />
+						<button class="ai-menu-item" @click="openSlashFromMenu">
+							<TerminalSquareIcon class="size-4" />
+							<span class="grow text-left">Команды и навыки</span>
+							<kbd class="ai-kbd">/</kbd>
+						</button>
 					</div>
+				</div>
+				<div v-if="aiSettings.webSearch || aiSettings.deepThink" class="flex shrink-0 items-center gap-1">
+					<button
+						v-if="aiSettings.webSearch"
+						v-tooltip="'Веб-поиск включён — нажми, чтобы выключить'"
+						class="ai-mode-chip"
+						@click="toggleWebSearch"
+					>
+						<GlobeIcon class="size-3.5" />
+						<span class="ai-mode-label">Поиск</span>
+					</button>
+					<button
+						v-if="aiSettings.deepThink"
+						v-tooltip="'Глубокое мышление: умнее и внимательнее, но дольше'"
+						class="ai-mode-chip ai-mode-chip--deep"
+						@click="toggleDeepThink"
+					>
+						<BrainCogIcon class="size-3.5" />
+						<span class="ai-mode-label">Глубоко</span>
+					</button>
 				</div>
 				<textarea
 					ref="inputEl"
@@ -1361,7 +1629,8 @@ defineExpose({ send })
 					class="ai-input grow"
 					rows="1"
 					:placeholder="formatMessage(messages.placeholder)"
-					@keydown.enter.exact.prevent="() => send()"
+					@keydown="onInputKeydown"
+					@keydown.enter.exact.prevent="onEnter"
 					@paste="onPaste"
 				/>
 				<div class="relative shrink-0">
@@ -1411,7 +1680,7 @@ defineExpose({ send })
 							<span class="min-w-0 grow text-left">
 								<span class="ai-build-name">{{ instance.name }}</span>
 								<span class="ai-build-meta">
-									{{ instance.loader ?? 'vanilla' }} · {{ instance.game_version }}
+									{{ instance.loader ?? 'vanilla' }}{{ instance.loader_version ? ` ${instance.loader_version}` : '' }} · Minecraft {{ instance.game_version }}
 								</span>
 							</span>
 							<span v-if="chosenInstance === instance.id" class="ai-build-check">✓</span>
@@ -2300,5 +2569,249 @@ defineExpose({ send })
 
 .ai-queued-remove:hover {
 	color: var(--color-red);
+}
+
+.ai-wiki-image {
+	width: 3.5rem;
+	height: 3.5rem;
+	flex-shrink: 0;
+	border-radius: 0.6rem;
+	border: 1px solid var(--surface-5);
+	object-fit: cover;
+	background: var(--color-surface-3);
+}
+
+.ai-site-glyph {
+	color: var(--color-brand);
+	background: color-mix(in srgb, var(--color-brand) 14%, transparent);
+}
+
+.ai-site-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 60;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2rem;
+	background: rgba(0, 0, 0, 0.45);
+	backdrop-filter: blur(10px);
+}
+
+.ai-site-window {
+	display: flex;
+	flex-direction: column;
+	width: min(70rem, 100%);
+	height: min(44rem, 100%);
+	overflow: hidden;
+	border: 1px solid var(--surface-5);
+	border-radius: 1.25rem;
+	background: color-mix(in srgb, var(--color-raised-bg) 78%, transparent);
+	backdrop-filter: blur(22px);
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.ai-site-bar {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.6rem 0.8rem;
+	color: var(--color-primary);
+	border-bottom: 1px solid var(--surface-5);
+}
+
+.ai-site-frame {
+	flex: 1;
+	width: 100%;
+	border: none;
+	background: #fff;
+}
+
+.ai-site-enter-active,
+.ai-site-leave-active {
+	transition: opacity 0.22s ease;
+}
+
+.ai-site-enter-active .ai-site-window,
+.ai-site-leave-active .ai-site-window {
+	transition: transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.ai-site-enter-from,
+.ai-site-leave-to {
+	opacity: 0;
+}
+
+.ai-site-enter-from .ai-site-window,
+.ai-site-leave-to .ai-site-window {
+	transform: scale(0.95) translateY(10px);
+}
+
+.ai-slash {
+	margin-bottom: 0.5rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	max-height: 20rem;
+	overflow-y: auto;
+	padding: 0.4rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 1.1rem;
+	background: color-mix(in srgb, var(--color-raised-bg) 72%, transparent);
+	backdrop-filter: blur(20px);
+	box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
+}
+
+.ai-slash-title,
+.ai-slash-foot {
+	margin: 0;
+	padding: 0.25rem 0.55rem;
+	font-size: 0.6875rem;
+	color: var(--color-secondary);
+}
+
+.ai-slash-title {
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.ai-slash-item {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	width: 100%;
+	padding: 0.4rem 0.55rem;
+	border: none;
+	border-radius: 0.7rem;
+	background: transparent;
+	font: inherit;
+	color: var(--color-primary);
+	cursor: pointer;
+	text-align: left;
+	transition: background-color 0.14s ease;
+}
+
+.ai-slash-item--active {
+	background: color-mix(in srgb, var(--color-brand) 16%, transparent);
+}
+
+.ai-slash-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex-shrink: 0;
+	border-radius: 0.5rem;
+	background: var(--color-button-bg);
+	color: var(--color-brand);
+}
+
+.ai-slash-name {
+	font-weight: 600;
+	font-size: 0.8125rem;
+}
+
+.ai-slash-hint {
+	min-width: 0;
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.75rem;
+	color: var(--color-secondary);
+}
+
+.ai-slash-tag {
+	flex-shrink: 0;
+	padding: 0.05rem 0.4rem;
+	border-radius: 999px;
+	font-size: 0.625rem;
+	color: var(--color-brand);
+	background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+}
+
+.ai-slash-enter-active,
+.ai-slash-leave-active {
+	transition: opacity 0.16s ease, transform 0.18s ease;
+}
+
+.ai-slash-enter-from,
+.ai-slash-leave-to {
+	opacity: 0;
+	transform: translateY(6px);
+}
+
+.ai-mode-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	height: 1.75rem;
+	padding: 0 0.55rem;
+	border: 1px solid color-mix(in srgb, var(--color-brand) 35%, transparent);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+	color: var(--color-brand);
+	font: inherit;
+	font-size: 0.75rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.ai-mode-chip:hover {
+	background: color-mix(in srgb, var(--color-brand) 20%, transparent);
+	transform: translateY(-1px);
+}
+
+.ai-mode-chip--deep {
+	border-color: color-mix(in srgb, var(--color-purple, #a78bfa) 40%, transparent);
+	background: color-mix(in srgb, var(--color-purple, #a78bfa) 14%, transparent);
+	color: var(--color-purple, #a78bfa);
+}
+
+.ai-menu-sep {
+	height: 1px;
+	margin: 0.15rem 0.25rem;
+	background: var(--surface-5);
+}
+
+.ai-switch {
+	position: relative;
+	width: 1.9rem;
+	height: 1.1rem;
+	flex-shrink: 0;
+	border-radius: 999px;
+	background: var(--surface-5);
+	transition: background-color 0.18s ease;
+}
+
+.ai-switch::after {
+	content: '';
+	position: absolute;
+	top: 0.15rem;
+	left: 0.15rem;
+	width: 0.8rem;
+	height: 0.8rem;
+	border-radius: 50%;
+	background: #fff;
+	transition: transform 0.2s cubic-bezier(0.3, 0.9, 0.4, 1.2);
+}
+
+.ai-switch--on {
+	background: var(--color-brand);
+}
+
+.ai-switch--on::after {
+	transform: translateX(0.8rem);
+}
+
+.ai-kbd {
+	padding: 0 0.35rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 0.3rem;
+	font-size: 0.6875rem;
+	color: var(--color-secondary);
 }
 </style>

@@ -1,4 +1,6 @@
 <script setup>
+import '@/helpers/ai-launcher-tools'
+
 import { ModrinthApiError } from '@modrinth/api-client'
 import {
         ArrowLeftRightIcon,
@@ -67,6 +69,7 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useRouteLoading } from '@/app/runtime/use-route-loading'
 import AppSidebar from '@/app/shell/sidebar/index.vue'
 import AppTitleBar from '@/app/shell/title-bar/index.vue'
+import AgentNavNotice from '@/components/ui/ai/AgentNavNotice.vue'
 import CurseforgePendingFilesModal from '@/components/ui/curseforge/CurseforgePendingFilesModal.vue'
 import ErrorModal from '@/components/ui/ErrorModal.vue'
 import HostingUpdateRequired from '@/components/ui/HostingUpdateRequired.vue'
@@ -82,12 +85,11 @@ import ModrinthAccountRequiredModal from '@/components/ui/modal/ModrinthAccountR
 import UpdateToPlayModal from '@/components/ui/modal/UpdateToPlayModal.vue'
 import PackManifestModal from '@/components/ui/modpack/PackManifestModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
+import NotesLaunchPopup from '@/components/ui/NotesLaunchPopup.vue'
 import PortalrinthBackdrop from '@/components/ui/PortalrinthBackdrop.vue'
 import PortalrinthCrashModal from '@/components/ui/PortalrinthCrashModal.vue'
 import PortalrinthSwipeNavigation from '@/components/ui/PortalrinthSwipeNavigation.vue'
 import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
-import AgentNavNotice from '@/components/ui/ai/AgentNavNotice.vue'
-import NotesLaunchPopup from '@/components/ui/NotesLaunchPopup.vue'
 import SharedInstanceInviteHandler from '@/components/ui/shared-instances/shared-instance-invite-handler/index.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
 import SurveyPopup from '@/components/ui/SurveyPopup.vue'
@@ -114,7 +116,6 @@ import {
         take_ads_window_hold,
 } from '@/helpers/ads.js'
 import { mascotCelebrate, maybeMarkPlayerInterrupt, noteAgentNavigation, registerAiToolHandler } from '@/helpers/ai-assistant'
-import { handleHotkeyKeyEvent, registerHotkeyHandler } from '@/helpers/portalrinth-hotkeys'
 import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { refreshBedrockProfiles } from '@/helpers/bedrock'
@@ -142,6 +143,7 @@ import {
         setActive,
 } from '@/helpers/mr_auth.ts'
 import { loadBackground } from '@/helpers/portalrinth-background'
+import { handleHotkeyKeyEvent, registerHotkeyHandler } from '@/helpers/portalrinth-hotkeys'
 import { prefetchRouteChunks, startProjectHoverPrefetch } from '@/helpers/portalrinth-prefetch'
 import { installSoundEffects } from '@/helpers/portalrinth-sfx'
 import { markSidebarMoving } from '@/helpers/portalrinth-sidebar-motion'
@@ -1626,22 +1628,79 @@ onMounted(() => {
         setServerInstallToPlayModal(installToPlayModal.value)
         setServerUpdateToPlayModal(updateToPlayModal.value)
 
+        // Models write paths loosely - "mods", "browse/mods", "/настройки":
+        // every spelling of a real screen lands on it instead of a 404.
+        const normalizeAgentPath = (raw: string): string => {
+                let path = raw.trim().replace(/^["'`]+|["'`]+$/g, '')
+                if (!path) return ''
+                if (/^https?:\/\/modrinth\.com\//.test(path)) path = path.replace(/^https?:\/\/modrinth\.com/, '')
+                const bare = path.replace(/^\/+/, '').toLowerCase()
+                const aliases: Record<string, string> = {
+                        '': '/',
+                        home: '/',
+                        главная: '/',
+                        mods: '/browse/mod',
+                        mod: '/browse/mod',
+                        моды: '/browse/mod',
+                        modpacks: '/browse/modpack',
+                        modpack: '/browse/modpack',
+                        сборки: '/browse/modpack',
+                        shaders: '/browse/shader',
+                        shader: '/browse/shader',
+                        шейдеры: '/browse/shader',
+                        resourcepacks: '/browse/resourcepack',
+                        resourcepack: '/browse/resourcepack',
+                        'ресурс-паки': '/browse/resourcepack',
+                        datapacks: '/browse/datapack',
+                        skins: '/skins',
+                        скины: '/skins',
+                        screenshots: '/screenshots',
+                        скриншоты: '/screenshots',
+                        lan: '/lan',
+                        лан: '/lan',
+                        ai: '/ai',
+                        browse: '/browse/mod',
+                        settings: 'settings',
+                        настройки: 'settings',
+                }
+                if (bare in aliases) return aliases[bare]
+                path = `/${path.replace(/^\/+/, '')}`
+                return path
+                        .replace(/^\/browse\/(mods|modpacks|shaders|resourcepacks|datapacks|plugins)(?=$|[?/])/, (_m, kind: string) => `/browse/${kind.slice(0, -1)}`)
+                        .replace(/^\/(mods|modpacks|shaders|resourcepacks)(?=\?)/, (_m, kind: string) => `/browse/${kind.slice(0, -1)}`)
+                        .replace(/^\/settings.*$/, 'settings')
+        }
+
         // The AI assistant's hands: the tools that need the app itself.
-        registerAiToolHandler((tool, args) => {
+        registerAiToolHandler(async (tool, args) => {
                 if (tool === 'navigate') {
-                        if (!args || !args.startsWith('/')) return 'Нужен путь внутри лаунчера'
+                        const target = normalizeAgentPath(args)
+                        if (target === 'settings') {
+                                void appSettingsModal.value?.show()
+                                return 'Открыл настройки лаунчера'
+                        }
+                        if (!target) return 'Нужен путь внутри лаунчера, например /browse/mod?q=jei'
+                        const resolved = router.resolve(target)
+                        if (resolved.matched.length === 0) {
+                                return `Экрана ${target} нет. Есть: /, /browse/mod, /browse/modpack, /browse/resourcepack, /browse/shader, /browse/skin, /skins, /screenshots, /lan, /project/<id>, /curseforge/<id>, /instance/<id>`
+                        }
                         noteAgentNavigation()
-                        void router.push(args)
-                        return `Открыл ${args}`
+                        await router.push(target).catch(() => {})
+                        return `Открыл ${route.fullPath}`
+                }
+                if (tool === 'open_settings') {
+                        void appSettingsModal.value?.show()
+                        return 'Открыл настройки лаунчера'
                 }
                 if (tool === 'open_creation_modal') {
                         void installationModal.value?.show()
                         return 'Открыл окно создания сборки'
                 }
                 if (tool === 'open_instance') {
-                        if (!args) return 'Нужен id сборки'
+                        const id = args.trim()
+                        if (!id) return 'Нужен id сборки'
                         noteAgentNavigation()
-                        void router.push(`/instance/${args}`)
+                        await router.push(`/instance/${encodeURIComponent(id)}`).catch(() => {})
                         return 'Открыл сборку'
                 }
                 if (tool === 'get_page') {

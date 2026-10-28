@@ -29,24 +29,24 @@ const messages = defineMessages({
 	description: {
 		id: 'noctrinth.settings.curseforge.description',
 		defaultMessage:
-			'Browse and install from CurseForge, recognise its files in your instances and keep them up to date. Off, and the launcher asks CurseForge nothing.',
+			'Поиск и установка с CurseForge, распознавание его файлов в сборках и их обновление. Если выключено — лаунчер ничего не запрашивает у CurseForge.',
 	},
 	noKey: {
 		id: 'noctrinth.settings.curseforge.no-key',
-		defaultMessage: 'This build has no CurseForge API key. Add your own below to use CurseForge.',
+		defaultMessage: 'В этой сборке лаунчера нет ключа API CurseForge. Добавьте свой ниже, чтобы пользоваться CurseForge.',
 	},
 	discoverSection: {
 		id: 'noctrinth.settings.curseforge.section.discover',
-		defaultMessage: 'Discover',
+		defaultMessage: 'Обзор',
 	},
 	defaultSource: {
 		id: 'noctrinth.settings.curseforge.default-source',
-		defaultMessage: 'Browse opens on',
+		defaultMessage: 'Обзор открывается на',
 	},
 	defaultSourceDescription: {
 		id: 'noctrinth.settings.curseforge.default-source.description',
 		defaultMessage:
-			'Which catalogue Discover shows first. The switch above the results changes it any time.',
+			'Какой каталог показывать первым. Переключатель над результатами меняет его в любой момент.',
 	},
 	modrinth: { id: 'noctrinth.settings.curseforge.source.modrinth', defaultMessage: 'Modrinth' },
 	curseforge: {
@@ -55,99 +55,99 @@ const messages = defineMessages({
 	},
 	filesSection: {
 		id: 'noctrinth.settings.curseforge.section.files',
-		defaultMessage: 'Files and updates',
+		defaultMessage: 'Файлы и обновления',
 	},
 	recognizeFilesTitle: {
 		id: 'noctrinth.settings.curseforge.recognize-files.title',
-		defaultMessage: 'Recognise files',
+		defaultMessage: 'Распознавать файлы',
 	},
 	recognizeFiles: {
 		id: 'noctrinth.settings.curseforge.recognize-files',
-		defaultMessage: 'Recognise mods added by hand or from other launchers by their fingerprint',
+		defaultMessage: 'Узнавать моды, добавленные вручную или из других лаунчеров, по отпечатку файла',
 	},
 	checkUpdatesTitle: {
 		id: 'noctrinth.settings.curseforge.check-updates.title',
-		defaultMessage: 'Check for updates',
+		defaultMessage: 'Проверять обновления',
 	},
 	checkUpdates: {
 		id: 'noctrinth.settings.curseforge.check-updates',
-		defaultMessage: 'Check CurseForge for updates of its mods and packs',
+		defaultMessage: 'Проверять на CurseForge обновления его модов и сборок',
 	},
 	releaseType: {
 		id: 'noctrinth.settings.curseforge.release-type',
-		defaultMessage: 'Update to',
+		defaultMessage: 'Обновлять до',
 	},
 	releaseTypeDescription: {
 		id: 'noctrinth.settings.curseforge.release-type.description',
-		defaultMessage: 'Which files count as an update.',
+		defaultMessage: 'Какие файлы считать обновлением.',
 	},
 	release: {
 		id: 'noctrinth.settings.curseforge.release-type.release',
-		defaultMessage: 'Releases only',
+		defaultMessage: 'Только релизы',
 	},
 	beta: {
 		id: 'noctrinth.settings.curseforge.release-type.beta',
-		defaultMessage: 'Releases and betas',
+		defaultMessage: 'Релизы и беты',
 	},
 	alpha: {
 		id: 'noctrinth.settings.curseforge.release-type.alpha',
-		defaultMessage: 'Any file, alphas too',
+		defaultMessage: 'Любые файлы, включая альфы',
 	},
 	restrictedSection: {
 		id: 'noctrinth.settings.curseforge.section.restricted',
-		defaultMessage: 'Files kept off launchers',
+		defaultMessage: 'Файлы, недоступные лаунчерам',
 	},
 	searchOtherLaunchersTitle: {
 		id: 'noctrinth.settings.curseforge.search-other-launchers.title',
-		defaultMessage: 'Search other launchers',
+		defaultMessage: 'Искать в других лаунчерах',
 	},
 	searchOtherLaunchers: {
 		id: 'noctrinth.settings.curseforge.search-other-launchers',
 		defaultMessage:
-			"Look for files kept off launchers in other launchers' instances, not only in Downloads",
+			'Искать недоступные лаунчерам файлы в сборках других лаунчеров, а не только в «Загрузках»',
 	},
-	ownKey: { id: 'noctrinth.settings.curseforge.own-key', defaultMessage: 'Your own API key' },
+	ownKey: { id: 'noctrinth.settings.curseforge.own-key', defaultMessage: 'Свой ключ API' },
 	ownKeyHint: {
 		id: 'noctrinth.settings.curseforge.own-key.hint',
 		defaultMessage:
-			'Used instead of the built-in one and kept on this computer. Sign in to the CurseForge console and copy a key from its API keys page:',
+			'Используется вместо встроенного и хранится только на этом компьютере. Войдите в консоль CurseForge и скопируйте ключ на странице API keys:',
 	},
 	ownKeyPlaceholder: {
 		id: 'noctrinth.settings.curseforge.own-key.placeholder',
-		defaultMessage: 'Your key is saved',
+		defaultMessage: 'Ваш ключ сохранён',
 	},
-	check: { id: 'noctrinth.settings.curseforge.own-key.check', defaultMessage: 'Check' },
+	check: { id: 'noctrinth.settings.curseforge.own-key.check', defaultMessage: 'Проверить' },
 	checkAndSave: {
 		id: 'noctrinth.settings.curseforge.own-key.check-and-save',
-		defaultMessage: 'Check and save',
+		defaultMessage: 'Проверить и сохранить',
 	},
-	forget: { id: 'noctrinth.settings.curseforge.own-key.forget', defaultMessage: 'Forget my key' },
+	forget: { id: 'noctrinth.settings.curseforge.own-key.forget', defaultMessage: 'Забыть мой ключ' },
 	keyOk: {
 		id: 'noctrinth.settings.curseforge.own-key.ok',
-		defaultMessage: 'CurseForge accepts the key',
+		defaultMessage: 'CurseForge принимает ключ',
 	},
 	keySaved: {
 		id: 'noctrinth.settings.curseforge.own-key.saved',
-		defaultMessage: 'CurseForge accepts the key; it is saved',
+		defaultMessage: 'CurseForge принимает ключ, он сохранён',
 	},
 	keyInvalid: {
 		id: 'noctrinth.settings.curseforge.own-key.invalid',
-		defaultMessage: 'CurseForge does not accept this key',
+		defaultMessage: 'CurseForge не принимает этот ключ',
 	},
 	checkFailed: {
 		id: 'noctrinth.settings.curseforge.own-key.check-failed',
-		defaultMessage: 'Could not reach CurseForge to check the key',
+		defaultMessage: 'Не удалось связаться с CurseForge для проверки ключа',
 	},
-	cacheTitle: { id: 'noctrinth.settings.curseforge.cache.title', defaultMessage: 'Cache' },
+	cacheTitle: { id: 'noctrinth.settings.curseforge.cache.title', defaultMessage: 'Кэш' },
 	clearCache: {
 		id: 'noctrinth.settings.curseforge.clear-cache',
-		defaultMessage: "Forget CurseForge's answers",
+		defaultMessage: 'Сбросить ответы CurseForge',
 	},
 	clearCacheHint: {
 		id: 'noctrinth.settings.curseforge.clear-cache-hint',
-		defaultMessage: 'They are kept for five minutes; this asks again right away.',
+		defaultMessage: 'Они хранятся пять минут; кнопка запросит заново прямо сейчас.',
 	},
-	cleared: { id: 'noctrinth.settings.curseforge.cleared', defaultMessage: 'Forgotten' },
+	cleared: { id: 'noctrinth.settings.curseforge.cleared', defaultMessage: 'Сброшено' },
 })
 
 const sourceOptions = computed<ComboboxOption<'modrinth' | 'curseforge'>[]>(() => [

@@ -3,8 +3,8 @@ import { ChevronLeftIcon, ChevronRightIcon, RightArrowIcon } from '@modrinth/ass
 import { defineMessages, IconButton, useVIntl } from '@modrinth/ui'
 import { useRouter } from 'vue-router'
 
-import PortalrinthLogo from '@/components/ui/PortalrinthLogo.vue'
 import ClockWidget from '@/components/ui/portalrinth-widgets/ClockWidget.vue'
+import PortalrinthLogo from '@/components/ui/PortalrinthLogo.vue'
 import { portalrinthFeatures } from '@/helpers/portalrinth-features'
 
 import AppActionBar from './action-bar.vue'
@@ -38,6 +38,7 @@ const messages = defineMessages({
 	>
 		<ClockWidget
 			v-if="portalrinthFeatures.clock"
+			data-titlebar-clock
 			class="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-contrast"
 		/>
 		<div data-tauri-drag-region class="flex min-w-0 flex-1 items-center overflow-hidden p-2">
