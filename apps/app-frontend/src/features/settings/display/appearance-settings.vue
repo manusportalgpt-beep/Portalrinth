@@ -29,6 +29,8 @@ import {
 	setAccentGradientSpeed,
 	removeCustomAccentColor,
 	setAccentGradientAnimated,
+	iconsAccent,
+	setIconsAccent,
 	showAccent,
 	useAccentPreset,
 } from '@/composables/use-accent.ts'
@@ -108,6 +110,12 @@ const accent = useAccentPreset()
 const gradientAnimated = computed({
 	get: () => accentGradientAnimated.value,
 	set: setAccentGradientAnimated,
+})
+
+/** Whether the brand icons and our mark wear the accent, switched at once. */
+const iconsAccentMode = computed({
+	get: () => iconsAccent.value,
+	set: setIconsAccent,
 })
 
 /** How fast the run pours: one walk of the gradient in seconds. */
@@ -200,6 +208,15 @@ const messages = defineMessages({
 		id: 'app.appearance-settings.accent.gradient-shimmer.description',
 		defaultMessage:
 			'The colours of a gradient accent slowly move across what they fill.',
+	},
+	iconsAccentTitle: {
+		id: 'app.appearance-settings.accent-icons.title',
+		defaultMessage: 'All icons in the accent',
+	},
+	iconsAccentDescription: {
+		id: 'app.appearance-settings.accent-icons.description',
+		defaultMessage:
+			'The Modrinth and CurseForge icons and our mark - in the title bar and on the desktop - take the accent\u2019s colour. A gradient gives them its first colour. Account icons keep their own.',
 	},
 	accentTintDescription: {
 		id: 'app.appearance-settings.accent-tint.description',
@@ -560,6 +577,21 @@ provideAppearanceSettings({
 				:step="1"
 				unit="s"
 				aria-labelledby="accent-shimmer-speed-label"
+			/>
+		</div>
+		<div class="mt-3 flex items-center justify-between gap-4">
+			<div class="min-w-0">
+				<h3 id="accent-icons-label" class="m-0 text-lg font-semibold text-contrast">
+					{{ formatMessage(messages.iconsAccentTitle) }}
+				</h3>
+				<p class="m-0 mt-1 text-secondary">
+					{{ formatMessage(messages.iconsAccentDescription) }}
+				</p>
+			</div>
+			<Toggle
+				id="accent-icons"
+				v-model="iconsAccentMode"
+				aria-labelledby="accent-icons-label"
 			/>
 		</div>
 	</div>

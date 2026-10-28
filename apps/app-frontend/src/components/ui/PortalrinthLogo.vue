@@ -22,7 +22,6 @@
 import { injectLoadingState } from '@modrinth/ui'
 import { onBeforeUnmount, ref, watch } from 'vue'
 
-import PortalrinthMark from '@/assets/portalrinth-icon.png'
 import { useAppBusy } from '@/composables/use-app-busy'
 
 /** How long a turn is held once it has started, so a fast page load is still seen. */
@@ -74,7 +73,7 @@ onBeforeUnmount(clearStopTimer)
 
 <template>
 	<span class="portalrinth-logo" :class="{ 'is-active': active || working }">
-		<img :src="PortalrinthMark" alt="" class="portalrinth-logo__mark" aria-hidden="true" />
+		<span class="portalrinth-logo__mark" aria-hidden="true" />
 		<span class="portalrinth-logo__name">Portalrinth</span>
 	</span>
 </template>
@@ -88,9 +87,23 @@ onBeforeUnmount(clearStopTimer)
 }
 
 .portalrinth-logo__mark {
+	display: block;
 	height: 1.75rem;
 	width: 1.75rem;
-	object-fit: contain;
+	background: url('@/assets/portalrinth-icon.png') center / contain no-repeat;
+}
+
+/*
+ * Under "all icons in the accent" the artwork steps aside and the mark
+ * becomes a silhouette in the accent colour - the same shape, worn as a
+ * mask over the colour the rest of the interface is picked out in. A
+ * gradient accent hands over its first colour, as it does everywhere
+ * else only one colour will do.
+ */
+html.portalrinth-icons-accent .portalrinth-logo__mark {
+	background: var(--portalrinth-accent, var(--color-brand));
+	-webkit-mask: url('@/assets/portalrinth-icon.png') center / contain no-repeat;
+	mask: url('@/assets/portalrinth-icon.png') center / contain no-repeat;
 }
 
 /*

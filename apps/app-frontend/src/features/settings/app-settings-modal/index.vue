@@ -10,7 +10,6 @@ import {
 	KeyboardIcon,
 	LanguagesIcon,
 	LightBulbIcon,
-	ModrinthIcon,
 	NewspaperIcon,
 	PaintbrushIcon,
 	RefreshCwIcon,
@@ -513,7 +512,7 @@ const messages = defineMessages({
 						}"
 						@click="devModeCount"
 					>
-						<ModrinthIcon aria-hidden="true" class="w-6 h-6" />
+						<span class="portalrinth-settings-mark" aria-hidden="true" />
 					</button>
 					<div v-if="appInfo" class="max-w-[200px]">
 						<p class="m-0">
@@ -530,3 +529,18 @@ const messages = defineMessages({
 		</template>
 	</TabbedModal>
 </template>
+
+<style scoped>
+/* Our mark, drawn without any colour of its own: the artwork is worn
+   as a mask over the text colour, so it sits beside the version as
+   quietly as the Modrinth icon it replaced - secondary in a normal
+   window, brand while developer mode is on. */
+.portalrinth-settings-mark {
+	display: block;
+	width: 1.5rem;
+	height: 1.5rem;
+	background-color: currentColor;
+	-webkit-mask: url('@/assets/portalrinth-icon.png') center / contain no-repeat;
+	mask: url('@/assets/portalrinth-icon.png') center / contain no-repeat;
+}
+</style>

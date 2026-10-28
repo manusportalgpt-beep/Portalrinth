@@ -17,7 +17,7 @@
 			min="0"
 			max="100"
 			step="1"
-			:style="{ '--progress': `${model}%` }"
+			:style="{ '--p': String(Math.min(100, Math.max(0, model)) / 100) }"
 			:aria-label="label"
 		/>
 	</div>
@@ -44,7 +44,12 @@ function toggleMute() {
    control. The input itself is a generous invisible grab area - the visible
    bar is the gradient, squeezed into a thin centred strip by background-size. */
 .portalrinth-range {
-	--progress: 0%;
+	/* The thumb travels half its own width short of each end, so the
+	   colour is filled to the thumb's centre, not to where the raw
+	   percent lands: the ball stays pinned to the tip of the line
+	   instead of drifting off it. */
+	--p: 0;
+	--progress: calc(0.4375rem + (100% - 0.875rem) * var(--p));
 	appearance: none;
 	height: 1.1rem;
 	margin: 0;

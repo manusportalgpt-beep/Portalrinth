@@ -21,9 +21,11 @@
 					{{ currentTrack?.artist || formatMessage(messages.unknownArtist) }}
 				</span>
 			</div>
-			<div v-if="audioSettings.visualizer" class="h-9 w-20 shrink-0">
-				<MusicVisualizer :bars="9" />
-			</div>
+			<VolumeControl
+				v-model="audioSettings.musicVolume"
+				:label="formatMessage(messages.musicVolume)"
+				class="w-32 shrink-0"
+			/>
 		</div>
 
 		<div class="flex flex-col gap-1">
@@ -38,7 +40,7 @@
 				:max="Math.max(player.duration, 0.01)"
 				step="0.1"
 				:value="scrubbing ?? player.currentTime"
-				:style="{ '--progress': `${progress}%` }"
+				:style="{ '--p': String(progress / 100) }"
 				:aria-label="formatMessage(messages.seek)"
 				:disabled="!player.trackId"
 				@input="scrubbing = Number(($event.target as HTMLInputElement).value)"
@@ -87,11 +89,6 @@
 					<RepeatIcon v-else :class="{ 'opacity-50': audioSettings.repeat === 'off' }" />
 				</IconButton>
 			</div>
-			<VolumeControl
-				v-model="audioSettings.musicVolume"
-				:label="formatMessage(messages.musicVolume)"
-				class="w-28"
-			/>
 		</div>
 	</div>
 </template>
@@ -109,7 +106,6 @@ import {
 import { defineMessages, IconButton, useVIntl } from '@modrinth/ui'
 import { computed, ref } from 'vue'
 
-import MusicVisualizer from '@/components/ui/portalrinth-audio/MusicVisualizer.vue'
 import VolumeControl from '@/components/ui/portalrinth-audio/VolumeControl.vue'
 import {
 	audioSettings,

@@ -2984,12 +2984,6 @@
 	"app.settings.sound.music-description": {
 		"message": "Играет ваш плейлист в лаунчере. Громкость и плеер — под кнопкой звука в заголовке окна."
 	},
-	"app.settings.sound.visualizer": {
-		"message": "Отрисовывать бит"
-	},
-	"app.settings.sound.visualizer-description": {
-		"message": "Полоски в плеере, которые двигаются под музыку."
-	},
 	"app.settings.sound.music-volume": {
 		"message": "Громкость музыки"
 	},
@@ -3563,12 +3557,6 @@
 	"app.settings.sound.online.title": {
 		"message": "Музыка из интернета"
 	},
-	"app.settings.sound.online.search-placeholder": {
-		"message": "Исполнитель или название трека…"
-	},
-	"app.settings.sound.online.search": {
-		"message": "Искать на LightAudio"
-	},
 	"app.settings.sound.online.url-placeholder": {
 		"message": "Прямая ссылка на трек (https://…/track.mp3)"
 	},
@@ -3576,7 +3564,7 @@
 		"message": "Скачать"
 	},
 	"app.settings.sound.online.hint": {
-		"message": "Поиск открывается на web.ligaudio.ru в браузере (сайт проверяет, что зашёл настоящий браузер). Скопируйте из их плеера прямую ссылку на файл, вставьте сюда — трек скачается в плейлист. То же умеет Порталус: попросите «скачай трек по ссылке …»."
+		"message": "Вставьте прямую ссылку на трек (например, https://…/track.mp3) - и он скачается прямо в плейлист. Порталус тоже умеет: попросите его «скачать трек по ссылке …»."
 	},
 	"app.settings.sound.online.url-ok": {
 		"message": "Трек скачан в плейлист"
@@ -3808,5 +3796,11 @@
 	},
 	"app.skin-browse.filter-results": {
 		"message": "Скины: {filter}"
+	},
+	"app.appearance-settings.accent-icons.title": {
+		"message": "Все иконки под акцент"
+	},
+	"app.appearance-settings.accent-icons.description": {
+		"message": "Иконки Modrinth, CurseForge и наш логотип - сверху и на рабочем столе - берут цвет акцента. Градиент отдаёт им свой первый цвет. Иконки аккаунта остаются своими."
 	}
 }

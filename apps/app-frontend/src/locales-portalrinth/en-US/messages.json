@@ -1934,12 +1934,6 @@
 	"app.settings.sound.online.title": {
 		"message": "Music from the internet"
 	},
-	"app.settings.sound.online.search-placeholder": {
-		"message": "Artist or track name…"
-	},
-	"app.settings.sound.online.search": {
-		"message": "Search on LightAudio"
-	},
 	"app.settings.sound.online.url-placeholder": {
 		"message": "Direct link to a track (https://…/track.mp3)"
 	},
@@ -1947,7 +1941,7 @@
 		"message": "Download"
 	},
 	"app.settings.sound.online.hint": {
-		"message": "Search opens on web.ligaudio.ru in your browser (the site checks that a real browser is visiting). Copy the direct link to the file from its player, paste it here, and the track downloads into the playlist. Portalus can do the same: ask it to “download a track by the link …”."
+		"message": "Paste a direct link to a track (for example, https://…/track.mp3) and it downloads straight into the playlist. Portalus can do the same: ask it to “download a track by the link …”."
 	},
 	"app.settings.sound.online.url-ok": {
 		"message": "Track downloaded into the playlist"
@@ -2269,5 +2263,11 @@
 	},
 	"app.skin-browse.similar-category": {
 		"message": "Category: {tags}"
+	},
+	"app.appearance-settings.accent-icons.title": {
+		"message": "All icons in the accent"
+	},
+	"app.appearance-settings.accent-icons.description": {
+		"message": "The Modrinth and CurseForge icons and our mark - in the title bar and on the desktop - take the accent’s colour. A gradient gives them its first colour. Account icons keep their own."
 	}
 }

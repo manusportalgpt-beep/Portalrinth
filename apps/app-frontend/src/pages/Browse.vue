@@ -1323,13 +1323,13 @@ function getCardSources(result: Labrinth.Search.v3.ResultSearchProject): CardSou
 		key: 'modrinth',
 		label: 'Modrinth',
 		icon: ModrinthBrandIcon,
-		iconClass: 'text-[#1bd96a]',
+		iconClass: 'text-[#1bd96a] portalrinth-brand-icon',
 	}
 	const curseforge = {
 		key: 'curseforge',
 		label: 'CurseForge',
 		icon: CurseForgeIcon,
-		iconClass: 'text-[#f16436]',
+		iconClass: 'text-[#f16436] portalrinth-brand-icon',
 	}
 	const label = formatMessage(messages.cardSourceLabel)
 	if (isCurseforgeId(result.project_id)) {

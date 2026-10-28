@@ -15,21 +15,6 @@
 				/>
 			</div>
 			<template v-if="audioSettings.musicEnabled">
-				<div class="flex items-center justify-between gap-4">
-					<div class="min-w-0">
-						<h3 id="sound-visualizer-label" class="m-0 text-lg font-semibold text-contrast">
-							{{ formatMessage(messages.visualizerTitle) }}
-						</h3>
-						<p class="m-0 mt-1 text-secondary">
-							{{ formatMessage(messages.visualizerDescription) }}
-						</p>
-					</div>
-					<Toggle
-						id="sound-visualizer"
-						v-model="audioSettings.visualizer"
-						aria-labelledby="sound-visualizer-label"
-					/>
-				</div>
 				<div class="flex flex-col gap-2.5">
 					<h3 class="m-0 text-lg font-semibold text-contrast">
 						{{ formatMessage(messages.musicVolume) }}
@@ -69,36 +54,6 @@
 					id="sound-video-volume"
 					v-model="audioSettings.videoVolume"
 					:aria-label="formatMessage(messages.videoVolume)"
-					:min="0"
-					:max="100"
-					:step="1"
-					unit="%"
-				/>
-			</div>
-		</section>
-
-		<section class="flex flex-col gap-6 border-0 border-t border-solid border-divider pt-6">
-			<div class="flex items-center justify-between gap-4">
-				<div class="min-w-0">
-					<h2 id="sound-effects-label" class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.effectsTitle) }}
-					</h2>
-					<p class="m-0 mt-1 text-secondary">{{ formatMessage(messages.effectsDescription) }}</p>
-				</div>
-				<Toggle
-					id="sound-effects"
-					v-model="audioSettings.effectsEnabled"
-					aria-labelledby="sound-effects-label"
-				/>
-			</div>
-			<div v-if="audioSettings.effectsEnabled" class="flex flex-col gap-2.5">
-				<h3 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.effectsVolume) }}
-				</h3>
-				<Slider
-					id="sound-effects-volume"
-					v-model="audioSettings.effectsVolume"
-					:aria-label="formatMessage(messages.effectsVolume)"
 					:min="0"
 					:max="100"
 					:step="1"
@@ -188,18 +143,6 @@
 				<span class="font-semibold text-contrast">
 					{{ formatMessage(messages.onlineTitle) }}
 				</span>
-				<div class="flex flex-wrap items-center gap-2">
-					<Input
-						v-model="onlineQuery"
-						:placeholder="formatMessage(messages.onlineSearchPlaceholder)"
-						class="w-72"
-						@keydown.enter="searchOnline"
-					/>
-					<Button :disabled="!onlineQuery.trim()" @click="searchOnline">
-						<SearchIcon class="size-4" aria-hidden="true" />
-						{{ formatMessage(messages.onlineSearch) }}
-					</Button>
-				</div>
 				<div class="flex flex-wrap items-center gap-2">
 					<Input
 						v-model="onlineUrl"
@@ -319,7 +262,6 @@ import {
 	PauseIcon,
 	PlayIcon,
 	PlusIcon,
-	SearchIcon,
 	SpinnerIcon,
 	TrashIcon,
 } from '@modrinth/assets'
@@ -379,11 +321,6 @@ const messages = defineMessages({
 		defaultMessage:
 			'Plays your playlist in the launcher. Volume and the player are under the sound button in the title bar.',
 	},
-	visualizerTitle: { id: 'app.settings.sound.visualizer', defaultMessage: 'Draw the beat' },
-	visualizerDescription: {
-		id: 'app.settings.sound.visualizer-description',
-		defaultMessage: 'Bars in the player that move with the music.',
-	},
 	musicVolume: { id: 'app.settings.sound.music-volume', defaultMessage: 'Music volume' },
 	videoTitle: { id: 'app.settings.sound.video', defaultMessage: 'Background video sound' },
 	videoDescription: {
@@ -407,14 +344,6 @@ const messages = defineMessages({
 		id: 'app.settings.sound.online.title',
 		defaultMessage: 'Music from the internet',
 	},
-	onlineSearchPlaceholder: {
-		id: 'app.settings.sound.online.search-placeholder',
-		defaultMessage: 'Artist or track name…',
-	},
-	onlineSearch: {
-		id: 'app.settings.sound.online.search',
-		defaultMessage: 'Search on LightAudio',
-	},
 	onlineUrlPlaceholder: {
 		id: 'app.settings.sound.online.url-placeholder',
 		defaultMessage: 'Direct link to a track (https://…/track.mp3)',
@@ -423,7 +352,7 @@ const messages = defineMessages({
 	onlineHint: {
 		id: 'app.settings.sound.online.hint',
 		defaultMessage:
-			'Search opens on web.ligaudio.ru in your browser (the site checks that a real browser is visiting). Copy the direct link to the file from its player, paste it here, and the track downloads into the playlist. Portalus can do the same: ask it to “download a track by the link …”.',
+			'Paste a direct link to a track (for example, https://…/track.mp3) and it downloads straight into the playlist. Portalus can do the same: ask it to “download a track by the link …”.',
 	},
 	urlOk: { id: 'app.settings.sound.online.url-ok', defaultMessage: 'Track downloaded into the playlist' },
 	urlFail: { id: 'app.settings.sound.online.url-fail', defaultMessage: 'Could not add' },
@@ -491,24 +420,10 @@ async function add() {
 
 // ---- Music from the internet -----------------------------------------------
 
-const onlineQuery = ref('')
 const onlineUrl = ref('')
 const addingUrl = ref(false)
 const urlMessage = ref('')
 const urlOk = ref(false)
-
-/** Opens the LightAudio search in the system browser: the site greets robots
- * with a check only a real browser passes, so the search lives there. */
-async function searchOnline() {
-	const query = onlineQuery.value.trim()
-	if (!query) return
-	try {
-		const { openUrl } = await import('@tauri-apps/plugin-opener')
-		await openUrl(`https://web.ligaudio.ru/search?q=${encodeURIComponent(query)}`)
-	} catch {
-		window.open(`https://web.ligaudio.ru/search?q=${encodeURIComponent(query)}`, '_blank')
-	}
-}
 
 /** Downloads a track by its direct link straight into the playlist. */
 async function addByUrl() {

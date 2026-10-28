@@ -596,6 +596,58 @@ export function setAccentGradientSpeed(seconds: number): void {
 
 applyShimmerSpeed(accentGradientSpeed.value)
 
+/**
+ * Whether the icons that carry a brand's own colour - Modrinth, CurseForge,
+ * the rest of them, and the mark in the title bar and on the desktop -
+ * take the accent instead. Account icons keep their own faces. Where the
+ * accent is a run of colours, the icons take its first, the one colour a
+ * single small picture can hold.
+ */
+const ICONS_KEY = 'portalrinth-icons-accent'
+const ICONS_CLASS = 'portalrinth-icons-accent'
+const ICONS_STYLE_ID = 'portalrinth-icons-accent-style'
+
+const ICONS_STYLESHEET = `
+/* The source pickers, the badges on combined search results: everything
+   painted in a brand's colour follows the accent instead. */
+html.${ICONS_CLASS} .portalrinth-brand-icon,
+html.${ICONS_CLASS} .browse-source-icon--modrinth,
+html.${ICONS_CLASS} .browse-source-icon--curseforge {
+	color: var(--portalrinth-accent, var(--color-brand)) !important;
+}
+`
+
+function readIconsAccent(): boolean {
+	try {
+		return localStorage.getItem(ICONS_KEY) === 'true'
+	} catch {
+		return false
+	}
+}
+
+export const iconsAccent = ref(readIconsAccent())
+
+/** Sets the icons following the accent, and keeps the choice. */
+export function setIconsAccent(on: boolean): void {
+	iconsAccent.value = on
+	try {
+		localStorage.setItem(ICONS_KEY, on ? 'true' : 'false')
+	} catch {
+		// Not kept, but still in effect until the window is closed.
+	}
+}
+
+/** The title bar's own rule lives with the logo; this one is for the rest. */
+function applyIconsAccent(): void {
+	if (!document.getElementById(ICONS_STYLE_ID)) {
+		const style = document.createElement('style')
+		style.id = ICONS_STYLE_ID
+		style.textContent = ICONS_STYLESHEET
+		document.head.appendChild(style)
+	}
+	document.documentElement.classList.toggle(ICONS_CLASS, iconsAccent.value)
+}
+
 /** The colour a preset is drawn in under the theme currently on screen. */
 /**
  * The accent of a theme that is not purple, which is what "the theme's own"
@@ -779,8 +831,9 @@ function settle(id: string): void {
 // than on dark, so the override is recomputed rather than kept.
 let firstApply = true
 watch(
-	[presetId, tintBackground, customColor, accentGradientAnimated, () => theme.active],
+	[presetId, tintBackground, customColor, accentGradientAnimated, () => theme.active, iconsAccent],
 	([id, tint, , , active], previous) => {
+		applyIconsAccent()
 		if (firstApply) {
 			firstApply = false
 			apply(id, tint)
