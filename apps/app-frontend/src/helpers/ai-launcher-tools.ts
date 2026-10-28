@@ -288,7 +288,7 @@ registerAiToolHandler(async (tool, args) => {
 				.map((relay) => {
 					const state =
 						relay.state === 'live'
-							? `открыт для друзей: ${relay.public_host}:${relay.public_port}`
+							? `открыт для друзей, адрес \`${relay.public_host}:${relay.public_port}\``
 							: relay.state === 'ready'
 								? `мир открыт в игре (порт ${relay.local_port}) — можно опубликовать: <<lan_publish|${relay.instance_id}>>`
 								: relay.state === 'lost'
@@ -321,15 +321,15 @@ registerAiToolHandler(async (tool, args) => {
 				return `Закрыл мир «${relay.instance_name}» для друзей.`
 			}
 			if (relay.state === 'live')
-				return `Уже открыт: адрес для друзей ${relay.public_host}:${relay.public_port}`
+				return `Уже открыт. Адрес для друзей: \`${relay.public_host}:${relay.public_port}\` (дай его игроку именно так, в обратных кавычках — в чате он копируется кликом). Экран: [LAN](/lan)`
 			if (relay.state === 'closed') {
 				return 'Мир ещё не открыт в самой игре: зайди в мир, Esc → «Открыть для сети» → «Открыть мир», потом скажи — опубликую.'
 			}
 			try {
 				const live = await start_lan_relay(relay.process_uuid)
 				return live.public_host
-					? `Готово, мир открыт для друзей. Адрес: ${live.public_host}:${live.public_port} — пусть добавят его как сервер.`
-					: `Публикую мир «${relay.instance_name}»… Адрес появится на экране /lan через пару секунд.`
+					? `Готово, мир открыт для друзей. Адрес: \`${live.public_host}:${live.public_port}\` — пусть добавят его как сервер (дай адрес игроку в обратных кавычках — он копируется кликом). Экран: [LAN](/lan)`
+					: `Публикую мир «${relay.instance_name}»… Адрес появится на экране [LAN](/lan) через пару секунд — потом снова <<lan_status|>>.`
 			} catch (error) {
 				return `Не удалось открыть мир: ${String(error).slice(0, 300)}. Экран /lan покажет подробности.`
 			}

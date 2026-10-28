@@ -39,6 +39,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import AiProviderSettings from '@/components/ui/ai/AiProviderSettings.vue'
+import AiRichText from '@/components/ui/ai/AiRichText.vue'
 import AiSteps from '@/components/ui/ai/AiSteps.vue'
 import {
 	agentBusy,
@@ -332,6 +333,11 @@ function actionName(tool: string) {
 		open_page: 'открыл статью в лаунчере',
 		sandbox_download: 'скачал файл',
 		sandbox_show: 'показал картинку',
+		instance_search: 'искал сборки',
+		instance_logs: 'читал логи',
+		instance_files: 'смотрел файлы сборки',
+		instance_read: 'читал файл сборки',
+		instance_worlds: 'смотрел миры',
 		build_modpack: 'собрал сборку',
 		scaffold: 'создал проект',
 		install_to_instance: 'поставил файл в сборку',
@@ -775,7 +781,7 @@ interface AiSegmentPart {
 }
 type AiSegment =
 	| { kind: 'code'; lang: string; lines: string[] }
-	| { kind: 'text'; parts: AiSegmentPart[] }
+	| { kind: 'text'; text: string; parts: AiSegmentPart[] }
 
 const LINK_RE = /(\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>"')\]]+)/g
 
@@ -809,7 +815,7 @@ function parseSegments(content: string): AiSegment[] {
 			segments.push({ kind: 'code', lang, lines: code.replace(/\n+$/, '').split('\n') })
 		} else {
 			const prose = stripLooseCommands(block).replace(/\n{3,}/g, '\n\n')
-			if (prose.trim()) segments.push({ kind: 'text', parts: splitLinks(prose) })
+			if (prose.trim()) segments.push({ kind: 'text', text: prose.trim(), parts: splitLinks(prose) })
 		}
 	}
 	return segments
@@ -828,6 +834,11 @@ const FILE_LINK =
 
 async function openLink(url: string) {
 	try {
+		// Launcher paths ([Сборка](/instance/…), [LAN](/lan)) open right here.
+		if (url.startsWith('/')) {
+			await router.push(url)
+			return
+		}
 		if (MODRINTH_LINK.test(url)) {
 			const path = url.replace(/^https?:\/\/(?:[a-z-]+\.)?modrinth\.com/i, '')
 			await router.push(path || '/')
@@ -1205,15 +1216,7 @@ defineExpose({ send })
 										<ChevronDownIcon class="size-3.5" />
 									</button>
 								</div>
-								<p v-else class="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed"><template
-									v-for="(part, partIndex) in segment.parts"
-									:key="partIndex"
-								><span v-if="part.kind === 'text'">{{ part.text }}</span><a
-									v-else
-									class="ai-link"
-									:href="part.url"
-									@click.prevent="() => openLink(part.url!)"
-								>{{ part.text }}<ExternalIcon class="ai-link-icon" /></a></template></p>
+								<AiRichText v-else :text="segment.text" @open="openLink" />
 							</template>
 						</template>
 						<p v-else class="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed">
@@ -1504,14 +1507,12 @@ defineExpose({ send })
 						@open-link="openLink"
 						@zoom="(src) => openImageViewer(src)"
 					/>
-					<p v-if="streaming" class="ai-live-text m-0 whitespace-pre-wrap break-words px-1 text-sm leading-relaxed">{{ streaming }}<span class="ai-caret" /></p>
+					<div v-if="streaming" class="ai-live-text px-1"><AiRichText :text="streaming" @open="openLink" /></div>
 				</div>
 			</div>
 			<div v-else-if="streaming" class="mb-3 flex justify-start">
 				<div class="ai-bubble ai-bubble-assistant rounded-2xl px-4 py-2.5">
-					<p class="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed">
-						{{ streaming }}
-					</p>
+					<AiRichText :text="streaming" @open="openLink" />
 				</div>
 			</div>
 		</div>

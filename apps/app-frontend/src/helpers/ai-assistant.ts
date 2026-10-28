@@ -822,7 +822,10 @@ export const AI_TOOLS_HINT = [
 	'- <<get_page|>> — узнать, какой экран сейчас открыт (путь игрока и твой совпадают)',
 	'- <<open_creation_modal|>> — открыть окно создания сборки вручную (обычно лучше сразу <<create_instance|…>>)',
 	'- <<open_instance|id>> — открыть сборку по id',
-	'- <<list_instances|>> — получить список сборок игрока',
+	'- <<list_instances|>> — получить список сборок игрока; <<instance_search|запрос>> — найти сборки игрока по названию, версии или ядру (пусто — все), вернёт кликабельные ссылки',
+	'- <<instance_logs|сборка::файл (необязательно, «краш» — краш-репорт)>> — прочитать лог сборки: ошибки, предупреждения и конец лога; сам разбери причину краша',
+	'- <<instance_files|сборка::папка>> — посмотреть файлы в папке сборки (mods, config, resourcepacks, saves, shaderpacks…); <<instance_read|сборка::путь>> — прочитать текстовый файл сборки (конфиг, options.txt, json)',
+	'- <<instance_worlds|сборка>> — миры и серверы сборки (режим, хардкор, когда играли, адреса серверов)',
 	'- <<launcher_search_mods|запрос::тип>> — найти контент сразу в Modrinth и CurseForge; тип (необязательно, но указывай!): mod, modpack, resourcepack, shader, datapack, plugin — например <<launcher_search_mods|мини-карта::mod>>, <<launcher_search_mods|выживание с магией::modpack>>; в ответе id для установки и пометка ✓/✗ — подходит ли к выбранной сборке (страница: <<navigate|/project/<id>>> или <<navigate|/curseforge/<id>>>)',
 	'- <<launcher_install|id::тип::id сборки>> — установить контент (тип: mod, resourcepack, shader, datapack) в сборку; несколько id через запятую (id1,cf:123,id3) — поставятся пачкой в фоне с зависимостями, игрок увидит карточки модов; сборку можно не указывать — тогда выбранная',
 	'Оформление лаунчера (ты им полностью управляешь, всё сохраняется после перезапуска):',
@@ -863,6 +866,8 @@ export const AI_TOOLS_HINT = [
 	'- <<session_read|номер>> — перечитать сессию по номеру из обзора (1 — последняя)',
 	'Если для продолжения тебе не хватает решения пользователя, задай вопрос: <<ask_user|Вопрос?::вариант 1;;вариант 2>> — у пользователя появятся кнопки и поле для своего ответа.',
 	'Прежде чем открыть игроку экран, папку или картинку без его просьбы — сначала спроси: «Хотите, чтобы я показал …?» (через ask_user или просто в тексте). Когда просят «покажи» — открывай сразу.',
+	'Оформление ответа (чат отрисовывает Markdown — пользуйся им, но к месту): **жирный**, *курсив*, ~~зачёркнутый~~, `код`, заголовки ##, списки (- и 1.), цитаты >, разделитель ---, таблицы | a | b | со строкой |---|---| и блоки кода ```язык. Сравнения (моды, версии, характеристики, команды, горячие клавиши) — таблицей. Код, команды и конфиги — блоком ```. Адреса серверов/LAN, ники, id, команды в строке — в `обратных кавычках` (их копируют кликом).',
+	'Ссылки всегда кликабельные, в виде [название](url): моды и проекты Modrinth — [Sodium](https://modrinth.com/mod/AANobbMI) (id из launcher_search_mods), CurseForge — [Имя](/curseforge/ID), сборки игрока — [Название](/instance/id), экраны лаунчера — [LAN](/lan), [Скины](/browse/skin). Не пиши голые id в скобках вместо ссылки.',
 	'Правила: интернет — твоими инструментами web_search/web_fetch; команды лаунчера — только для лаунчера; удалять или менять что-либо без явного согласия запрещено; отвечай коротко — 1-4 предложения, если не просят подробно.',
 	'Важно: если игрок во время твоей работы сам перешёл на другой экран, тебе сообщат «игрок передумал» — тогда сразу остановись и не продолжай действия.',
 ].join('\n')
@@ -2333,6 +2338,42 @@ function parseBing(html: string): SearchHit[] {
 	return hits
 }
 
+/** Brave Search: each web result is a data-type="web" block. */
+function parseBrave(html: string): SearchHit[] {
+	const hits: SearchHit[] = []
+	const blocks = html.split(/data-type="web"/).slice(1)
+	for (const block of blocks) {
+		if (hits.length >= 8) break
+		const link = /<a[^>]*href="(https?:\/\/[^"]+)"/.exec(block)
+		const title = /class="title[^"]*"[^>]*>([\s\S]*?)<\/div>/.exec(block)
+		if (!link || !title) continue
+		const snippet = /class="content[^"]*"[^>]*>([\s\S]*?)<\/div>/.exec(block)
+		hits.push({
+			title: stripHtml(title[1]),
+			url: link[1].replace(/&amp;/g, '&'),
+			snippet: snippet ? stripHtml(snippet[1]).slice(0, 220) : undefined,
+		})
+	}
+	return hits
+}
+
+/** r.jina.ai returns DuckDuckGo results as Markdown: "[Title](url)" lines. */
+function parseJinaMarkdown(text: string): SearchHit[] {
+	const hits: SearchHit[] = []
+	const seen = new Set<string>()
+	const pattern = /\[([^\]\n]{4,200})\]\((https?:\/\/[^)\s]+)\)/g
+	let match = pattern.exec(text)
+	while (match && hits.length < 8) {
+		const url = unwrapDdgLink(match[2])
+		if (!/duckduckgo\.com|jina\.ai/.test(url) && !seen.has(url)) {
+			seen.add(url)
+			hits.push({ title: match[1].trim(), url })
+		}
+		match = pattern.exec(text)
+	}
+	return hits
+}
+
 /**
  * Bot-checked engines sometimes answer with an unrelated "popular" page.
  * A hit has to mention at least one word of the query, or it is dropped.
@@ -2413,6 +2454,7 @@ export async function searchWeb(query: string): Promise<SearchHit[]> {
 	const first = [
 		searchPage(query, `https://html.duckduckgo.com/html/?q=${q}&kl=ru-ru`, parseDdgHtml),
 		searchPage(query, `https://www.bing.com/search?q=${q}&setlang=ru&cc=RU`, parseBing),
+		searchPage(query, `https://search.brave.com/search?q=${q}&source=web`, parseBrave),
 	]
 	let lastDetail = ''
 	try {
@@ -2423,6 +2465,12 @@ export async function searchWeb(query: string): Promise<SearchHit[]> {
 	for (const attempt of [
 		() => searchPage(query, `https://lite.duckduckgo.com/lite/?q=${q}`, parseDdgLite),
 		() => searchPage(query, `https://www.bing.com/search?q=${q}&setlang=en`, parseBing),
+		() =>
+			searchPage(
+				query,
+				`https://r.jina.ai/https://html.duckduckgo.com/html/?q=${q}`,
+				parseJinaMarkdown,
+			),
 		() => searchWikipedia(query),
 	]) {
 		try {

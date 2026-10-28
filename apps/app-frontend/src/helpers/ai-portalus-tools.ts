@@ -33,10 +33,12 @@ import {
 	sandboxWrite,
 	sandboxWriteBinary,
 } from './ai-sandbox'
-import { add_project_from_path, list } from './instance'
+import { add_project_from_path, get_full_path, list } from './instance'
+import { get_logs, get_output_by_filename } from './logs.js'
 import { applyThemeBackground, savedThemes, saveTheme } from './portalrinth-themes'
 import { proxiedFetch } from './proxy-fetch'
 import { get as getSettings, set as setSettings } from './settings'
+import { get_instance_worlds, getWorldDisplayName } from './worlds'
 
 const UA =
 	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36'
@@ -640,6 +642,167 @@ function kindOfFile(path: string, hint: string): 'mod' | 'resourcepack' | 'shade
 	if (/data/i.test(path)) return 'datapack'
 	return 'resourcepack'
 }
+
+// ---- Builds: search, logs, files, worlds -----------------------------------
+
+type Build = Awaited<ReturnType<typeof list>>[number]
+
+async function pickBuild(raw: string): Promise<Build | string> {
+	const all = await list().catch(() => [] as Build[])
+	const wanted = raw.trim().toLowerCase()
+	if (!wanted) {
+		const { readSelectedBuild } = await import('./ai-assistant')
+		const selected = all.find((instance) => instance.id === readSelectedBuild()?.id)
+		if (selected) return selected
+		if (all.length === 1) return all[0]
+		return `Какая сборка? Есть: ${all
+			.slice(0, 15)
+			.map((instance) => `«${instance.name}» (${instance.id})`)
+			.join(', ')}`
+	}
+	return (
+		all.find((instance) => instance.id.toLowerCase() === wanted) ??
+		all.find((instance) => instance.name.toLowerCase() === wanted) ??
+		all.find((instance) => instance.name.toLowerCase().includes(wanted)) ??
+		`Сборки «${raw.trim()}» нет. Есть: ${all
+			.slice(0, 15)
+			.map((instance) => `«${instance.name}» (${instance.id})`)
+			.join(', ')}`
+	)
+}
+
+const buildLink = (build: Build) => `[${build.name.replace(/[[\]]/g, '')}](/instance/${encodeURIComponent(build.id)})`
+
+async function searchBuilds(query: string): Promise<string> {
+	const all = await list().catch(() => [] as Build[])
+	if (all.length === 0) return 'У игрока пока нет сборок'
+	const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+	const hits = all.filter((instance) => {
+		const hay = `${instance.name} ${instance.game_version} ${instance.loader} ${instance.id}`.toLowerCase()
+		return words.every((word) => hay.includes(word))
+	})
+	const shown = (words.length ? hits : all).slice(0, 30)
+	if (shown.length === 0) return `По «${query}» сборок нет. Всего сборок: ${all.length}`
+	return [
+		`Найдено сборок: ${shown.length}${words.length ? ` по «${query}»` : ''}. Ссылки кликабельны — давай их игроку как есть:`,
+		...shown.map(
+			(instance) =>
+				`- ${buildLink(instance)} — Minecraft ${instance.game_version}, ${instance.loader}${instance.loader_version ? ` ${instance.loader_version}` : ''} (id ${instance.id})`,
+		),
+	].join('\n')
+}
+
+const LOG_IMPORTANT = /(error|exception|caused by|fatal|crash|failed|warn|mixin|incompatible|missing)/i
+
+async function buildLogs(raw: string): Promise<string> {
+	const [buildRaw = '', fileRaw = ''] = raw.split('::').map((part) => part.trim())
+	const build = await pickBuild(buildRaw)
+	if (typeof build === 'string') return build
+	const logs = ((await get_logs(build.id, true).catch(() => [])) ?? []) as {
+		filename: string
+		log_type: string
+	}[]
+	if (logs.length === 0) return `У «${build.name}» логов пока нет (игру ещё не запускали)`
+	const wanted = fileRaw.toLowerCase()
+	const crash = logs.find((log) => /crash/i.test(log.log_type) || /crash/i.test(log.filename))
+	const log =
+		(wanted && logs.find((item) => item.filename.toLowerCase().includes(wanted))) ||
+		(/краш|crash/.test(wanted) ? crash : undefined) ||
+		logs.find((item) => item.filename === 'latest.log') ||
+		logs[0]
+	const output = String((await get_output_by_filename(build.id, log.log_type, log.filename).catch(() => '')) ?? '')
+	const lines = output.split(/\r?\n/)
+	const important = lines.filter((line) => LOG_IMPORTANT.test(line)).slice(-60)
+	const tail = lines.slice(-80)
+	return [
+		`Лог «${log.filename}» сборки ${buildLink(build)} — ${lines.length} строк. Все логи: ${logs
+			.slice(0, 12)
+			.map((item) => item.filename)
+			.join(', ')}${crash && crash !== log ? ` (есть краш-репорт ${crash.filename} — <<instance_logs|${build.id}::${crash.filename}>>)` : ''}. Экран логов: [Логи](/instance/${encodeURIComponent(build.id)}/logs).`,
+		important.length ? `Ошибки и предупреждения:\n${important.join('\n').slice(-3500)}` : 'Ошибок и предупреждений не видно.',
+		`Конец лога:\n${tail.join('\n').slice(-3000)}`,
+	].join('\n\n')
+}
+
+/** A path inside the build's folder, never outside it. */
+function insideBuild(base: string, rel: string): string {
+	const parts = rel
+		.replace(/\\/g, '/')
+		.split('/')
+		.filter((part) => part && part !== '.')
+	if (parts.includes('..')) throw new Error('Путь не может выходить из папки сборки')
+	const separator = base.includes('\\') ? '\\' : '/'
+	return [base.replace(/[\\/]+$/, ''), ...parts].join(separator)
+}
+
+async function buildFiles(raw: string): Promise<string> {
+	const [buildRaw = '', relRaw = ''] = raw.split('::').map((part) => part.trim())
+	const build = await pickBuild(buildRaw)
+	if (typeof build === 'string') return build
+	const base = await get_full_path(build.id)
+	const dir = insideBuild(base, relRaw)
+	const entries = await fs.readDir(dir)
+	const sorted = entries.sort(
+		(a, b) => Number(b.isDirectory) - Number(a.isDirectory) || a.name.localeCompare(b.name),
+	)
+	return [
+		`Папка «${relRaw || '/'}» сборки ${buildLink(build)} (${dir}), ${entries.length} шт.:`,
+		...sorted.slice(0, 150).map((entry) => (entry.isDirectory ? `${entry.name}/` : entry.name)),
+		entries.length > 150 ? `…и ещё ${entries.length - 150}` : '',
+		'Прочитать файл: <<instance_read|сборка::путь/к/файлу>>.',
+	]
+		.filter(Boolean)
+		.join('\n')
+}
+
+async function buildRead(raw: string): Promise<string> {
+	const [buildRaw = '', relRaw = ''] = raw.split('::').map((part) => part.trim())
+	if (!relRaw) return 'Формат: <<instance_read|сборка::путь (например config/sodium-options.json)>>'
+	const build = await pickBuild(buildRaw)
+	if (typeof build === 'string') return build
+	const path = insideBuild(await get_full_path(build.id), relRaw)
+	if (/\.(jar|zip|png|jpe?g|dat|mca|7z|exe)$/i.test(relRaw)) {
+		const info = await fs.stat(path)
+		return `${relRaw} — двоичный файл, ${Math.round((info.size ?? 0) / 1024)} КБ; читать его как текст бессмысленно`
+	}
+	const text = await fs.readTextFile(path)
+	return `Файл ${relRaw} из ${buildLink(build)} (${text.length} симв.):\n${text.slice(0, 7000)}${text.length > 7000 ? '\n…(обрезано)' : ''}`
+}
+
+async function buildWorlds(raw: string): Promise<string> {
+	const build = await pickBuild(raw)
+	if (typeof build === 'string') return build
+	const worlds = await get_instance_worlds(build.id).catch(() => [])
+	if (worlds.length === 0) return `В ${buildLink(build)} нет миров и серверов`
+	return [
+		`Миры и серверы ${buildLink(build)} (экран: [Миры](/instance/${encodeURIComponent(build.id)}/worlds)):`,
+		...worlds.slice(0, 40).map((world) =>
+			world.type === 'singleplayer'
+				? `- Мир «${getWorldDisplayName(world)}» — ${world.game_mode}${world.hardcore ? ', хардкор' : ''}${world.last_played ? `, играли ${new Date(world.last_played).toLocaleString('ru-RU')}` : ''}`
+				: `- Сервер «${getWorldDisplayName(world)}» — \`${world.address}\``,
+		),
+	].join('\n')
+}
+
+registerAiToolHandler(async (tool, args) => {
+	try {
+		switch (tool) {
+			case 'instance_search':
+				return await searchBuilds(args)
+			case 'instance_logs':
+				return await buildLogs(args)
+			case 'instance_files':
+				return await buildFiles(args)
+			case 'instance_read':
+				return await buildRead(args)
+			case 'instance_worlds':
+				return await buildWorlds(args)
+		}
+	} catch (error) {
+		return `Не получилось: ${String(error).slice(0, 240)}`
+	}
+	return null
+})
 
 registerAiToolHandler(async (tool, args) => {
 	switch (tool) {

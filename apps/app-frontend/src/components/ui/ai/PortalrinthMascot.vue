@@ -633,7 +633,7 @@ const mascotName = computed(() => aiSettings.value.mascotName || 'Помощни
 						<p class="m-0 whitespace-pre-wrap break-words text-sm leading-snug">
 							<span class="font-semibold text-brand">{{ mascotName }}: </span>
 							<template v-if="thinking">…</template>
-							<template v-else>{{ bubbleText }}</template>
+							<template v-else>{{ bubbleText.replace(/\*\*|__|~~|`/g, '') }}</template>
 						</p>
 						<div v-if="offer && !thinking" class="flex gap-1.5">
 							<Button size="sm" color="brand" @click="acceptOffer">
