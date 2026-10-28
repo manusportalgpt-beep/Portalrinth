@@ -140,7 +140,7 @@ const tabs = [
 			id: 'app.settings.tabs.changes',
 			defaultMessage: 'Изменения',
 		}),
-		category: tabCategories.system,
+		category: tabCategories.display,
 		icon: NewspaperIcon,
 		content: ChangesSettings,
 	},
