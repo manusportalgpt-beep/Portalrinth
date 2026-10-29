@@ -14,7 +14,15 @@ import {
 	install_create_modpack_instance,
 	installJobInstanceId,
 } from './install'
-import { get_content_items, kill, list, refresh_content_updates, run } from './instance'
+import {
+	get_content_items,
+	kill,
+	list,
+	refresh_content_updates,
+	remove_project,
+	run,
+	toggle_disable_project,
+} from './instance'
 import { list_lan_relays, start_lan_relay, stop_lan_relay } from './lan'
 import { proxiedFetch } from './proxy-fetch'
 import type { InstanceLoader } from './types'
@@ -253,6 +261,24 @@ const LOADERS: Record<string, InstanceLoader> = {
 	ванила: 'vanilla',
 }
 
+/** Finds a content item by title or file name, loosely. A string is an error. */
+async function findContentItem(buildId: string, wanted: string) {
+	const items = await get_content_items(buildId).catch(() => [])
+	const lower = wanted.toLowerCase()
+	const found =
+		items.find((item) => (item.project?.title ?? '').toLowerCase() === lower) ??
+		items.find((item) => (item.project?.title ?? '').toLowerCase().includes(lower)) ??
+		items.find((item) => item.file_name.toLowerCase() === lower) ??
+		items.find((item) => item.file_name.toLowerCase().includes(lower))
+	if (!found) {
+		return `Не нашёл «${wanted}». Контент сборки: ${items
+			.slice(0, 30)
+			.map((item) => item.project?.title ?? item.file_name)
+			.join(', ')} (полный список — <<instance_mods|>>)`
+	}
+	return found
+}
+
 registerAiToolHandler(async (tool, args) => {
 	switch (tool) {
 		case 'instance_info': {
@@ -439,6 +465,79 @@ registerAiToolHandler(async (tool, args) => {
 			} catch (error) {
 				return `Модпак не установился: ${String(error).slice(0, 300)}`
 			}
+		}
+		case 'instance_mods': {
+			const build = await resolveBuild(args)
+			if (typeof build === 'string') return build
+			try {
+				const items = await get_content_items(build.id)
+				if (items.length === 0) return `В «${build.name}» контента нет — чистая сборка.`
+				const typeLabel: Record<string, string> = {
+					mod: 'мод',
+					resourcepack: 'ресурс-пак',
+					shaderpack: 'шейдер',
+					datapack: 'датапак',
+				}
+				const lines = items
+					.slice(0, 100)
+					.map((item) => {
+						const kind = typeLabel[item.project_type] ?? item.project_type
+						const state = item.enabled === false ? 'ВЫКЛ' : 'вкл'
+						const version = item.version?.version_number ?? ''
+						const mark = item.has_update ? ' [есть обновление]' : ''
+						return `- ${kind} «${item.project?.title ?? item.file_name}» ${version} — ${state}${mark}`
+					})
+				return `Контент «${build.name}» (${items.length}):\n${lines.join('\n')}${items.length > 100 ? `\n…и ещё ${items.length - 100}` : ''}\nВыключить/включить — <<mod_toggle|…>>, удалить — <<mod_delete|…>>.`
+			} catch (error) {
+				return `Список контента не получился: ${String(error).slice(0, 300)}`
+			}
+		}
+		case 'mod_toggle': {
+			const [buildRaw = '', modRaw = '', stateRaw = ''] = args.split('::').map((part) => part.trim())
+			const build = await resolveBuild(buildRaw)
+			if (typeof build === 'string') return build
+			if (!modRaw) return 'Формат: <<mod_toggle|сборка::мод::вкл или выкл>>'
+			const item = await findContentItem(build.id, modRaw)
+			if (typeof item === 'string') return item
+			const wantOn = /вкл|on|enable/i.test(stateRaw)
+				? true
+				: /выкл|off|disable/i.test(stateRaw)
+					? false
+					: item.enabled === false
+			try {
+				await toggle_disable_project(build.id, item.file_path ?? item.file_name, wantOn)
+				return `${wantOn ? 'Включил' : 'Выключил'} «${item.project?.title ?? item.file_name}» в «${build.name}».`
+			} catch (error) {
+				return `Не получилось переключить: ${String(error).slice(0, 300)}`
+			}
+		}
+		case 'mod_delete': {
+			const [first = '', second = '', third = ''] = args.split('::').map((part) => part.trim())
+			const confirmed = Boolean(third) && /да|confirm|yes/i.test(third)
+			const buildRaw = second ? first : ''
+			const modsRaw = second || first
+			const build = await resolveBuild(buildRaw)
+			if (typeof build === 'string') return build
+			if (!modsRaw) return 'Формат: <<mod_delete|сборка::мод1;;мод2::да>>'
+			const names = modsRaw.split(';;').map((part) => part.trim()).filter(Boolean)
+			if (!confirmed) {
+				return `Удаление необратимо — сначала спроси игрока: <<ask_user|Удалить из «${build.name}»: ${names.join(', ')}? Файлы модов будут стёрты.::Да, удалить;;Отмена>> — и только после ответа «Да, удалить» вызови <<mod_delete|${buildRaw || build.name}::${modsRaw}::да>>. Без подтверждения я ничего не стираю.`
+			}
+			const results: string[] = []
+			for (const name of names) {
+				const item = await findContentItem(build.id, name)
+				if (typeof item === 'string') {
+					results.push(`- ${name}: ${item}`)
+					continue
+				}
+				try {
+					await remove_project(build.id, item.file_path ?? item.file_name)
+					results.push(`- удалил «${item.project?.title ?? item.file_name}»`)
+				} catch (error) {
+					results.push(`- «${item.project?.title ?? item.file_name}»: ${String(error).slice(0, 160)}`)
+				}
+			}
+			return `Удаление в «${build.name}»:\n${results.join('\n')}`
 		}
 		case 'fandom':
 		case 'wiki':

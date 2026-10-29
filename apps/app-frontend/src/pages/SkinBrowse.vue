@@ -46,6 +46,7 @@ import {
 	NavTabs,
 	NewModal,
 	Pagination,
+	RadioButtons,
 	SkinButton,
 	SkinPreviewRenderer,
 	useVIntl,
@@ -108,6 +109,9 @@ const messages = defineMessages({
 	page: { id: 'app.skin-browse.page', defaultMessage: 'Стр. {page}' },
 	pageLast: { id: 'app.skin-browse.page-last', defaultMessage: 'Стр. {page} — последняя' },
 	modalTitle: { id: 'app.skin-browse.modal-title', defaultMessage: 'Skin' },
+	armStyle: { id: 'app.skin-browse.arm-style', defaultMessage: 'Модель рук' },
+	armClassic: { id: 'app.skin-browse.arm-classic', defaultMessage: 'Классика' },
+	armSlim: { id: 'app.skin-browse.arm-slim', defaultMessage: 'Slim' },
 	uses: { id: 'app.skin-browse.uses', defaultMessage: '{count} players' },
 	crouch: { id: 'app.skin-browse.crouch', defaultMessage: 'Crouch' },
 	stand: { id: 'app.skin-browse.stand', defaultMessage: 'Stand up' },
@@ -737,6 +741,11 @@ const capes = ref<Cape[]>([])
 const capesLoaded = ref(false)
 const capePickerOpen = ref(false)
 const selectedCape = ref<Cape | undefined>(undefined)
+/** Arm model used for the preview and the install: the skin's own at first. */
+const armVariant = ref<'CLASSIC' | 'SLIM'>('CLASSIC')
+watch(current, (skin) => {
+	armVariant.value = skin ? labySkinVariant(skin) : 'CLASSIC'
+})
 const installing = ref(false)
 const similar = ref<LabySkin[]>([])
 const similarLoading = ref(false)
@@ -838,7 +847,7 @@ async function install() {
 	installing.value = true
 	try {
 		const texture = await labySkinTexture(skin.image_hash)
-		await add_and_equip_custom_skin(texture, labySkinVariant(skin), selectedCape.value)
+		await add_and_equip_custom_skin(texture, armVariant.value, selectedCape.value)
 		addNotification({
 			type: 'success',
 			title: formatMessage(messages.installed),
@@ -1087,7 +1096,7 @@ async function copyProfile(text: string) {
 				<SkinPreviewRenderer
 					v-if="currentTexture"
 					:texture-src="currentTexture"
-					:variant="labySkinVariant(current)"
+					:variant="armVariant"
 					:cape-src="selectedCape?.texture"
 					:crouch="crouching"
 					:walk="walking"
@@ -1302,6 +1311,16 @@ async function copyProfile(text: string) {
 						)
 					}}
 				</Button>
+				<section class="flex flex-col gap-1">
+					<h2 class="m-0 text-base font-semibold text-contrast">
+						{{ formatMessage(messages.armStyle) }}
+					</h2>
+					<RadioButtons v-model="armVariant" :items="['CLASSIC', 'SLIM']" class="!flex-row flex-wrap">
+						<template #default="{ item }">
+							{{ formatMessage(item === 'CLASSIC' ? messages.armClassic : messages.armSlim) }}
+						</template>
+					</RadioButtons>
+				</section>
 				<Button
 					type="colored"
 					color="brand"

@@ -384,7 +384,7 @@ function openContextMenu(event, instance) {
 					/>
 					<PinIcon
 						v-if="isPinned(instance.id)"
-						class="pointer-events-none absolute left-1.5 top-1.5 z-10 size-3.5 rounded-sm bg-bg-raised p-px text-brand [fill:currentColor]"
+						class="pointer-events-none absolute left-0 top-1/2 z-10 size-3 -translate-y-1/2 rounded-full bg-bg-raised text-brand [fill:currentColor]"
 					/>
 					<div
 						v-if="instance.install_stage !== 'installed'"

@@ -1941,7 +1941,7 @@ defineExpose({ send })
 					@paste="onPaste"
 				/>
 				<div class="relative shrink-0">
-					<button class="ai-model-chip" @click="toggleBuilds">
+					<button v-tooltip="chosenBuildLabel" class="ai-model-chip" @click="toggleBuilds">
 						<img
 							v-if="chosenBuildIcon"
 							:src="chosenBuildIcon"
@@ -2136,9 +2136,7 @@ defineExpose({ send })
 	font-size: 0.8125rem;
 	font-weight: 600;
 	color: var(--color-primary);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	overflow-wrap: anywhere;
 }
 
 .ai-build-meta {
@@ -2188,7 +2186,7 @@ defineExpose({ send })
 	display: inline-flex;
 	align-items: center;
 	gap: 0.375rem;
-	max-width: 16rem;
+	max-width: 20rem;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -2219,7 +2217,7 @@ defineExpose({ send })
 
 .ai-attach-image {
 	max-height: 10rem;
-	max-width: 16rem;
+	max-width: 20rem;
 	border-radius: 0.75rem;
 	border: 1px solid var(--surface-5);
 	object-fit: cover;

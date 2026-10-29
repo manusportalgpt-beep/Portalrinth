@@ -2356,5 +2356,38 @@
 	},
 	"portalrinth.settings.editor.sound-remove": {
 		"message": "Remove the sound"
+	},
+	"app.skin-browse.arm-style": {
+		"message": "Arm model"
+	},
+	"app.skin-browse.arm-classic": {
+		"message": "Classic"
+	},
+	"app.skin-browse.arm-slim": {
+		"message": "Slim"
+	},
+	"app.decor.editor.opacity": {
+		"message": "Opacity"
+	},
+	"app.decor.editor.layer-up": {
+		"message": "Bring forward"
+	},
+	"app.decor.editor.layer-down": {
+		"message": "Send backward"
+	},
+	"app.decor.editor.duplicate": {
+		"message": "Duplicate"
+	},
+	"app.decor.editor.move": {
+		"message": "Move to page"
+	},
+	"app.decor.editor.sound-pick": {
+		"message": "Choose sound"
+	},
+	"app.decor.editor.sound-remove": {
+		"message": "Remove sound"
+	},
+	"app.decor.editor.selected": {
+		"message": "Selected"
 	}
 }

@@ -9,6 +9,9 @@
  * and carry the whole look into a .prth file or back out of one.
  */
 import {
+        ChevronDownIcon,
+        ChevronUpIcon,
+        CopyIcon,
         DownloadIcon,
         ImageIcon,
         MusicIcon,
@@ -22,15 +25,20 @@ import { Button, defineMessages, useVIntl } from '@modrinth/ui'
 
         import {
                 addDecoration,
+                chooseThemeSound,
                 clearPage,
                 decorEditorOpen,
                 decorUrl,
+                duplicateDecoration,
                 EDITOR_PAGES,
                 exportTheme,
                 importTheme,
                 itemsForPage,
+                moveDecorationToPage,
+                moveDecorLayer,
                 normalizeDecorItem,
                 removeDecoration,
+                removeThemeSound,
                 themeSound,
                 themeSoundOn,
                 updateDecorItem,
@@ -53,6 +61,14 @@ import { Button, defineMessages, useVIntl } from '@modrinth/ui'
                         defaultMessage:
                                 'Перетаскивай, тяни за уголок, крестик убирает. Одна страница = одна вкладка лаунчера.',
                 },
+                soundPick: { id: 'app.decor.editor.sound-pick', defaultMessage: 'Выбрать звук' },
+                soundRemove: { id: 'app.decor.editor.sound-remove', defaultMessage: 'Убрать звук' },
+                selected: { id: 'app.decor.editor.selected', defaultMessage: 'Выбрано' },
+                opacity: { id: 'app.decor.editor.opacity', defaultMessage: 'Прозрачность' },
+                layerUp: { id: 'app.decor.editor.layer-up', defaultMessage: 'Слой выше' },
+                layerDown: { id: 'app.decor.editor.layer-down', defaultMessage: 'Слой ниже' },
+                duplicate: { id: 'app.decor.editor.duplicate', defaultMessage: 'Дублировать' },
+                move: { id: 'app.decor.editor.move', defaultMessage: 'Перенести на страницу' },
         })
 
         const items = computed(() => itemsForPage(page.value))
@@ -101,6 +117,7 @@ import { Button, defineMessages, useVIntl } from '@modrinth/ui'
         function onPointerDown(event: PointerEvent, id: string, mode: Drag['mode']) {
                 const item = items.value.find((kept) => kept.id === id)
                 if (!item) return
+                selectedId.value = id
                 drag = {
                         id,
                         mode,
@@ -149,11 +166,53 @@ import { Button, defineMessages, useVIntl } from '@modrinth/ui'
         onMounted(() => {
                 window.addEventListener('pointermove', onPointerMove)
                 window.addEventListener('pointerup', onPointerUp)
+                window.addEventListener('keydown', onEditorKey)
         })
         onBeforeUnmount(() => {
                 window.removeEventListener('pointermove', onPointerMove)
                 window.removeEventListener('pointerup', onPointerUp)
+                window.removeEventListener('keydown', onEditorKey)
         })
+
+        // ---- Selection and the inspector ------------------------------------------
+
+        const selectedId = ref<string | null>(null)
+        const selectedItem = computed(() => items.value.find((kept) => kept.id === selectedId.value) ?? null)
+
+        watch(items, (list) => {
+                if (selectedId.value && !list.some((kept) => kept.id === selectedId.value)) {
+                        selectedId.value = null
+                }
+        })
+
+        function patchSelected(patch: Partial<{ x: number; y: number; w: number; h: number; opacity: number }>) {
+                if (!selectedItem.value) return
+                updateDecorItem(selectedItem.value.id, normalizeDecorItem({ ...selectedItem.value, ...patch }))
+        }
+
+        function onEditorKey(event: KeyboardEvent) {
+                if (!decorEditorOpen.value || !selectedItem.value) return
+                const tag = (event.target as HTMLElement | null)?.tagName
+                if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+                if (event.key === 'Delete' || event.key === 'Backspace') {
+                        event.preventDefault()
+                        void removeDecoration(selectedItem.value.id)
+                        selectedId.value = null
+                        return
+                }
+                const step = event.shiftKey ? 3 : 0.5
+                const moves: Record<string, [number, number]> = {
+                        ArrowLeft: [-step, 0],
+                        ArrowRight: [step, 0],
+                        ArrowUp: [0, -step],
+                        ArrowDown: [0, step],
+                }
+                const move = moves[event.key]
+                if (move) {
+                        event.preventDefault()
+                        patchSelected({ x: selectedItem.value.x + move[0], y: selectedItem.value.y + move[1] })
+                }
+        }
 
         // ---- The editor bar --------------------------------------------------------
 
@@ -193,6 +252,15 @@ import { Button, defineMessages, useVIntl } from '@modrinth/ui'
                 }
         }
 
+        async function pickSound() {
+                busy.value = true
+                try {
+                        await chooseThemeSound()
+                } finally {
+                        busy.value = false
+                }
+        }
+
         function clearOne() {
                 void clearPage(page.value)
         }
@@ -209,6 +277,7 @@ import { Button, defineMessages, useVIntl } from '@modrinth/ui'
                         v-for="item in items"
                         :key="item.id"
                         class="portalrinth-decor__item"
+                        :class="{ 'portalrinth-decor__item--selected': decorEditorOpen && item.id === selectedId }"
                         :style="{
                                 left: `${item.x}%`,
                                 top: `${item.y}%`,
@@ -272,6 +341,17 @@ import { Button, defineMessages, useVIntl } from '@modrinth/ui'
                         >
                                 <MusicIcon /> {{ themeSoundOn ? 'Звук темы: вкл' : 'Звук темы: выкл' }}
                         </Button>
+                        <Button :disabled="busy" size="small" @click="pickSound">
+                                <MusicIcon /> {{ formatMessage(messages.soundPick) }}
+                        </Button>
+                        <Button
+                                v-if="themeSound"
+                                v-tooltip="formatMessage(messages.soundRemove)"
+                                size="small"
+                                @click="removeThemeSound()"
+                        >
+                                <XIcon />
+                        </Button>
                         <Button size="small" @click="clearOne">
                                 <TrashIcon /> {{ formatMessage(messages.clear) }}
                         </Button>
@@ -279,6 +359,75 @@ import { Button, defineMessages, useVIntl } from '@modrinth/ui'
                                 {{ formatMessage(messages.done) }}
                         </Button>
                         <span class="portalrinth-decor__hint">{{ formatMessage(messages.hint) }}</span>
+                </div>
+
+                <!-- The inspector of the selected thing: transparency, layers, a
+                     new home, a copy, or a goodbye. -->
+                <div v-if="decorEditorOpen && selectedItem" class="portalrinth-decor__inspector">
+                        <div class="portalrinth-decor__row">
+                                <span class="portalrinth-decor__row-label">
+                                        {{ formatMessage(messages.selected) }} ·
+                                        {{ selectedItem.kind === 'video' ? 'Видео' : 'Картинка' }}
+                                </span>
+                                <button type="button" class="portalrinth-decor__icon-btn" @click="selectedId = null">
+                                        <XIcon class="size-3.5" />
+                                </button>
+                        </div>
+                        <div class="portalrinth-decor__row">
+                                <span class="portalrinth-decor__row-label">{{ formatMessage(messages.opacity) }}</span>
+                                <input
+                                        type="range"
+                                        min="10"
+                                        max="100"
+                                        :value="selectedItem.opacity"
+                                        @input="patchSelected({ opacity: Number(($event.target as HTMLInputElement).value) })"
+                                />
+                                <span class="portalrinth-decor__row-value">{{ selectedItem.opacity }}%</span>
+                        </div>
+                        <div class="portalrinth-decor__row">
+                                <span class="portalrinth-decor__row-label">{{ formatMessage(messages.move) }}</span>
+                                <select
+                                        class="portalrinth-decor__page-select"
+                                        :value="selectedItem.page"
+                                        @change="moveDecorationToPage(selectedItem.id, ($event.target as HTMLSelectElement).value)"
+                                >
+                                        <option v-for="p in EDITOR_PAGES" :key="p.key" :value="p.key">{{ p.label }}</option>
+                                </select>
+                        </div>
+                        <div class="portalrinth-decor__row">
+                                <button
+                                        v-tooltip="formatMessage(messages.layerUp)"
+                                        type="button"
+                                        class="portalrinth-decor__icon-btn"
+                                        @click="moveDecorLayer(selectedItem.id, 1)"
+                                >
+                                        <ChevronUpIcon class="size-4" />
+                                </button>
+                                <button
+                                        v-tooltip="formatMessage(messages.layerDown)"
+                                        type="button"
+                                        class="portalrinth-decor__icon-btn"
+                                        @click="moveDecorLayer(selectedItem.id, -1)"
+                                >
+                                        <ChevronDownIcon class="size-4" />
+                                </button>
+                                <button
+                                        v-tooltip="formatMessage(messages.duplicate)"
+                                        type="button"
+                                        class="portalrinth-decor__icon-btn"
+                                        @click="duplicateDecoration(selectedItem.id)"
+                                >
+                                        <CopyIcon class="size-4" />
+                                </button>
+                                <button
+                                        v-tooltip="formatMessage(messages.clear)"
+                                        type="button"
+                                        class="portalrinth-decor__icon-btn portalrinth-decor__icon-btn--danger"
+                                        @click="removeDecoration(selectedItem.id); selectedId = null"
+                                >
+                                        <TrashIcon class="size-4" />
+                                </button>
+                        </div>
                 </div>
         </div>
 </template>
@@ -369,5 +518,82 @@ import { Button, defineMessages, useVIntl } from '@modrinth/ui'
         width: 100%;
         font-size: 0.72rem;
         color: var(--color-secondary);
+}
+
+.portalrinth-decor__item--selected .portalrinth-decor__handle {
+        border: 2px solid var(--color-brand);
+}
+
+.portalrinth-decor__inspector {
+        position: fixed;
+        right: 1rem;
+        bottom: 5rem;
+        z-index: 300;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        width: 16rem;
+        padding: 0.75rem;
+        border: 1px solid color-mix(in srgb, var(--color-contrast) 14%, transparent);
+        border-radius: 1rem;
+        background: color-mix(in srgb, var(--color-raised-bg) 88%, transparent);
+        backdrop-filter: blur(18px) saturate(1.3);
+        -webkit-backdrop-filter: blur(18px) saturate(1.3);
+        box-shadow: 0 10px 32px rgb(0 0 0 / 28%);
+}
+
+.portalrinth-decor__row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+}
+
+.portalrinth-decor__row-label {
+        flex: 1;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-contrast);
+}
+
+.portalrinth-decor__row-value {
+        font-size: 0.72rem;
+        color: var(--color-secondary);
+}
+
+.portalrinth-decor__icon-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        padding: 0;
+        border: 1px solid var(--color-surface-5);
+        border-radius: 0.5rem;
+        background: var(--color-button-bg);
+        color: var(--color-contrast);
+        cursor: pointer;
+}
+
+.portalrinth-decor__icon-btn:hover {
+        filter: brightness(1.15);
+}
+
+.portalrinth-decor__icon-btn--danger {
+        color: var(--color-red, #ff4949);
+}
+
+.portalrinth-decor__page-select {
+        flex: 1;
+        padding: 0.25rem 0.4rem;
+        border: 1px solid var(--color-surface-5);
+        border-radius: 0.5rem;
+        background: var(--color-button-bg);
+        color: var(--color-contrast);
+        font-size: 0.75rem;
+}
+
+.portalrinth-decor__inspector input[type='range'] {
+        flex: 1;
+        accent-color: var(--color-brand);
 }
 </style>

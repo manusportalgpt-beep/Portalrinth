@@ -3889,5 +3889,38 @@
 	},
 	"portalrinth.settings.editor.sound-remove": {
 		"message": "Убрать звук"
+	},
+	"app.skin-browse.arm-style": {
+		"message": "Модель рук"
+	},
+	"app.skin-browse.arm-classic": {
+		"message": "Классика"
+	},
+	"app.skin-browse.arm-slim": {
+		"message": "Slim"
+	},
+	"app.decor.editor.opacity": {
+		"message": "Прозрачность"
+	},
+	"app.decor.editor.layer-up": {
+		"message": "Слой выше"
+	},
+	"app.decor.editor.layer-down": {
+		"message": "Слой ниже"
+	},
+	"app.decor.editor.duplicate": {
+		"message": "Дублировать"
+	},
+	"app.decor.editor.move": {
+		"message": "Перенести на страницу"
+	},
+	"app.decor.editor.sound-pick": {
+		"message": "Выбрать звук"
+	},
+	"app.decor.editor.sound-remove": {
+		"message": "Убрать звук"
+	},
+	"app.decor.editor.selected": {
+		"message": "Выбрано"
 	}
 }

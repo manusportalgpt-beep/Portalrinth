@@ -290,6 +290,7 @@ onMounted(() => {
 		}"
 		:instance="instance"
 		:selected="selected"
+		:pinned="pinned"
 		data-library-instance-card
 		:data-instance-id="instance.id"
 		:data-instance-group="instanceGroupId"
@@ -303,6 +304,7 @@ onMounted(() => {
 				: formatMessage(messages.openInstance, { name: instance.name })
 		"
 		:aria-pressed="isLibraryInstanceSelectionActive ? selected : undefined"
+		@unpin="togglePin"
 		@click="activateCard"
 		@keydown="handleCardKeydown"
 		@mouseenter="checkProcess"
@@ -381,6 +383,7 @@ onMounted(() => {
 		</template>
 		<template #overlay="{ compact }">
 			<button
+				v-if="!pinned"
 				type="button"
 				class="pin-button group/pin absolute z-[2] flex size-[50px] cursor-pointer items-start justify-center border-0 bg-transparent p-0 pt-4"
 				:class="compact ? '-left-1 -top-1' : 'left-1.5 top-1.5'"

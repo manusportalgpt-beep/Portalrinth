@@ -752,6 +752,22 @@ function likeness(a: Histogram, b: Histogram) {
         return shared
 }
 
+/**
+ * How much two skins agree in words: the tags a skin carries ("marvel",
+ * "suit", "rainbow", "boy") say what it is about - a thing a colour
+ * comparison alone keeps missing. Separators vary ("iron-man", "iron_man"),
+ * so everything is flattened before the match.
+ */
+function tagLikeness(referenceTags: string[] | undefined, candidateTags: string): number {
+        const wanted = (referenceTags ?? [])
+                .map((tag) => tag.toLowerCase().replace(/[_-]+/g, ' ').trim())
+                .filter(Boolean)
+        if (wanted.length === 0) return 0
+        const owned = candidateTags.toLowerCase().replace(/[_-]+/g, ' ')
+        const hits = wanted.filter((tag) => owned.includes(tag)).length
+        return hits / wanted.length
+}
+
 async function inBatches<T, R>(items: T[], size: number, run: (item: T) => Promise<R>) {
         const results: R[] = []
         for (let i = 0; i < items.length; i += size) {
@@ -796,9 +812,11 @@ export async function findSimilarLabySkins(
                                 setTimeout(() => reject(new Error('texture too slow')), 6000),
                         ),
                 ])
-        // Each candidate is judged twice: by its whole palette and part by part
-        // (hair, shirt, sleeves, trousers) - two skins with the same colours in
-        // the same places read as alike, the same colours scattered do not.
+        // Each candidate is judged three ways: by its whole palette, part by part
+        // (hair, shirt, sleeves, trousers), and by its tags - two skins with the
+        // same colours in the same places read as alike, the same colours
+        // scattered do not, and skins wearing the same words ("suit", "rainbow",
+        // "superhero") belong together even when their palettes drift apart.
         const scored = await inBatches(pool, 16, async (skin) => {
                 const candidatePixels = await withDeadline(skin.image_hash)
                         .then((texture) => pixelsOf(texture))
@@ -806,8 +824,9 @@ export async function findSimilarLabySkins(
                 if (!candidatePixels) return { skin, score: -1 }
                 const other = fingerprint(candidatePixels)
                 const score =
-                        0.45 * likeness(own.histogram, other.histogram) +
-                        0.55 * regionLikeness(own.regions, other.regions)
+                        0.35 * likeness(own.histogram, other.histogram) +
+                        0.45 * regionLikeness(own.regions, other.regions) +
+                        0.2 * tagLikeness(reference.tags, skin.tags)
                 // A pixel-for-pixel copy of the reference is not a look-alike.
                 return { skin, score: score > 0.995 ? -2 : score }
         })

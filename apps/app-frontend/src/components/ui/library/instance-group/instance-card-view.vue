@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Avatar, truncatedTooltip } from '@modrinth/ui'
+import { PinIcon } from '@modrinth/assets'
+import { Avatar, defineMessages, truncatedTooltip, useVIntl } from '@modrinth/ui'
 import { computed, ref } from 'vue'
 
 import { useAppSettings } from '@/composables/use-app-settings.ts'
@@ -11,9 +12,11 @@ const props = withDefaults(
 	defineProps<{
 		instance: GameInstance
 		selected?: boolean
+		pinned?: boolean
 	}>(),
 	{
 		selected: false,
+		pinned: false,
 	},
 )
 
@@ -34,6 +37,14 @@ const iconSrc = computed(() =>
 
 const nameRef = ref<HTMLElement | null>(null)
 const versionRef = ref<HTMLElement | null>(null)
+
+const emit = defineEmits<{ (event: 'unpin'): void }>()
+
+const messages = defineMessages({
+	unpin: { id: 'app.library.instance.action.unpin', defaultMessage: 'Unpin' },
+})
+
+const { formatMessage } = useVIntl()
 </script>
 
 <template>
@@ -74,13 +85,24 @@ const versionRef = ref<HTMLElement | null>(null)
 			class="flex min-w-0 w-full flex-col items-start justify-center gap-1 px-0.5"
 			:class="{ 'pr-10': compactMode }"
 		>
-			<p
-				ref="nameRef"
-				v-tooltip="truncatedTooltip(nameRef, instance.name)"
-				class="m-0 w-full truncate text-base font-semibold leading-5 text-contrast"
-			>
-				{{ instance.name }}
-			</p>
+			<div class="flex w-full min-w-0 items-center gap-1">
+				<button
+					v-if="pinned"
+					v-tooltip="formatMessage(messages.unpin)"
+					type="button"
+					class="flex shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-brand"
+					@click.stop="emit('unpin')"
+				>
+					<PinIcon class="size-3.5 [fill:currentColor]" />
+				</button>
+				<p
+					ref="nameRef"
+					v-tooltip="truncatedTooltip(nameRef, instance.name)"
+					class="m-0 min-w-0 flex-1 truncate text-base font-semibold leading-5 text-contrast"
+				>
+					{{ instance.name }}
+				</p>
+			</div>
 			<p
 				ref="versionRef"
 				v-tooltip="truncatedTooltip(versionRef, `${instance.loader} ${instance.game_version}`)"
