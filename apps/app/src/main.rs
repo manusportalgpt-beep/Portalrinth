@@ -189,6 +189,7 @@ async fn open_web_window(
         .inner_size(1100.0, 760.0)
         .min_inner_size(500.0, 400.0)
         .center()
+        .additional_browser_args(api::WEBVIEW_BROWSER_ARGS)
         .build()
         .context("failed to open web window")?;
     Ok(())

@@ -82,6 +82,7 @@ pub async fn ely_device_login<R: Runtime>(
     .inner_size(1000.0, 700.0)
     .focused(true)
     .center()
+    .additional_browser_args(crate::api::WEBVIEW_BROWSER_ARGS)
     .build()?;
 
     window.request_user_attention(Some(tauri::UserAttentionType::Critical))?;
@@ -169,6 +170,7 @@ pub async fn ely_oauth_login<R: Runtime>(
     .inner_size(1000.0, 700.0)
     .focused(true)
     .center()
+    .additional_browser_args(crate::api::WEBVIEW_BROWSER_ARGS)
     .build()?;
 
     window.request_user_attention(Some(tauri::UserAttentionType::Critical))?;
@@ -571,6 +573,7 @@ fn run_in_skin_window<R: Runtime>(
     .title("Ely.by — skin")
     .inner_size(1080.0, 800.0)
     .center()
+    .additional_browser_args(crate::api::WEBVIEW_BROWSER_ARGS)
     .visible(false)
     .on_page_load(move |window, payload| {
         // Once the page is there: a script run as it starts would run against
@@ -613,6 +616,7 @@ pub async fn ely_open_skin_window<R: Runtime>(
     .title("Ely.by — skin")
     .inner_size(1080.0, 800.0)
     .center()
+    .additional_browser_args(crate::api::WEBVIEW_BROWSER_ARGS)
     .build()?;
 
     let handle = app.clone();

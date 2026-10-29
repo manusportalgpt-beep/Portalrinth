@@ -2,6 +2,13 @@ use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use theseus::error_code;
 
+/// Every WebView2 environment in the process must be created with the same
+/// browser arguments, or the second one dies with HRESULT 0x8007139F
+/// (ERROR_INVALID_STATE). The main window pins its own set through
+/// tauri.conf.json, so every extra window (sign-in, built-in browser, Ely
+/// skin uploads) repeats exactly the same line here.
+pub const WEBVIEW_BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,MediaSessionService";
+
 pub mod auth;
 pub mod ely_auth;
 pub mod import;

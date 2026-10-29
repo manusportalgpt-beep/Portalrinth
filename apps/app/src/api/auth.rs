@@ -54,6 +54,7 @@ pub async fn login<R: Runtime>(
     .inner_size(1000.0, 700.0)
     .focused(true)
     .center()
+    .additional_browser_args(crate::api::WEBVIEW_BROWSER_ARGS)
     .build()?;
 
     window.request_user_attention(Some(UserAttentionType::Critical))?;

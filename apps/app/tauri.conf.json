@@ -90,7 +90,7 @@
 				"visible": false,
 				"zoomHotkeysEnabled": false,
 				"decorations": false,
-				"additionalBrowserArgs": "--disable-features=MediaSessionService"
+				"additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,MediaSessionService"
 			}
 		],
 		"security": {
