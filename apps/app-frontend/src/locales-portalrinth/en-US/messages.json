@@ -2357,9 +2357,6 @@
 	"portalrinth.settings.editor.sound-remove": {
 		"message": "Remove the sound"
 	},
-	"app.skin-browse.arm-style": {
-		"message": "Arm model"
-	},
 	"app.skin-browse.arm-classic": {
 		"message": "Classic"
 	},

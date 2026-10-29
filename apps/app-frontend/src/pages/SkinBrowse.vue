@@ -46,7 +46,6 @@ import {
 	NavTabs,
 	NewModal,
 	Pagination,
-	RadioButtons,
 	SkinButton,
 	SkinPreviewRenderer,
 	useVIntl,
@@ -109,7 +108,6 @@ const messages = defineMessages({
 	page: { id: 'app.skin-browse.page', defaultMessage: 'Стр. {page}' },
 	pageLast: { id: 'app.skin-browse.page-last', defaultMessage: 'Стр. {page} — последняя' },
 	modalTitle: { id: 'app.skin-browse.modal-title', defaultMessage: 'Skin' },
-	armStyle: { id: 'app.skin-browse.arm-style', defaultMessage: 'Модель рук' },
 	armClassic: { id: 'app.skin-browse.arm-classic', defaultMessage: 'Классика' },
 	armSlim: { id: 'app.skin-browse.arm-slim', defaultMessage: 'Slim' },
 	uses: { id: 'app.skin-browse.uses', defaultMessage: '{count} players' },
@@ -1219,6 +1217,18 @@ async function copyProfile(text: string) {
 						<PlayIcon v-else />
 						{{ formatMessage(walking ? messages.stopWalking : messages.startWalking) }}
 					</Button>
+					<Button
+						:class="{ 'skin-browse-button--active': armVariant === 'CLASSIC' }"
+						@click="armVariant = 'CLASSIC'"
+					>
+						{{ formatMessage(messages.armClassic) }}
+					</Button>
+					<Button
+						:class="{ 'skin-browse-button--active': armVariant === 'SLIM' }"
+						@click="armVariant = 'SLIM'"
+					>
+						{{ formatMessage(messages.armSlim) }}
+					</Button>
 				</div>
 
 				<div v-if="capePickerOpen" class="grid grid-cols-[repeat(4,max-content)] gap-2">
@@ -1311,16 +1321,6 @@ async function copyProfile(text: string) {
 						)
 					}}
 				</Button>
-				<section class="flex flex-col gap-1">
-					<h2 class="m-0 text-base font-semibold text-contrast">
-						{{ formatMessage(messages.armStyle) }}
-					</h2>
-					<RadioButtons v-model="armVariant" :items="['CLASSIC', 'SLIM']" class="!flex-row flex-wrap">
-						<template #default="{ item }">
-							{{ formatMessage(item === 'CLASSIC' ? messages.armClassic : messages.armSlim) }}
-						</template>
-					</RadioButtons>
-				</section>
 				<Button
 					type="colored"
 					color="brand"
