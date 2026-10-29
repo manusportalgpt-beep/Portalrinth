@@ -3170,6 +3170,9 @@
 	"app.ai.clear": {
 		"message": "Очистить историю"
 	},
+	"app.ai.name": {
+		"message": "Порталус"
+	},
 	"app.ai.empty.title": {
 		"message": "Чем помочь?"
 	},

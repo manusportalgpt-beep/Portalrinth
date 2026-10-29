@@ -1550,6 +1550,9 @@
 	"app.ai.clear": {
 		"message": "Clear history"
 	},
+	"app.ai.name": {
+		"message": "Portalus"
+	},
 	"app.ai.empty.title": {
 		"message": "How can I help?"
 	},

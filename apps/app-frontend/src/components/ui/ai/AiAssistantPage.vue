@@ -106,6 +106,7 @@ const messages = {
 	},
 	send: { id: 'app.ai.send', defaultMessage: 'Отправить' },
 	clear: { id: 'app.ai.clear', defaultMessage: 'Очистить историю' },
+	aiName: { id: 'app.ai.name', defaultMessage: 'Порталус' },
 	emptyTitle: { id: 'app.ai.empty.title', defaultMessage: 'Чем помочь?' },
 	emptyHint: {
 		id: 'app.ai.empty.hint',
@@ -1151,10 +1152,7 @@ defineExpose({ send })
 
 <template>
 	<div class="ai-page flex h-full min-h-0 flex-col">
-		<div class="flex items-start justify-between gap-3 px-6 pt-6">
-			<div class="flex flex-col gap-1">
-				<h1 class="m-0 text-2xl font-bold text-primary">{{ formatMessage(messages.heading) }}</h1>
-			</div>
+		<div class="flex items-start justify-end gap-3 px-6 pt-6">
 			<div class="relative flex shrink-0 items-center gap-1">
 				<IconButton
 					v-tooltip="formatMessage(messages.historyNewChat)"
@@ -1254,6 +1252,7 @@ defineExpose({ send })
 				v-if="visibleHistory.length === 0"
 				class="flex h-full flex-col items-center justify-center gap-2 text-center"
 			>
+				<p class="m-0 text-2xl font-bold text-primary">{{ formatMessage(messages.aiName) }}</p>
 				<p class="m-0 text-lg font-semibold text-primary">
 					{{ formatMessage(messages.emptyTitle) }}
 				</p>

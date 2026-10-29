@@ -16,7 +16,6 @@ import {
 	DownloadIcon,
 	ExternalIcon,
 	LanguagesIcon,
-	MoonIcon,
 	RefreshCwIcon,
 	SpinnerIcon,
 	UndoIcon,
@@ -29,7 +28,8 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import dayjs from 'dayjs'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
-import ModrinthAppMark from '@/assets/modrinth_app.svg?component'
+import ModrinthMark from '@/assets/modrinth-mark.svg?component'
+import NoctrinthMark from '@/assets/noctrinth-icon.svg?component'
 import PortalrinthMark from '@/assets/portalrinth-icon.png'
 import { PORTALRINTH_CHANGELOG } from '@/helpers/portalrinth-changelog'
 import { PORTALRINTH_OWN_CHANGELOG } from '@/helpers/portalrinth-own-changelog'
@@ -402,11 +402,8 @@ function setAutoInstall(value: boolean) {
 						alt=""
 						class="changes-tab__icon"
 					/>
-					<MoonIcon
-						v-else-if="item.id === 'noctrinth'"
-						class="changes-tab__icon changes-tab__icon--moon"
-					/>
-					<ModrinthAppMark v-else class="changes-tab__icon" />
+					<NoctrinthMark v-else-if="item.id === 'noctrinth'" class="changes-tab__icon" />
+					<ModrinthMark v-else class="changes-tab__icon" />
 				</button>
 			</div>
 			<div class="flex items-center gap-2">
@@ -564,10 +561,6 @@ function setAutoInstall(value: boolean) {
 	height: 1.1rem;
 	flex-shrink: 0;
 	object-fit: contain;
-}
-
-.changes-tab__icon--moon {
-	color: #a78bfa;
 }
 
 .changes-entry {
