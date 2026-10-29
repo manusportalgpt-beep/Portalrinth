@@ -937,6 +937,7 @@ export const AI_NAVIGATION_HINT = [
 
 export const AI_TOOLS_HINT = [
 	'Ты можешь выполнять действия, добавляя в ответ команды вида <<инструмент|аргумент>> (аргумент одной строкой, без кавычек). Пользователь видит каждую выполненную команду. ВАЖНО: внутри аргумента команды нельзя использовать двойные >> (они закрывают команду) — например, для дописывания в файл сначала прочитай его (cat) и запиши целиком через >; одинарный > допустим (html-теги, echo hi > file).',
+	'Не обещай действия — выполняй. Любое «сейчас проверю», «давай посмотрю», «сделаю» должно идти ВМЕСТЕ с вызовом команды <<инструмент|аргумент>> в этом же ответе: вызвал команду — сам получишь результат и продолжай работу дальше. Ответ-обещание без команды — ошибка: игрок ждёт действие, а не слова. Не спрашивай разрешения сделать очевидное — просто делай и рассказывай, что получилось.',
 	'Свои интернет-инструменты (это ТВОИ инструменты, как у настоящего агента — через них ищи и изучай всё, что вне лаунчера; по умолчанию DuckDuckGo):',
 	'У ТЕБЯ ЕСТЬ ИНТЕРНЕТ. Никогда не пиши «у меня нет доступа к интернету», «я не могу искать» или «не могу открыть ссылку» — вызывай инструмент. Если поиск вернул мало — переформулируй запрос (короче, на английском) и ищи снова.',
 	'- <<web_search|запрос>> — поиск в интернете (DuckDuckGo + Bing + Wikipedia), вернёт ссылки, заголовки и описания; всегда проверяй факты поиском, не выдумывай. Результаты поиска ты видишь сам — опирайся на них и давай ссылки',
@@ -2041,6 +2042,14 @@ async function presearchFor(request: AiRequest): Promise<string> {
 		: ''
 }
 
+/**
+ * A reply that promises to act («сейчас проверю», «давай посмотрю»,
+ * «хотите, чтобы я...») without a single command - the exact way chatty
+ * models stall a run into empty words instead of working.
+ */
+const PROMISE_RE =
+	/(дава(?:й|йте)\s+(?:я\s+)?(?:провер|посмотр|прочит|изуч|разбер|глян|скача|установ|сдела|собер|найд|откро|запущ|попроб|подготов|начн)|сейчас\s+(?:же\s+)?(?:всё\s+)?(?:провер|посмотр|прочит|изуч|разбер|глян|скача|установ|сдела|собер|найд|откро|запущ|попроб|подготов|ищу)|один момент|секунд[уы]|минутк[уу]|мгновенн|ща\b|гляну|хот(?:ите|ишь),?\s+чтобы я|позволь(?:те)?\s+(?:провер|посмотр|изуч))/i
+
 export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	const settings = aiSettings.value
 	// The fast lane skips the launcher's documentation, the memory files and
@@ -2079,6 +2088,8 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	let providerTried = ''
 	let lastError: unknown
 	const doneActions: string[] = []
+	// Promises-without-action nudges spent in this turn (two at most).
+	let promiseNudges = 0
 	// The honest story of who answered: the first provider that gave up
 	// rides along on the reply, so the label never lies about the source.
 	let failedProviderLabel = ''
@@ -2201,6 +2212,23 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 							}
 						}
 						if (parsed.actions.length === 0) {
+							// A chatty model that promises to work («сейчас проверю лог») without a
+							// single command stalls the run into empty words: nudge it back to its
+							// tools instead of ending the turn on an empty promise.
+							if (!fastPath && promiseNudges < 2 && round < maxRounds - 1 && PROMISE_RE.test(parsed.text)) {
+								promiseNudges++
+								payload = [
+									...payload,
+									{ role: 'assistant', content: raw },
+									{
+										role: 'user',
+										content:
+											'[служебное] Ты написал, что сейчас что-то сделаешь, но не вызвал ни одной команды — для игрока это пустое обещание. Продолжай работать: вызови нужную команду <<инструмент|аргумент>> прямо сейчас (список инструментов — в системном промпте), не задавай вопросов и не жди разрешения. Когда работа сделана — дай игроку короткий итог. Если командам здесь действительно нечего делать — ответь по существу, без обещаний.',
+									},
+								]
+								await sleep(120, request.signal)
+								continue
+							}
 							// A model that only shouted commands and never spoke still owes
 							// the player words - summarize what was done instead of silence.
 							const silent = !parsed.text.trim()
