@@ -125,7 +125,7 @@ const { isDragging } = useDraggable({
 	id: computed(() => `instance:${props.instanceGroupId}:${props.instance.id}`),
 	element: instanceCardElement,
 	disabled: computed(
-		() => displayState.value.group !== 'Group' || isInstancePinned(props.instance.id),
+		() => displayState.value.group !== 'Group',
 	),
 	sensors: instanceCardSensors,
 	data: computed(() => ({

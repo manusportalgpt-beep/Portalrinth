@@ -145,9 +145,9 @@ type IconEditorModal = {
 }
 
 /**
- * Portalrinth: the virtual group pinned instances are lifted into. Not a real
- * group - it exists only in the library view, always first, and it is not a
- * drop target, so nothing can be dragged into it.
+ * Portalrinth: legacy id of the old virtual "Pinned" section. Pinned
+ * instances no longer leave their groups - the pin is just a badge on the
+ * card now - but the id is still guarded against as a drop target.
  */
 export const PINNED_GROUP_ID = 'group:pinned'
 
@@ -210,10 +210,6 @@ const instanceActionMessages = defineMessages({
 		id: 'app.library.instance.action.remove-from-group',
 		defaultMessage: 'Remove from group',
 	},
-})
-
-const pinnedGroupMessages = defineMessages({
-	pinned: { id: 'app.library.group.pinned', defaultMessage: 'Pinned' },
 })
 
 function createLibraryState(instances: Ref<GameInstance[]>) {
@@ -663,37 +659,8 @@ function createLibraryState(instances: Ref<GameInstance[]>) {
 			})
 		}
 
-		// Pinned instances are lifted out of their groups into a section that
-		// always sits at the very top, ahead of favourites and every group -
-		// new instances land below it by construction. While searching, the
-		// results keep their natural order so pins do not hide matches.
-		const pinnedIds = pinnedInstanceIds.value
-		if (pinnedIds.length > 0 && !isSearching.value) {
-			const pinnedSet = new Set(pinnedIds)
-			const byId = new Map(visibleInstances.map((instance) => [instance.id, instance]))
-			const pinnedInstances = pinnedIds.flatMap((id) => {
-				const instance = byId.get(id)
-				return instance ? [instance] : []
-			})
-			if (pinnedInstances.length > 0) {
-				return [
-					{
-						id: PINNED_GROUP_ID,
-						key: formatMessage(pinnedGroupMessages.pinned),
-						instances: pinnedInstances,
-					},
-					...groups.map((group) =>
-						group.instances.some((instance) => pinnedSet.has(instance.id))
-							? {
-									...group,
-									instances: group.instances.filter((instance) => !pinnedSet.has(instance.id)),
-								}
-							: group,
-					),
-				]
-			}
-		}
-
+		// Portalrinth: pinned instances keep their place - the pin is only a
+		// badge on the card, nothing is lifted out of its group anymore.
 		return groups
 	})
 
@@ -863,8 +830,6 @@ function createLibraryState(instances: Ref<GameInstance[]>) {
 			draggedInstanceIds.has(instance.id),
 		)
 		const operations = draggedInstances.flatMap((instance) => {
-			// Pinned instances stay put until they are unpinned.
-			if (isInstancePinned(instance.id)) return []
 			const instanceGroupIds = getEffectiveInstanceGroupIds(instance)
 			if (toGroup && instanceGroupIds.includes(toGroup)) {
 				return []

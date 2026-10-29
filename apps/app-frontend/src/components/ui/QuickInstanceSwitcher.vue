@@ -76,13 +76,32 @@ const allInstances = computed(() =>
 const dragging = ref(false)
 const quickInstances = useQuickInstanceLimit()
 
+// Portalrinth: shares the library pin list, so a build pinned anywhere shows
+// its badge everywhere.
+const pinnedIds = useStorage('portalrinth-pinned-instances', [])
+const isPinned = (id) => pinnedIds.value.includes(id)
+
+function togglePin(id) {
+	pinnedIds.value = pinnedIds.value.includes(id)
+		? pinnedIds.value.filter((kept) => kept !== id)
+		: [...pinnedIds.value, id]
+}
+
 const maxVisible = computed(() =>
 	Math.min(maxAuto.value, allInstances.value.length, QUICK_INSTANCE_LIMIT_MAX),
 )
 const visibleCount = computed(() =>
 	Math.min(quickInstances.limit.value ?? maxVisible.value, maxVisible.value),
 )
-const recentInstances = computed(() => allInstances.value.slice(0, visibleCount.value))
+// Portalrinth: pinned builds never fall out of the quick panel - any pinned
+// instance cut off by the visible window is appended back below the recent ones.
+const recentInstances = computed(() => {
+	const visible = allInstances.value.slice(0, visibleCount.value)
+	const pinnedOutside = allInstances.value.filter(
+		(instance) => isPinned(instance.id) && !visible.some((shown) => shown.id === instance.id),
+	)
+	return pinnedOutside.length > 0 ? [...visible, ...pinnedOutside] : visible
+})
 const canDrag = computed(() => maxVisible.value > 0)
 const showOverdrag = ref(false)
 
@@ -292,14 +311,6 @@ async function stopInstance(instance) {
 	})
 }
 
-const pinnedIds = useStorage('portalrinth-pinned-instances', [])
-
-function togglePin(id) {
-	pinnedIds.value = pinnedIds.value.includes(id)
-		? pinnedIds.value.filter((kept) => kept !== id)
-		: [...pinnedIds.value, id]
-}
-
 function openContextMenu(event, instance) {
 	const playing = runningInstances.value.includes(instance.id)
 	const pinned = pinnedIds.value.includes(instance.id)
@@ -370,6 +381,10 @@ function openContextMenu(event, instance) {
 						:tint-by="instance.id"
 						:class="`transition-all ${instance.install_stage !== 'installed' ? `brightness-[0.25] scale-[0.85]` : `group-hover:brightness-75`}`"
 						pad-transparent-corners
+					/>
+					<PinIcon
+						v-if="isPinned(instance.id)"
+						class="pointer-events-none absolute left-1.5 top-1.5 z-10 size-3.5 rounded-sm bg-bg-raised p-px text-brand [fill:currentColor]"
 					/>
 					<div
 						v-if="instance.install_stage !== 'installed'"
