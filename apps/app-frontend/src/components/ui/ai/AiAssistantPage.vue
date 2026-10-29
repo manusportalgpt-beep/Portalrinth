@@ -14,7 +14,6 @@ import {
 	FileCodeIcon,
 	FileIcon,
 	FilePlusIcon,
-	FolderOpenIcon,
 	GlobeIcon,
 	HistoryIcon,
 	HistoryIcon as MemoryIcon,
@@ -46,7 +45,6 @@ import {
 	agentQueue,
 	agentStreaming,
 	agentTurn,
-	type AiFolderCard,
 	aiHistory,
 	type AiJarCard,
 	type AiMessage,
@@ -82,7 +80,6 @@ import {
 	readSession,
 	restoreSession,
 	sandboxAbsolutePath,
-	sandboxReveal,
 	type SessionMeta,
 	trashSession,
 } from '@/helpers/ai-sandbox'
@@ -363,7 +360,6 @@ function actionName(tool: string) {
 		ask_user: 'спросил вас',
 		celebrate: 'отплясывает',
 		sandbox_bash: 'выполнил команду',
-		open_folder: 'открыл папку',
 		gen_image: 'сгенерировал картинку',
 		launcher_set_theme: 'сменил тему',
 		launcher_compile_java: 'скомпилировал мод в .jar',
@@ -378,21 +374,7 @@ function actionName(tool: string) {
 	return map[tool] ?? tool
 }
 
-function openSandboxFolder(path: string) {
-	void sandboxReveal(path)
-}
-
 // ---- Card helpers ----------------------------------------------------------
-
-function folderCardsOf(message: AiMessage): AiFolderCard[] {
-	const raw = message.activity?.foldersOpened ?? []
-	return raw.map((folder) => (typeof folder === 'string' ? { path: folder } : folder))
-}
-
-function folderName(path: string): string {
-	const parts = path.split(/[\\/]/).filter(Boolean)
-	return parts[parts.length - 1] ?? path
-}
 
 function compactCount(value: number | undefined): string {
 	if (!value) return '0'
@@ -1427,23 +1409,6 @@ defineExpose({ send })
 							</span>
 						</div>
 
-						<div v-if="folderCardsOf(message).length" class="ai-cards">
-							<div
-								v-for="folder in folderCardsOf(message)"
-								:key="`fc-${folder.path}`"
-								class="ai-folder-card"
-							>
-								<span class="ai-card-glyph"><FolderOpenIcon class="size-5" /></span>
-								<div class="min-w-0 grow">
-									<p class="ai-card-title">{{ folderName(folder.path) }}</p>
-									<p v-if="folder.description" class="ai-card-desc">{{ folder.description }}</p>
-								</div>
-								<Button size="sm" class="shrink-0" @click="() => openSandboxFolder(folder.path)">
-									{{ formatMessage(messages.open) }}
-								</Button>
-							</div>
-						</div>
-
 						<div v-if="message.activity?.mods?.length" class="ai-cards">
 							<button class="ai-cards-toggle" @click="() => toggleCardGroup(`m-${index}`)">
 								<span
@@ -1646,13 +1611,6 @@ defineExpose({ send })
 													: formatMessage(messages.install)
 											}}
 										</Button>
-										<IconButton
-											v-tooltip="formatMessage(messages.openFolderCard)"
-											:label="formatMessage(messages.openFolderCard)"
-											@click="() => openSandboxFolder(jar.path)"
-										>
-											<FolderOpenIcon class="size-4" />
-										</IconButton>
 									</div>
 								</div>
 							</div>

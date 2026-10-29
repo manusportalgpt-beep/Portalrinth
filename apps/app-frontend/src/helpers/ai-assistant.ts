@@ -32,7 +32,6 @@ import {
 	sandboxPack,
 	sandboxRead,
 	sandboxReadDataUrl,
-	sandboxReveal,
 	sandboxStatsSnapshot,
 	sandboxUnpack,
 	sandboxWrite,
@@ -584,7 +583,7 @@ function progressTask(task: AiTask, tool: string, args: string): AiTask {
 			tool === 'sandbox_unpack' ||
 			(bash ? /echo|>|cp\s|mv\s|unzip|unrar/.test(bash) : false)
 	else if (index === 3) hit = tool === 'launcher_compile_java' || tool === 'sandbox_pack'
-	else hit = tool === 'open_folder' || tool === 'install_to_instance' || tool === 'launcher_install'
+	else hit = tool === 'install_to_instance' || tool === 'launcher_install'
 	if (!hit) return task
 	const stages = task.stages.map((stage, i) => (i === index ? { ...stage, done: true } : stage))
 	return { ...task, stages }
@@ -971,7 +970,7 @@ export const AI_TOOLS_HINT = [
 	'- <<sandbox_list|путь>>, <<sandbox_read|файл>>, <<sandbox_write|файл::текст>> — то же самое по шагам (многострочный текст разрешён); «.exe» и другие исполняемые файлы создать нельзя',
 	'- <<sandbox_delete|путь>> — удалить файл или папку (только с явного согласия)',
 	'Честность о песочнице: мини-shell НЕ запускает внешние программы (java, npm, python, pip и т.п.) — не пытайся и не обещай. Java-код компилируется через launcher_compile_java, архивы — через sandbox_pack/unpack, скачивание (вместо wget/curl) — через sandbox_download, показ картинок — sandbox_show. Песочница работает: файлы, папки, архивы — всё получается. Никогда не говори «песочница не работает» или «у меня нет доступа» — есть только список команд выше.',
-	'- <<open_folder|путь::что там>> — показать папку игроку карточкой с кнопкой «Открыть»; в двух-трёх словах опиши, что в ней (например: «готовый ресурс-пак») — делай это, когда отдал игроку готовый файл',
+	'Компьютер игрока не трогаем: не открывай проводник и папки, не запускай терминалы и внешние окна — всё, что ты делаешь, живёт в песочнице и показывается в чате. Готовый результат (мод, ресурс-пак, шейдер, датапак) сразу ставь в сборку <<install_to_instance|файл::тип>> сам, без вопросов и без «нажмите кнопку» — игроку просто сообщи, что поставлено.',
 	'- <<view_image|url>> — посмотреть картинку из интернета своими глазами (и показать её игроку в чате); пользуйся, когда нужно разглядеть скриншот, схему или текстуру',
 	'Архиватор и компилятор (встроенные, как 7-zip и javac):',
 	'- <<sandbox_pack|архив.zip::путь1::путь2>> — упаковать файлы/папки в .zip, .7z или .jar (ресурс-пак, шейдерпак, датапак)',
@@ -1033,7 +1032,7 @@ export const AI_LAUNCHER_HINT = [
 	'Установка контента: launcher_install ставит ТОЛЬКО версию под Minecraft и ядро сборки, сама подтягивает зависимости (как кнопка «Установить» в лаунчере). Id с Modrinth — как есть, с CurseForge — cf:ID (их даёт launcher_search_mods). Если ответ «НЕ установлено» — мод не вышел под эту версию: честно скажи и предложи аналог; НИКОГДА не пиши «установил», если инструмент ответил ошибкой.',
 	'Сервер/LAN — играть с друзьями. «Запусти сервер», «лан», «открой мир», «поиграть с другом» значат: 1) <<launch_instance|сборка>>; 2) попроси игрока зайти в мир и нажать Esc → «Открыть для сети»; 3) <<lan_status|>> и <<lan_publish|сборка>> — даст адрес для друзей; <<lan_stop|сборка>> — закрыть. Экран LAN: /lan.',
 	'Вики и гайды: <<fandom|что ищем::мод (необязательно)>> — статья с Fandom-вики мода или Minecraft Wiki (рецепты, механики, гайды), например <<fandom|Mechanical Press::Create>> или <<fandom|незерит>>. Игрок увидит карточку статьи с картинкой — клик по ней открывает статью в браузере; перескажи главное своими словами. Если игрок хочет почитать — <<open_page|ссылка на статью>>. Для вопросов «как скрафтить/как работает/гайд по моду» сначала fandom.',
-	'Сайты: делай проект в песочнице (site/index.html, style.css, script.js), затем <<site_preview|site/index.html>> — игрок увидит живой предпросмотр сайта прямо в чате; потом open_folder.',
+	'Сайты: делай проект в песочнице (site/index.html, style.css, script.js), затем <<site_preview|site/index.html>> — игрок увидит живой предпросмотр сайта прямо в чате.',
 ].join('\n')
 
 /** How players actually talk: short, slangy, never a spec. */
@@ -1046,15 +1045,15 @@ export const AI_SLANG_HINT = [
 
 export const AI_SKILLS_HINT = [
 	'ЛЮБУЮ постройку (мод, шейдер, ресурс-пак, датапак) начинай с объявления задачи: <<task_start|тип::Название>> (тип: mod, shader, resourcepack, datapack), например <<task_start|mod::Лесоповал>> — игрок увидит живую карточку этапов; без неё карточка не появится.',
-	'Ты умеешь создавать контент для Minecraft, сайты, картинки и код на любых языках — всё делаешь файлами в песочнице, а готовый результат отдаёшь архивом и открываешь папку игроку через <<open_folder|путь>>:',
+	'Ты умеешь создавать контент для Minecraft, сайты, картинки и код на любых языках — всё делаешь файлами в песочнице, а готовый результат сразу ставишь в сборку через <<install_to_instance|файл::тип>>:',
 	'- Ресурс-пак: pack.mcmeta (поле pack_format зависит от версии — если не уверен, уточни через web_search), assets/minecraft/textures/..., модели, звуки (sounds.json). Собери файлы и упакуй в .zip.',
 	'- Шейдеры (OptiFine/Iris): папка shaders/ с вершинными и фрагментными программами (*.vsh, *.fsh, GLSL), composite/final проходы, shaders.properties. Собери и упакуй в .zip.',
 	'Быстрый старт любого проекта: <<scaffold|тип::название::версия::ядро>> — готовая заготовка в песочнице (projects/<имя>/): тип resourcepack, datapack, shader или mod (ядро fabric/forge/neoforge). Для ресурс-пака/датапака/шейдера сразу соберётся правильный .zip (pack.mcmeta в корне, pack_format под версию). Потом дописывай файлы и ставь в сборку.',
 	'- Готовый файл в сборку: <<install_to_instance|файл.zip/.jar или папка::тип::сборка>> — тип mod, resourcepack, shaderpack, datapack; сборку можно не указывать (тогда выбранная); папка сама упакуется в .zip.',
 	'- Моды: Fabric — fabric.mod.json (id, version, entrypoints main/client), код на Java или Kotlin, mixins; Forge — mods.toml; NeoForge — neoforge.mods.toml. Java-код компилируй по-настоящему: <<launcher_compile_java|папка::мод.jar>> (нужен JDK в системе). Если javac нет — собери .jar как zip (это честный мод для ресурсных/клиентских правок) и скажи, что для скомпилированных модов нужен JDK.',
 	'- Датапаки: pack.mcmeta в корне + data/<namespace>/function/*.mcfunction и прочее.',
-	'- Любой другой код и файлы: сайты (html/css/js — потом open_folder), скрипты (Python, Lua, C#...), конфиги, картинки через <<gen_image|описание::файл.png>>.',
-	'Порядок работы над артефактом: папка проекта в песочнице → файлы (удобно через <<sandbox_bash|mkdir ... && ...>>) → компиляция/упаковка → <<open_folder|путь>> → скажи игроку, что где лежит.',
+	'- Любой другой код и файлы: сайты (html/css/js — потом <<site_preview|site/index.html>>), скрипты (Python, Lua, C#...), конфиги, картинки через <<gen_image|описание::файл.png>>.',
+	'Порядок работы над артефактом: папка проекта в песочнице → файлы (удобно через <<sandbox_bash|mkdir ... && ...>>) → компиляция/упаковка → <<install_to_instance|файл::тип>> → скажи игроку, что поставлено и куда.',
 	'Большие проекты: сначала осмотрись (<<sandbox_bash|tree>> или ls), потом читай файлы по одному и частями (head/tail), план работ держи в memory_write — не пытайся прочитать всё сразу и ничего не теряй между шагами.',
 	'Если знаний не хватает (версии, форматы, API) — сначала web_search, потом пиши код. Не выдумывай несуществующие API: проверяй.',
 ].join('\n')
@@ -1071,7 +1070,7 @@ export const AI_CRAFT_HINT = [
 	'ШЕЙДЕР (Iris/OptiFine): в корне архива папка shaders/ с программами: gbuffers_terrain.vsh/.fsh (мир), gbuffers_textured (частицы), composite.fsh и final.fsh (пост-обработка: туман, тон, блум). shaders.properties — настройки и профили. Юниформы бери готовые: gbufferModelView, worldTime, cameraPosition, texcoord. GLSL #version 120-330: каждую скобку и точку с запятой проверяй — от опечатки шейдер не загрузится. pack.mcmeta в корне добавь.',
 	'РЕСУРС-ПАК: pack.mcmeta {"pack":{"pack_format":N, "description":"..."}} — N из твоей таблицы pack_format под версию игрока; assets/minecraft/textures/block|item/*.png, models/, sounds/ + sounds.json, lang/ru_ru.json и en_us.json (там, где переименования). Текстуры 16x16 — <<gen_image|описание::файл.png>> или нарисуй сам по пикселям через sandbox_write (PNG писать байтами нельзя — бери gen_image или проси картинку у игрока). Анимация текстуры — вертикальная полоса кадров + .mcmeta с frames рядом.',
 	'ДАТАПАК: pack.mcmeta (pack_format ДАТАПАКОВ, он другой!) + data/<namespace>/function/*.mcfunction (команды БЕЗ слэша), автозапуск через data/minecraft/tags/function/tick.json и load.json (в 1.21+ tags/function, раньше tags/functions — в файле перечисли свои функции). Рецепты data/<ns>/recipe/*.json, лут data/<ns>/loot_table/*.json, достижения advancement/. Название namespace — латиница.',
-	'Проверка и выдача: собрал — <<sandbox_pack|имя.zip::папка>> (или <<launcher_compile_java|>> для мода), проверь содержимое архива <<sandbox_unpack|имя.zip::проверка>> и ls проверка, потом <<open_folder|путь::что внутри>> и предложи: «Поставить в сборку?» — по да: <<install_to_instance|файл::тип::сборка>>. pack.mcmeta и манифесты должны лежать В КОРНЕ архива, не во вложенной папке — это самая частая ошибка, всегда проверяй распаковкой.',
+	'Проверка и выдача: собрал — <<sandbox_pack|имя.zip::папка>> (или <<launcher_compile_java|>> для мода), проверь содержимое архива <<sandbox_unpack|имя.zip::проверка>> и ls проверка, потом сразу сам поставь: <<install_to_instance|файл::тип::сборка>> — без вопросов и подтверждений (установка безопасна, мод потом можно выключить или удалить). pack.mcmeta и манифесты должны лежать В КОРНЕ архива, не во вложенной папке — это самая частая ошибка, всегда проверяй распаковкой.',
 	'Честность о возможностях: java ты компилируешь, но не запускаешь; python/npm/go не существуют для тебя — код проверяй чтением, а не исполнением; протестировать мод по-настоящему можно только установкой в сборку игроком. Никогда не обещай «протестировал и работает» — говори «собрал, проверь в игре».',
 ]
 
@@ -2936,7 +2935,7 @@ registerAiToolHandler(async (tool, args) => {
 			.map((stage) => stage.label)
 			.join(
 				' → ',
-			)}. Веди работу по этапам: файлы в песочнице, затем упаковка (sandbox_pack) или компиляция (launcher_compile_java) и выдача (open_folder / install_to_instance).`
+			)}. Веди работу по этапам: файлы в песочнице, затем упаковка (sandbox_pack) или компиляция (launcher_compile_java) и установка (install_to_instance).`
 	}
 	if (tool === 'web_fetch' || tool === 'open_page') {
 		const url = args.trim()
@@ -2991,13 +2990,6 @@ registerAiToolHandler(async (tool, args) => {
 	if (tool === 'sandbox_bash') {
 		if (!args.trim()) return 'Пустая команда'
 		return sandboxBash(args)
-	}
-	if (tool === 'open_folder') {
-		const separator = args.indexOf('::')
-		const path = (separator < 0 ? args : args.slice(0, separator)).trim()
-		if (!path) return 'Укажите путь'
-		const revealed = await sandboxReveal(path)
-		return revealed
 	}
 	if (tool === 'gen_image') {
 		const separator = args.indexOf('::')
@@ -3936,24 +3928,8 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 						task: progressTask(agentTurn.value.task, tool, args),
 					}
 				}
-				if (tool === 'open_folder') {
-					const separator = args.indexOf('::')
-					const path = (separator < 0 ? args : args.slice(0, separator)).trim()
-					const description = separator < 0 ? '' : args.slice(separator + 2).trim()
-					if (path && !agentTurn.value.folders.some((folder) => folder.path === path)) {
-						agentTurn.value = {
-							...agentTurn.value,
-							folders: [
-								...agentTurn.value.folders,
-								{ path, description: description || undefined },
-							],
-						}
-					}
-				}
 			},
 		})
-		// The folder cards come from the open_folder handler registered by
-		// the app shell; the sandbox path rides in the second argument.
 		const done: AiMessage = {
 			role: 'assistant',
 			content: result.content,

@@ -226,7 +226,7 @@ async function download(urlRaw: string, pathRaw: string, depth = 0): Promise<str
 			: `${Math.round(bytes.length / 1024)} КБ`
 	const isImage = /^image\//i.test(type) || IMAGE_EXT.test(path)
 	const isVideo = /^video\//i.test(type) || VIDEO_EXT.test(path)
-	const line = `Скачано: ${path} (${size}) → ${absolute}.${isVideo ? ' Это видео — покажи папку игроку через <<open_folder|' + path.replace(/\/[^/]+$/, '') + '::видео>>.' : ''}`
+	const line = `Скачано: ${path} (${size}) → ${absolute}.${isVideo ? ' Это видео — сообщи игроку путь к файлу текстом.' : ''}`
 	if (isImage && bytes.length <= 6 * 1024 * 1024) {
 		const mime = /^image\//i.test(type) ? type.split(';')[0] : `image/${(path.split('.').pop() ?? 'png').replace('jpg', 'jpeg')}`
 		return `${line}@@IMG@@data:${mime};base64,${bytesToBase64(bytes)}`
@@ -628,7 +628,7 @@ async function scaffold(type: string, name: string, version: string, loader: str
 		)
 		packed = ` Архив готов: ${archive} — поставь в сборку через <<install_to_instance|${archive}::${type === 'shader' ? 'shaderpack' : type}>>.`
 	}
-	return `Создал проект «${name}» (${type}, Minecraft ${version}${type === 'mod' ? `, ${loader || 'fabric'}` : ''}) в ${root}.${packed}\nФайлы:\n${Object.keys(files).join('\n')}\nДальше дописывай файлы через sandbox_write и покажи папку игроку через <<open_folder|${root}::проект>>.`
+	return `Создал проект «${name}» (${type}, Minecraft ${version}${type === 'mod' ? `, ${loader || 'fabric'}` : ''}) в ${root}.${packed}\nФайлы:\n${Object.keys(files).join('\n')}\nДальше дописывай файлы через sandbox_write, потом собери и поставь в сборку через <<install_to_instance|файл::тип>>.`
 }
 
 function kindOfFile(path: string, hint: string): 'mod' | 'resourcepack' | 'shaderpack' | 'datapack' {

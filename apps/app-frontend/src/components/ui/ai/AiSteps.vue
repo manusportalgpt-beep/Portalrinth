@@ -26,7 +26,6 @@ import {
 	FileCodeIcon,
 	FilePlusIcon,
 	FileTextIcon,
-	FolderOpenIcon,
 	FolderSearchIcon,
 	GlobeIcon,
 	HammerIcon,
@@ -136,7 +135,6 @@ const TOOLS: Record<string, ToolMeta> = {
 	show_poll: { title: 'Опрос', icon: ListBulletedIcon },
 	task_start: { title: 'Новая задача', icon: BoxPlusIcon },
 	ask_user: { title: 'Вопрос', icon: MessageIcon },
-	open_folder: { title: 'Папка', icon: FolderOpenIcon },
 	music_add_url: { title: 'Трек в плейлист', icon: MusicIcon },
 	find_wallpaper: { title: 'Поиск обоев', icon: ImagesIcon },
 	sysinfo: { title: 'Система', icon: CpuIcon },
@@ -216,7 +214,6 @@ function subtitleOf(step: AiStep): string {
 		case 'sandbox_write':
 		case 'sandbox_pack':
 		case 'sandbox_unpack':
-		case 'open_folder':
 			return head(args)
 		default:
 			return args.replace(/\s+/g, ' ').trim()

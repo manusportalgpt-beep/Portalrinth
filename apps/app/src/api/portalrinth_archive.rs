@@ -503,6 +503,12 @@ pub async fn archiver_compile_java<R: tauri::Runtime>(
         .arg("-d")
         .arg(&classes)
         .args(&sources);
+    #[cfg(windows)]
+    {
+        // javac is a console program: without CREATE_NO_WINDOW a black
+        // terminal flashes on the player's screen on every compile.
+        command.creation_flags(0x0800_0000);
+    }
     let output = command
         .output()
         .await
