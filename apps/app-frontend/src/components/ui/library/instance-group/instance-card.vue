@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { KeyboardSensor, PointerSensor, useDraggable } from '@dnd-kit/vue'
-import { CheckIcon, DownloadIcon, PlayIcon, SpinnerIcon, StopCircleIcon } from '@modrinth/assets'
+import {
+	CheckIcon,
+	DownloadIcon,
+	PinIcon,
+	PlayIcon,
+	SpinnerIcon,
+	StopCircleIcon,
+} from '@modrinth/assets'
 import { defineMessages, IconButton, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { useEventListener, useMagicKeys } from '@vueuse/core'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -50,12 +57,16 @@ const messages = defineMessages({
 	play: { id: 'app.library.instance.play', defaultMessage: 'Play' },
 	select: { id: 'app.library.instance.select', defaultMessage: 'Select instance' },
 	deselect: { id: 'app.library.instance.deselect', defaultMessage: 'Deselect instance' },
+	pinInstance: { id: 'app.library.instance.action.pin', defaultMessage: 'Pin to top' },
+	unpinInstance: { id: 'app.library.instance.action.unpin', defaultMessage: 'Unpin' },
 })
 const {
 	displayState,
 	selectedLibraryInstances,
 	isLibraryInstanceSelectionActive,
 	activeDraggedInstanceKeys,
+	isInstancePinned,
+	toggleInstancePinned,
 } = useLibrary()
 
 const props = defineProps<{
@@ -109,10 +120,13 @@ const selected = computed(() => selectedLibraryInstances.value.has(selectionKey.
 const keys = useMagicKeys()
 const holdingShift = computed(() => keys.shift.value)
 const isPartOfActiveDrag = computed(() => activeDraggedInstanceKeys.value.has(selectionKey.value))
+const pinned = computed(() => isInstancePinned(props.instance.id))
 const { isDragging } = useDraggable({
 	id: computed(() => `instance:${props.instanceGroupId}:${props.instance.id}`),
 	element: instanceCardElement,
-	disabled: computed(() => displayState.value.group !== 'Group'),
+	disabled: computed(
+		() => displayState.value.group !== 'Group' || isInstancePinned(props.instance.id),
+	),
 	sensors: instanceCardSensors,
 	data: computed(() => ({
 		instanceId: props.instance.id,
@@ -131,10 +145,15 @@ const toggleSelection = (event?: MouseEvent) => {
 	emit('toggle-selection', event?.shiftKey ?? false)
 }
 
+const togglePin = (event: MouseEvent) => {
+	event.stopPropagation()
+	toggleInstancePinned(props.instance.id)
+}
+
 const handlePointerDown = (event: PointerEvent) => {
 	isPrimaryPointerDown.value =
 		event.button === 0 &&
-		!(event.target instanceof Element && event.target.closest('.selection-button'))
+		!(event.target instanceof Element && event.target.closest('.selection-button, .pin-button'))
 }
 
 const resetPrimaryPointer = () => {
@@ -361,6 +380,26 @@ onMounted(() => {
 			</div>
 		</template>
 		<template #overlay="{ compact }">
+			<button
+				type="button"
+				class="pin-button group/pin absolute z-[2] flex size-[50px] cursor-pointer items-start justify-center border-0 bg-transparent p-0 pt-4"
+				:class="compact ? '-left-1 -top-1' : 'left-1.5 top-1.5'"
+				:aria-label="formatMessage(pinned ? messages.unpinInstance : messages.pinInstance)"
+				@click.stop="togglePin"
+			>
+				<span
+					v-tooltip="formatMessage(pinned ? messages.unpinInstance : messages.pinInstance)"
+					class="flex items-center justify-center rounded-full transition-opacity duration-200 ease-out"
+					:class="[
+						compact ? 'size-[20px]' : 'size-[24px]',
+						pinned
+							? 'text-brand opacity-100'
+							: 'text-contrast opacity-0 group-hover/card:opacity-100',
+					]"
+				>
+					<PinIcon class="size-4" :class="{ '[fill:currentColor]': pinned }" />
+				</span>
+			</button>
 			<button
 				type="button"
 				class="selection-button group/selection absolute z-[2] flex size-[50px] cursor-pointer items-start pt-4 justify-center border-0 bg-transparent p-0"

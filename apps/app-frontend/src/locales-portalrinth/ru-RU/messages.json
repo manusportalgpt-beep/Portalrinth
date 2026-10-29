@@ -1,4 +1,22 @@
 {
+	"app.library.group.pinned": {
+		"message": "Закреплённые"
+	},
+	"app.library.instance.action.pin": {
+		"message": "Закрепить"
+	},
+	"app.library.instance.action.unpin": {
+		"message": "Открепить"
+	},
+	"app.settings.search": {
+		"message": "Поиск настроек"
+	},
+	"app.settings.search.clear": {
+		"message": "Очистить поиск"
+	},
+	"app.settings.search.no-results": {
+		"message": "Ничего не найдено"
+	},
 	"app.account-provider.description": {
 		"message": "С какого аккаунта вы играете?"
 	},

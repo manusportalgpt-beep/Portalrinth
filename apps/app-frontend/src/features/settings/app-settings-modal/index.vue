@@ -13,6 +13,7 @@ import {
 	NewspaperIcon,
 	PaintbrushIcon,
 	RefreshCwIcon,
+	SearchIcon,
 	Settings2Icon,
 	SparklesIcon,
 	ToggleRightIcon,
@@ -20,6 +21,7 @@ import {
 	Volume2Icon,
 	WindowIcon,
 	WrenchIcon,
+	XIcon,
 } from '@modrinth/assets'
 import {
 	commonMessages,
@@ -72,6 +74,9 @@ const { handleError } = injectNotificationManager()
 const queryClient = useQueryClient()
 
 const devModeCounter = ref(0)
+
+// Sidebar search: filters the tab list in the left bar only.
+const settingsSearch = ref('')
 
 const developerModeEnabled = defineMessage({
 	id: 'app.settings.developer-mode-enabled',
@@ -444,6 +449,8 @@ function devModeCount() {
 }
 
 const messages = defineMessages({
+	searchSettings: { id: 'app.settings.search', defaultMessage: 'Search settings' },
+	clearSearch: { id: 'app.settings.search.clear', defaultMessage: 'Clear search' },
 	downloading: {
 		id: 'app.settings.downloading',
 		defaultMessage: 'Downloading v{version}',
@@ -470,8 +477,34 @@ const messages = defineMessages({
 		max-width="928px"
 		:before-hide="canLeaveCurrentTab"
 		:before-tab-change="canLeaveCurrentTab"
+		:filter-query="settingsSearch"
+		:on-after-hide="() => (settingsSearch = '')"
 		:floating-action-bar-shown="hasUnsavedChanges"
 	>
+		<template #sidebar-header>
+			<div class="relative shrink-0">
+				<SearchIcon
+					class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-secondary"
+				/>
+				<input
+					v-model="settingsSearch"
+					type="text"
+					spellcheck="false"
+					class="w-full rounded-[14px] border-none bg-surface-4 py-2 pl-9 text-sm font-medium text-contrast placeholder:text-secondary focus:outline-none"
+					:class="{ 'pr-8': settingsSearch }"
+					:placeholder="formatMessage(messages.searchSettings)"
+				/>
+				<button
+					v-if="settingsSearch"
+					type="button"
+					class="absolute right-1 top-1/2 flex -translate-y-1/2 cursor-pointer items-center border-0 bg-transparent p-1.5 text-secondary hover:text-contrast"
+					:aria-label="formatMessage(messages.clearSearch)"
+					@click="settingsSearch = ''"
+				>
+					<XIcon class="size-4" />
+				</button>
+			</div>
+		</template>
 		<template #title>
 			<span class="text-2xl font-semibold text-contrast">
 				{{ formatMessage(commonMessages.settingsLabel) }}

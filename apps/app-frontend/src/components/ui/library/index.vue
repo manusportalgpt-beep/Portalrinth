@@ -13,6 +13,7 @@ import LibrarySelectionActionBar from '@/components/ui/library/LibrarySelectionA
 import {
 	getLibraryInstanceSelectionKey,
 	type InstanceGroup as InstanceGroupType,
+	PINNED_GROUP_ID,
 	provideLibrary,
 } from '@/components/ui/library/use-library'
 import ConfirmDeleteInstanceModal from '@/components/ui/modal/ConfirmDeleteInstanceModal.vue'
@@ -89,7 +90,9 @@ const visibleInstanceGroups = computed(() =>
 
 const visibleReorderableGroups = computed(() =>
 	displayState.value.group === 'Group'
-		? visibleInstanceGroups.value.filter((group) => group.id !== FAVORITES_GROUP_ID)
+		? visibleInstanceGroups.value.filter(
+				(group) => group.id !== FAVORITES_GROUP_ID && group.id !== PINNED_GROUP_ID,
+			)
 		: [],
 )
 const visibleFavoritesGroup = computed(() =>

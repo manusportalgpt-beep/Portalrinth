@@ -5,7 +5,7 @@ import { RightArrowIcon } from '@modrinth/assets'
 import { useElementSize } from '@vueuse/core'
 import { type Component, type ComponentPublicInstance, computed, nextTick, ref, watch } from 'vue'
 
-import { type MessageDescriptor, useVIntl } from '../../composables/i18n'
+import { defineMessage, type MessageDescriptor, useVIntl } from '../../composables/i18n'
 import { useScrollIndicator } from '../../composables/scroll-indicator'
 import { truncatedTooltip } from '../../utils/truncate'
 import LoadingIndicator from '../base/LoadingIndicator.vue'
@@ -43,6 +43,7 @@ const props = withDefaults(
 		beforeHide?: () => boolean
 		beforeTabChange?: (fromIndex: number, toIndex: number) => boolean
 		hideTabSelection?: boolean
+		filterQuery?: string
 		floatingActionBarShown?: boolean
 		disableClose?: boolean
 	}>(),
@@ -57,12 +58,33 @@ const props = withDefaults(
 		beforeHide: undefined,
 		beforeTabChange: undefined,
 		hideTabSelection: false,
+		filterQuery: undefined,
 		floatingActionBarShown: false,
 		disableClose: false,
 	},
 )
 
 const visibleTabs = computed(() => props.tabs.filter((tab) => tab.shown !== false))
+
+const noResultsMessage = defineMessage({
+	id: 'app.settings.search.no-results',
+	defaultMessage: 'No matches',
+})
+
+// A search over the sidebar's own entries - tab names and category headers.
+// The pane keeps showing the selected tab even when the filter hides it:
+// the search narrows the menu, not the window itself.
+const filteredTabs = computed(() => {
+	const query = props.filterQuery?.trim().toLowerCase() ?? ''
+	if (!query) return visibleTabs.value
+	return visibleTabs.value.filter(
+		(tab) =>
+			formatMessage(tab.name).toLowerCase().includes(query) ||
+			(tab.category && formatMessage(tab.category).toLowerCase().includes(query)),
+	)
+})
+
+const selectedTabObject = computed(() => visibleTabs.value[selectedTab.value])
 
 const selectedTab = ref(0)
 const tabLabelRefs = ref<Record<number, HTMLElement | null>>({})
@@ -120,9 +142,9 @@ function hide(): boolean {
 	return modal.value?.hide() ?? false
 }
 
-function startsCategory(index: number) {
-	const category = visibleTabs.value[index]?.category
-	return !!category && category.id !== visibleTabs.value[index - 1]?.category?.id
+function startsCategory(tabs: Tab[], index: number) {
+	const category = tabs[index]?.category
+	return !!category && category.id !== tabs[index - 1]?.category?.id
 }
 
 defineExpose({ show, hide, selectedTab, setTab })
@@ -173,9 +195,9 @@ defineExpose({ show, hide, selectedTab, setTab })
 						class="tabbed-modal-scrollbar -mr-3 flex h-full flex-col gap-1 overflow-y-auto overscroll-contain pr-3"
 						@scroll="checkSidebarScrollState"
 					>
-						<template v-for="(tab, index) in visibleTabs" :key="index">
+						<template v-for="(tab, index) in filteredTabs" :key="index">
 							<div
-								v-if="startsCategory(index) && tab.category"
+								v-if="startsCategory(filteredTabs, index) && tab.category"
 								class="shrink-0 truncate pb-1.5 text-sm font-extrabold uppercase leading-5 text-secondary"
 								:class="{ 'mt-3': index > 0 }"
 							>
@@ -186,8 +208,8 @@ defineExpose({ show, hide, selectedTab, setTab })
 								:href="tab.href ?? undefined"
 								:target="tab.href ? '_blank' : undefined"
 								:rel="tab.href ? 'noopener noreferrer' : undefined"
-								:class="`flex min-w-0 shrink-0 gap-2 items-center text-left rounded-[14px] px-4 py-2.5 border-none text-base leading-5 font-semibold cursor-pointer active:scale-[0.97] transition-all no-underline ${!tab.href && !hideTabSelection && selectedTab === index ? 'bg-[color-mix(in_srgb,var(--color-brand)_30%,transparent)] text-brand' : 'bg-transparent text-primary hover:bg-surface-4 hover:text-contrast'}`"
-								@click="!tab.href && setTab(index)"
+								:class="`flex min-w-0 shrink-0 gap-2 items-center text-left rounded-[14px] px-4 py-2.5 border-none text-base leading-5 font-semibold cursor-pointer active:scale-[0.97] transition-all no-underline ${!tab.href && !hideTabSelection && selectedTabObject === tab ? 'bg-[color-mix(in_srgb,var(--color-brand)_30%,transparent)] text-brand' : 'bg-transparent text-primary hover:bg-surface-4 hover:text-contrast'}`"
+								@click="!tab.href && setTab(visibleTabs.indexOf(tab))"
 							>
 								<component :is="tab.icon" class="size-5 flex-shrink-0" />
 								<span
@@ -206,6 +228,9 @@ defineExpose({ show, hide, selectedTab, setTab })
 								<RightArrowIcon v-if="tab.href" class="ml-auto size-4 shrink-0" />
 							</component>
 						</template>
+						<div v-if="filteredTabs.length === 0" class="px-4 py-2 text-sm text-secondary">
+							{{ formatMessage(noResultsMessage) }}
+						</div>
 					</div>
 
 					<Transition
@@ -249,12 +274,9 @@ defineExpose({ show, hide, selectedTab, setTab })
 						class="flow-root min-h-full px-6 pt-6"
 						:style="{ paddingBottom: contentBottomPadding }"
 					>
-						<slot name="content" :tab="visibleTabs[selectedTab]" :index="selectedTab">
+						<slot name="content" :tab="selectedTabObject" :index="selectedTab">
 							<Suspense>
-								<component
-									:is="visibleTabs[selectedTab]?.content"
-									v-if="visibleTabs[selectedTab]?.content"
-								/>
+								<component :is="selectedTabObject?.content" v-if="selectedTabObject?.content" />
 								<template #fallback>
 									<LoadingIndicator class="py-2" />
 								</template>

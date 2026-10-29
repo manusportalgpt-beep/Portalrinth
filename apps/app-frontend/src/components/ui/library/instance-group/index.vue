@@ -30,7 +30,7 @@ import type {
 	InstanceCard as InstanceCardExposed,
 	InstanceGroup as InstanceGroupType,
 } from '@/components/ui/library/use-library'
-import { useLibrary } from '@/components/ui/library/use-library'
+import { PINNED_GROUP_ID, useLibrary } from '@/components/ui/library/use-library'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { FAVORITES_GROUP_ID, MAX_INSTANCE_GROUP_NAME_LENGTH } from '@/helpers/instance-groups'
 import {
@@ -239,11 +239,16 @@ const deletingGroup = ref(false)
 const groupName = ref(props.instanceGroup.key)
 const isUngrouped = computed(() => props.instanceGroup.id === 'group:none')
 const isFavorites = computed(() => props.instanceGroup.id === FAVORITES_GROUP_ID)
+const isPinnedGroup = computed(() => props.instanceGroup.id === PINNED_GROUP_ID)
 const isCustomGroup = computed(
-	() => displayState.value.group === 'Group' && !isUngrouped.value && !isFavorites.value,
+	() =>
+		displayState.value.group === 'Group' &&
+		!isUngrouped.value &&
+		!isFavorites.value &&
+		!isPinnedGroup.value,
 )
 const isReorderableGroup = computed(
-	() => displayState.value.group === 'Group' && !isFavorites.value,
+	() => displayState.value.group === 'Group' && !isFavorites.value && !isPinnedGroup.value,
 )
 const groupContextMenuOpen = ref(false)
 const isGroupToggleBlocked = computed(
@@ -262,7 +267,7 @@ const emit = defineEmits<{
 useDroppable({
 	id: computed(() => `instance-group:${props.instanceGroup.id}`),
 	element: groupDropTarget,
-	disabled: computed(() => displayState.value.group !== 'Group'),
+	disabled: computed(() => displayState.value.group !== 'Group' || isPinnedGroup.value),
 	data: computed(() => ({
 		groupId: props.instanceGroup.id,
 	})),
@@ -276,6 +281,10 @@ const messages = defineMessages({
 	favorites: {
 		id: 'app.library.group.favorites',
 		defaultMessage: 'Favorites',
+	},
+	pinned: {
+		id: 'app.library.group.pinned',
+		defaultMessage: 'Pinned',
 	},
 	collapseGroup: { id: 'app.library.group.collapse', defaultMessage: 'Collapse group' },
 	expandGroup: { id: 'app.library.group.expand', defaultMessage: 'Expand group' },
@@ -353,7 +362,7 @@ async function removeGroup() {
 }
 
 function requestGroupDeletion() {
-	if (isUngrouped.value || isFavorites.value) return
+	if (isUngrouped.value || isFavorites.value || isPinnedGroup.value) return
 
 	if (props.instanceGroup.instances.length > 0) {
 		confirmDeleteGroupModal.value?.show()
@@ -584,7 +593,7 @@ watch([gridHeight, () => props.instanceGroup.instances], () => nextTick(syncScro
 					/>
 				</button>
 				<InlineEditableText
-					v-if="!isUngrouped && !isFavorites"
+					v-if="!isUngrouped && !isFavorites && !isPinnedGroup"
 					ref="groupNameInput"
 					v-model="groupName"
 					activation-mode="manual"
@@ -601,6 +610,12 @@ watch([gridHeight, () => props.instanceGroup.instances], () => nextTick(syncScro
 					class="text-base font-semibold text-primary select-none group-hover/open-target:text-contrast"
 				>
 					{{ formatMessage(messages.ungrouped) }}
+				</span>
+				<span
+					v-else-if="isPinnedGroup"
+					class="flex items-center gap-1.5 text-base font-semibold text-primary select-none group-hover/open-target:text-contrast"
+				>
+					{{ formatMessage(messages.pinned) }}
 				</span>
 				<span
 					v-else

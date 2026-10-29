@@ -6,6 +6,7 @@ import {
 	FolderOpenIcon,
 	MinusIcon,
 	PaletteIcon,
+	PinIcon,
 	PlayIcon,
 	PlusIcon,
 	StarIcon,
@@ -143,6 +144,13 @@ type IconEditorModal = {
 	show: () => void
 }
 
+/**
+ * Portalrinth: the virtual group pinned instances are lifted into. Not a real
+ * group - it exists only in the library view, always first, and it is not a
+ * drop target, so nothing can be dragged into it.
+ */
+export const PINNED_GROUP_ID = 'group:pinned'
+
 const instanceActionMessages = defineMessages({
 	play: { id: 'app.library.instance.action.play', defaultMessage: 'Play' },
 	stop: { id: 'app.library.instance.action.stop', defaultMessage: 'Stop' },
@@ -153,6 +161,14 @@ const instanceActionMessages = defineMessages({
 	removeFromFavorites: {
 		id: 'app.library.instance.action.remove-from-favorites',
 		defaultMessage: 'Remove from favorites',
+	},
+	pinInstance: {
+		id: 'app.library.instance.action.pin',
+		defaultMessage: 'Pin to top',
+	},
+	unpinInstance: {
+		id: 'app.library.instance.action.unpin',
+		defaultMessage: 'Unpin',
 	},
 	addContent: { id: 'app.library.instance.action.add-content', defaultMessage: 'Add content' },
 	viewInstance: {
@@ -194,6 +210,10 @@ const instanceActionMessages = defineMessages({
 		id: 'app.library.instance.action.remove-from-group',
 		defaultMessage: 'Remove from group',
 	},
+})
+
+const pinnedGroupMessages = defineMessages({
+	pinned: { id: 'app.library.group.pinned', defaultMessage: 'Pinned' },
 })
 
 function createLibraryState(instances: Ref<GameInstance[]>) {
@@ -323,6 +343,24 @@ function createLibraryState(instances: Ref<GameInstance[]>) {
 
 	const linkedInstances = computed(() => instances.value.filter((instance) => instance.link))
 	const isSearching = computed(() => search.value.length > 0)
+
+	// Portalrinth: pinned instances. The pin is a display choice, so the list
+	// lives in local storage rather than in the launcher's own data.
+	const pinnedInstanceIds = useStorage<string[]>('portalrinth-pinned-instances', [])
+	const isInstancePinned = (instanceId: string) => pinnedInstanceIds.value.includes(instanceId)
+	function toggleInstancePinned(instanceId: string) {
+		const wasPinned = pinnedInstanceIds.value.includes(instanceId)
+		pinnedInstanceIds.value = wasPinned
+			? pinnedInstanceIds.value.filter((id) => id !== instanceId)
+			: [...pinnedInstanceIds.value, instanceId]
+		trackEvent(wasPinned ? 'InstanceUnpin' : 'InstancePin')
+	}
+	// Forget the pins of instances that no longer exist.
+	watchEffect(() => {
+		const knownIds = new Set(instances.value.map((instance) => instance.id))
+		if (pinnedInstanceIds.value.every((id) => knownIds.has(id))) return
+		pinnedInstanceIds.value = pinnedInstanceIds.value.filter((id) => knownIds.has(id))
+	})
 	const collapsedSectionKeys = computed(() => new Set(displayState.value.collapsedGroups))
 	const groupNames = computed(
 		() =>
@@ -625,6 +663,37 @@ function createLibraryState(instances: Ref<GameInstance[]>) {
 			})
 		}
 
+		// Pinned instances are lifted out of their groups into a section that
+		// always sits at the very top, ahead of favourites and every group -
+		// new instances land below it by construction. While searching, the
+		// results keep their natural order so pins do not hide matches.
+		const pinnedIds = pinnedInstanceIds.value
+		if (pinnedIds.length > 0 && !isSearching.value) {
+			const pinnedSet = new Set(pinnedIds)
+			const byId = new Map(visibleInstances.map((instance) => [instance.id, instance]))
+			const pinnedInstances = pinnedIds.flatMap((id) => {
+				const instance = byId.get(id)
+				return instance ? [instance] : []
+			})
+			if (pinnedInstances.length > 0) {
+				return [
+					{
+						id: PINNED_GROUP_ID,
+						key: formatMessage(pinnedGroupMessages.pinned),
+						instances: pinnedInstances,
+					},
+					...groups.map((group) =>
+						group.instances.some((instance) => pinnedSet.has(instance.id))
+							? {
+									...group,
+									instances: group.instances.filter((instance) => !pinnedSet.has(instance.id)),
+								}
+							: group,
+					),
+				]
+			}
+		}
+
 		return groups
 	})
 
@@ -719,6 +788,14 @@ function createLibraryState(instances: Ref<GameInstance[]>) {
 		)
 		const toGroup = normalizeInstanceGroupId(groupId)
 		const operation = isAddingInstanceToGroup.value ? 'add' : 'move'
+		// The pinned section is display-only: nothing can be dropped into it.
+		if (toGroup === PINNED_GROUP_ID) {
+			return {
+				alreadyInGroup: false,
+				canDrop: false,
+				operation,
+			} as const
+		}
 		const canAddToGroup = operation !== 'add' || toGroup !== null
 		const hasChanges = draggedInstances.some((instance) => {
 			const instanceGroupIds = getEffectiveInstanceGroupIds(instance)
@@ -786,6 +863,8 @@ function createLibraryState(instances: Ref<GameInstance[]>) {
 			draggedInstanceIds.has(instance.id),
 		)
 		const operations = draggedInstances.flatMap((instance) => {
+			// Pinned instances stay put until they are unpinned.
+			if (isInstancePinned(instance.id)) return []
 			const instanceGroupIds = getEffectiveInstanceGroupIds(instance)
 			if (toGroup && instanceGroupIds.includes(toGroup)) {
 				return []
@@ -1336,6 +1415,7 @@ function createLibraryState(instances: Ref<GameInstance[]>) {
 				? instanceGroupId
 				: null
 		const isFavorite = item.instance.group_ids.includes(FAVORITES_GROUP_ID)
+		const isPinned = isInstancePinned(item.instance.id)
 		const installing = item.instance.install_stage.includes('installing')
 		const canAddContent = !item.instance.quarantined && !item.instance.link && !installing
 
@@ -1356,6 +1436,14 @@ function createLibraryState(instances: Ref<GameInstance[]>) {
 				disabled: installing,
 				tone: 'brand',
 				action: () => void item.play(null, 'InstanceGridContextMenu'),
+			},
+			{
+				id: isPinned ? 'unpin_instance' : 'pin_instance',
+				label: formatMessage(
+					isPinned ? instanceActionMessages.unpinInstance : instanceActionMessages.pinInstance,
+				),
+				icon: PinIcon,
+				action: () => void toggleInstancePinned(item.instance.id),
 			},
 			{
 				id: isFavorite ? 'remove_from_favorites' : 'add_to_favorites',
@@ -1513,6 +1601,9 @@ function createLibraryState(instances: Ref<GameInstance[]>) {
 		deleteInstance,
 		handleInstanceContextMenu,
 		handleInstanceIconSaved,
+		pinnedInstanceIds,
+		isInstancePinned,
+		toggleInstancePinned,
 	}
 }
 

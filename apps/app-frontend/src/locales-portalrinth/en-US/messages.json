@@ -1,4 +1,22 @@
 {
+	"app.library.group.pinned": {
+		"message": "Pinned"
+	},
+	"app.library.instance.action.pin": {
+		"message": "Pin to top"
+	},
+	"app.library.instance.action.unpin": {
+		"message": "Unpin"
+	},
+	"app.settings.search": {
+		"message": "Search settings"
+	},
+	"app.settings.search.clear": {
+		"message": "Clear search"
+	},
+	"app.settings.search.no-results": {
+		"message": "No matches"
+	},
 	"app.account-provider.description": {
 		"message": "Which account do you play with?"
 	},

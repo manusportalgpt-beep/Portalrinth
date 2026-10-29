@@ -76,7 +76,7 @@ function toggleMute() {
 	width: 0.875rem;
 	height: 0.875rem;
 	border-radius: 999px;
-	background: var(--color-contrast, #fff);
+	background: var(--portalrinth-accent-gradient, var(--color-brand));
 	box-shadow: 0 1px 4px rgb(0 0 0 / 40%);
 	transition: transform 0.12s ease;
 }
@@ -92,6 +92,6 @@ function toggleMute() {
 	height: 0.875rem;
 	border: 0;
 	border-radius: 999px;
-	background: var(--color-contrast, #fff);
+	background: var(--portalrinth-accent-gradient, var(--color-brand));
 }
 </style>
