@@ -6,9 +6,9 @@
 	>
 		<nav
 			ref="scrollContainer"
-			class="relative flex w-fit rounded-full bg-bg-raised p-1 text-xs sm:text-sm font-bold"
+			class="relative flex w-fit rounded-full p-1 text-xs sm:text-sm font-bold"
 			:class="{
-				'card-shadow border border-solid border-surface-4': mode === 'navigation',
+				'border border-solid border-surface-4': mode === 'navigation',
 				'tab-color-delayed': colorChangeDelayed,
 			}"
 			v-bind="pageNav ? {} : $attrs"
@@ -35,6 +35,12 @@
 					<span class="tab-color text-nowrap" :class="getLabelClasses(index)">
 						{{ link.label }}
 					</span>
+					<component
+						:is="link.iconRight"
+						v-if="link.iconRight"
+						class="tab-color hidden sm:block size-4"
+						:class="getIconClasses(index)"
+					/>
 				</RouterLink>
 			</template>
 
@@ -57,6 +63,12 @@
 					<span class="tab-color text-nowrap" :class="getLabelClasses(index)">
 						{{ link.label }}
 					</span>
+					<component
+						:is="link.iconRight"
+						v-if="link.iconRight"
+						class="tab-color size-4"
+						:class="getIconClasses(index)"
+					/>
 				</div>
 			</template>
 
@@ -88,6 +100,8 @@ interface Tab {
 	href: string
 	shown?: boolean
 	icon?: Component
+	/** An icon drawn after the label - part of the same button. */
+	iconRight?: Component
 	subpages?: string[]
 	onHover?: () => void
 }
@@ -364,6 +378,15 @@ watch(
 </script>
 
 <style scoped>
+nav {
+	/* A glass plate, not an opaque one: an almost-black slab behind the tabs
+	   read as a black board laid over the page. The blur keeps the labels
+	   readable over whatever the page carries. */
+	background: color-mix(in srgb, var(--color-raised-bg) 55%, transparent);
+	backdrop-filter: blur(12px) saturate(1.2);
+	-webkit-backdrop-filter: blur(12px) saturate(1.2);
+}
+
 .navtabs-transition {
 	transition:
 		left 80ms cubic-bezier(0.4, 0, 0.2, 1) v-bind(leftDelay),

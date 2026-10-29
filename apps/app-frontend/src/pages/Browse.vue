@@ -1,16 +1,22 @@
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
 import {
+	BlocksIcon,
 	CheckIcon,
 	CompassIcon,
 	CurseForgeIcon,
 	ExternalIcon,
 	GlobeIcon,
+	LayersIcon,
 	ModrinthBrandIcon,
+	PackageIcon,
+	PaintbrushIcon,
 	PlusIcon,
 	ServerStackIcon,
 	SettingsIcon,
+	ShirtIcon,
 	SpinnerIcon,
+	WrenchIcon,
 } from '@modrinth/assets'
 import type {
 	BrowseInstallContentType,
@@ -892,27 +898,32 @@ const selectableProjectTypes = computed(() => {
 			label: formatMessage(messages.modpacksProjectType),
 			href: `/browse/modpack${suffix}`,
 			shown: modpacks,
+			iconRight: PackageIcon,
 		},
-		{ label: formatMessage(messages.modsProjectType), href: `/browse/mod${suffix}`, shown: mods },
+		{ label: formatMessage(messages.modsProjectType), href: `/browse/mod${suffix}`, shown: mods, iconRight: WrenchIcon },
 		{
 			label: formatMessage(messages.resourcePacksProjectType),
 			href: `/browse/resourcepack${suffix}`,
+			iconRight: PaintbrushIcon,
 		},
 		{
 			label: formatMessage(messages.dataPacksProjectType),
 			href: `/browse/datapack${suffix}`,
 			shown: dataPacks,
+			iconRight: BlocksIcon,
 		},
-		{ label: formatMessage(messages.shadersProjectType), href: `/browse/shader${suffix}` },
+		{ label: formatMessage(messages.shadersProjectType), href: `/browse/shader${suffix}`, iconRight: LayersIcon },
 		{
 			label: formatMessage(messages.serversProjectType),
 			href: `/browse/server${suffix}`,
 			shown: !instance.value,
+			iconRight: GlobeIcon,
 		},
 		{
 			label: formatMessage(messages.skinsProjectType),
 			href: '/browse/skin',
 			shown: !instance.value && !suffix,
+			iconRight: ShirtIcon,
 		},
 	]
 })

@@ -15,12 +15,30 @@ import {
 	headerShadeOpacity,
 	pageShade,
 } from '@/helpers/portalrinth-background'
+import { decorUrl, themeSound, themeSoundOn } from '@/helpers/portalrinth-decor'
 
 /*
  * A background video plays silent unless its sound is turned on in
  * Settings → Sound; then at the volume set there or under the title bar's
  * sound button.
  */
+/** The theme's own sound, if a theme came with one and it is wanted. */
+const themeAudio = ref<HTMLAudioElement | null>(null)
+const themeSoundUrl = ref<string | null>(null)
+watchEffect(async () => {
+	if (!themeSoundOn.value || !themeSound.value) {
+		themeSoundUrl.value = null
+		return
+	}
+	themeSoundUrl.value = await decorUrl(themeSound.value.asset, themeSound.value.ext)
+})
+function applyThemeSoundVolume() {
+	if (themeAudio.value && themeSound.value) {
+		themeAudio.value.volume = Math.min(1, Math.max(0, themeSound.value.volume / 100))
+	}
+}
+watchEffect(applyThemeSoundVolume)
+
 const video = ref<HTMLVideoElement | null>(null)
 function applyVideoVolume() {
 	if (video.value) video.value.volume = Math.min(1, Math.max(0, audioSettings.videoVolume / 100))
@@ -77,6 +95,15 @@ watchEffect(() => {
 			@loadedmetadata="applyVideoVolume"
 		/>
 	</Transition>
+	<!-- A theme can carry a quiet sound of its own; it loops under everything. -->
+	<audio
+		v-if="themeSoundUrl && themeSoundOn"
+		ref="themeAudio"
+		:src="themeSoundUrl"
+		loop
+		autoplay
+		@loadedmetadata="applyThemeSoundVolume"
+	/>
 </template>
 
 <style>

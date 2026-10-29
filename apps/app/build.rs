@@ -581,6 +581,12 @@ fn main() {
                         "background_theme_apply",
                         "background_theme_remove",
                         "background_read_icon",
+                        "decor_store",
+                        "decor_store_bytes",
+                        "decor_get",
+                        "decor_kind",
+                        "decor_list",
+                        "decor_remove",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,

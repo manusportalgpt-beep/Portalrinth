@@ -21,6 +21,15 @@ const messages = defineMessages({
 		id: 'app.settings.ai-assistant.effects',
 		defaultMessage: 'Эффекты чата (печатающийся текст)',
 	},
+	masterToggle: {
+		id: 'app.settings.ai-assistant.enabled',
+		defaultMessage: 'Включить ИИ-помощника',
+	},
+	masterHint: {
+		id: 'app.settings.ai-assistant.enabled-hint',
+		defaultMessage:
+			'Выключишь — вкладка «ИИ-Помощник» исчезнет из настроек, пока не вернёшься сюда.',
+	},
 	brainTitle: {
 		id: 'app.settings.ai-assistant.brain.title',
 		defaultMessage: 'Мозг',
@@ -45,6 +54,18 @@ const anyFreeProvider = AI_PROVIDERS.some((p) => !p.needsKey)
 			<p class="m-0 text-sm text-secondary">
 				{{ formatMessage(messages.assistantDescription) }}
 			</p>
+			<Toggle
+				:model-value="aiSettings.enabled"
+				@update:model-value="
+					(value) => {
+						aiSettings.enabled = Boolean(value)
+						saveAiSettings()
+					}
+				"
+			>
+				{{ formatMessage(messages.masterToggle) }}
+				<template v-if="!aiSettings.enabled"> — {{ formatMessage(messages.masterHint) }}</template>
+			</Toggle>
 			<Toggle
 				:model-value="aiSettings.chatEffects"
 				@update:model-value="

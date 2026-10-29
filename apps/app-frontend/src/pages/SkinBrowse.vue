@@ -2,6 +2,7 @@
 import {
 	ArrowDownIcon,
 	ArrowUpIcon,
+	BlocksIcon,
 	CheckIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
@@ -9,6 +10,10 @@ import {
 	ExternalIcon,
 	EyeIcon,
 	EyeOffIcon,
+	GlobeIcon,
+	LayersIcon,
+	PackageIcon,
+	PaintbrushIcon,
 	PauseIcon,
 	PlayIcon,
 	SearchIcon,
@@ -27,6 +32,7 @@ import {
 	UserIcon,
 	UserRoundIcon,
 	UserSearchIcon,
+	WrenchIcon,
 	XIcon,
 } from '@modrinth/assets'
 import {
@@ -161,6 +167,12 @@ const messages = defineMessages({
 		id: 'app.skin-browse.filter-results',
 		defaultMessage: 'Skins: {filter}',
 	},
+	profile: { id: 'app.skin-browse.profile', defaultMessage: 'Профиль игрока' },
+	profileAccount: { id: 'app.skin-browse.profile-account', defaultMessage: 'Учётная запись' },
+	profileCopy: { id: 'app.skin-browse.profile-copy', defaultMessage: 'Копировать' },
+	profileColor: { id: 'app.skin-browse.profile-color', defaultMessage: 'Цвет полосы локатора' },
+	profileHead: { id: 'app.skin-browse.profile-head', defaultMessage: 'Получение головы' },
+	profileCopied: { id: 'app.skin-browse.profile-copied', defaultMessage: 'Скопировано' },
 })
 
 // ---- Filters --------------------------------------------------------------
@@ -217,13 +229,13 @@ function syncRoute() {
 }
 
 const tabs = computed(() => [
-	{ label: formatMessage(messages.modpacks), href: '/browse/modpack' },
-	{ label: formatMessage(messages.mods), href: '/browse/mod' },
-	{ label: formatMessage(messages.resourcePacks), href: '/browse/resourcepack' },
-	{ label: formatMessage(messages.dataPacks), href: '/browse/datapack' },
-	{ label: formatMessage(messages.shaders), href: '/browse/shader' },
-	{ label: formatMessage(messages.servers), href: '/browse/server' },
-	{ label: formatMessage(messages.skins), href: '/browse/skin' },
+	{ label: formatMessage(messages.modpacks), href: '/browse/modpack', iconRight: PackageIcon },
+	{ label: formatMessage(messages.mods), href: '/browse/mod', iconRight: WrenchIcon },
+	{ label: formatMessage(messages.resourcePacks), href: '/browse/resourcepack', iconRight: PaintbrushIcon },
+	{ label: formatMessage(messages.dataPacks), href: '/browse/datapack', iconRight: BlocksIcon },
+	{ label: formatMessage(messages.shaders), href: '/browse/shader', iconRight: LayersIcon },
+	{ label: formatMessage(messages.servers), href: '/browse/server', iconRight: GlobeIcon },
+	{ label: formatMessage(messages.skins), href: '/browse/skin', iconRight: ShirtIcon },
 ])
 
 const breadcrumbManager = injectBreadcrumbManager()
@@ -853,6 +865,96 @@ function tagsOf(skin: LabySkin) {
 }
 
 const usesFormatter = new Intl.NumberFormat()
+
+// ---- The player's own page (nickname mode) ------------------------------------
+
+/** The account panel: the head, the UUID, the colour and the /give command. */
+const profileHead = ref('')
+const profileColor = ref('')
+const profileHeadVersion = ref('new')
+
+const PROFILE_VERSIONS = [
+	{ id: 'new', label: '1.20.5+' },
+	{ id: 'mid', label: '1.13 - 1.20.4' },
+	{ id: 'old', label: '1.8 - 1.12.2' },
+]
+
+const profileCommand = computed(() => {
+	const nick = isNickSkin(current.value) ? current.value.nick : ''
+	if (!nick) return ''
+	if (profileHeadVersion.value === 'old') {
+		return `/give @p minecraft:skull 1 3 {SkullOwner:"${nick}"}`
+	}
+	if (profileHeadVersion.value === 'mid') {
+		return `/give @p minecraft:player_head{SkullOwner:"${nick}"} 1`
+	}
+	// The command is assembled from pieces: a whole bracketed profile in the
+	// source reads as a Tailwind arbitrary class and breaks the CSS build.
+	const give = String.fromCharCode(91)
+	return `/give @p minecraft:player_head${give}minecraft:profile={name:"${nick}"}${give}] 1`
+})
+
+/**
+ * Cuts the face out of the 64x64 texture and grows it without smoothing:
+ * that is the head the player wears, and the average of its pixels is the
+ * colour their locator bar shows as.
+ */
+async function loadPlayerProfile() {
+	if (!currentTexture.value || !current.value || !isNickSkin(current.value)) {
+		profileHead.value = ''
+		profileColor.value = ''
+		return
+	}
+	try {
+		const image = new Image()
+		image.src = currentTexture.value
+		await image.decode()
+		const face = document.createElement('canvas')
+		face.width = 8
+		face.height = 8
+		const faceContext = face.getContext('2d')
+		if (!faceContext) return
+		faceContext.drawImage(image, 8, 8, 8, 8, 0, 0, 8, 8)
+		const grown = document.createElement('canvas')
+		grown.width = 64
+		grown.height = 64
+		const grownContext = grown.getContext('2d')
+		if (!grownContext) return
+		grownContext.imageSmoothingEnabled = false
+		grownContext.drawImage(face, 0, 0, 64, 64)
+		profileHead.value = grown.toDataURL('image/png')
+		const { data: pixels } = faceContext.getImageData(0, 0, 8, 8)
+		let red = 0
+		let green = 0
+		let blue = 0
+		let seen = 0
+		for (let at = 0; at < pixels.length; at += 4) {
+			if (pixels[at + 3] < 128) continue
+			red += pixels[at]
+			green += pixels[at + 1]
+			blue += pixels[at + 2]
+			seen += 1
+		}
+		if (seen === 0) return
+		const hex = (value: number) => Math.round(value / seen).toString(16).padStart(2, '0')
+		profileColor.value = `#${hex(red)}${hex(green)}${hex(blue)}`
+	} catch {
+		profileHead.value = ''
+	}
+}
+
+watch(currentTexture, () => {
+	void loadPlayerProfile()
+})
+
+async function copyProfile(text: string) {
+	try {
+		await navigator.clipboard.writeText(text)
+		addNotification({ type: 'success', title: formatMessage(messages.profileCopied), text })
+	} catch {
+		// The clipboard said no; the text stays selectable on screen.
+	}
+}
 </script>
 
 <template>
@@ -871,18 +973,22 @@ const usesFormatter = new Intl.NumberFormat()
 			@clear="query = ''"
 		/>
 
-		<Chips
-			v-model="filterId"
-			:items="SKIN_FILTERS.map((filter) => filter.id)"
-			:format-label="(id) => filterLabel(SKIN_FILTERS.find((filter) => filter.id === id)!)"
-			:format-icon="(id) => SKIN_FILTERS.find((filter) => filter.id === id)?.icon"
-			:never-empty="false"
-			:capitalize="false"
-			hide-checkmark-icon
-			size="small"
-			:aria-label="formatMessage(messages.filters)"
-			class="skin-browse-filters"
-		/>
+		<Teleport to="#sidebar-teleport-target">
+			<div class="skin-browse-side">
+				<h3 class="skin-browse-side__title">{{ formatMessage(messages.filters) }}</h3>
+				<Chips
+					v-model="filterId"
+					:items="SKIN_FILTERS.map((filter) => filter.id)"
+					:format-label="(id) => filterLabel(SKIN_FILTERS.find((filter) => filter.id === id)!)"
+					:format-icon="(id) => SKIN_FILTERS.find((filter) => filter.id === id)?.icon"
+					:never-empty="false"
+					:capitalize="false"
+					hide-checkmark-icon
+					:aria-label="formatMessage(messages.filters)"
+					class="skin-browse-filters"
+				/>
+			</div>
+		</Teleport>
 
 		<div class="mt-2 flex flex-wrap items-center justify-between gap-2">
 			<h2 class="m-0 text-lg font-semibold text-contrast">{{ heading }}</h2>
@@ -1009,6 +1115,73 @@ const usesFormatter = new Intl.NumberFormat()
 						{{ formatMessage(messages.uses, { count: usesFormatter.format(current.use_count) }) }}
 					</template>
 				</div>
+
+				<section
+					v-if="isNickSkin(current)"
+					class="flex flex-col gap-2 rounded-2xl border border-solid border-surface-5 bg-surface-3 p-3"
+				>
+					<h3 class="m-0 flex items-center gap-1.5 text-base font-semibold text-contrast">
+						<UserIcon class="size-4" /> {{ formatMessage(messages.profile) }}
+					</h3>
+
+					<div class="flex items-center gap-3">
+						<img
+							v-if="profileHead"
+							:src="profileHead"
+							alt=""
+							class="size-14 rounded-lg [image-rendering:pixelated]"
+						/>
+						<div class="min-w-0 flex flex-col gap-1">
+							<span class="truncate text-sm font-bold text-contrast">{{ current.nick }}</span>
+							<template v-if="current.uuid">
+								<span class="truncate text-xs text-secondary">UUID: {{ current.uuid }}</span>
+								<button
+									type="button"
+									class="w-fit cursor-pointer border-0 bg-transparent p-0 text-xs text-brand"
+									@click="copyProfile(current.uuid)"
+								>
+									{{ formatMessage(messages.profileCopy) }}
+								</button>
+							</template>
+							<span v-else class="text-xs text-secondary">{{ formatMessage(messages.nickSource, { source: current.source === 'mojang' ? 'Minecraft' : 'Ely.by' }) }}</span>
+						</div>
+					</div>
+
+					<div v-if="profileColor" class="flex items-center gap-2">
+						<span
+							class="inline-block size-5 rounded-md border border-solid border-surface-5"
+							:style="{ background: profileColor }"
+						/>
+						<span class="text-xs text-secondary">{{ formatMessage(messages.profileColor) }}: {{ profileColor.toUpperCase() }}</span>
+						<button
+							type="button"
+							class="cursor-pointer border-0 bg-transparent p-0 text-xs text-brand"
+							@click="copyProfile(profileColor)"
+						>
+							{{ formatMessage(messages.profileCopy) }}
+						</button>
+					</div>
+
+					<div class="flex flex-col gap-1.5">
+						<h4 class="m-0 text-sm font-semibold text-contrast">{{ formatMessage(messages.profileHead) }}</h4>
+						<div class="flex flex-wrap items-center gap-2">
+							<select
+								v-model="profileHeadVersion"
+								class="rounded-xl border-none bg-surface-4 px-3 py-1.5 text-sm text-contrast"
+							>
+								<option v-for="version in PROFILE_VERSIONS" :key="version.id" :value="version.id">
+									{{ version.label }}
+								</option>
+							</select>
+							<code class="min-w-0 flex-1 truncate rounded-xl bg-surface-4 px-3 py-1.5 text-xs text-secondary">
+								{{ profileCommand }}
+							</code>
+							<Button size="small" @click="copyProfile(profileCommand)">
+								{{ formatMessage(messages.profileCopy) }}
+							</Button>
+						</div>
+					</div>
+				</section>
 
 				<div class="grid grid-cols-2 gap-2">
 					<Button @click="crouching = !crouching">
@@ -1151,10 +1324,24 @@ const usesFormatter = new Intl.NumberFormat()
 	gap: 0.75rem;
 }
 
+.skin-browse-side {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	padding: 1rem 1rem 1.5rem;
+}
+
+.skin-browse-side__title {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 700;
+	color: var(--color-contrast);
+}
+
 .skin-browse-filters {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.375rem;
+	gap: 0.5rem;
 }
 
 .skin-browse-filters :deep(.btn) {
@@ -1162,10 +1349,19 @@ const usesFormatter = new Intl.NumberFormat()
 	background: color-mix(in srgb, var(--color-raised-bg) 55%, transparent);
 	backdrop-filter: blur(12px);
 	-webkit-backdrop-filter: blur(12px);
+	font-size: 0.95rem;
+	font-weight: 600;
+	padding: 0.55rem 1.05rem;
+	gap: 0.5rem;
 	transition:
 		background-color 0.2s ease,
 		color 0.2s ease,
 		transform 0.15s ease;
+}
+
+.skin-browse-filters :deep(.btn svg) {
+	width: 1.15em;
+	height: 1.15em;
 }
 
 .skin-browse-filters :deep(.btn:active) {

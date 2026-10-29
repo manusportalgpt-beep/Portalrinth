@@ -831,6 +831,8 @@ export interface NickSkin extends LabySkin {
         nick: string
         source: 'mojang' | 'ely'
         pageUrl: string
+        /** The account's UUID when the source tells it; dashed, as the game shows it. */
+        uuid?: string
 }
 
 function decodeTextures(value: string): { url: string; slim: boolean } | null {
@@ -846,7 +848,14 @@ function decodeTextures(value: string): { url: string; slim: boolean } | null {
         }
 }
 
-async function mojangSkin(nick: string): Promise<{ name: string; url: string; slim: boolean } | null> {
+/** A bare Mojang uuid (no dashes) read the way the game prints it. */
+function dashedUuid(raw: string): string {
+        const clean = raw.replace(/-/g, '')
+        if (clean.length !== 32) return raw
+        return [clean.slice(0, 8), clean.slice(8, 12), clean.slice(12, 16), clean.slice(16, 20), clean.slice(20)].join('-')
+}
+
+async function mojangSkin(nick: string): Promise<{ name: string; url: string; slim: boolean; uuid?: string } | null> {
         const profile = await proxiedFetch(
                 `https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(nick)}`,
                 { signal: AbortSignal.timeout(10000) },
@@ -862,10 +871,10 @@ async function mojangSkin(nick: string): Promise<{ name: string; url: string; sl
         const data = (await session.json()) as { properties?: { name: string; value: string }[] }
         const textures = data.properties?.find((property) => property.name === 'textures')
         const skin = textures ? decodeTextures(textures.value) : null
-        return skin ? { name, ...skin } : null
+        return skin ? { name, ...skin, uuid: dashedUuid(id) } : null
 }
 
-async function elySkin(nick: string): Promise<{ name: string; url: string; slim: boolean } | null> {
+async function elySkin(nick: string): Promise<{ name: string; url: string; slim: boolean; uuid?: string } | null> {
         const response = await proxiedFetch(
                 `https://skinsystem.ely.by/textures/${encodeURIComponent(nick)}`,
                 { signal: AbortSignal.timeout(10000) },
@@ -873,12 +882,17 @@ async function elySkin(nick: string): Promise<{ name: string; url: string; slim:
         if (!response.ok) return null
         const text = await response.text()
         if (!text.trim()) return null
-        const data = JSON.parse(text) as { SKIN?: { url?: string; metadata?: { model?: string } } }
+        const data = JSON.parse(text) as {
+                SKIN?: { url?: string; metadata?: { model?: string } }
+                uuid?: string
+                user?: { uuid?: string }
+        }
         if (!data.SKIN?.url) return null
         return {
                 name: nick,
                 url: data.SKIN.url.replace(/^http:/, 'https:'),
                 slim: data.SKIN.metadata?.model === 'slim',
+                uuid: data.uuid ?? data.user?.uuid,
         }
 }
 
@@ -912,6 +926,7 @@ export async function findSkinByNick(nickRaw: string): Promise<NickSkin | null> 
                 skin_variant: found.slim ? 'SLIM' : 'CLASSIC',
                 nick: found.name,
                 source,
+                uuid: found.uuid,
                 pageUrl:
                         source === 'mojang'
                                 ? `https://namemc.com/profile/${encodeURIComponent(found.name)}`

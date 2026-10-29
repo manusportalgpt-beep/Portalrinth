@@ -3823,5 +3823,71 @@
 	},
 	"app.appearance-settings.accent-icons.description": {
 		"message": "Иконки Modrinth, CurseForge и наш логотип - сверху и на рабочем столе - берут цвет акцента. Градиент отдаёт им свой первый цвет. Иконки аккаунта остаются своими."
+	},
+	"app.settings.ai-assistant.enabled": {
+		"message": "Включить ИИ-Помощника"
+	},
+	"app.settings.ai-assistant.enabled-hint": {
+		"message": "вкладка «ИИ-Помощник» исчезнет, пока снова не включишь здесь."
+	},
+	"app.decor.editor.title": {
+		"message": "Редактор страниц"
+	},
+	"app.decor.editor.add-image": {
+		"message": "Картинка/GIF"
+	},
+	"app.decor.editor.add-video": {
+		"message": "Видео"
+	},
+	"app.decor.editor.done": {
+		"message": "Готово"
+	},
+	"app.decor.editor.clear": {
+		"message": "Очистить страницу"
+	},
+	"app.decor.editor.export": {
+		"message": "Экспорт темы (.prth)"
+	},
+	"app.decor.editor.import": {
+		"message": "Импорт темы"
+	},
+	"app.decor.editor.hint": {
+		"message": "Перетаскивай мышкой, тяни за круглый уголок — размер, крестик — убрать. Страница определяется там, где ты находишься."
+	},
+	"app.skin-browse.profile": {
+		"message": "Профиль игрока"
+	},
+	"app.skin-browse.profile-copy": {
+		"message": "Копировать"
+	},
+	"app.skin-browse.profile-color": {
+		"message": "Цвет полосы локатора"
+	},
+	"app.skin-browse.profile-head": {
+		"message": "Получение головы"
+	},
+	"app.skin-browse.profile-copied": {
+		"message": "Скопировано"
+	},
+	"portalrinth.settings.editor.title": {
+		"message": "Редактор страниц"
+	},
+	"portalrinth.settings.editor.description": {
+		"message": "Ставь картинки, GIF и видео на любую страницу лаунчера: перетаскивай, меняй размер, удаляй. Вся тема уезжает одним файлом .prth — фон, цвет/градиент, звук и все украшения."
+	},
+	"portalrinth.settings.editor.open": {
+		"message": "Открыть редактор"
+	},
+	"portalrinth.settings.editor.hint": {
+		"message": "Закрой окно настроек — редактор ждёт прямо на страницах."
+	},
+	"portalrinth.settings.editor.sound": {
+		"message": "Звук темы"
+	},
+	"portalrinth.settings.editor.sound-choose": {
+		"message": "Выбрать звук темы"
+	},
+	"portalrinth.settings.editor.sound-remove": {
+		"message": "Убрать звук"
 	}
 }

@@ -2290,5 +2290,71 @@
 	},
 	"app.appearance-settings.accent-icons.description": {
 		"message": "The Modrinth and CurseForge icons and our mark - in the title bar and on the desktop - take the accent’s colour. A gradient gives them its first colour. Account icons keep their own."
+	},
+	"app.settings.ai-assistant.enabled": {
+		"message": "Enable AI assistant"
+	},
+	"app.settings.ai-assistant.enabled-hint": {
+		"message": "the AI assistant tab disappears until you turn it back on here."
+	},
+	"app.decor.editor.title": {
+		"message": "Page editor"
+	},
+	"app.decor.editor.add-image": {
+		"message": "Picture/GIF"
+	},
+	"app.decor.editor.add-video": {
+		"message": "Video"
+	},
+	"app.decor.editor.done": {
+		"message": "Done"
+	},
+	"app.decor.editor.clear": {
+		"message": "Clear the page"
+	},
+	"app.decor.editor.export": {
+		"message": "Export theme (.prth)"
+	},
+	"app.decor.editor.import": {
+		"message": "Import theme"
+	},
+	"app.decor.editor.hint": {
+		"message": "Drag to move, the round corner resizes, the cross removes. A page is wherever you are."
+	},
+	"app.skin-browse.profile": {
+		"message": "Player profile"
+	},
+	"app.skin-browse.profile-copy": {
+		"message": "Copy"
+	},
+	"app.skin-browse.profile-color": {
+		"message": "Locator bar color"
+	},
+	"app.skin-browse.profile-head": {
+		"message": "Getting the head"
+	},
+	"app.skin-browse.profile-copied": {
+		"message": "Copied"
+	},
+	"portalrinth.settings.editor.title": {
+		"message": "Page editor"
+	},
+	"portalrinth.settings.editor.description": {
+		"message": "Put pictures, GIFs and videos on any launcher page: drag, resize, remove. The whole look travels in one .prth file - background, color/gradient, sound and every decoration."
+	},
+	"portalrinth.settings.editor.open": {
+		"message": "Open the editor"
+	},
+	"portalrinth.settings.editor.hint": {
+		"message": "Close the settings window - the editor waits right on the pages."
+	},
+	"portalrinth.settings.editor.sound": {
+		"message": "Theme sound"
+	},
+	"portalrinth.settings.editor.sound-choose": {
+		"message": "Choose a theme sound"
+	},
+	"portalrinth.settings.editor.sound-remove": {
+		"message": "Remove the sound"
 	}
 }

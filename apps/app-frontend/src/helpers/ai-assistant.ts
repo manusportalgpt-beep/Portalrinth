@@ -110,6 +110,25 @@ export const AI_PROVIDERS: AiProvider[] = [
 		deepModel: 'glm-4.7-flash',
 	},
 	{
+		id: 'genapi',
+		label: 'GenAPI (gen-api.ru)',
+		baseUrl: 'https://proxy.gen-api.ru/v1/chat/completions',
+		needsKey: true,
+		keyUrl: 'https://gen-api.ru/account/api-tokens',
+		models: [
+			{ id: 'deepseek-v4', label: 'DeepSeek V4 (самая дешёвая)' },
+			{ id: 'gpt-4o-mini', label: 'GPT-4o mini' },
+			{ id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5' },
+			{ id: 'glm-5-3-flash', label: 'GLM 5.3 Flash' },
+			{ id: 'gemini-3-flash', label: 'Gemini 3 Flash' },
+			{ id: 'gpt-6-luna', label: 'GPT-6 Luna' },
+		],
+		note: 'РФ-агрегатор в формате OpenAI: новый аккаунт получает бесплатные пробные генерации («Попробовать бесплатно»), дальше копейки за запрос. В списке — только бюджетные текстовые модели.',
+		fromRussia: true,
+		visionModel: 'gpt-4o-mini',
+		deepModel: 'glm-5-3-flash',
+	},
+	{
 		id: 'kilo',
 		label: 'Kilo Gateway',
 		baseUrl: 'https://api.kilo.ai/api/gateway/chat/completions',
@@ -233,6 +252,8 @@ export interface AiSettings {
 	affection: number
 	/** "Веб-поиск": facts are checked online before answering. */
 	webSearch: boolean
+	/** Whether the assistant is wanted at all; off hides its tab. */
+	enabled: boolean
 	/** "Глубокое мышление": a stronger model, more steps, slower but careful. */
 	deepThink: boolean
 }
@@ -255,6 +276,7 @@ const DEFAULT_SETTINGS: AiSettings = {
 	affection: 20,
 	webSearch: true,
 	deepThink: false,
+	enabled: true,
 }
 
 function readSettings(): AiSettings {

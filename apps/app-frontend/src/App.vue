@@ -71,6 +71,7 @@ import { useRouteLoading } from '@/app/runtime/use-route-loading'
 import AppSidebar from '@/app/shell/sidebar/index.vue'
 import AppTitleBar from '@/app/shell/title-bar/index.vue'
 import AgentNavNotice from '@/components/ui/ai/AgentNavNotice.vue'
+import AiViewerHost from '@/components/ui/ai/AiViewerHost.vue'
 import CurseforgePendingFilesModal from '@/components/ui/curseforge/CurseforgePendingFilesModal.vue'
 import ErrorModal from '@/components/ui/ErrorModal.vue'
 import HostingUpdateRequired from '@/components/ui/HostingUpdateRequired.vue'
@@ -88,9 +89,9 @@ import PackManifestModal from '@/components/ui/modpack/PackManifestModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
 import NotesLaunchPopup from '@/components/ui/NotesLaunchPopup.vue'
 import ViewportScrollbar from '@/components/ui/portalrinth-widgets/ViewportScrollbar.vue'
-import AiViewerHost from '@/components/ui/ai/AiViewerHost.vue'
 import PortalrinthBackdrop from '@/components/ui/PortalrinthBackdrop.vue'
 import PortalrinthCrashModal from '@/components/ui/PortalrinthCrashModal.vue'
+import PortalrinthDecorOverlay from '@/components/ui/PortalrinthDecorOverlay.vue'
 import PortalrinthSwipeNavigation from '@/components/ui/PortalrinthSwipeNavigation.vue'
 import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
 import SharedInstanceInviteHandler from '@/components/ui/shared-instances/shared-instance-invite-handler/index.vue'
@@ -2938,6 +2939,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
         />
         <SharedInstanceInviteHandler ref="sharedInstanceInviteHandler" />
         <AgentNavNotice />
+        <PortalrinthDecorOverlay />
         <NotesLaunchPopup />
         <InstallToPlayModal ref="installToPlayModal" :show-external-warnings="false" />
         <UpdateToPlayModal ref="updateToPlayModal" :show-external-warnings="false" />

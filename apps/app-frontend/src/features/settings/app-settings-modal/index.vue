@@ -61,6 +61,7 @@ import CurseforgeSettings from '@/features/settings/system/CurseforgeSettings.vu
 import HotkeysSettings from '@/features/settings/system/hotkeys-settings.vue'
 import ResourceManagementSettings from '@/features/settings/system/resource-management-settings/index.vue'
 import TroubleshootingSettings from '@/features/settings/system/troubleshooting-settings.vue'
+import { aiSettings } from '@/helpers/ai-assistant'
 import { appSettingsKeys, appSettingsQueryOptions, set } from '@/helpers/settings.ts'
 import { injectAppUpdateDownloadProgress } from '@/providers/download-progress.ts'
 
@@ -278,8 +279,15 @@ const tabs = [
 	},
 ]
 
-const availableTabs = computed(() =>
-	tabs.filter((tab) => !tab.developerOnly || appSettings.devMode),
+const availableTabs = computed(
+	() =>
+		tabs.filter(
+			(tab) =>
+				(!tab.developerOnly || appSettings.devMode) &&
+				// The assistant's own switch lives on its tab: switched off, the tab
+				// goes with it - the settings search keeps working on what is left.
+				(tab.content !== AiAssistantSettings || aiSettings.value.enabled),
+		),
 )
 
 const modal = ref<InstanceType<typeof TabbedModal> | null>(null)

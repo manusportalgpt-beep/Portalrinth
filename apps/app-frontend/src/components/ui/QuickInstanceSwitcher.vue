@@ -2,6 +2,7 @@
 import {
 	EyeIcon,
 	FolderOpenIcon,
+	PinIcon,
 	PlayIcon,
 	SpinnerIcon,
 	StopCircleIcon,
@@ -16,6 +17,7 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { useQuery } from '@tanstack/vue-query'
+import { useStorage } from '@vueuse/core'
 import dayjs from 'dayjs'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -252,6 +254,8 @@ const messages = defineMessages({
 		id: 'app.quick-instance-switcher.title',
 		defaultMessage: 'Recent instances',
 	},
+	pin: { id: 'app.library.instance.action.pin', defaultMessage: 'Pin to top' },
+	unpin: { id: 'app.library.instance.action.unpin', defaultMessage: 'Unpin' },
 })
 
 const dividerTooltip = computed(() => {
@@ -288,8 +292,17 @@ async function stopInstance(instance) {
 	})
 }
 
+const pinnedIds = useStorage('portalrinth-pinned-instances', [])
+
+function togglePin(id) {
+	pinnedIds.value = pinnedIds.value.includes(id)
+		? pinnedIds.value.filter((kept) => kept !== id)
+		: [...pinnedIds.value, id]
+}
+
 function openContextMenu(event, instance) {
 	const playing = runningInstances.value.includes(instance.id)
+	const pinned = pinnedIds.value.includes(instance.id)
 	instanceOptions.value?.open(event, [
 		playing
 			? {
@@ -320,6 +333,12 @@ function openContextMenu(event, instance) {
 			label: formatMessage(commonMessages.openFolderButton),
 			icon: FolderOpenIcon,
 			action: () => showInstanceInFolder(instance.id),
+		},
+		{
+			id: pinned ? 'unpin_instance' : 'pin_instance',
+			label: formatMessage(pinned ? messages.unpin : messages.pin),
+			icon: PinIcon,
+			action: () => togglePin(instance.id),
 		},
 	])
 }

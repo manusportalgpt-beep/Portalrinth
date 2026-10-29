@@ -19,6 +19,12 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             background_theme_apply,
             background_theme_remove,
             background_read_icon,
+            decor_store,
+            decor_store_bytes,
+            decor_get,
+            decor_kind,
+            decor_list,
+            decor_remove,
         ])
         .build()
 }
@@ -247,4 +253,184 @@ pub async fn background_read_icon(path: String) -> Result<Response> {
             .await
             .map_err(|error| anyhow::anyhow!(error.to_string()))?,
     ))
+}
+
+/*
+ * Decorations: the pictures, gifs, videos and sounds a player places over the
+ * launcher's pages from the page editor. Each one is a file under `decor/`,
+ * kept by an id the interface invents, the way the background is - so a theme
+ * (.prth) can carry them, and so the original being moved or deleted changes
+ * nothing.
+ */
+
+fn valid_decor_id(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= 80
+        && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+}
+
+async fn decor_dir() -> Result<std::path::PathBuf> {
+    let state = theseus::State::get().await?;
+    let dir = state.directories.settings_dir.join("decor");
+    tokio::fs::create_dir_all(&dir)
+        .await
+        .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+    Ok(dir)
+}
+
+/// A decoration file kept under an id: `decor/<id>.<extension>`.
+async fn decor_path(id: &str, extension: &str) -> Result<std::path::PathBuf> {
+    if !valid_decor_id(id) {
+        return Err(anyhow::anyhow!("Invalid decoration id").into());
+    }
+    let extension = extension
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_lowercase();
+    let extension = if extension.is_empty() {
+        "bin".to_string()
+    } else {
+        extension
+    };
+    Ok(decor_dir().await?.join(format!("{id}.{extension}")))
+}
+
+async fn existing_decor_path(id: &str) -> Result<Option<std::path::PathBuf>> {
+    if !valid_decor_id(id) {
+        return Ok(None);
+    }
+    let mut found = None;
+    if let Ok(mut entries) = tokio::fs::read_dir(decor_dir().await?).await {
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            if entry
+                .path()
+                .file_stem()
+                .and_then(|stem| stem.to_str())
+                == Some(id)
+            {
+                found = Some(entry.path());
+                break;
+            }
+        }
+    }
+    Ok(found)
+}
+
+/// Keeps a copy of the file as decoration `id`; answers with the extension it
+/// was stored under.
+#[tauri::command]
+pub async fn decor_store(id: String, path: String) -> Result<String> {
+    let size = tokio::fs::metadata(&path)
+        .await
+        .map_err(|error| anyhow::anyhow!(error.to_string()))?
+        .len();
+    if size > MAX_BYTES {
+        return Err(anyhow::anyhow!(format!(
+            "The file is {} MB; a decoration takes up to {} MB",
+            size / 1024 / 1024,
+            MAX_BYTES / 1024 / 1024
+        ))
+        .into());
+    }
+    let extension = std::path::Path::new(&path)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .unwrap_or("bin")
+        .to_lowercase();
+    let target = decor_path(&id, &extension).await?;
+    if let Some(old) = existing_decor_path(&id).await? {
+        if old != target {
+            let _ = tokio::fs::remove_file(old).await;
+        }
+    }
+    tokio::fs::copy(&path, &target)
+        .await
+        .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+    Ok(extension)
+}
+
+/// Keeps raw bytes as decoration `id` - the way a .prth theme puts its own
+/// pictures back. Answers with the extension it was stored under.
+#[tauri::command]
+pub async fn decor_store_bytes(id: String, extension: String, bytes: Vec<u8>) -> Result<String> {
+    if bytes.len() as u64 > MAX_BYTES {
+        return Err(anyhow::anyhow!("The decoration is too large").into());
+    }
+    let target = decor_path(&id, &extension).await?;
+    if let Some(old) = existing_decor_path(&id).await? {
+        if old != target {
+            let _ = tokio::fs::remove_file(old).await;
+        }
+    }
+    tokio::fs::write(&target, bytes)
+        .await
+        .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+    Ok(target
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .unwrap_or("bin")
+        .to_lowercase())
+}
+
+/// The decoration's bytes, or none when there is no such decoration.
+#[tauri::command]
+pub async fn decor_get(id: String) -> Result<Response> {
+    match existing_decor_path(&id).await? {
+        Some(path) => Ok(Response::new(
+            tokio::fs::read(path)
+                .await
+                .map_err(|error| anyhow::anyhow!(error.to_string()))?,
+        )),
+        None => Ok(Response::new(Vec::new())),
+    }
+}
+
+/// The extension a decoration was stored with; empty when there is none.
+#[tauri::command]
+pub async fn decor_kind(id: String) -> Result<String> {
+    Ok(existing_decor_path(&id)
+        .await?
+        .and_then(|path| path.extension().and_then(|extension| extension.to_str()).map(String::from))
+        .unwrap_or_default()
+        .to_lowercase())
+}
+
+/// Every decoration kept: id and extension, so the interface can throw away
+/// the ones no page uses any more.
+#[tauri::command]
+pub async fn decor_list() -> Result<Vec<DecorAsset>> {
+    let mut found = Vec::new();
+    if let Ok(mut entries) = tokio::fs::read_dir(decor_dir().await?).await {
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            if let (Some(stem), Some(extension)) = (
+                path.file_stem().and_then(|stem| stem.to_str()),
+                path.extension().and_then(|extension| extension.to_str()),
+            ) {
+                found.push(DecorAsset {
+                    id: stem.to_string(),
+                    ext: extension.to_lowercase(),
+                });
+            }
+        }
+    }
+    Ok(found)
+}
+
+#[derive(serde::Serialize)]
+pub struct DecorAsset {
+    pub id: String,
+    pub ext: String,
+}
+
+#[tauri::command]
+pub async fn decor_remove(id: String) -> Result<()> {
+    if let Some(path) = existing_decor_path(&id).await? {
+        let _ = tokio::fs::remove_file(path).await;
+    }
+    Ok(())
 }
