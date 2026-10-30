@@ -33,7 +33,8 @@ import {
 	sandboxWrite,
 	sandboxWriteBinary,
 } from './ai-sandbox'
-import { add_project_from_path, get_full_path, list } from './instance'
+import { add_project_from_path, edit, get_full_path, list } from './instance'
+import { get_max_memory as getMaxMemory } from './jre.js'
 import { get_logs, get_output_by_filename } from './logs.js'
 import { applyThemeBackground, savedThemes, saveTheme } from './portalrinth-themes'
 import { proxiedFetch } from './proxy-fetch'
@@ -250,6 +251,33 @@ async function persistAccent(): Promise<void> {
 	} catch {
 		/* shown now, just not remembered */
 	}
+}
+
+/** Finds a build by id or by (fuzzy) name - for <<launcher_set_memory|сборка::МБ>>. */
+async function resolveBuildLoose(raw: string): Promise<{ id: string; name: string } | undefined> {
+	const wanted = raw.trim().toLowerCase()
+	if (!wanted) return undefined
+	const builds = await list()
+	return (
+		builds.find((build) => build.id === wanted) ??
+		builds.find((build) => build.name.toLowerCase() === wanted) ??
+		builds.find((build) => build.name.toLowerCase().includes(wanted))
+	)
+}
+
+/** Real total RAM in MB (0 when the OS would not say). */
+async function totalRamMb(): Promise<number> {
+	try {
+		return Math.floor(Number(await getMaxMemory()) / 1024)
+	} catch {
+		return 0
+	}
+}
+
+/** Clamps a memory request to 512..(3/4 of the PC's RAM), rounded to 512. */
+function clampMemoryMb(mb: number, totalMb: number): number {
+	const cap = totalMb ? Math.floor((totalMb * 3) / 4) : 16384
+	return Math.max(512, Math.floor(Math.min(mb, cap) / 512) * 512)
 }
 
 async function persistTheme(theme: (typeof THEME_OPTIONS)[number]): Promise<void> {
@@ -912,6 +940,71 @@ registerAiToolHandler(async (tool, args) => {
 			if (!THEME_OPTIONS.includes(theme)) return `Темы бывают: ${THEME_OPTIONS.join(', ')}`
 			await persistTheme(theme)
 			return `Тема лаунчера сменена на ${theme} и сохранена`
+		}
+		case 'launcher_get_settings': {
+			const settings = await getSettings()
+			const totalMb = await totalRamMb()
+			return [
+				`Память игре: ${settings.memory.maximum} МБ (всего на ПК: ${totalMb ? `${totalMb} МБ (~${Math.round(totalMb / 1024)} ГБ)` : 'неизвестно'})`,
+				`Полноэкранный режим: ${settings.force_fullscreen ? 'вкл' : 'выкл'}`,
+				`Разрешение окна: ${settings.game_resolution[0]}x${settings.game_resolution[1]}`,
+				`Java-аргументы: ${settings.extra_launch_args.length ? settings.extra_launch_args.join(' ') : 'нет'}`,
+				`Тема: ${settings.theme}`,
+			].join('\n')
+		}
+		case 'launcher_set_memory': {
+			const parts = args.split('::').map((part) => part.trim())
+			const mb = Number.parseInt(parts[parts.length - 1] ?? '', 10)
+			if (!Number.isFinite(mb)) {
+				return 'Формат: <<launcher_set_memory|4096>> или <<launcher_set_memory|сборка::4096>> — МБ, кратно 512'
+			}
+			const totalMb = await totalRamMb()
+			const rounded = clampMemoryMb(mb, totalMb)
+			if (parts.length >= 2) {
+				const build = await resolveBuildLoose(parts[0])
+				if (!build) return `Сборка «${parts[0]}» не нашлась`
+				await edit(build.id, { memory: { maximum: rounded } })
+				return `Сборке «${build.name}» выделено ${rounded} МБ памяти (переопределение сборки)${
+					rounded < mb ? ` — ограничил железом ПК (${totalMb} МБ всего, 3/4 в дело)` : ''
+				}`
+			}
+			const settings = await getSettings()
+			const before = settings.memory.maximum
+			settings.memory = { maximum: rounded }
+			await setSettings(settings)
+			return `Память игры: ${rounded} МБ (было ${before} МБ), сохранено${
+				rounded < mb ? ` — ограничил железом ПК (${totalMb} МБ всего, 3/4 в дело)` : ''
+			}`
+		}
+		case 'launcher_set_setting': {
+			const [what = '', ...rest] = args.split('::')
+			const key = what.trim().toLowerCase()
+			const value = rest.join('::').trim()
+			const settings = await getSettings()
+			if (key === 'force_fullscreen') {
+				const on = !/^(off|выкл|нет|0|false)$/i.test(value)
+				settings.force_fullscreen = on
+				await setSettings(settings)
+				return `Полноэкранный режим ${on ? 'включён' : 'выключен'} и сохранён`
+			}
+			if (key === 'resolution') {
+				const dims = rest.map((dim) => Number.parseInt(dim.trim(), 10))
+				const width = dims.find((dim) => Number.isFinite(dim) && dim >= 200)
+				const height = dims.findLast((dim) => Number.isFinite(dim) && dim >= 200)
+				if (!width || !height || width === height) {
+					return 'Формат: <<launcher_set_setting|resolution::1920::1080>>'
+				}
+				settings.game_resolution = [width, height]
+				await setSettings(settings)
+				return `Разрешение окна игры: ${width}x${height}, сохранено`
+			}
+			if (key === 'java_args') {
+				const next = value ? value.split(/\s+/).filter(Boolean).slice(0, 24) : []
+				settings.extra_launch_args = next
+				await setSettings(settings)
+				return next.length ? `Java-аргументы сохранены: ${next.join(' ')}` : 'Java-аргументы очищены'
+			}
+			return 'Умею менять: force_fullscreen on/off, resolution ШИРИНА::ВЫСОТА, java_args текст'
 		}
 		case 'launcher_apply_theme': {
 			const wanted = args.trim().toLowerCase()

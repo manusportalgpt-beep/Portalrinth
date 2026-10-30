@@ -2392,5 +2392,41 @@
 	},
 	"app.nav.lan-free": {
 		"message": "LAN (free)"
+	},
+	"app.ai.effort": {
+		"message": "Reasoning effort"
+	},
+	"app.ai.effort.low": {
+		"message": "Low"
+	},
+	"app.ai.effort.medium": {
+		"message": "Medium"
+	},
+	"app.ai.effort.high": {
+		"message": "High"
+	},
+	"app.ai.settings.showkey": {
+		"message": "Show key"
+	},
+	"app.ai.settings.hidekey": {
+		"message": "Hide key"
+	},
+	"app.ai.settings.picker.hint": {
+		"message": "Pick a model — the list is grouped by provider"
+	},
+	"app.ai.settings.manage": {
+		"message": "Manage models"
+	},
+	"app.ai.settings.done": {
+		"message": "Done"
+	},
+	"app.ai.settings.manage.hint": {
+		"message": "Click a provider name to paste its key. A switch hides the model from the picker above."
+	},
+	"app.ai.settings.key.missing": {
+		"message": "Without a key these models do not work — paste it here."
+	},
+	"app.ai.settings.models.alloff": {
+		"message": "All models of this provider are switched off"
 	}
 }

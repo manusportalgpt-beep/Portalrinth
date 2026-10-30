@@ -231,13 +231,13 @@ function syncRoute() {
 }
 
 const tabs = computed(() => [
-	{ label: formatMessage(messages.modpacks), href: '/browse/modpack', iconRight: PackageIcon },
-	{ label: formatMessage(messages.mods), href: '/browse/mod', iconRight: WrenchIcon },
-	{ label: formatMessage(messages.resourcePacks), href: '/browse/resourcepack', iconRight: PaintbrushIcon },
-	{ label: formatMessage(messages.dataPacks), href: '/browse/datapack', iconRight: BlocksIcon },
-	{ label: formatMessage(messages.shaders), href: '/browse/shader', iconRight: LayersIcon },
-	{ label: formatMessage(messages.servers), href: '/browse/server', iconRight: GlobeIcon },
-	{ label: formatMessage(messages.skins), href: '/browse/skin', iconRight: ShirtIcon },
+	{ label: formatMessage(messages.modpacks), href: '/browse/modpack', icon: PackageIcon },
+	{ label: formatMessage(messages.mods), href: '/browse/mod', icon: WrenchIcon },
+	{ label: formatMessage(messages.resourcePacks), href: '/browse/resourcepack', icon: PaintbrushIcon },
+	{ label: formatMessage(messages.dataPacks), href: '/browse/datapack', icon: BlocksIcon },
+	{ label: formatMessage(messages.shaders), href: '/browse/shader', icon: LayersIcon },
+	{ label: formatMessage(messages.servers), href: '/browse/server', icon: GlobeIcon },
+	{ label: formatMessage(messages.skins), href: '/browse/skin', icon: ShirtIcon },
 ])
 
 const breadcrumbManager = injectBreadcrumbManager()

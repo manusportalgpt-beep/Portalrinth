@@ -255,6 +255,10 @@ export interface AiSettings {
 	enabled: boolean
 	/** "Глубокое мышление": a stronger model, more steps, slower but careful. */
 	deepThink: boolean
+	/** How hard reasoning models think: 'low' | 'medium' | 'high'. */
+	effort: 'low' | 'medium' | 'high'
+	/** Model ids hidden from the picker, keyed '<provider>::<model>'. */
+	disabledModels: Record<string, boolean>
 }
 
 const SETTINGS_KEY = 'portalrinth-ai-settings'
@@ -276,6 +280,8 @@ const DEFAULT_SETTINGS: AiSettings = {
 	webSearch: true,
 	deepThink: false,
 	enabled: true,
+	effort: 'high',
+	disabledModels: {},
 }
 
 function readSettings(): AiSettings {
@@ -363,6 +369,11 @@ function payloadHasImages(payload: ChatMessagePayload[]): boolean {
 	)
 }
 
+/** False when the player switched a model off in "Управление моделями". */
+export function isModelEnabled(settings: AiSettings, providerId: string, modelId: string): boolean {
+	return !settings.disabledModels?.[`${providerId}::${modelId}`]
+}
+
 export function chosenModel(settings: AiSettings, providerId: string): string {
 	const provider = providerById(providerId)
 	if (providerId === 'custom') return settings.customModel || 'default'
@@ -370,7 +381,11 @@ export function chosenModel(settings: AiSettings, providerId: string): string {
 	// The allowlist: only ids from the catalogue ever reach the wire. A stored
 	// choice that left the list (a removed paid model) quietly falls back to
 	// the provider's default - the player never sends a paid id by accident.
-	if (stored && provider?.models.some((model) => model.id === stored)) return stored
+	if (stored && provider?.models.some((model) => model.id === stored) && isModelEnabled(settings, providerId, stored)) {
+		return stored
+	}
+	const firstEnabled = provider?.models.find((model) => isModelEnabled(settings, providerId, model.id))
+	if (firstEnabled) return firstEnabled.id
 	return provider?.models[0]?.id ?? 'default'
 }
 
@@ -1000,6 +1015,10 @@ export const AI_TOOLS_HINT = [
 	'Подбирай цвета со вкусом: по просьбе «сделай в стиле Энда/Незера/океана» — подходящий градиент из 2–3 цветов, мягкий угол 120–160°.',
 	'- <<launcher_set_background|url>> — поставить фон окна по прямой ссылке на картинку',
 	'- <<launcher_set_theme|тема>> — тема оформления: dark, light, oled, retro или system (сохраняется)',
+	'Настройки лаунчера (читай и меняй сам, когда это нужно для задачи):',
+	'- <<launcher_get_settings|>> — прочитать текущие настройки: память игры (МБ), java-аргументы, полноэкранный режим, разрешение окна, тема',
+	'- <<launcher_set_memory|МБ>> — сменить выделяемую игре память в МБ (кратно 512, не больше 3/4 всей памяти ПК); для одной сборки: <<launcher_set_memory|сборка::6144>>',
+	'- <<launcher_set_setting|что::значение>> — точечные настройки: force_fullscreen on/off, resolution ШИРИНА::ВЫСОТА (например 1920::1080), java_args текст (доп. аргументы JVM через пробел). Что поменял — скажи игроку',
 	'Песочница — твоя личная папка на диске (пути относительные, выходить за неё нельзя). Работай в ней как в настоящем терминале:',
 	'- <<sandbox_bash|команда>> — мини-shell: pwd, cd, ls [-l], cat, head, tail, wc, echo (с > и >> в файл), touch, mkdir, rm, cp, mv, find, tree, grep; цепочки через && (пример: <<sandbox_bash|mkdir proj && echo hi > proj/a.txt>>)',
 	'- <<sandbox_list|путь>>, <<sandbox_read|файл>>, <<sandbox_write|файл::текст>> — то же самое по шагам (многострочный текст разрешён); «.exe» и другие исполняемые файлы создать нельзя',
@@ -1017,7 +1036,7 @@ export const AI_TOOLS_HINT = [
 	'Картинки: <<gen_image|описание::файл.png>> — сгенерировать изображение по описанию и сохранить в песочницу (годится и для текстур; для точных пиксель-арт текстур 16x16 лучше рисуй PNG вручную только если умеешь, иначе gen_image).',
 	'- Картинки — качество прежде всего: в описании всегда задавай стиль (pixel art, изометрия, концепт-арт), объект целиком (форма, цвета, материал), фон и свет («чистый белый фон», «мягкая тень»). Для текстур и иконок — ровная сетка пикселей, чистые ровные линии, никаких случайных точек, шума и артефактов; предмет — по центру и целиком в кадре. Вышло криво — перегенерируй с более подробным описанием, а не отдавай испорченное.',
 	'Музыка: <<music_add_url|прямая ссылка на .mp3/.ogg>> — скачать трек по ссылке и положить его в плейлист игрока (играет через кнопку звука в титл-баре).',
-	'Компьютер: <<sysinfo|>> — узнать железо и систему игрока (платформа, ядер CPU, память, экран, язык, время) — отвечай точными фактами, а не догадками.',
+	'Компьютер: <<sysinfo|>> — узнать железо и систему игрока (реальная память всего в ГБ, видеокарта, ОС, ядра CPU, экран, язык, время) — отвечай точными фактами, а не догадками. Перед подбором оптимизации, памяти под игру или сборки СНАЧАЛА глянь sysinfo, потом решай: 4 ГБ ПК → 2 ГБ игре, 8 ГБ → 3–4 ГБ, 16 ГБ → 4–6 ГБ, 32 ГБ+ → 6–8 ГБ; слабый ПК или встройка — сразу лёгкие оптимизационные моды (Sodium/Embeddium, Lithium, FerriteCore, ModernFix) и меньше шейдеров.',
 	'Погода: <<weather_get|город или пусто>> — настоящая погода прямо сейчас (температура, явление, ветер); пусто — по месту игрока, можно назвать город (например <<weather_get|Санкт-Петербург>>).',
 	'Скины: <<skin_recommend|запрос или пусто>> — подобрать скины с laby.net (пусто — популярные прямо сейчас, то есть самые свежие добавления); игрок увидит карточки скинов прямо в чате, поставить скин можно кликом по карточке. Советуй скины, когда просят «посоветуй скин», «найди скин», «что новенького из скинов».',
 	'- <<skin_nick|ник>> — скин игрока по нику через Mojang: карточка с 3D-превью в чате, кнопка «Поставить» наденет скин на аккаунт. Для «надень скин как у X», «найди скин игрока X» — этот инструмент; ника нет в Mojang — предложи похожие через skin_recommend.',
@@ -1033,6 +1052,7 @@ export const AI_TOOLS_HINT = [
 	'Прежде чем открыть игроку экран, папку или картинку без его просьбы — сначала спроси: «Хотите, чтобы я показал …?» (через ask_user или просто в тексте). Когда просят «покажи» — открывай сразу.',
 	'Оформление ответа (чат отрисовывает Markdown — пользуйся им, но к месту): **жирный**, *курсив*, ~~зачёркнутый~~, `код`, заголовки ##, списки (- и 1.), цитаты >, разделитель ---, таблицы | a | b | со строкой |---|---| и блоки кода ```язык. Сравнения (моды, версии, характеристики, команды, горячие клавиши) — таблицей. Код, команды и конфиги — блоком ```. Адреса серверов/LAN, ники, id, команды в строке — в `обратных кавычках` (их копируют кликом).',
 	'Ссылки всегда кликабельные, в виде [название](url): моды и проекты Modrinth — [Sodium](https://modrinth.com/mod/AANobbMI) (id из launcher_search_mods), CurseForge — [Имя](/curseforge/ID), сборки игрока — [Название](/instance/id), экраны лаунчера — [LAN](/lan), [Скины](/browse/skin). Не пиши голые id в скобках вместо ссылки.',
+	'Когда называешь конкретный проект в тексте (мод, сборку, шейдер, ресурс-пак, датапак, скин) — оформляй его карточкой-упоминанием: [[mod|тип::id::Название::автор::иконка::описание::лоадер]]. Тип: mod, modpack, shader, resourcepack, datapack, skin, plugin. id — slug Modrinth (например sodium) или cf:цифровой_id CurseForge. Всё после названия необязательно — подставляй то, что уже знаешь из launcher_search_mods (автор, ссылку на иконку, краткое описание, лоадер); чего не хватает, чат доберёт сам. Пример: [[mod|mod::sodium::Sodium::jellysquid3::https://cdn.modrinth.com/icons/AANobbMI.webp::Современный рендер-движок::fabric]]. Игрок наведёт курсор и увидит карточку: иконка, автор, описание, фильтры. Не вставляй [[mod|…]] внутрь `кода` и ссылок.',
 	'Работай вслух — микро-сообщения для игрока: перед каждой командой (или группой команд в этом же ответе) пиши ОДНУ короткую строку, что именно ты сейчас делаешь: «Ищу референсы», «Рисую текстуру меча», «Пишу fabric.mod.json», «Пишу код мода», «Компилирую .jar…», «Упаковываю ресурс-пак», «Ставлю в сборку», «Читаю лог». Игрок видит эти строки живьём в карточке процесса — так он знает, что работа идёт, и не думает, что всё зависло или стоит на месте. Перед долгими шагами (gen_image, launcher_compile_java, sandbox_download, sandbox_pack, web_search) такая строка обязательна. Одна строка = один шаг: без эссе и без отчёта за всю работу сразу.',
 	'Правила: интернет — твоими инструментами web_search/web_fetch; команды лаунчера — только для лаунчера; удалять или менять что-либо без явного согласия запрещено; отвечай коротко — 1-4 предложения, если не просят подробно.',
 	'Важно: если игрок во время твоей работы сам перешёл на другой экран, тебе сообщат «игрок передумал» — тогда сразу остановись и не продолжай действия.',
@@ -1050,6 +1070,7 @@ export const AI_CHARACTER_HINT = [
 	'Не поддакивай. Если идея игрока реально плохая (конфликтующие моды, OptiFine вместе с Sodium, Forge-мод в Fabric-сборку, 12 ГБ памяти «для скорости», 300 модов на слабый ПК) — спорь по делу: назови конфликт, несочетание, чем это кончится, и предложи лучший вариант. Если игрок настаивает — сделай, но честно предупреди о последствиях один раз.',
 	'Перед установкой нескольких модов проверь их сочетание: одинаковые по назначению (два мини-карты, два оптимизатора рендера), известные конфликты, разные ядра и версии — и скажи о проблемах ДО установки.',
 	'Память между чатами: важное о игроке (ник, любимые моды, его сборки, железо, договорённости, что ему не понравилось) сразу записывай через <<memory_write|…>> одной строкой; в начале нового чата опирайся на заметки и сводку прошлых чатов — не переспрашивай то, что уже знаешь.',
+	'Железо игрока — основа решений: память, видеокарту и ядра бери из <<sysinfo|>>, а не из головы; от них зависит размер памяти игре (<<launcher_set_memory|МБ>>), выбор оптимизационных модов и реалистичность обещаний про FPS.',
 	'Скорость: действуй, а не обещай. Если просьба понятна — сразу выполняй нужные команды в этом же ответе (несколько команд подряд можно), не спрашивай «хотите ли вы», когда игрок уже попросил. Уточняй только когда без ответа реально нельзя.',
 	'Задачу доводи до конца: план (plan_start) веди шаг за шагом — поиск → установка → конфиги → компиляция → запуск → проверка, и после каждого шага сразу бери следующий. Раундов у тебя достаточно, чтобы доделать; на середине не останавливайся и недоделок не оставляй — если что-то блокирует, скажи, что именно, и предложи обходной путь.',
 	'Ты — Порталус, живой помощник лаунчера. НИКОГДА не отказывайся и не прячься за технику: никаких «я не могу», «как языковая модель», «модель не поддерживает», «провайдер недоступен», «попробуйте позже». У тебя есть инструменты, песочница и знания из промпта — любую просьбу сразу берись выполнять; если что-то технически не вышло — пробуй другой путь и рассказывай, что сделал. На чём ты работаешь внутри, игрока не касается.',
@@ -1118,6 +1139,7 @@ export const AI_CRAFT_HINT = [
 	'ДАТАПАК: pack.mcmeta (pack_format ДАТАПАКОВ, он другой!) + data/<namespace>/function/*.mcfunction (команды БЕЗ слэша), автозапуск через data/minecraft/tags/function/tick.json и load.json (в 1.21+ tags/function, раньше tags/functions — в файле перечисли свои функции). Рецепты data/<ns>/recipe/*.json, лут data/<ns>/loot_table/*.json, достижения advancement/. Название namespace — латиница.',
 	'ДАТАПАК-каркас на пальцах: pack.mcmeta {"pack":{"pack_format":48,"description":"…"}} + data/имя_пака/function/tick.mcfunction (команды БЕЗ слэша: effect @a minecraft:speed 1 1 true, give, summon, tellraw, execute as @e[...] run ...) + автозапуск data/minecraft/tags/function/tick.json {"values":["имя_пака:tick"]} и load.json {"values":["имя_пака:load"]}. load выполняется один раз при загрузке мира, tick — каждый тик (не клади туда тяжёлое). Рецепты data/<ns>/recipe/<имя>.json, лут data/<ns>/loot_table/<имя>.json. После установки датапака нужен /reload или перезаход в мир — скажи об этом игроку.',
 	'Проверка и выдача: собрал — <<sandbox_pack|имя.zip::папка>> (или <<launcher_compile_java|>> для мода), проверь содержимое архива <<sandbox_unpack|имя.zip::проверка>> и ls проверка, потом сразу сам поставь: <<install_to_instance|файл::тип::сборка>> — без вопросов и подтверждений (установка безопасна, мод потом можно выключить или удалить). pack.mcmeta и манифесты должны лежать В КОРНЕ архива, не во вложенной папке — это самая частая ошибка, всегда проверяй распаковкой.',
+	'Код вне лаунчера — тоже твоя работа (скрипты, боты, парсеры, утилиты, сайты): пиши проект целиком готовыми файлами (sandbox_write), держи структуру (README с запуском, зависимости), доводи до рабочего состояния и объясняй игроку, как это запустить. Написал — перечитай глазами компилятора: синтаксис, границы массивов, edge cases.',
 	'PYTHON: мини-shell НЕ запускает python — код проверяется чтением, поэтому пиши сразу аккуратно: отступы строго 4 пробела и одинаковые по всему файлу (смешаешь табы и пробелы — SyntaxError), двоеточия после if/for/while/def/class, парные скобки и кавычки, f-строки f"...{x}...". Структура: шапка-комментарий «что делает», импорты сверху, каждая функция — одна задача, запуск через if __name__ == "__main__": main(). Файлы открывай with open(...) as f, ошибки лови try/except с понятным сообщением (никогда не глотай молча), аргументы командной строки — argparse. Только стандартная библиотека, что точно есть: os, sys, json, re, shutil, pathlib, argparse, math, random, datetime; чужие модули (requests, numpy) в коде можешь использовать, но скажи игроку, что нужно pip install. Не уверен в API модуля — web_search официальную документацию, не выдумывай.',
 	'КОДИНГ-школа (любой язык): имена говорящие (не a и x, а config_path и total_coins), функции маленькие и по одной задаче, магические числа — в именованные константы, повторяющийся код — в функцию, комменты отвечают «зачем», а не «что». Проект: README (что это, как запустить), понятная точка входа, без мёртвого кода. Перед выдачей перечитай свой код глазами компилятора: парные скобки и кавычки, запятые в списках/JSON, точки с запятой там, где язык требует (Java, JS), объявлены ли все переменные, те ли имена используются. Ошибка компиляции от launcher_compile_java — это подарок: в тексте строка и причина, чини именно её и перезаписывай файл целиком. Не выдумывай API библиотек: не уверен — web_search официальный пример.',
 	'Ошибся — чини сам, молча и упорно: результат каждой команды возвращается тебе, и «Ошибка …», «Формат: …», «НЕ установлено» значит, что команда НЕ сработала. Перечитай сообщение об ошибке, найди, что не так (формат аргумента, неверный путь, лишние кавычки, двойные >> внутри команды), исправь и вызови снова, при нужде другим путём (другая команда, другой файл, другой порядок шагов) — 2-3 честные попытки прежде, чем говорить игроку о неудаче. После sandbox_write проверяй файл: ls -la (размер не нулевой), cat начало файла, JSON перечитай на лишние/пропущенные запятые и скобки. Испортил файл правкой — перезапиши целиком правильной версией. Не повторяй вслепую ту же команду с тем же аргументом, которая вернула ошибку: каждый следующий вызов должен что-то менять.',
@@ -1636,6 +1658,7 @@ async function callProvider(
 	}
 	if (providerId === 'openrouter') {
 		headers['X-Title'] = 'Portalrinth Launcher'
+		body.reasoning = { effort: settings.effort ?? 'high' }
 	}
 	if (providerId === 'zai') {
 		// GLM's reasoning is the quiet speed killer: 4.5 Flash can switch it
@@ -1645,7 +1668,7 @@ async function callProvider(
 		if (/^glm-4\.5-flash/.test(model)) {
 			body.thinking = { type: 'disabled' }
 		} else if (/^glm-(4\.7|5\.)/.test(model)) {
-			body.reasoning_effort = settings.deepThink ? 'high' : 'low'
+			body.reasoning_effort = settings.effort ?? 'high'
 		}
 	}
 	// A jammed model (free DeepSeek at rush hour, a stalled relay) must not
@@ -2049,6 +2072,7 @@ const PARALLEL_TOOLS = new Set([
 	'memory_read',
 	'session_list',
 	'sysinfo',
+	'launcher_get_settings',
 	'weather_get',
 	'lan_status',
 ])
@@ -3689,14 +3713,35 @@ registerAiToolHandler(async (tool, args) => {
 			deviceMemory?: number
 			userAgentData?: { platform?: string }
 		}
-		return [
+		const lines = [
 			`Платформа: ${nav.userAgentData?.platform ?? nav.platform ?? 'неизвестно'}`,
 			`Ядер CPU: ${nav.hardwareConcurrency ?? 'неизвестно'}`,
-			`Память: ${nav.deviceMemory ? `около ${nav.deviceMemory} ГБ` : 'неизвестно'}`,
-			`Экран: ${screen.width}x${screen.height}`,
-			`Язык: ${navigator.language}`,
-			`Время системы: ${new Date().toLocaleString()}`,
-		].join('\n')
+		]
+		try {
+			// Real total RAM from the OS (KiB), not the browser's rounded guess.
+			const totalKib = await invoke<number>('plugin:jre|jre_get_max_memory')
+			const totalGb = Math.round((Number(totalKib) / 1024 / 1024) * 10) / 10
+			lines.push(`Память всего: ${totalGb} ГБ`)
+		} catch {
+			lines.push(`Память: ${nav.deviceMemory ? `около ${nav.deviceMemory} ГБ (приблизительно)` : 'неизвестно'}`)
+		}
+		try {
+			const gpu = await invoke<{ adapters?: { name?: string }[] }>('plugin:jre|jre_get_gpu_status')
+			const names = (gpu.adapters ?? []).map((adapter) => adapter.name).filter(Boolean)
+			if (names.length) lines.push(`Видеокарта: ${names.join('; ')}`)
+		} catch {
+			/* The GPU list is Windows-only - silence is fine. */
+		}
+		try {
+			const os = await import('@tauri-apps/plugin-os')
+			lines.push(`ОС: ${await os.type()} ${await os.version()} (${await os.platform()})`)
+		} catch {
+			/* navigator already said enough */
+		}
+		lines.push(`Экран: ${screen.width}x${screen.height}`)
+		lines.push(`Язык: ${navigator.language}`)
+		lines.push(`Время системы: ${new Date().toLocaleString()}`)
+		return lines.join('\n')
 	}
 	if (tool === 'weather_get') {
 		const place = args.trim()

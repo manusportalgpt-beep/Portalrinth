@@ -3925,5 +3925,41 @@
 	},
 	"app.nav.lan-free": {
 		"message": "LAN (бесплатно)"
+	},
+	"app.ai.effort": {
+		"message": "Раздумье"
+	},
+	"app.ai.effort.low": {
+		"message": "Низкий"
+	},
+	"app.ai.effort.medium": {
+		"message": "Средний"
+	},
+	"app.ai.effort.high": {
+		"message": "Высокий"
+	},
+	"app.ai.settings.showkey": {
+		"message": "Показать ключ"
+	},
+	"app.ai.settings.hidekey": {
+		"message": "Скрыть ключ"
+	},
+	"app.ai.settings.picker.hint": {
+		"message": "Выберите модель — список сгруппирован по провайдерам"
+	},
+	"app.ai.settings.manage": {
+		"message": "Управление моделями"
+	},
+	"app.ai.settings.done": {
+		"message": "Готово"
+	},
+	"app.ai.settings.manage.hint": {
+		"message": "Нажмите на название провайдера, чтобы вставить ключ. Ползунок прячет модель из выбора выше."
+	},
+	"app.ai.settings.key.missing": {
+		"message": "Без ключа модели этого провайдера не работают — вставьте его здесь."
+	},
+	"app.ai.settings.models.alloff": {
+		"message": "Все модели этого провайдера выключены"
 	}
 }

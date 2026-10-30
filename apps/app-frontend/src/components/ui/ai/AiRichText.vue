@@ -11,11 +11,14 @@
 import { CheckIcon, CopyIcon, ExternalIcon } from '@modrinth/assets'
 import { defineComponent, h, ref, type VNode } from 'vue'
 
+import AiModMention, { type AiMentionMeta } from './AiModMention.vue'
+
 type Inline =
 	| { kind: 'text'; text: string }
 	| { kind: 'code'; text: string }
 	| { kind: 'link'; url: string; children: Inline[] }
 	| { kind: 'strong' | 'em' | 'del'; children: Inline[] }
+	| { kind: 'mod'; mention: AiMentionMeta }
 
 type Align = 'left' | 'center' | 'right' | ''
 
@@ -30,8 +33,42 @@ type Block =
 const INLINE_RE =
 	/(`+)([^`][\s\S]*?)\1(?!`)|\[([^\]\n]+)\]\(((?:https?:\/\/|\/)[^\s)]+)\)|(https?:\/\/[^\s<>"'`)\]]+[^\s<>"'`)\].,;:!?])|\*\*(?!\s)([\s\S]+?)\*\*|__(?!\s)([^_\n]+?)__|~~(?!\s)([\s\S]+?)~~|\*(?![\s*])([^*\n]+?)\*|(?<![\p{L}\p{N}_])_(?![\s_])([^_\n]+?)_(?![\p{L}\p{N}_])/gu
 
+/** A project named in passing: [[mod|тип::id::Название::автор::иконка::описание::лоадер::url]]
+ * - the launcher draws it as a live chip with a hover card. Parts after the
+ * title are optional; an unfinished token (still streaming) stays raw text. */
+const MENTION_RE = /\[\[mod\|([\s\S]*?)\]\]/g
+
+function parseMentionArgs(raw: string): AiMentionMeta | undefined {
+	const parts = raw.split('::').map((part) => part.trim())
+	const ptype = (parts[0] ?? '').toLowerCase()
+	const id = parts[1] ?? ''
+	if (!/^[a-z]+$/.test(ptype) || !id || id.length > 200) return undefined
+	const meta: AiMentionMeta = { ptype, id, title: parts[2] || id }
+	if (parts[3]) meta.author = parts[3].slice(0, 80)
+	if (parts[4]) meta.icon = parts[4]
+	if (parts[5]) meta.desc = parts[5].slice(0, 300)
+	if (parts[6]) meta.loader = parts[6].slice(0, 60)
+	if (parts[7] && /^https?:\/\/|^\//.test(parts[7])) meta.url = parts[7]
+	return meta
+}
+
 export function parseInline(text: string, depth = 0): Inline[] {
 	if (depth > 6) return [{ kind: 'text', text }]
+	const out: Inline[] = []
+	let cursor = 0
+	for (const match of text.matchAll(MENTION_RE)) {
+		const start = match.index ?? 0
+		if (start > cursor) out.push(...parsePlainInline(text.slice(cursor, start), depth))
+		const mention = parseMentionArgs(match[1] ?? '')
+		if (mention) out.push({ kind: 'mod', mention })
+		else out.push({ kind: 'text', text: match[0] })
+		cursor = start + match[0].length
+	}
+	if (cursor < text.length) out.push(...parsePlainInline(text.slice(cursor), depth))
+	return out
+}
+
+function parsePlainInline(text: string, depth: number): Inline[] {
 	const out: Inline[] = []
 	const re = new RegExp(INLINE_RE.source, INLINE_RE.flags)
 	let cursor = 0
@@ -262,6 +299,11 @@ export default defineComponent({
 							),
 						])
 					}
+					case 'mod':
+						return h(AiModMention, {
+							meta: node.mention,
+							onOpen: (path: string) => emit('open', path),
+						})
 				}
 				return ''
 			})

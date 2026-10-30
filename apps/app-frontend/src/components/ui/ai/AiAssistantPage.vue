@@ -14,6 +14,7 @@ import {
 	FileCodeIcon,
 	FileIcon,
 	FilePlusIcon,
+	GaugeIcon,
 	GlobeIcon,
 	HistoryIcon,
 	HistoryIcon as MemoryIcon,
@@ -136,6 +137,10 @@ const messages = {
 		defaultMessage: 'В буфере обмена нет текста.',
 	},
 	plusAttach: { id: 'app.ai.plus.attach', defaultMessage: 'Прикрепить файл' },
+	effort: { id: 'app.ai.effort', defaultMessage: 'Раздумье' },
+	effortLow: { id: 'app.ai.effort.low', defaultMessage: 'Низкий' },
+	effortMedium: { id: 'app.ai.effort.medium', defaultMessage: 'Средний' },
+	effortHigh: { id: 'app.ai.effort.high', defaultMessage: 'Высокий' },
 	attach: { id: 'app.ai.attach', defaultMessage: 'Прикрепить файлы' },
 	attachEmpty: {
 		id: 'app.ai.attach-empty',
@@ -618,6 +623,29 @@ function toggleWebSearch() {
 
 function toggleDeepThink() {
 	saveAiSettings({ deepThink: !aiSettings.value.deepThink })
+}
+
+// Effort: how hard reasoning models think before the first word. GLM ships
+// with 'high' - the player asked for it as the default, the slider moves it.
+const EFFORT_VALUES = ['low', 'medium', 'high'] as const
+type EffortValue = (typeof EFFORT_VALUES)[number]
+const effortIndex = computed(() => {
+	const index = EFFORT_VALUES.indexOf(aiSettings.value.effort as EffortValue)
+	return index < 0 ? 2 : index
+})
+const effortLabel = computed(() =>
+	formatMessage(
+		effortIndex.value === 0
+			? messages.effortLow
+			: effortIndex.value === 1
+				? messages.effortMedium
+				: messages.effortHigh,
+	),
+)
+
+function onEffortSlider(event: Event) {
+	const value = Number((event.target as HTMLInputElement).value)
+	saveAiSettings({ effort: EFFORT_VALUES[value] ?? 'high' })
 }
 
 // ---- Slash commands ----------------------------------------------------------
@@ -1865,6 +1893,22 @@ defineExpose({ send })
 							<span class="grow text-left">Глубокое мышление</span>
 							<span class="ai-switch" :class="{ 'ai-switch--on': aiSettings.deepThink }" />
 						</button>
+						<div class="ai-effort-row">
+							<GaugeIcon class="size-4" />
+							<span class="grow text-left">{{ formatMessage(messages.effort) }}</span>
+							<input
+								v-tooltip="effortLabel"
+								class="ai-effort-slider"
+								type="range"
+								min="0"
+								max="2"
+								step="1"
+								:aria-label="formatMessage(messages.effort)"
+								:value="effortIndex"
+								@input="onEffortSlider"
+							/>
+							<span class="ai-effort-value">{{ effortLabel }}</span>
+						</div>
 						<div class="ai-menu-sep" />
 						<button class="ai-menu-item" @click="openSlashFromMenu">
 							<TerminalSquareIcon class="size-4" />
@@ -2421,6 +2465,18 @@ defineExpose({ send })
 .ai-mod-card:hover {
 	border-color: color-mix(in srgb, var(--color-brand) 50%, transparent);
 	transform: translateY(-1px);
+}
+
+.ai-mod-card:hover {
+	box-shadow: 0 0.2rem 0.8rem color-mix(in srgb, var(--color-brand) 14%, transparent);
+}
+
+.ai-mod-card .ai-card-title {
+	transition: color 0.15s ease;
+}
+
+.ai-mod-card:hover .ai-card-title {
+	color: var(--color-brand);
 }
 
 .ai-mod-icon {
@@ -3054,6 +3110,77 @@ defineExpose({ send })
 	height: 1px;
 	margin: 0.15rem 0.25rem;
 	background: var(--surface-5);
+}
+
+/* Effort: how hard reasoning models think - a small slider in the "+" menu. */
+.ai-effort-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.4rem 0.5rem;
+	font-size: 0.8125rem;
+	color: var(--color-primary);
+}
+
+.ai-effort-slider {
+	width: 6.5rem;
+	height: 0.85rem;
+	appearance: none;
+	-webkit-appearance: none;
+	background: transparent;
+	cursor: pointer;
+}
+
+.ai-effort-slider::-webkit-slider-runnable-track {
+	height: 0.3rem;
+	border-radius: 999px;
+	background: linear-gradient(
+		90deg,
+		color-mix(in srgb, var(--color-brand) 55%, transparent),
+		var(--color-brand)
+	);
+}
+
+.ai-effort-slider::-webkit-slider-thumb {
+	appearance: none;
+	-webkit-appearance: none;
+	width: 0.85rem;
+	height: 0.85rem;
+	margin-top: -0.275rem;
+	border-radius: 999px;
+	background: var(--color-contrast);
+	border: 2px solid var(--color-brand);
+	transition: transform 0.15s ease;
+}
+
+.ai-effort-slider::-webkit-slider-thumb:hover {
+	transform: scale(1.15);
+}
+
+.ai-effort-slider::-moz-range-track {
+	height: 0.3rem;
+	border-radius: 999px;
+	background: linear-gradient(
+		90deg,
+		color-mix(in srgb, var(--color-brand) 55%, transparent),
+		var(--color-brand)
+	);
+}
+
+.ai-effort-slider::-moz-range-thumb {
+	width: 0.85rem;
+	height: 0.85rem;
+	border-radius: 999px;
+	background: var(--color-contrast);
+	border: 2px solid var(--color-brand);
+}
+
+.ai-effort-value {
+	min-width: 3.6rem;
+	text-align: right;
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: var(--color-brand);
 }
 
 .ai-switch {
