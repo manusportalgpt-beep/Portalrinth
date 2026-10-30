@@ -784,6 +784,33 @@ async function buildWorlds(raw: string): Promise<string> {
 	].join('\n')
 }
 
+/** Writes a text file into a build: configs, options, scripts. */
+async function buildWrite(raw: string): Promise<string> {
+	const first = raw.indexOf('::')
+	const second = first < 0 ? -1 : raw.indexOf('::', first + 2)
+	if (second < 0) return 'Формат: <<instance_write|сборка::путь::текст>>'
+	const buildRaw = raw.slice(0, first).trim()
+	const relRaw = raw.slice(first + 2, second).trim()
+	const content = raw.slice(second + 2)
+	if (!relRaw) return 'Формат: <<instance_write|сборка::путь::текст>>'
+	const build = await pickBuild(buildRaw)
+	if (typeof build === 'string') return build
+	if (/\.(jar|zip|png|jpe?g|gif|webp|dat|mca|7z|exe|dll|msi|nbt|litematic|ogg|mp3)$/i.test(relRaw)) {
+		return `${relRaw} — бинарный файл, записать его текстом нельзя`
+	}
+	const path = insideBuild(await get_full_path(build.id), relRaw)
+	const text = content.replace(/\\n/g, '\n')
+	try {
+		await fs.writeTextFile(path, text)
+	} catch {
+		const separator = path.includes('\\') ? '\\' : '/'
+		const parts = path.split(separator)
+		parts.pop()
+		await fs.mkdir(parts.join(separator), { recursive: true }).catch(() => {})
+		await fs.writeTextFile(path, text)
+	}
+	return `Записал ${relRaw} в ${buildLink(build)} (${text.length} символов). Если игра была запущена, конфиг подхватится после её перезапуска.`
+}
 registerAiToolHandler(async (tool, args) => {
 	try {
 		switch (tool) {
@@ -797,6 +824,8 @@ registerAiToolHandler(async (tool, args) => {
 				return await buildRead(args)
 			case 'instance_worlds':
 				return await buildWorlds(args)
+			case 'instance_write':
+				return await buildWrite(args)
 		}
 	} catch (error) {
 		return `Не получилось: ${String(error).slice(0, 240)}`

@@ -48,7 +48,7 @@ import {
 	type DownloadReason,
 	install_project_with_dependencies,
 } from './instance'
-import { labySkinTags, labySkinVariant, searchLabySkins } from './laby-skins'
+import { labySkinTags, labySkinVariant, searchLabySkins, vzgeBodyUrl } from './laby-skins'
 import { addMusicFromUrl } from './portalrinth-audio'
 import { setBackgroundFromPath } from './portalrinth-background'
 import { fetchWeather } from './portalrinth-widgets'
@@ -819,6 +819,8 @@ export interface AiSkinCard {
 	hash: string
 	tags: string
 	variant: 'CLASSIC' | 'SLIM'
+	url?: string
+	render?: string
 	uses?: number
 }
 
@@ -977,12 +979,14 @@ export const AI_TOOLS_HINT = [
 	'- <<sandbox_show|файл.png>> — показать игроку картинку из песочницы прямо в чате (свои сгенерированные, скачанные, текстуры)',
 	'Экраны лаунчера (команды лаунчера касаются только лаунчера):',
 	'- <<navigate|путь>> — открыть экран, например <<navigate|/browse/mod?q=jei>>; если просят показать/найти/открыть — вызывай navigate СРАЗУ, в этом же ответе, без лишних вопросов и расспросов, и коротко объясни после перехода. Игрок видит тот же экран, что и ты: двигайся по лаунчеру вместе с ним',
+	'- Переходы по экранам делай сам в любой момент работы: нашёл мод — покажи страницу проекта (<<navigate|/project/<id>>>), установил — открой сборку, поправил конфиг — верни игрока назад. Несколько задач в одном сообщении — пройди их ВСЕ за один ход по плану, а не по одной.',
 	'- <<get_page|>> — узнать, какой экран сейчас открыт (путь игрока и твой совпадают)',
 	'- <<open_creation_modal|>> — открыть окно создания сборки вручную (обычно лучше сразу <<create_instance|…>>)',
 	'- <<open_instance|id>> — открыть сборку по id',
 	'- <<list_instances|>> — получить список сборок игрока; <<instance_search|запрос>> — найти сборки игрока по названию, версии или ядру (пусто — все), вернёт кликабельные ссылки',
 	'- <<instance_logs|сборка::файл (необязательно, «краш» — краш-репорт)>> — прочитать лог сборки: ошибки, предупреждения и конец лога; сам разбери причину краша',
 	'- <<instance_files|сборка::папка>> — посмотреть файлы в папке сборки (mods, config, resourcepacks, saves, shaderpacks…); <<instance_read|сборка::путь>> — прочитать текстовый файл сборки (конфиг, options.txt, json)',
+	'- <<instance_write|сборка::путь::текст>> — записать текстовый файл в сборку (config/*.toml, *.json, *.properties): сам правь конфиги под задачу, не спрашивая; бинарные (jar, png, dat) писать нельзя.',
 	'- <<instance_worlds|сборка>> — миры и серверы сборки (режим, хардкор, когда играли, адреса серверов)',
 	'- <<launcher_search_mods|запрос::тип>> — найти контент сразу в Modrinth и CurseForge; тип (необязательно, но указывай!): mod, modpack, resourcepack, shader, datapack, plugin — например <<launcher_search_mods|мини-карта::mod>>, <<launcher_search_mods|выживание с магией::modpack>>; в ответе id для установки и пометка ✓/✗ — подходит ли к выбранной сборке (страница: <<navigate|/project/<id>>> или <<navigate|/curseforge/<id>>>)',
 	'- <<launcher_install|id::тип::id сборки>> — установить контент (тип: mod, resourcepack, shader, datapack) в сборку; несколько id через запятую (id1,cf:123,id3) — поставятся пачкой в фоне с зависимостями, игрок увидит карточки модов; сборку можно не указывать — тогда выбранная',
@@ -1011,15 +1015,18 @@ export const AI_TOOLS_HINT = [
 	'Опрос: <<show_poll|вопрос::вариант 1;;вариант 2>> — покажет игроку карточку-опрос с кнопками; используй, когда нужно узнать мнение или выбор.',
 	'Навыки: <<skill_save|имя::что уметь и как>> — сохранить навык как постоянную инструкцию себе; включится сам и переживёт перезапуск.',
 	'Картинки: <<gen_image|описание::файл.png>> — сгенерировать изображение по описанию и сохранить в песочницу (годится и для текстур; для точных пиксель-арт текстур 16x16 лучше рисуй PNG вручную только если умеешь, иначе gen_image).',
+	'- Картинки — качество прежде всего: в описании всегда задавай стиль (pixel art, изометрия, концепт-арт), объект целиком (форма, цвета, материал), фон и свет («чистый белый фон», «мягкая тень»). Для текстур и иконок — ровная сетка пикселей, чистые ровные линии, никаких случайных точек, шума и артефактов; предмет — по центру и целиком в кадре. Вышло криво — перегенерируй с более подробным описанием, а не отдавай испорченное.',
 	'Музыка: <<music_add_url|прямая ссылка на .mp3/.ogg>> — скачать трек по ссылке и положить его в плейлист игрока (играет через кнопку звука в титл-баре).',
 	'Компьютер: <<sysinfo|>> — узнать железо и систему игрока (платформа, ядер CPU, память, экран, язык, время) — отвечай точными фактами, а не догадками.',
 	'Погода: <<weather_get|город или пусто>> — настоящая погода прямо сейчас (температура, явление, ветер); пусто — по месту игрока, можно назвать город (например <<weather_get|Санкт-Петербург>>).',
 	'Скины: <<skin_recommend|запрос или пусто>> — подобрать скины с laby.net (пусто — популярные прямо сейчас, то есть самые свежие добавления); игрок увидит карточки скинов прямо в чате, поставить скин можно кликом по карточке. Советуй скины, когда просят «посоветуй скин», «найди скин», «что новенького из скинов».',
+	'- <<skin_nick|ник>> — скин игрока по нику через Mojang: карточка с 3D-превью в чате, кнопка «Поставить» наденет скин на аккаунт. Для «надень скин как у X», «найди скин игрока X» — этот инструмент; ника нет в Mojang — предложи похожие через skin_recommend.',
 	'Таймер: <<timer_set|минуты::название>> — завести таймер, когда время выйдет — придёт плашка сверху и сообщение в чат (например <<timer_set|25::достать чай>>).',
 	'Файлы, которые игрок скинул в чат, сохраняются в папку inbox/ твоей песочницы — они остаются там: читай их, распаковывай, переделывай, удаляй по просьбе.',
 	'Память — твои заметки и прошлые разговоры не пропадают:',
 	'- <<memory_read|>> — перечитать свои заметки (memory.md)',
 	'- <<memory_write|текст>> — дописать заметку на будущее (привычки игрока, договорённости, что сделал)',
+	'- Как только игрок говорит «запомни», «давай запомним», «впредь всегда/никогда не делай» — сразу <<memory_write|…>> с самой договорённостью (по делу, с деталями: чем запускать сборку, какие моды ставить, как продолжать начатое), а ответ начинай словами «Память обновлена». Заметил важное про игрока сам — записывай и без просьбы.',
 	'- <<session_list|>> — обзор прошлых сессий',
 	'- <<session_read|номер>> — перечитать сессию по номеру из обзора (1 — последняя)',
 	'Если для продолжения тебе не хватает решения пользователя, задай вопрос: <<ask_user|Вопрос?::вариант 1;;вариант 2>> — у пользователя появятся кнопки и поле для своего ответа.',
@@ -1044,8 +1051,10 @@ export const AI_CHARACTER_HINT = [
 	'Перед установкой нескольких модов проверь их сочетание: одинаковые по назначению (два мини-карты, два оптимизатора рендера), известные конфликты, разные ядра и версии — и скажи о проблемах ДО установки.',
 	'Память между чатами: важное о игроке (ник, любимые моды, его сборки, железо, договорённости, что ему не понравилось) сразу записывай через <<memory_write|…>> одной строкой; в начале нового чата опирайся на заметки и сводку прошлых чатов — не переспрашивай то, что уже знаешь.',
 	'Скорость: действуй, а не обещай. Если просьба понятна — сразу выполняй нужные команды в этом же ответе (несколько команд подряд можно), не спрашивай «хотите ли вы», когда игрок уже попросил. Уточняй только когда без ответа реально нельзя.',
+	'Задачу доводи до конца: план (plan_start) веди шаг за шагом — поиск → установка → конфиги → компиляция → запуск → проверка, и после каждого шага сразу бери следующий. Раундов у тебя достаточно, чтобы доделать; на середине не останавливайся и недоделок не оставляй — если что-то блокирует, скажи, что именно, и предложи обходной путь.',
 	'Ты — Порталус, живой помощник лаунчера. НИКОГДА не отказывайся и не прячься за технику: никаких «я не могу», «как языковая модель», «модель не поддерживает», «провайдер недоступен», «попробуйте позже». У тебя есть инструменты, песочница и знания из промпта — любую просьбу сразу берись выполнять; если что-то технически не вышло — пробуй другой путь и рассказывай, что сделал. На чём ты работаешь внутри, игрока не касается.',
 	'Скорость рук: файлы пиши СРАЗУ ЦЕЛИКОМ одним <<sandbox_write|файл::полный текст>> — не по кусочкам и без перечитывания после каждой записи; мелкие шаги объединяй в цепочки <<sandbox_bash|mkdir proj && echo текст > proj/файл.txt>>; правка файла = перезапись целиком, а не чтение-правка-запись. Последний файл готов — тут же собери (<<launcher_compile_java|папка::мод.jar>> или <<sandbox_pack|имя.zip::папка>>) и сразу <<install_to_instance|файл::тип>>: минимум раундов, одной проверки распаковкой перед установкой достаточно.',
+	'«Выбери лучший / посоветуй лучший» (мод, шейдер, ресурс-пак, датапак, сервер, сборку, скин): выбор — ТВОЯ работа, не отмахивайся. Ищи (launcher_search_mods, web_search, skin_recommend/skin_nick), сравнивай 2-4 кандидатов по сути (качество, совместимость с версией и ядром, свежесть, вес, отзывы, зависимости), называй победителя и честно объясняй почему. Дальше решай сам: поставить сразу, показать карточки или спросить выбор через <<show_poll|…>> — но решение и причина всегда твои.',
 ].join('\n')
 
 /** The launcher tools beyond search and install: Portalus's hands. */
@@ -1056,6 +1065,7 @@ export const AI_LAUNCHER_HINT = [
 	'- <<install_modpack|id>> — поставить модпак как новую сборку (id с Modrinth или cf:ID с CurseForge)',
 	'- <<build_modpack|название::версия::ядро::мод1;;мод2;;…::rp:ресурс-пак;;shader:шейдер>> — СОБРАТЬ СВОЮ СБОРКУ целиком одной командой: создаст сборку и поставит все моды (по названиям, найдёт сам под версию и ядро), ресурс-паки и шейдеры (Iris/Oculus добавится сам). Версию можно оставить пустой — возьмётся последняя. Пример: <<build_modpack|Магия и техно::1.20.1::forge::create;;botania;;jei;;sodium::rp:fresh animations;;shader:complementary>>',
 	'Сборка по описанию: когда игрок описывает идею словами, одним словом («космос», «хоррор», «средневековье»), текстом или картинкой — сам продумай тему, подбери 10–30 совместимых модов под одно ядро и версию (основа + оптимизация + QoL: JEI/EMI, мини-карта, Sodium/Embeddium), ресурс-пак и шейдер под атмосферу, коротко объясни выбор и сразу вызывай build_modpack. По картинке: определи стиль/биом/эпоху и подбери под него. Дополнительно рекомендуй: обои (find_wallpaper), цвет/градиент лаунчера под тему, ссылки на вики модов.',
+	'Стандарт сборки: моды РАЗНЫЕ по назначению — основа геймплея под тему (биомы, мобы, магия, техника), оптимизация (Sodium/Embeddium, Lithium), QoL (JEI/EMI, мини-карта), а не одна оптимизация; ядро подбирай под тему (магия — forge/neoforge, техно и лёгкость — fabric). После установки загляни в конфиги (<<instance_files|сборка::config>>, <<instance_read|…>>) и поправь ключевое через <<instance_write|…>>. Потом предложи запуск: <<launch_instance|…>>; если краш — сразу <<instance_logs|сборка::краш>>, найди виновника, замени или убери (<<mod_delete|…>>) и собери заново. Итог — работающая сборка, а не список названий.',
 	'Модификации на заказ: датапак, ресурс-пак или простой мод собери в песочнице (sandbox_write, scaffold), упакуй и поставь в сборку <<install_to_instance|файл::тип::сборка>>; Java-мод — <<launcher_compile_java|файлы>>. Настройками лаунчера управляй сам: launcher_set_accent, launcher_set_gradient, launcher_set_background, launcher_set_theme, launcher_save_theme, open_settings.',
 	'- <<launch_instance|id или название>> — запустить игру; <<stop_instance|id>> — закрыть игру',
 	'- <<update_mods|id>> — обновить все моды сборки, у которых есть обновления',
@@ -1621,7 +1631,7 @@ async function callProvider(
 		// Small talk never needs a lecture back; real work keeps the headroom.
 		// Free reasoning models spend part of the budget thinking before the
 		// first visible word, so even a greeting gets room for that.
-		max_tokens: fastPath ? 900 : settings.deepThink ? 6144 : 3072,
+		max_tokens: fastPath ? 1200 : settings.deepThink ? 8192 : 4096,
 		stream: Boolean(onDelta),
 	}
 	if (providerId === 'openrouter') {
@@ -2181,7 +2191,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						...fullChain.filter((id) => !providerById(id)?.visionModel),
 					]
 				: fullChain
-			const maxRounds = settings.deepThink ? 12 : 10
+			const maxRounds = settings.deepThink ? 20 : 14
 			for (const providerId of chain) {
 				if (turnAborted())
 					throw new Error('Быстрый ответ не уложился в 25 секунд — провайдеры молчат')
@@ -2901,7 +2911,12 @@ async function installOneProject(
 	const cfMatch = /^cf:(\d+)$/i.exec(projectId)
 	const cfId = cfMatch ? cfMatch[1] : /^\d+$/.test(projectId) ? projectId : ''
 	if (cfId) {
-		const files = await curseforgeFiles(cfId, target.game_version, kind === 'mod' ? loader : null)
+		let files = await curseforgeFiles(cfId, target.game_version, kind === 'mod' ? loader : null)
+		if (files.length === 0 && kind === 'mod') {
+			// CurseForge leaves the loader tag empty or wrong on many files:
+			// a second try by the Minecraft version alone, loader unchecked.
+			files = await curseforgeFiles(cfId, target.game_version, null).catch(() => [])
+		}
 		const file = files[0]
 		if (!file) {
 			const any = await curseforgeFiles(cfId).catch(() => [])
@@ -2953,7 +2968,39 @@ async function installOneProject(
 				version_type: string
 			}[])
 		: []
-	const version = versions.find((item) => item.version_type === 'release') ?? versions[0]
+	let version = versions.find((item) => item.version_type === 'release') ?? versions[0]
+	let versionNote = ''
+	if (!version) {
+		// A strict query can miss a file that exists: quilt hosts fabric, and
+		// a 1.20.1 file is sometimes tagged neoforge while really a forge mod.
+		// A broad query by game version alone, loaders re-checked by hand.
+		const broadResponse = await proxiedFetch(
+			`https://api.modrinth.com/v2/project/${encodeURIComponent(project.id)}/version?game_versions=${encodeURIComponent(JSON.stringify([target.game_version]))}`,
+			{ headers, signal: AbortSignal.timeout(15000) },
+		)
+		const broad = broadResponse.ok
+			? ((await broadResponse.json()) as {
+					id: string
+					version_number: string
+					version_type: string
+					loaders: string[]
+				}[])
+			: []
+		const allowed = [
+			...new Set([
+				...modrinthLoadersFor(realKind, loader),
+				...(loader === 'forge' ? ['neoforge'] : []),
+			]),
+		]
+		const fitting = broad.filter((item) =>
+			(item.loaders ?? []).some((name) => allowed.includes(name)),
+		)
+		const candidate = fitting.find((item) => item.version_type === 'release') ?? fitting[0]
+		if (candidate) {
+			version = candidate
+			versionNote = ' (версия подобрана по Minecraft без тега ядра — проверь в игре)'
+		}
+	}
 	if (!version) {
 		const gv = (project.game_versions ?? []).filter((v) => /^\d+\.\d+(\.\d+)?$/.test(v))
 		throw new Error(
@@ -2979,7 +3026,7 @@ async function installOneProject(
 		await add_project_from_version(target.id, version.id, 'standalone' as DownloadReason)
 	}
 	const card = await fetchModrinthCard(project.id)
-	const line = `Установлено в ${buildLabel}: «${project.title}» ${version.version_number} (cdn.modrinth.com)${deps}`
+	const line = `Установлено в ${buildLabel}: «${project.title}» ${version.version_number} (cdn.modrinth.com)${deps}${versionNote}`
 	return card ? `${line}\n@@MOD@@${JSON.stringify(card)}` : line
 }
 
@@ -3313,8 +3360,9 @@ registerAiToolHandler(async (tool, args) => {
 		}
 		const appended = `${previous}${previous && !previous.endsWith('\n') ? '\n' : ''}- ${note}\n`
 		const trimmed =
-			appended.length > 4000 ? `…(старое обрезано)\n${appended.slice(-4000)}` : appended
-		return sandboxWrite(MEMORY_FILE, trimmed)
+			appended.length > 12000 ? `…(старое обрезано)\n${appended.slice(-12000)}` : appended
+		const saved = await sandboxWrite(MEMORY_FILE, trimmed)
+		return 'Память обновлена. ' + saved
 	}
 	if (tool === 'session_list') return readSessionsOverview()
 	if (tool === 'session_read') {
@@ -3564,6 +3612,45 @@ registerAiToolHandler(async (tool, args) => {
 		if (lines.length === 0) return 'Ничего не нашлось'
 		return lines.join('\n') + cards.map((card) => `\n@@MOD@@${JSON.stringify(card)}`).join('')
 	}
+		if (tool === 'skin_nick') {
+			const nick = args.trim()
+			if (!nick) return 'Формат: <<skin_nick|ник игрока>>'
+			try {
+				const lookup = await proxiedFetch(
+					`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(nick)}`,
+					{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) },
+				)
+				if (!lookup.ok)
+					return `Ник «${nick}» Mojang не знает (опечатка или нелицензионный аккаунт). Могу подобрать похожие скины: <<skin_recommend|${nick}>>.`
+				const profile = (await lookup.json()) as { id: string; name: string }
+				const sessionResponse = await proxiedFetch(
+					`https://sessionserver.mojang.com/session/minecraft/profile/${profile.id}`,
+					{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) },
+				)
+				if (!sessionResponse.ok)
+					return `Профиль «${profile.name}» нашёлся, но скин не отдался (HTTP ${sessionResponse.status})`
+				const session = (await sessionResponse.json()) as {
+					properties?: { value?: string }[]
+				}
+				const decoded = JSON.parse(atob(session.properties?.[0]?.value ?? '')) as {
+					textures?: { SKIN?: { url?: string; metadata?: { model?: string } } }
+				}
+				const url = decoded.textures?.SKIN?.url ?? ''
+				if (!url)
+					return `У «${profile.name}» стоит стандартный скин (Steve/Alex) — качать нечего. Предложи игроку подобрать свой: <<skin_recommend|${nick}>>.`
+				const hash = url.split('/texture/')[1] ?? ''
+				const card = {
+					hash,
+					url,
+					render: vzgeBodyUrl(hash || profile.id, 512),
+					tags: `Скин игрока ${profile.name}`,
+					variant: decoded.textures?.SKIN?.metadata?.model === 'slim' ? 'SLIM' : 'CLASSIC',
+				}
+				return `Скин игрока «${profile.name}» найден. В чате карточка с 3D-превью — кнопка «Поставить» наденет скин на аккаунт.\n@@SKIN@@${JSON.stringify(card)}`
+			} catch (error) {
+				return `Скин по нику не получился: ${String(error).slice(0, 150)}`
+			}
+		}
 	if (tool === 'skin_recommend') {
 		// The skin library lives on laby.net; an empty query returns whatever
 		// is hot right now, so the agent always sees fresh additions.

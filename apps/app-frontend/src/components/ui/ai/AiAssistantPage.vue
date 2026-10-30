@@ -85,6 +85,7 @@ import {
 } from '@/helpers/ai-sandbox'
 import { getInstanceIconUrl, list as listInstances } from '@/helpers/instance'
 import { labySkinPreview, labySkinTexture } from '@/helpers/laby-skins'
+import { proxiedFetch } from '@/helpers/proxy-fetch'
 import { skinRenderUrl } from '@/helpers/skin-render-service'
 import { add_and_equip_custom_skin } from '@/helpers/skins'
 
@@ -399,6 +400,7 @@ const skinInstalledSkins = ref<string[]>([])
  * the texture route is dead.
  */
 function skinPreviewSrc(hash: string): string {
+	if (/^https?:/.test(hash)) return hash
 	if (skinPreviews.value[hash]) return skinPreviews.value[hash]
 	if (!skinPreviewTried.has(hash)) {
 		skinPreviewTried.add(hash)
@@ -414,12 +416,21 @@ function skinPreviewSrc(hash: string): string {
 	return skinPreviews.value[hash] ?? ''
 }
 
+/** The skin of a named player comes as a direct PNG link from Mojang. */
+async function fetchSkinTexture(url: string): Promise<Uint8Array> {
+	const response = await proxiedFetch(url, { signal: AbortSignal.timeout(15000) })
+	if (!response.ok) throw new Error(`HTTP ${response.status}`)
+	return new Uint8Array(await response.arrayBuffer())
+}
+
 /** Puts a recommended skin on the account right from the chat card. */
 async function installSkin(skin: AiSkinCard) {
 	if (skinInstalling.value.includes(skin.hash)) return
 	skinInstalling.value = [...skinInstalling.value, skin.hash]
 	try {
-		const texture = await labySkinTexture(skin.hash)
+		const texture = skin.url
+			? await fetchSkinTexture(skin.url)
+			: await labySkinTexture(skin.hash)
 		await add_and_equip_custom_skin(texture, skin.variant)
 		skinInstalledSkins.value = [...skinInstalledSkins.value, skin.hash]
 	} catch {
@@ -1538,8 +1549,8 @@ defineExpose({ send })
 							<div v-if="!collapsedCards[`s-${index}`]" class="ai-skin-grid">
 								<div v-for="skin in message.activity.skins" :key="skin.hash" class="ai-skin-card">
 									<img
-										v-if="skinPreviewSrc(skin.hash)"
-										:src="skinPreviewSrc(skin.hash)"
+										v-if="skinPreviewSrc(skin.render || skin.hash)"
+										:src="skinPreviewSrc(skin.render || skin.hash)"
 										class="ai-skin-img"
 										alt=""
 										loading="lazy"
