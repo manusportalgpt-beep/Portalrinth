@@ -487,7 +487,7 @@ export interface AiStep {
 }
 
 /** A craft the agent can build with its own hands in the sandbox. */
-export type AiTaskKind = 'mod' | 'shader' | 'resourcepack' | 'datapack'
+export type AiTaskKind = 'mod' | 'shader' | 'resourcepack' | 'datapack' | 'plan'
 
 /** A tracked creation task: the chat draws its stages live while Portalus works. */
 export interface AiTask {
@@ -501,6 +501,7 @@ export const TASK_KIND_LABELS: Record<AiTaskKind, string> = {
 	shader: 'Шейдер',
 	resourcepack: 'Ресурс-пак',
 	datapack: 'Датапак',
+	plan: 'План',
 }
 
 /** The stages of each craft, in the order the player watches them happen. */
@@ -527,6 +528,7 @@ const TASK_PIPELINES: Record<AiTaskKind, string[]> = {
 		'Упаковка .zip',
 		'Готовый файл игроку',
 	],
+	plan: [],
 }
 
 function taskPipeline(kind: AiTaskKind): AiTask['stages'] {
@@ -546,6 +548,32 @@ function taskFromArgs(args: string): AiTask {
 	return { kind, title: title.slice(0, 60) || TASK_KIND_LABELS[kind], stages: taskPipeline(kind) }
 }
 
+/** Reads `<<plan_start|Название::шаг 1;;шаг 2;;…>>` - a todo plan with the player-facing
+ * checklist. Steps are 2-8 short lines; hidden sub-steps (research, textures,
+ * compilation, install) belong here too, that is what makes the plan honest.
+ */
+function planFromArgs(args: string): AiTask | null {
+	const [title = '', stepsRaw = ''] = args.split('::').map((part) => part.trim())
+	const steps = stepsRaw
+		.split(';;')
+		.map((step) => step.trim())
+		.filter(Boolean)
+		.slice(0, 8)
+		.map((label) => ({ label: label.slice(0, 80), done: false }))
+	if (steps.length === 0) return null
+	return { kind: 'plan', title: title.slice(0, 60) || 'План', stages: steps }
+}
+
+/** Ticks `<<plan_done|номер>>` (1-based) on the plan in flight. */
+function markPlanStep(args: string): AiTask | null {
+	const task = agentTurn.value.task
+	if (!task || task.kind !== 'plan') return null
+	const index = Number.parseInt(args.trim(), 10) - 1
+	if (!Number.isInteger(index) || index < 0 || index >= task.stages.length) return null
+	const stages = task.stages.map((stage, i) => (i === index ? { ...stage, done: true } : stage))
+	return { ...task, stages }
+}
+
 /** A request that clearly asks to build something with its own hands - so
  * the stage card shows up even if the model forgets to announce the task. */
 export function detectTaskKind(text: string): AiTaskKind | null {
@@ -563,6 +591,9 @@ export function detectTaskKind(text: string): AiTaskKind | null {
  * closes the plan, writes and scaffolds build the structure, then code,
  * then packing and the hand-over to the player. */
 function progressTask(task: AiTask, tool: string, args: string): AiTask {
+	// A plan ticks only by explicit <<plan_done|N>> - its steps are free-form,
+	// so the craft heuristics below would guess wrong.
+	if (task.kind === 'plan') return task
 	const index = task.stages.findIndex((stage) => !stage.done)
 	if (index < 0) return task
 	const bash = tool === 'sandbox_bash' ? args.toLowerCase() : ''
@@ -1048,6 +1079,7 @@ export const AI_SLANG_HINT = [
 
 export const AI_SKILLS_HINT = [
 	'ЛЮБУЮ постройку (мод, шейдер, ресурс-пак, датапак) начинай с объявления задачи: <<task_start|тип::Название>> (тип: mod, shader, resourcepack, datapack), например <<task_start|mod::Лесоповал>> — игрок увидит живую карточку этапов; без неё карточка не появится.',
+	'План-задачи (как todos): если просьба игрока — БОЛЬШЕ одной задачи или работа с этапами, сразу объяви план: <<plan_start|Название::шаг 1;;шаг 2;;шаг 3>> (2-8 коротких шагов) — игрок увидит живой чек-лист с галочками. В план включай и подводные шаги, которые игрок не называл словами: поиск в интернете, изучение референсов, текстуры, написание кода, компиляция/упаковка, установка в сборку, проверка. Выполнил шаг — тут же <<plan_done|номер>> (нумерация с 1); взялся за шаг — скажи строкой, что делаешь. Когда все шаги закрыты — короткий итог игроку. Крафтовую задачу (мод/шейдер/ресурс-пак/датапак) объявляй как раньше <<task_start|тип::название>> — для неё свой вид карточки; plan_start — для всего остального из нескольких шагов.',
 	'Ты умеешь создавать контент для Minecraft, сайты, картинки и код на любых языках — всё делаешь файлами в песочнице, а готовый результат сразу ставишь в сборку через <<install_to_instance|файл::тип>>:',
 	'- Ресурс-пак: pack.mcmeta (поле pack_format зависит от версии — если не уверен, уточни через web_search), assets/minecraft/textures/..., модели, звуки (sounds.json). Собери файлы и упакуй в .zip.',
 	'- Шейдеры (OptiFine/Iris): папка shaders/ с вершинными и фрагментными программами (*.vsh, *.fsh, GLSL), composite/final проходы, shaders.properties. Собери и упакуй в .zip.',
@@ -1076,6 +1108,8 @@ export const AI_CRAFT_HINT = [
 	'ДАТАПАК: pack.mcmeta (pack_format ДАТАПАКОВ, он другой!) + data/<namespace>/function/*.mcfunction (команды БЕЗ слэша), автозапуск через data/minecraft/tags/function/tick.json и load.json (в 1.21+ tags/function, раньше tags/functions — в файле перечисли свои функции). Рецепты data/<ns>/recipe/*.json, лут data/<ns>/loot_table/*.json, достижения advancement/. Название namespace — латиница.',
 	'ДАТАПАК-каркас на пальцах: pack.mcmeta {"pack":{"pack_format":48,"description":"…"}} + data/имя_пака/function/tick.mcfunction (команды БЕЗ слэша: effect @a minecraft:speed 1 1 true, give, summon, tellraw, execute as @e[...] run ...) + автозапуск data/minecraft/tags/function/tick.json {"values":["имя_пака:tick"]} и load.json {"values":["имя_пака:load"]}. load выполняется один раз при загрузке мира, tick — каждый тик (не клади туда тяжёлое). Рецепты data/<ns>/recipe/<имя>.json, лут data/<ns>/loot_table/<имя>.json. После установки датапака нужен /reload или перезаход в мир — скажи об этом игроку.',
 	'Проверка и выдача: собрал — <<sandbox_pack|имя.zip::папка>> (или <<launcher_compile_java|>> для мода), проверь содержимое архива <<sandbox_unpack|имя.zip::проверка>> и ls проверка, потом сразу сам поставь: <<install_to_instance|файл::тип::сборка>> — без вопросов и подтверждений (установка безопасна, мод потом можно выключить или удалить). pack.mcmeta и манифесты должны лежать В КОРНЕ архива, не во вложенной папке — это самая частая ошибка, всегда проверяй распаковкой.',
+	'PYTHON: мини-shell НЕ запускает python — код проверяется чтением, поэтому пиши сразу аккуратно: отступы строго 4 пробела и одинаковые по всему файлу (смешаешь табы и пробелы — SyntaxError), двоеточия после if/for/while/def/class, парные скобки и кавычки, f-строки f"...{x}...". Структура: шапка-комментарий «что делает», импорты сверху, каждая функция — одна задача, запуск через if __name__ == "__main__": main(). Файлы открывай with open(...) as f, ошибки лови try/except с понятным сообщением (никогда не глотай молча), аргументы командной строки — argparse. Только стандартная библиотека, что точно есть: os, sys, json, re, shutil, pathlib, argparse, math, random, datetime; чужие модули (requests, numpy) в коде можешь использовать, но скажи игроку, что нужно pip install. Не уверен в API модуля — web_search официальную документацию, не выдумывай.',
+	'КОДИНГ-школа (любой язык): имена говорящие (не a и x, а config_path и total_coins), функции маленькие и по одной задаче, магические числа — в именованные константы, повторяющийся код — в функцию, комменты отвечают «зачем», а не «что». Проект: README (что это, как запустить), понятная точка входа, без мёртвого кода. Перед выдачей перечитай свой код глазами компилятора: парные скобки и кавычки, запятые в списках/JSON, точки с запятой там, где язык требует (Java, JS), объявлены ли все переменные, те ли имена используются. Ошибка компиляции от launcher_compile_java — это подарок: в тексте строка и причина, чини именно её и перезаписывай файл целиком. Не выдумывай API библиотек: не уверен — web_search официальный пример.',
 	'Ошибся — чини сам, молча и упорно: результат каждой команды возвращается тебе, и «Ошибка …», «Формат: …», «НЕ установлено» значит, что команда НЕ сработала. Перечитай сообщение об ошибке, найди, что не так (формат аргумента, неверный путь, лишние кавычки, двойные >> внутри команды), исправь и вызови снова, при нужде другим путём (другая команда, другой файл, другой порядок шагов) — 2-3 честные попытки прежде, чем говорить игроку о неудаче. После sandbox_write проверяй файл: ls -la (размер не нулевой), cat начало файла, JSON перечитай на лишние/пропущенные запятые и скобки. Испортил файл правкой — перезапиши целиком правильной версией. Не повторяй вслепую ту же команду с тем же аргументом, которая вернула ошибку: каждый следующий вызов должен что-то менять.',
 	'Честность о возможностях: java ты компилируешь, но не запускаешь; python/npm/go не существуют для тебя — код проверяй чтением, а не исполнением; протестировать мод по-настоящему можно только установкой в сборку игроком. Никогда не обещай «протестировал и работает» — говори «собрал, проверь в игре».',
 ]
@@ -2950,6 +2984,32 @@ async function installOneProject(
 }
 
 registerAiToolHandler(async (tool, args) => {
+	if (tool === 'plan_start') {
+		const plan = planFromArgs(args)
+		if (!plan) return 'Формат: <<plan_start|Название::шаг 1;;шаг 2;;шаг 3>> — 2-8 коротких шагов'
+		agentTurn.value = { ...agentTurn.value, task: plan }
+		return 'План объявлен: «'
+			+ plan.title
+			+ '». Игрок видит чек-лист: '
+			+ plan.stages.map((stage, i) => `${i + 1}. ${stage.label}`).join('; ')
+			+ '. Веди работу по шагам и закрывай каждый: <<plan_done|номер>>.'
+	}
+	if (tool === 'plan_done') {
+		const updated = markPlanStep(args)
+		if (!updated) {
+			return agentTurn.value.task && agentTurn.value.task.kind === 'plan'
+				? `Нет шага №${args.trim()}: в плане ${agentTurn.value.task.stages.length} шагов. Номер — с 1.`
+				: 'Плана ещё нет: сначала <<plan_start|Название::шаги через ;;>>'
+		}
+		agentTurn.value = { ...agentTurn.value, task: updated }
+		const doneCount = updated.stages.filter((stage) => stage.done).length
+		const num = Number.parseInt(args.trim(), 10)
+		return 'Шаг закрыт: «'
+			+ (updated.stages[num - 1]?.label ?? '')
+			+ `» (${doneCount}/${updated.stages.length}).`
+			+ (doneCount === updated.stages.length ? ' План выполнен целиком — отчитайся игроку.' : ' Продолжай по плану.')
+	}
+
 	if (tool === 'task_start') {
 		const task = taskFromArgs(args)
 		return `Задача объявлена: ${TASK_KIND_LABELS[task.kind]} «${task.title}». Игрок видит карточку этапов: ${task.stages
@@ -3876,6 +3936,10 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 				// round, drawn in the steps - not a reply half-written.
 				agentStreaming.value = ''
 				stepStart(tool, args)
+				if (tool === 'plan_start') {
+					const plan = planFromArgs(args)
+					if (plan) agentTurn.value = { ...agentTurn.value, task: plan }
+				}
 				if (tool === 'task_start') {
 					agentTurn.value = { ...agentTurn.value, task: taskFromArgs(args) }
 				}

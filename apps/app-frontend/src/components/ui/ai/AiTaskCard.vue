@@ -6,6 +6,7 @@
  */
 import {
 	BoxIcon,
+	CheckCheckIcon,
 	CheckIcon,
 	HammerIcon,
 	PackageIcon,
@@ -30,6 +31,7 @@ const KINDS: Record<AiTaskKind, { label: string; icon: Component }> = {
 	shader: { label: 'Шейдер', icon: SparklesIcon },
 	resourcepack: { label: 'Ресурс-пак', icon: PaintbrushIcon },
 	datapack: { label: 'Датапак', icon: PackageIcon },
+	plan: { label: 'План', icon: CheckCheckIcon },
 }
 
 const kind = computed(() => KINDS[props.task.kind] ?? { label: 'Задача', icon: BoxIcon })
@@ -41,7 +43,8 @@ const currentStage = computed(() => {
 })
 
 function stateOf(index: number): 'done' | 'current' | 'ahead' {
-	if (index < currentStage.value) return 'done'
+	// A plan can be ticked out of order: trust the stage flag, not the position.
+	if (props.task.stages[index].done) return 'done'
 	if (index === currentStage.value) return props.live ? 'current' : 'ahead'
 	return 'ahead'
 }

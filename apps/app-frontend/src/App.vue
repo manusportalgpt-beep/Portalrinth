@@ -66,6 +66,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { type } from '@tauri-apps/plugin-os'
 import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state'
+import { useStorage } from '@vueuse/core'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 
@@ -770,6 +771,10 @@ const messages = defineMessages({
         hostingPaid: {
                 id: 'app.nav.hosting-paid',
                 defaultMessage: 'Modrinth Hosting (paid)',
+        },
+        hostingTab: {
+                id: 'app.nav.modrinth-hosting',
+                defaultMessage: 'Modrinth Hosting',
         },
         screenshots: {
                 id: 'app.nav.screenshots',
@@ -2586,8 +2591,15 @@ function handleContextMenu(event) {
         event.preventDefault()
 }
 
-// Правый клик по иконке LAN в панели слева: переключатель «LAN (бесплатно) /
-// Modrinth Hosting (платно)» — Hosting вернулся в лаунчер, но не вытесняет LAN.
+// Какая вкладка открывается кнопкой сети слева: LAN (бесплатно, встроено) или
+// Modrinth Hosting (платно). Режим запоминается; правый клик всегда предлагает
+// оба варианта — вкладка, тултип и иконка следуют за выбран mode.
+const netMode = useStorage('portalrinth-net-mode', 'lan')
+const netTarget = computed(() => (netMode.value === 'hosting' ? '/hosting/manage/' : '/lan'))
+function switchNetMode(mode) {
+        netMode.value = mode
+        void router.push(mode === 'hosting' ? '/hosting/manage/' : '/lan')
+}
 const lanMenu = ref()
 function openLanMenu(event) {
         lanMenu.value?.open(event, [
@@ -2595,13 +2607,15 @@ function openLanMenu(event) {
                         id: 'lan',
                         label: formatMessage(messages.lanFree),
                         icon: RadioTowerIcon,
-                        action: () => void router.push('/lan'),
+                        tone: netMode.value === 'lan' ? 'brand' : 'default',
+                        action: () => switchNetMode('lan'),
                 },
                 {
                         id: 'hosting',
                         label: formatMessage(messages.hostingPaid),
                         icon: ServerIcon,
-                        action: () => void router.push('/hosting/manage/'),
+                        tone: netMode.value === 'hosting' ? 'brand' : 'default',
+                        action: () => switchNetMode('hosting'),
                 },
         ])
 }
@@ -2727,12 +2741,16 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                                 <SparklesIcon />
                         </NavButton>
                         <NavButton
-                                v-tooltip.right="formatMessage(messages.lan)"
-                                to="/lan"
-                                :is-primary="(r) => r.path === '/lan'"
+                                v-tooltip.right="
+                                        formatMessage(netMode === 'hosting' ? messages.hostingTab : messages.lan)
+                                "
+                                :to="netTarget"
+                                :is-primary="(r) => r.path === netTarget"
+                                :is-subpage="(r) => netMode === 'hosting' && r.path.startsWith('/hosting')"
                                 @contextmenu.prevent.stop="openLanMenu"
                         >
-                                <RadioTowerIcon />
+                                <ServerIcon v-if="netMode === 'hosting'" />
+                                <RadioTowerIcon v-else />
                         </NavButton>
                         <ContextMenu ref="lanMenu" :label="formatMessage(messages.lan)" />
                         <suspense>
