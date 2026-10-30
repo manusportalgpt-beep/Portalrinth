@@ -3919,5 +3919,11 @@
 	},
 	"app.decor.editor.selected": {
 		"message": "Выбрано"
+	},
+	"app.nav.hosting-paid": {
+		"message": "Modrinth Hosting (платно)"
+	},
+	"app.nav.lan-free": {
+		"message": "LAN (бесплатно)"
 	}
 }

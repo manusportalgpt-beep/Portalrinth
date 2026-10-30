@@ -15,6 +15,7 @@ import {
         PlusIcon,
         RadioTowerIcon,
         RefreshCwIcon,
+        ServerIcon,
         SettingsIcon,
         ShirtIcon,
         SparklesIcon,
@@ -33,6 +34,7 @@ import {
         commonSettingsMessages,
         ContentInstallModal,
         ContentUpdaterModal,
+        ContextMenu,
         CreationFlowModal,
         defineMessages,
         I18nDebugPanel,
@@ -760,6 +762,14 @@ const messages = defineMessages({
         lan: {
                 id: 'app.nav.lan',
                 defaultMessage: 'LAN',
+        },
+        lanFree: {
+                id: 'app.nav.lan-free',
+                defaultMessage: 'LAN (free)',
+        },
+        hostingPaid: {
+                id: 'app.nav.hosting-paid',
+                defaultMessage: 'Modrinth Hosting (paid)',
         },
         screenshots: {
                 id: 'app.nav.screenshots',
@@ -2576,6 +2586,26 @@ function handleContextMenu(event) {
         event.preventDefault()
 }
 
+// Правый клик по иконке LAN в панели слева: переключатель «LAN (бесплатно) /
+// Modrinth Hosting (платно)» — Hosting вернулся в лаунчер, но не вытесняет LAN.
+const lanMenu = ref()
+function openLanMenu(event) {
+        lanMenu.value?.open(event, [
+                {
+                        id: 'lan',
+                        label: formatMessage(messages.lanFree),
+                        icon: RadioTowerIcon,
+                        action: () => void router.push('/lan'),
+                },
+                {
+                        id: 'hosting',
+                        label: formatMessage(messages.hostingPaid),
+                        icon: ServerIcon,
+                        action: () => void router.push('/hosting/manage/'),
+                },
+        ])
+}
+
 provideAppUpdateDownloadProgress(appUpdateDownload)
 </script>
 
@@ -2700,9 +2730,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                                 v-tooltip.right="formatMessage(messages.lan)"
                                 to="/lan"
                                 :is-primary="(r) => r.path === '/lan'"
+                                @contextmenu.prevent.stop="openLanMenu"
                         >
                                 <RadioTowerIcon />
                         </NavButton>
+                        <ContextMenu ref="lanMenu" :label="formatMessage(messages.lan)" />
                         <suspense>
                                 <QuickInstanceSwitcher>
                                         <NavButton

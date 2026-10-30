@@ -2386,5 +2386,11 @@
 	},
 	"app.decor.editor.selected": {
 		"message": "Selected"
+	},
+	"app.nav.hosting-paid": {
+		"message": "Modrinth Hosting (paid)"
+	},
+	"app.nav.lan-free": {
+		"message": "LAN (free)"
 	}
 }
