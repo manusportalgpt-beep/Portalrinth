@@ -199,7 +199,6 @@ const messages = {
 	},
 	phaseThinking: { id: 'app.ai.phase.thinking', defaultMessage: 'Думаю…' },
 	phaseWorking: { id: 'app.ai.phase.working', defaultMessage: 'Работаю…' },
-	phaseSpeaking: { id: 'app.ai.phase.speaking', defaultMessage: 'Отвечаю…' },
 	queuedBadge: { id: 'app.ai.queued', defaultMessage: 'в очереди' },
 }
 
@@ -299,9 +298,7 @@ function stopTyping() {
 const phaseLabel = computed(() =>
 	agentPhase.value === 'working'
 		? formatMessage(messages.phaseWorking)
-		: agentPhase.value === 'speaking'
-			? formatMessage(messages.phaseSpeaking)
-			: formatMessage(messages.phaseThinking),
+		: formatMessage(messages.phaseThinking),
 )
 
 function removeQueued(index: number) {

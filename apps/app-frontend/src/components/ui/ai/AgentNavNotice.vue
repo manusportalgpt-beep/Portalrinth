@@ -146,11 +146,7 @@ const visible = computed(
 )
 
 const phaseLabel = computed(() =>
-	agentPhase.value === 'working'
-		? 'Работаю'
-		: agentPhase.value === 'speaking'
-			? 'Отвечаю'
-			: 'Думаю',
+	agentPhase.value === 'working' ? 'Работаю' : 'Думаю',
 )
 
 const runningStep = computed(() =>
