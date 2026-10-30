@@ -120,6 +120,43 @@
 								<p v-if="addNote" class="m-0 text-xs" :class="addFailed ? 'text-red' : 'text-secondary'">
 										{{ addNote }}
 								</p>
+
+								<!-- Meteum от Яндекса: с личным ключом отвечает точнее и первым -->
+								<div class="mt-1 flex flex-col gap-1 border-t border-surface-5 pt-2">
+										<div class="flex gap-1.5">
+												<Input
+														v-model="meteumDraft"
+														size="small"
+														autocomplete="off"
+														:placeholder="
+															meteumSaved
+																? formatMessage(messages.meteumSaved)
+																: formatMessage(messages.meteumKey)
+														"
+												/>
+												<Button
+														v-tooltip="formatMessage(messages.meteumSave)"
+														size="sm"
+														:disabled="!meteumDraft.trim()"
+														@click="saveMeteum"
+												>
+														<CheckIcon class="!size-3.5" />
+												</Button>
+										</div>
+										<p class="m-0 text-[11px] text-secondary">
+												{{
+													meteumSaved
+														? formatMessage(messages.meteumOn)
+														: formatMessage(messages.meteumHint)
+												}}
+												<button
+														class="cursor-pointer border-none bg-transparent p-0 text-blue underline"
+														@click.prevent="openMeteumConsole"
+												>
+														{{ formatMessage(messages.meteumGet) }}
+												</button>
+										</p>
+								</div>
 						</div>
 				</template>
 		</FloatingMenu>
@@ -134,6 +171,7 @@
  * is cached for ten minutes per region, so flipping is instant.
  */
 import {
+		CheckIcon,
 		CloudDrizzleIcon,
 		CloudFogIcon,
 		CloudIcon,
@@ -148,9 +186,16 @@ import {
 		XIcon,
 } from '@modrinth/assets'
 import { Button, defineMessages, FloatingMenu, IconButton, Input, useVIntl } from '@modrinth/ui'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-import { fetchWeather, searchPlace, type WeatherNow } from '@/helpers/portalrinth-widgets'
+import {
+		fetchWeather,
+		meteumKey,
+		searchPlace,
+		setMeteumKey,
+		type WeatherNow,
+} from '@/helpers/portalrinth-widgets'
 
 const { formatMessage } = useVIntl()
 
@@ -167,6 +212,21 @@ const messages = defineMessages({
 		remove: { id: 'app.cloud.remove', defaultMessage: 'Убрать город' },
 		added: { id: 'app.cloud.added', defaultMessage: 'Город добавлен' },
 		notFound: { id: 'app.cloud.not-found', defaultMessage: 'Город не нашёлся' },
+		meteumKey: {
+			id: 'app.cloud.meteum-key',
+			defaultMessage: 'Ключ Meteum от Яндекса…',
+		},
+		meteumSaved: { id: 'app.cloud.meteum-saved', defaultMessage: 'Ключ Meteum сохранён' },
+		meteumSave: { id: 'app.cloud.meteum-save', defaultMessage: 'Сохранить ключ' },
+		meteumHint: {
+			id: 'app.cloud.meteum-hint',
+			defaultMessage: 'Без ключа — Open-Meteo. Тестовый ключ бесплатный:',
+		},
+		meteumOn: {
+			id: 'app.cloud.meteum-on',
+			defaultMessage: 'Станция: Meteum от Яндекса — ключ работает.',
+		},
+		meteumGet: { id: 'app.cloud.meteum-get', defaultMessage: 'получить ключ' },
 })
 
 interface WeatherRegion {
@@ -203,6 +263,24 @@ const newCity = ref('')
 const adding = ref(false)
 const addNote = ref('')
 const addFailed = ref(false)
+
+// Meteum: the key lives in storage, the draft only in the input.
+const meteumDraft = ref('')
+const meteumSaved = computed(() => meteumKey().length > 0)
+
+function saveMeteum() {
+		const key = meteumDraft.value.trim()
+		if (!key) return
+		setMeteumKey(key)
+		meteumDraft.value = ''
+		// New station: refresh what is on the screen right away.
+		void loadActive(true)
+}
+
+function openMeteumConsole() {
+		const url = 'https://yandex.ru/pogoda/b2b/console/home'
+		void openUrl(url).catch(() => window.open(url, '_blank'))
+}
 
 function persist() {
 		try {

@@ -385,6 +385,118 @@ async function fetchFromWttr(
         }
 }
 
+// ---- Meteum (Yandex) ---------------------------------------------------------
+
+const METEUM_KEY_STORAGE = 'portalrinth-weather-yandex-key'
+
+/** The player's own Meteum key, if they pasted one: with it Yandex answers
+ * first, without it the free stations stay on duty. */
+export function meteumKey(): string {
+        try {
+                return (localStorage.getItem(METEUM_KEY_STORAGE) ?? '').trim()
+        } catch {
+                return ''
+        }
+}
+
+export function setMeteumKey(key: string): void {
+        try {
+                localStorage.setItem(METEUM_KEY_STORAGE, key.trim())
+        } catch {
+                /* a full quota keeps the old key */
+        }
+}
+
+/** Yandex's wording for the sky, mapped onto the widget's labels and icons. */
+const METEUM_CONDITIONS: Record<string, { label: string; code: number }> = {
+        clear: { label: 'Ясно', code: 0 },
+        'partly-cloudy': { label: 'Малооблачно', code: 1 },
+        cloudy: { label: 'Облачно', code: 2 },
+        overcast: { label: 'Пасмурно', code: 3 },
+        drizzle: { label: 'Морось', code: 51 },
+        'light-rain': { label: 'Небольшой дождь', code: 61 },
+        rain: { label: 'Дождь', code: 63 },
+        'moderate-rain': { label: 'Умеренный дождь', code: 63 },
+        'heavy-rain': { label: 'Сильный дождь', code: 65 },
+        'continuous-heavy-rain': { label: 'Длительный дождь', code: 65 },
+        showers: { label: 'Ливень', code: 81 },
+        'wet-snow': { label: 'Дождь со снегом', code: 71 },
+        'light-snow': { label: 'Небольшой снег', code: 71 },
+        snow: { label: 'Снег', code: 73 },
+        'snow-showers': { label: 'Снегопад', code: 75 },
+        hail: { label: 'Град', code: 96 },
+        thunderstorm: { label: 'Гроза', code: 95 },
+        'thunderstorm-with-rain': { label: 'Гроза с дождём', code: 95 },
+        'thunderstorm-with-hail': { label: 'Гроза с градом', code: 96 },
+}
+
+const METEUM_WIND: Record<string, number> = {
+        n: 0,
+        ne: 45,
+        e: 90,
+        se: 135,
+        s: 180,
+        sw: 225,
+        w: 270,
+        nw: 315,
+}
+
+/**
+ * Meteum from Yandex - the station the player unlocks with their own key
+ * (the free trial one from the Yandex console works). Goes only through the
+ * Tauri HTTP client: the host sends no CORS headers, so the WebView's own
+ * fetch would always lose the race.
+ */
+async function fetchFromMeteum(
+        location: { lat: number; lon: number; place: string },
+): Promise<WeatherNow> {
+        const key = meteumKey()
+        if (!key) throw new Error('Ключ Meteum не задан')
+        const response = await nativeTauriFetch(
+                `https://api.weather.yandex.ru/v2/forecast?lat=${location.lat}&lon=${location.lon}&extra=true`,
+                {
+                        signal: AbortSignal.timeout(10000),
+                        headers: {
+                                'X-Yandex-Weather-Key': key,
+                                Accept: 'application/json',
+                                'User-Agent': WEATHER_UA,
+                        },
+                },
+        )
+        if (!response.ok) throw new Error(`Meteum не ответила: HTTP ${response.status}`)
+        const data = (await response.json()) as {
+                fact?: {
+                        temp?: number
+                        feels_like?: number
+                        humidity?: number
+                        pressure_pa?: number
+                        condition?: string
+                        wind_speed?: number
+                        wind_dir?: string
+                        daytime?: string
+                }
+        }
+        const fact = data.fact
+        if (!fact || typeof fact.temp !== 'number') throw new Error('Meteum не ответила')
+        const sky = METEUM_CONDITIONS[fact.condition ?? ''] ?? { label: 'Погода', code: 3 }
+        return {
+                temp: Math.round(fact.temp),
+                code: sky.code,
+                label: sky.label,
+                wind: Math.round(fact.wind_speed ?? 0),
+                windDir: fact.wind_dir ? METEUM_WIND[fact.wind_dir.toLowerCase()] : undefined,
+                feels: fact.feels_like !== undefined ? Math.round(fact.feels_like) : undefined,
+                humidity: fact.humidity,
+                pressure: fact.pressure_pa,
+                isDay: (fact.daytime ?? 'd') === 'd',
+                place: location.place,
+                lat: location.lat,
+                lon: location.lon,
+                source: 'Meteum (Яндекс)',
+                fetchedAt: Date.now(),
+        }
+}
+
 export async function fetchWeather(placeQuery?: string, force = false): Promise<WeatherNow> {
         if (!placeQuery && !force) {
                 try {
@@ -400,6 +512,15 @@ export async function fetchWeather(placeQuery?: string, force = false): Promise<
 
         const location = placeQuery ? await geocodeByName(placeQuery) : await geocodeByIp()
         if (!location) throw new Error('Место не нашлось')
+        // The player's own station first: with a key Meteum beats the free ones,
+        // and if it stumbles the free pair below still catches the widget.
+        if (meteumKey()) {
+                try {
+                        return await fetchFromMeteum(location)
+                } catch {
+                        /* no answer from Yandex - the free stations take over */
+                }
+        }
         // Both stations are asked side by side: Open-Meteo is preferred, wttr.in
         // is already on its way if Open-Meteo is not routed on this network.
         const openMeteo = fetchFromOpenMeteo(location)

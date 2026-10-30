@@ -5,16 +5,25 @@
  * sandbox. Registered once from App.vue; every result is a short plain text
  * the model can act on, cards ride along as markers.
  */
-import { readSelectedBuild, registerAiToolHandler, searchWeb } from './ai-assistant'
+import {
+	noteAgentThought,
+	playerTookOver,
+	readSelectedBuild,
+	registerAiToolHandler,
+	searchWeb,
+} from './ai-assistant'
 import { describeBuild, loaderLabel } from './ai-build-info'
 import { sandboxRead } from './ai-sandbox'
 import {
 	install_bulk_update_content,
 	install_create_instance,
 	install_create_modpack_instance,
+	install_job_get,
 	installJobInstanceId,
+	isInstallJobFinished,
 } from './install'
 import {
+	get,
 	get_content_items,
 	kill,
 	list,
@@ -245,6 +254,66 @@ export async function buildSitePreview(path: string): Promise<string> {
 
 // ---- The handler -----------------------------------------------------------------
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** True when this build is fully usable: installed, or a modpack whose
+ * content is in place. */
+function buildReady(stage: string | undefined): boolean {
+	return stage === 'installed' || stage === 'pack_installed'
+}
+
+/**
+ * Waits until the install job settles, thinking out loud every so often.
+ * Returns 'готова', 'остановлено', 'время ожидания вышло' or a failure text.
+ */
+async function waitInstallDone(
+	jobId: string,
+	instanceId: string | null,
+	label: string,
+	timeoutMs: number,
+): Promise<string> {
+	const deadline = Date.now() + timeoutMs
+	let tick = 0
+	while (Date.now() < deadline) {
+		if (playerTookOver()) return 'остановлено'
+		if (jobId) {
+			const job = await install_job_get(jobId).catch(() => null)
+			if (job && isInstallJobFinished(job.status)) {
+				if (job.status === 'succeeded') return 'готова'
+				const detail = job.error
+					? String(
+							(job.error as { message?: string }).message ?? JSON.stringify(job.error),
+					  ).slice(0, 200)
+					: job.status
+				return `установка не удалась: ${detail}`
+			}
+		}
+		const instance = instanceId ? await get(instanceId).catch(() => null) : null
+		if (instance && buildReady(instance.install_stage)) return 'готова'
+		tick += 1
+		if (tick % 10 === 0) noteAgentThought(`Жду, пока установится ${label}…`)
+		await sleep(2000)
+	}
+	return 'время ожидания вышло'
+}
+
+/** A build with this exact name already exists: reuse it, never a twin. */
+async function reuseExistingBuild(
+	instance: { id: string; name: string; install_stage: string },
+	timeoutMs: number,
+): Promise<string> {
+	if (buildReady(instance.install_stage)) {
+		return `Сборка «${instance.name}» уже есть (id: ${instance.id}) — не создаю дубль, работаем с ней.`
+	}
+	noteAgentThought(`Сборка «${instance.name}» уже ставится — жду её, а не создаю новую`)
+	const outcome = await waitInstallDone('', instance.id, `«${instance.name}»`, timeoutMs)
+	if (outcome === 'готова') {
+		return `Сборка «${instance.name}» уже была и теперь готова (id: ${instance.id}) — работаем с ней.`
+	}
+	if (outcome === 'остановлено') return outcome
+	return `Сборка «${instance.name}» (id: ${instance.id}) ещё ставится (${outcome}) — подожди и проверь <<instance_info|${instance.id}>>, новую не создавай.`
+}
+
 const LOADERS: Record<string, InstanceLoader> = {
 	fabric: 'fabric',
 	фабрик: 'fabric',
@@ -290,6 +359,14 @@ registerAiToolHandler(async (tool, args) => {
 			const build = await resolveBuild(args)
 			if (typeof build === 'string') return build
 			try {
+				const fresh = await get(build.id).catch(() => null)
+				if (fresh && !buildReady(fresh.install_stage)) {
+					noteAgentThought(`Сборка «${build.name}» ещё устанавливается — жду конца`)
+					const outcome = await waitInstallDone('', build.id, `«${build.name}»`, 180000)
+					if (outcome !== 'готова') {
+						return `«${build.name}» ещё не готова (${outcome}) — подожди и попробуй запустить снова.`
+					}
+				}
 				await run(build.id)
 				return `Запустил «${build.name}» — игра загружается. Для игры с друзьями: в игре Esc → «Открыть для сети», потом <<lan_publish|${build.id}>>.`
 			} catch (error) {
@@ -396,15 +473,34 @@ registerAiToolHandler(async (tool, args) => {
 			if (!loader)
 				return `Ядро «${loaderRaw}» не знаю. Есть: fabric, forge, neoforge, quilt, vanilla.`
 			try {
+				const finalName = name || `${loaderLabel(loader)} ${version}`
+				// One build per name: the answer comes only when the game and the
+				// loader are fully downloaded, so mods can be added right away.
+				const existing = (await list().catch(() => [])).find(
+					(instance) => instance.name.toLowerCase() === finalName.toLowerCase(),
+				)
+				if (existing) return await reuseExistingBuild(existing, 420000)
 				const job = await install_create_instance({
-					name: name || `${loaderLabel(loader)} ${version}`,
+					name: finalName,
 					gameVersion: version,
 					loader,
 					loaderVersion: loader === 'vanilla' ? null : loaderVersion || 'stable',
 					iconPath: null,
 				})
 				const id = installJobInstanceId(job)
-				return `Создаю сборку «${name || version}» — Minecraft ${version}, ${loaderLabel(loader)}${id ? ` (id: ${id})` : ''}. Ставится в фоне; моды можно добавлять сразу через launcher_install с этим id.`
+				if (!id) {
+					return `Создаю сборку «${finalName}» — Minecraft ${version}, ${loaderLabel(loader)}. Ставится в фоне, прогресс в загрузках.`
+				}
+				noteAgentThought(`Скачиваю Minecraft ${version} и ядро ${loaderLabel(loader)} для «${finalName}»`)
+				const outcome = await waitInstallDone(job.job_id, id, `«${finalName}»`, 420000)
+				if (outcome === 'готова') {
+					return `Сборка «${finalName}» готова — Minecraft ${version}, ${loaderLabel(loader)} (id: ${id}). Моды ставь через launcher_install.`
+				}
+				if (outcome.startsWith('установка не удалась')) {
+					return `Сборка «${finalName}» не установилась: ${outcome.replace('установка не удалась: ', '')}. Разбери ошибку и попробуй снова — заново создавать эту же сборку не нужно.`
+				}
+				if (outcome === 'остановлено') return outcome
+				return `Сборка «${finalName}» (id: ${id}) ещё скачивается (${outcome}) — проверь позже через <<instance_info|${id}>>, новую не создавай.`
 			} catch (error) {
 				return `Не создалась: ${String(error).slice(0, 300)}`
 			}
@@ -415,12 +511,27 @@ registerAiToolHandler(async (tool, args) => {
 			try {
 				if (/^cf:\d+$/i.test(id)) {
 					const projectId = id.slice(3)
+					const title = `CurseForge ${projectId}`
+					const existing = (await list().catch(() => [])).find(
+						(instance) => instance.name.toLowerCase() === title.toLowerCase(),
+					)
+					if (existing) return await reuseExistingBuild(existing, 720000)
 					const job = await install_create_modpack_instance({
 						type: 'fromCurseforge',
 						project_id: projectId,
-						title: `CurseForge ${projectId}`,
+						title,
 					})
-					return `Ставлю модпак с CurseForge (id ${projectId}) как новую сборку${installJobInstanceId(job) ? ` (id: ${installJobInstanceId(job)})` : ''} — прогресс в загрузках.`
+					const mid = installJobInstanceId(job)
+					if (!mid) {
+						return `Ставлю модпак с CurseForge (id ${projectId}) как новую сборку — прогресс в загрузках.`
+					}
+					noteAgentThought(`Скачиваю модпак CurseForge ${projectId} — жду конца скачивания`)
+					const outcome = await waitInstallDone(job.job_id, mid, 'модпак с CurseForge', 720000)
+					if (outcome === 'готова') {
+						return `Модпак с CurseForge (id ${projectId}) установлен как сборка (id: ${mid}) — готов к запуску <<launch_instance|${mid}>>.`
+					}
+					if (outcome === 'остановлено') return outcome
+					return `Модпак с CurseForge (id ${projectId}) ещё ставится (${outcome}), сборка (id: ${mid}) — проверь <<instance_info|${mid}>>, новую не создавай.`
 				}
 				const response = await proxiedFetch(
 					`https://api.modrinth.com/v2/project/${encodeURIComponent(id)}`,
@@ -454,6 +565,10 @@ registerAiToolHandler(async (tool, args) => {
 					: []
 				const version = versions.find((item) => item.version_type === 'release') ?? versions[0]
 				if (!version) return `У «${project.title}» нет версий для установки`
+				const existing = (await list().catch(() => [])).find(
+					(instance) => instance.name.toLowerCase() === project.title.toLowerCase(),
+				)
+				if (existing) return await reuseExistingBuild(existing, 720000)
 				const job = await install_create_modpack_instance({
 					type: 'fromVersionId',
 					project_id: project.id,
@@ -461,7 +576,17 @@ registerAiToolHandler(async (tool, args) => {
 					title: project.title,
 					icon_url: project.icon_url ?? null,
 				})
-				return `Ставлю модпак «${project.title}» ${version.version_number} (Minecraft ${version.game_versions.join(', ')}) как новую сборку${installJobInstanceId(job) ? ` (id: ${installJobInstanceId(job)})` : ''} — прогресс в загрузках.`
+				const mid = installJobInstanceId(job)
+				if (!mid) {
+					return `Ставлю модпак «${project.title}» ${version.version_number} как новую сборку — прогресс в загрузках.`
+				}
+				noteAgentThought(`Скачиваю модпак «${project.title}» — жду конца скачивания`)
+				const outcome = await waitInstallDone(job.job_id, mid, `«${project.title}»`, 720000)
+				if (outcome === 'готова') {
+					return `Модпак «${project.title}» ${version.version_number} (Minecraft ${version.game_versions.join(', ')}) установлен как сборка (id: ${mid}) — готов к запуску <<launch_instance|${mid}>>.`
+				}
+				if (outcome === 'остановлено') return outcome
+				return `Модпак «${project.title}» ещё ставится (${outcome}), сборка (id: ${mid}) — проверь <<instance_info|${mid}>>, новую не создавай.`
 			} catch (error) {
 				return `Модпак не установился: ${String(error).slice(0, 300)}`
 			}

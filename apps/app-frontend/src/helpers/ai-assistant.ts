@@ -42,7 +42,7 @@ import {
 import { bytesToBase64 } from './ai-sandbox'
 import { get_default_user, users } from './auth'
 import { curseforgeFiles, installCurseforgeMod, searchCurseforge } from './curseforge-api'
-import { list } from './instance'
+import { get, list } from './instance'
 import {
 	add_project_from_version,
 	type DownloadReason,
@@ -1082,10 +1082,11 @@ export const AI_CHARACTER_HINT = [
 export const AI_LAUNCHER_HINT = [
 	'Сборки и игра (ты полностью автономен — делай сам, не отправляй игрока жать кнопки):',
 	'- <<instance_info|id или название>> — всё о сборке: версия Minecraft, ядро (лоадер) и его версия, откуда сборка (модпак Modrinth/CurseForge/вручную), сколько модов/ресурс-паков/шейдеров, с какого CDN файлы (cdn.modrinth.com, edge.forgecdn.net, локальные), что можно обновить, полный список. Пусто — выбранная сборка.',
-	'- <<create_instance|название::версия::ядро>> — создать сборку (ядро: fabric, forge, neoforge, quilt, vanilla), например <<create_instance|Выживание::1.21.1::fabric>>',
-	'- <<install_modpack|id>> — поставить модпак как новую сборку (id с Modrinth или cf:ID с CurseForge)',
-	'- <<build_modpack|название::версия::ядро::мод1;;мод2;;…::rp:ресурс-пак;;shader:шейдер>> — СОБРАТЬ СВОЮ СБОРКУ целиком одной командой: создаст сборку и поставит все моды (по названиям, найдёт сам под версию и ядро), ресурс-паки и шейдеры (Iris/Oculus добавится сам). Версию можно оставить пустой — возьмётся последняя. Пример: <<build_modpack|Магия и техно::1.20.1::forge::create;;botania;;jei;;sodium::rp:fresh animations;;shader:complementary>>',
+	'- <<create_instance|название::версия::ядро>> — создать сборку (ядро: fabric, forge, neoforge, quilt, vanilla), например <<create_instance|Выживание::1.21.1::fabric>>; дожидается полной установки и возвращается уже готовой',
+	'- <<install_modpack|id>> — поставить модпак как новую сборку (id с Modrinth или cf:ID с CurseForge); дожидается конца скачивания — после ответа сборка готова',
+	'- <<build_modpack|название::версия::ядро::мод1;;мод2;;…::rp:ресурс-пак;;shader:шейдер>> — СОБРАТЬ СВОЮ СБОРКУ целиком одной командой: создаст сборку и поставит все моды (по названиям, найдёт сам под версию и ядро), ресурс-паки и шейдеры (Iris/Oculus добавится сам), дожидается установки каждого. Версию можно оставить пустой — возьмётся последняя. Оптимизация (Sodium/Embeddium, Lithium, FerriteCore) добавится сама, если её нет в списке. Пример: <<build_modpack|Магия и техно::1.20.1::forge::create;;botania;;jei;;sodium::rp:fresh animations;;shader:complementary>>',
 	'Сборка по описанию: когда игрок описывает идею словами, одним словом («космос», «хоррор», «средневековье»), текстом или картинкой — сам продумай тему, подбери 10–30 совместимых модов под одно ядро и версию (основа + оптимизация + QoL: JEI/EMI, мини-карта, Sodium/Embeddium), ресурс-пак и шейдер под атмосферу, коротко объясни выбор и сразу вызывай build_modpack. По картинке: определи стиль/биом/эпоху и подбери под него. Дополнительно рекомендуй: обои (find_wallpaper), цвет/градиент лаунчера под тему, ссылки на вики модов.',
+	'Сборки без дублей: перед созданием глянь <<list_instances|>> — если сборка с таким именем уже есть, работай с ней (create_instance и install_modpack сами находят её по имени и НЕ создают вторую). Все три команды дожидаются конца скачивания и установки: после их ответа сборка готова, моды ставить можно сразу. Если ответ «ещё ставится» или «время ожидания вышло» — подожди и проверь <<instance_info|id>>, НИКОГДА не создавай сборку заново из-за ожидания.',
 	'Стандарт сборки: моды РАЗНЫЕ по назначению — основа геймплея под тему (биомы, мобы, магия, техника), оптимизация (Sodium/Embeddium, Lithium), QoL (JEI/EMI, мини-карта), а не одна оптимизация; ядро подбирай под тему (магия — forge/neoforge, техно и лёгкость — fabric). После установки загляни в конфиги (<<instance_files|сборка::config>>, <<instance_read|…>>) и поправь ключевое через <<instance_write|…>>. Потом предложи запуск: <<launch_instance|…>>; если краш — сразу <<instance_logs|сборка::краш>>, найди виновника, замени или убери (<<mod_delete|…>>) и собери заново. Итог — работающая сборка, а не список названий.',
 	'Модификации на заказ: датапак, ресурс-пак или простой мод собери в песочнице (sandbox_write, scaffold), упакуй и поставь в сборку <<install_to_instance|файл::тип::сборка>>; Java-мод — <<launcher_compile_java|файлы>>. Настройками лаунчера управляй сам: launcher_set_accent, launcher_set_gradient, launcher_set_background, launcher_set_theme, launcher_save_theme, open_settings.',
 	'- <<launch_instance|id или название>> — запустить игру; <<stop_instance|id>> — закрыть игру',
@@ -3446,23 +3447,50 @@ registerAiToolHandler(async (tool, args) => {
 			}
 		}
 		const name = nameRaw || `Сборка ${version}`
-		const before = new Set((await list().catch(() => [])).map((instance) => instance.id))
-		const created = await runTool('create_instance', `${name}::${version}::${loader}`)
-		if (/^Не создалась|не знаю|Нужна версия/.test(created)) return created
-		let instanceId = /\(id: ([^)]+)\)/.exec(created)?.[1] ?? ''
-		for (let wait = 0; wait < 40; wait++) {
-			const all = await list().catch(() => [])
-			const found = instanceId
-				? all.find((instance) => instance.id === instanceId)
-				: all.find((instance) => !before.has(instance.id) && instance.name === name)
-			if (found) {
-				instanceId = found.id
-				break
+		// One build per name: an existing build is reused, never duplicated.
+		const existing = (await list().catch(() => [])).find(
+			(instance) => instance.name.toLowerCase() === name.toLowerCase(),
+		)
+		let instanceId = ''
+		if (existing) {
+			instanceId = existing.id
+			if (
+				existing.install_stage !== 'installed' &&
+				existing.install_stage !== 'pack_installed'
+			) {
+				noteAgentThought(`Сборка «${name}» уже ставится — жду её, а не создаю новую`)
+				for (let wait = 0; wait < 210; wait++) {
+					if (playerTookOver()) break
+					const again = await get(existing.id).catch(() => null)
+					if (!again) break
+					if (
+						again.install_stage === 'installed' ||
+						again.install_stage === 'pack_installed'
+					)
+						break
+					await sleep(2000)
+				}
 			}
-			await sleep(1000)
+		} else {
+			const created = await runTool('create_instance', `${name}::${version}::${loader}`)
+			if (/^Не создалась|не знаю|Нужна версия/.test(created)) return created
+			instanceId = /\(id: ([^)]+)\)/.exec(created)?.[1] ?? ''
+			const before = new Set((await list().catch(() => [])).map((instance) => instance.id))
+			for (let wait = 0; wait < 40; wait++) {
+				const all = await list().catch(() => [])
+				const found = instanceId
+					? all.find((instance) => instance.id === instanceId)
+					: all.find((instance) => !before.has(instance.id) && instance.name === name)
+				if (found) {
+					instanceId = found.id
+					break
+				}
+				if (playerTookOver()) break
+				await sleep(1000)
+			}
+			if (!instanceId)
+				return `${created}\nСборка ещё создаётся — поставь моды чуть позже через launcher_install.`
 		}
-		if (!instanceId)
-			return `${created}\nСборка ещё создаётся — поставь моды чуть позже через launcher_install.`
 
 		const facetsFor = (type: string) => {
 			const facets: string[][] = [[`project_type:${type}`], [`versions:${version}`]]
@@ -3498,6 +3526,18 @@ registerAiToolHandler(async (tool, args) => {
 		// Shaders need a shader loader in the build.
 		if (jobs.some((job) => job.type === 'shader') && loader !== 'vanilla') {
 			jobs.unshift({ query: /forge/.test(loader) ? 'oculus' : 'iris', type: 'mod' })
+		}
+		// A build that actually runs: optimization rides along even when
+		// the player never named it. Any optimizer in the list skips this.
+		if (loader !== 'vanilla') {
+			const asked = wanted.join(' ').toLowerCase()
+			if (!/(sodium|embeddium|lithium|ferrite|modernfix|rubidium|radium|optimi)/.test(asked)) {
+				const forgeSide = loader === 'forge' || loader === 'neoforge'
+				jobs.unshift(
+					{ query: forgeSide ? 'embeddium' : 'sodium', type: 'mod' },
+					{ query: forgeSide ? 'ferrite-core' : 'lithium', type: 'mod' },
+				)
+			}
 		}
 
 		const done: string[] = []
@@ -3849,7 +3889,7 @@ export const agentQueue = ref<QueuedTurn[]>([])
 export const agentThoughts = ref<string[]>([])
 
 /** Appends one thought line, keeping the buffer small. */
-function noteAgentThought(line: string): void {
+export function noteAgentThought(line: string): void {
 	const text = line.replace(/\s+/g, ' ').trim()
 	if (!text) return
 	agentThoughts.value = [...agentThoughts.value.slice(-29), text]

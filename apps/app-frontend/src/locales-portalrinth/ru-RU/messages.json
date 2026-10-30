@@ -3705,7 +3705,7 @@
 		"message": "Погода"
 	},
 	"app.widgets.weather.description": {
-		"message": "Облачко у иконок сверху: регион игрока и погода. Можно добавить несколько городов и переключаться между ними (Open-Meteo, без ключа)."
+		"message": "Облачко у иконок сверху: регион игрока и погода. Можно добавить несколько городов и переключаться между ними. Ключ Meteum от Яндекса делает станцию точнее (без ключа — Open-Meteo)."
 	},
 	"app.cloud.my-place": {
 		"message": "Моё место"
@@ -3721,6 +3721,24 @@
 	},
 	"app.cloud.not-found": {
 		"message": "Город не нашёлся"
+	},
+	"app.cloud.meteum-key": {
+		"message": "Ключ Meteum от Яндекса…"
+	},
+	"app.cloud.meteum-saved": {
+		"message": "Ключ Meteum сохранён"
+	},
+	"app.cloud.meteum-save": {
+		"message": "Сохранить ключ"
+	},
+	"app.cloud.meteum-hint": {
+		"message": "Без ключа — Open-Meteo. Тестовый ключ бесплатный:"
+	},
+	"app.cloud.meteum-on": {
+		"message": "Станция: Meteum от Яндекса — ключ работает."
+	},
+	"app.cloud.meteum-get": {
+		"message": "получить ключ"
 	},
 	"app.settings.tabs.hotkeys": {
 		"message": "Горячие клавиши"

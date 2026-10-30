@@ -2082,7 +2082,7 @@
 		"message": "Weather"
 	},
 	"app.widgets.weather.description": {
-		"message": "A cloud beside the title-bar icons: your region and the weather. Add as many cities as you like and switch between them (Open-Meteo, keyless)."
+		"message": "A cloud beside the title-bar icons: your region and the weather. Add as many cities as you like and switch between them. A Yandex Meteum key makes the station sharper (no key — Open-Meteo)."
 	},
 	"app.cloud.my-place": {
 		"message": "My place"
@@ -2098,6 +2098,24 @@
 	},
 	"app.cloud.not-found": {
 		"message": "City not found"
+	},
+	"app.cloud.meteum-key": {
+		"message": "Yandex Meteum key…"
+	},
+	"app.cloud.meteum-saved": {
+		"message": "Meteum key saved"
+	},
+	"app.cloud.meteum-save": {
+		"message": "Save key"
+	},
+	"app.cloud.meteum-hint": {
+		"message": "No key — Open-Meteo. The trial key is free:"
+	},
+	"app.cloud.meteum-on": {
+		"message": "Station: Yandex Meteum — the key works."
+	},
+	"app.cloud.meteum-get": {
+		"message": "get a key"
 	},
 	"app.settings.tabs.browser": {
 		"message": "Browser"

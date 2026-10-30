@@ -16,6 +16,13 @@
 					<span v-if="statusText" class="ai-dock-status" :class="{ 'ai-dock-shimmer': agentBusy }">
 						{{ statusText }}
 					</span>
+					<span
+						v-if="justDone"
+						v-tooltip="'Готово — можно продолжать'"
+						class="ai-dock-tick"
+					>
+						<CheckCircleIcon class="size-3.5" />
+					</span>
 					<span v-if="unread && !open" class="ai-dock-dot" />
 					<ChevronDownIcon class="ai-dock-chevron size-3.5" :class="{ 'rotate-180': open }" />
 				</button>
@@ -97,13 +104,16 @@
 
 <script setup lang="ts">
 /**
- * Portalus's dock: a glass pill to the right of the title-bar clock that
+ * Portalus's dock: a glass pill to the left of the title-bar clock that
  * stays while he works or has something to say, on every screen. Clicked it
  * unfolds into the live run (the same step timeline as the chat) or his last
  * reply, with an input that talks to him right here - the player never has
- * to go back to the chat to keep working with him.
+ * to go back to the chat to keep working with him. When a run is over the
+ * dock stays put with a green tick: Portalus is still reachable, the talk
+ * goes on in the same panel.
  */
 import {
+	CheckCircleIcon,
 	ChevronDownIcon,
 	ExternalIcon,
 	SendIcon,
@@ -133,16 +143,22 @@ const open = ref(false)
 const draft = ref('')
 const dismissed = ref(false)
 const unread = ref(false)
+/** True once Portalus ran at least one turn here: the dock stays afterwards. */
+const everBusy = ref(false)
+/** True right after a run ends: shows the green tick and "готово". */
+const justDone = ref(false)
 const input = ref<HTMLInputElement | null>(null)
 const scroller = ref<HTMLElement | null>(null)
 
 /** Shown off the chat page while there is a run, a fresh notice, or the
- * player opened it; "Скрыть" puts it away until Portalus has news again. */
+ * player opened it; and once Portalus worked this session it never vanishes
+ * on its own - after a run it stays with the tick so the talk goes on.
+ * "Скрыть" puts it away until Portalus has news again. */
 const visible = computed(
 	() =>
 		route.path !== '/ai' &&
 		!dismissed.value &&
-		(agentBusy.value || agentNavNotice.value !== null || open.value),
+		(agentBusy.value || everBusy.value || agentNavNotice.value !== null || open.value),
 )
 
 const phaseLabel = computed(() =>
@@ -159,7 +175,7 @@ const statusText = computed(() => {
 		if (step?.kind === 'tool' && step.tool) return `${phaseLabel.value} · ${toolLabel(step.tool)}`
 		return `${phaseLabel.value}…`
 	}
-	if (agentNavNotice.value) return 'готово'
+	if (agentNavNotice.value || justDone.value) return 'готово'
 	return ''
 })
 
@@ -237,8 +253,15 @@ watch(
 		if (!open.value) unread.value = true
 	},
 )
-watch(agentBusy, (busy) => {
-	if (busy) dismissed.value = false
+watch(agentBusy, (busy, was) => {
+	if (busy) {
+		everBusy.value = true
+		dismissed.value = false
+		justDone.value = false
+	} else if (was) {
+		justDone.value = true
+		if (!open.value) unread.value = true
+	}
 })
 watch([() => agentTurn.value.steps.length, agentStreaming, open], () => {
 	void nextTick(() => {
@@ -280,12 +303,13 @@ function openLink(url: string) {
 	void openUrl(url).catch(() => window.open(url, '_blank'))
 }
 
-// Sits just right of the title-bar clock, so the time stays readable.
+// Sits just left of the title-bar clock, so the time stays readable; the
+// CSS shifts the whole dock back by its own width (translateX(-100%)).
 const anchorLeft = ref(0)
 function place() {
 	const clock = document.querySelector<HTMLElement>('[data-titlebar-clock]')
 	const rect = clock?.getBoundingClientRect()
-	anchorLeft.value = rect && rect.width > 0 ? rect.right + 10 : window.innerWidth / 2 + 64
+	anchorLeft.value = rect && rect.width > 0 ? rect.left - 10 : window.innerWidth / 2 + 64
 }
 let observer: ResizeObserver | undefined
 onMounted(() => {
@@ -312,6 +336,7 @@ onBeforeUnmount(() => {
 	top: 0.3rem;
 	z-index: 80;
 	pointer-events: none;
+	transform: translateX(-100%);
 }
 
 .ai-dock {
@@ -403,6 +428,13 @@ onBeforeUnmount(() => {
 	text-overflow: ellipsis;
 	color: var(--color-secondary);
 	max-width: 14rem;
+}
+
+.ai-dock-tick {
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+	color: var(--color-green);
 }
 
 .ai-dock-dot {
@@ -602,7 +634,7 @@ onBeforeUnmount(() => {
 .ai-dock-enter-from,
 .ai-dock-leave-to {
 	opacity: 0;
-	transform: translateY(-8px) scale(0.96);
+	transform: translateX(-100%) translateY(-8px) scale(0.96);
 }
 
 @keyframes ai-dock-spin {
