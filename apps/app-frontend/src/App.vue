@@ -150,6 +150,7 @@ import {
         setActive,
 } from '@/helpers/mr_auth.ts'
 import { loadBackground } from '@/helpers/portalrinth-background'
+import { startDesignWatcher } from '@/helpers/portalrinth-design'
 import { handleHotkeyKeyEvent, registerHotkeyHandler } from '@/helpers/portalrinth-hotkeys'
 import { prefetchRouteChunks, startProjectHoverPrefetch } from '@/helpers/portalrinth-prefetch'
 import { installSoundEffects } from '@/helpers/portalrinth-sfx'
@@ -1638,6 +1639,7 @@ onMounted(() => {
         void revealMainWindow()
         prefetchRouteChunks(router)
         startProjectHoverPrefetch()
+        startDesignWatcher()
 
         error.setErrorModal(errorModal.value)
         error.setMinecraftAuthErrorModal(minecraftAuthErrorModal.value)
@@ -2692,6 +2694,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                         @confirm="resolvePackManifestChoice"
                 />
                 <div
+                        data-pd-zone="sidebar"
                         class="app-grid-navbar bg-bg-raised flex flex-col p-[0.5rem] pt-0 gap-[0.25rem] w-[--left-bar-width]"
                 >
                         <NavButton
@@ -2836,6 +2839,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                         </NavButton>
                 </div>
                 <AppTitleBar
+                        data-pd-zone="titlebar"
                         :can-navigate-back="canNavigateBack"
                         :can-navigate-forward="canNavigateForward"
                         :show-sidebar-toggle="!forceSidebar && appSettings.toggleSidebar"
@@ -2845,6 +2849,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
         </div>
         <div
                 v-if="stateInitialized"
+                data-pd-zone="content"
                 class="app-contents"
                 :class="{
                         'sidebar-enabled': sidebarVisible,

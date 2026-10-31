@@ -6,7 +6,10 @@
  * Данные приходят прямо из токена [[mod|...]] в ответе Порталуса; чего
  * не хватает - добираем из Modrinth API по slug и кэшируем.
  */
-import { computed, defineComponent, h, type PropType,ref } from 'vue'
+import { TextQuoteIcon } from '@modrinth/assets'
+import { computed, defineComponent, h, type PropType, ref } from 'vue'
+
+import { addAiPing } from '@/helpers/ai-pings'
 
 export interface AiMentionMeta {
 	ptype: string
@@ -151,6 +154,18 @@ export default defineComponent({
 			emit('open', path.value)
 		}
 
+		/** Пинг: объект прицепится чипом к следующему сообщению игрока. */
+		function ping(event: MouseEvent) {
+			event.preventDefault()
+			event.stopPropagation()
+			addAiPing({
+				kind: 'project',
+				title: title.value,
+				subtitle: typeLabel.value,
+				meta: { ptype: props.meta.ptype, id: props.meta.id, title: title.value },
+			})
+		}
+
 		return () =>
 			h('span', { class: 'ai-mention' }, [
 				h(
@@ -195,6 +210,18 @@ export default defineComponent({
 								h('span', { class: 'ai-mention-tag', key: 'dl' }, `${compactCount(downloads.value)} ↓`),
 							])
 						: null,
+						h('span', { class: 'ai-mention-card-foot' }, [
+							h(
+								'button',
+								{
+									type: 'button',
+									class: 'ai-mention-ping',
+									title: 'Прицепить к следующему сообщению',
+									onClick: ping,
+								},
+								[h(TextQuoteIcon, { class: 'size-3' }), 'Пингануть'],
+							),
+						]),
 				]),
 			])
 	},
@@ -303,6 +330,37 @@ export default defineComponent({
 	opacity: 1;
 	visibility: visible;
 	transform: translate(-50%, 0);
+	pointer-events: auto;
+}
+
+.ai-mention-card-foot {
+	display: flex;
+	justify-content: flex-end;
+}
+
+.ai-mention-ping {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.2rem 0.6rem;
+	border: 1px solid color-mix(in srgb, var(--color-brand) 35%, transparent);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+	color: var(--color-brand);
+	font: inherit;
+	font-size: 0.6875rem;
+	font-weight: 700;
+	cursor: pointer;
+	transition:
+		background 0.16s ease,
+		border-color 0.16s ease,
+		transform 0.16s ease;
+}
+
+.ai-mention-ping:hover {
+	background: color-mix(in srgb, var(--color-brand) 22%, transparent);
+	border-color: var(--color-brand);
+	transform: translateY(-1px);
 }
 
 .ai-mention-head {

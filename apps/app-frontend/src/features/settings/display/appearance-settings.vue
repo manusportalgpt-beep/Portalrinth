@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { PlusIcon, XIcon } from '@modrinth/assets'
+import { PaintbrushIcon, PlusIcon, XIcon } from '@modrinth/assets'
 import {
 	AppearanceSettingsLayout,
+	Button,
 	ColorPicker,
 	defineMessages,
 	injectAuth,
@@ -18,18 +19,18 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
 	ACCENT_PRESETS,
 	accentColorFor,
+	accentGradientAnimated,
+	accentGradientSpeed,
 	addCustomAccentColor,
 	CUSTOM_ACCENT_ID,
 	DEFAULT_ACCENT_PRESET,
 	findAccentPreset,
+	iconsAccent,
 	MAX_ACCENT_GRADIENT_STOPS,
 	MAX_CUSTOM_ACCENT_COLORS,
-	accentGradientAnimated,
-	accentGradientSpeed,
-	setAccentGradientSpeed,
 	removeCustomAccentColor,
 	setAccentGradientAnimated,
-	iconsAccent,
+	setAccentGradientSpeed,
 	setIconsAccent,
 	showAccent,
 	useAccentPreset,
@@ -37,11 +38,15 @@ import {
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { type ColorTheme, isDarkTheme, useTheme } from '@/composables/use-theme.ts'
 import { injectAppSettingsModal } from '@/features/settings/app-settings-modal/context'
+import DesignEditorOverlay from '@/features/settings/display/DesignEditorOverlay.vue'
 import PortalrinthBackgroundSettings from '@/features/settings/display/PortalrinthBackgroundSettings.vue'
 import type { ThemeAccent } from '@/helpers/portalrinth-themes'
 import { type AppSettings, get, set } from '@/helpers/settings.ts'
 
 const theme = useTheme()
+
+/** Редактор дизайна открывается поверх всей настройки и правит вид вживую. */
+const showDesignEditor = ref(false)
 
 /** The colour the wheel is on. It is not the accent until it is chosen. */
 const pickedColor = ref('#c1121f')
@@ -140,6 +145,14 @@ const savedAccent = ref({
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
+	designEditor: {
+		id: 'app.design.title',
+		defaultMessage: 'Редактор дизайна',
+	},
+	designEditorHint: {
+		id: 'app.design.description',
+		defaultMessage: 'Меняй вид лаунчера вживую: акцент, фон, стекло. «Сброс» вернёт всё как было.',
+	},
 	accentPickTitle: {
 		id: 'app.appearance-settings.accent.pick',
 		defaultMessage: 'Pick an accent colour',
@@ -419,6 +432,12 @@ provideAppearanceSettings({
 
 	<!-- Portalrinth's own: the shared layout has no notion of an accent that can
 	     be chosen, so the picker is added here rather than to it. -->
+	<Button class="mt-6" type="outlined" @click="showDesignEditor = true">
+		<PaintbrushIcon aria-hidden="true" />
+		{{ formatMessage(messages.designEditor) }}
+	</Button>
+	<p class="m-0 mt-1 text-sm text-secondary">{{ formatMessage(messages.designEditorHint) }}</p>
+	<DesignEditorOverlay :open="showDesignEditor" @close="showDesignEditor = false" />
 	<div class="mt-6 flex flex-col gap-3">
 		<div>
 			<h2 class="m-0 text-lg font-semibold text-contrast">

@@ -21,6 +21,7 @@ import {
 	ImageIcon,
 	MonitorIcon,
 	PackageIcon,
+	PencilIcon,
 	PlayIcon,
 	PlusIcon,
 	RefreshCwIcon,
@@ -29,6 +30,7 @@ import {
 	SparklesIcon,
 	StopCircleIcon,
 	TerminalSquareIcon,
+	TextQuoteIcon,
 	TrashIcon,
 	XIcon,
 } from '@modrinth/assets'
@@ -67,7 +69,9 @@ import {
 	stripLooseCommands,
 	zaiPeakHoursLabel,
 } from '@/helpers/ai-assistant'
+import { highlightLine } from '@/helpers/ai-code-highlight'
 import { buildSitePreview } from '@/helpers/ai-launcher-tools'
+import { addAiPing, aiPings, removeAiPing, serializeAiPings } from '@/helpers/ai-pings'
 import { openImageViewer } from '@/helpers/ai-reader'
 import {
 	type AttachedFile,
@@ -148,6 +152,16 @@ const messages = {
 	},
 	models: { id: 'app.ai.models', defaultMessage: 'Модель и ключ' },
 	commands: { id: 'app.ai.activity.commands', defaultMessage: 'команд' },
+	codeEdit: { id: 'app.ai.code.edit', defaultMessage: 'Редактировать' },
+	codeDone: { id: 'app.ai.code.done', defaultMessage: 'Готово' },
+	codePing: { id: 'app.ai.code.ping', defaultMessage: 'Пингануть' },
+	codePingHint: {
+		id: 'app.ai.code.ping-hint',
+		defaultMessage: 'Прицепить к следующему сообщению - ИИ будет знать, какой код иметь в виду',
+	},
+	codeFileCreated: { id: 'app.ai.code.file-created', defaultMessage: 'файл создан' },
+	codeFileChanged: { id: 'app.ai.code.file-changed', defaultMessage: 'файл изменён' },
+	pingsTitle: { id: 'app.ai.pings', defaultMessage: 'Пинг' },
 	filesCreated: { id: 'app.ai.activity.created', defaultMessage: 'сгенерирован файл' },
 	filesChanged: { id: 'app.ai.activity.changed', defaultMessage: 'изменён файл' },
 	openFolderCard: {
@@ -576,11 +590,14 @@ async function startFreshChat() {
 /** The chat never blocks: while Portalus works, a new message quietly lines
  * up "в очереди" and goes out the moment the run ends or is stopped. */
 async function send(text?: string) {
-	const message = (text ?? input.value).trim()
+	const typed = (text ?? input.value).trim()
+	const pings = serializeAiPings()
+	const message = pings ? pings + typed : typed
 	if (!message && attachments.value.length === 0) return
 	errorText.value = ''
 	errorOnTurn.value = ''
 	input.value = ''
+	clearPings()
 	const files = attachments.value
 	attachments.value = []
 	await sendAgentMessage(message, files)
@@ -898,7 +915,7 @@ interface AiSegmentPart {
 	url?: string
 }
 type AiSegment =
-	| { kind: 'code'; lang: string; lines: string[] }
+	| { kind: 'code'; lang: string; file?: string; diffAdded?: number; diffRemoved?: number; lines: string[] }
 	| { kind: 'text'; text: string; parts: AiSegmentPart[] }
 
 const LINK_RE = /(\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>"')\]]+)/g
@@ -920,6 +937,94 @@ function splitLinks(text: string): AiSegmentPart[] {
 	return parts
 }
 
+// ---- Code cards: edit, ping, file status ---------------------------------
+
+/** Right in the card: the player fixes a line or two before pinging it back. */
+const codeEdits = ref<Record<string, string>>({})
+const editingCode = ref<Record<string, boolean>>({})
+
+function initEdit(key: string, segment: { lines: string[] }) {
+	if (codeEdits.value[key] === undefined)
+		codeEdits.value = { ...codeEdits.value, [key]: segment.lines.join('\n') }
+}
+
+function toggleEdit(key: string, segment: { lines: string[] }) {
+	if (editingCode.value[key]) {
+		editingCode.value = { ...editingCode.value, [key]: false }
+		return
+	}
+	initEdit(key, segment)
+	editingCode.value = { ...editingCode.value, [key]: true }
+}
+
+function codeText(key: string, segment: { lines: string[] }): string {
+	return codeEdits.value[key] ?? segment.lines.join('\n')
+}
+
+/** A ping says "work with THIS code" - the fragment rides with the next message. */
+function pingCode(key: string, segment: { lang?: string; file?: string; lines: string[] }) {
+	addAiPing({
+		kind: 'code',
+		title: segment.file || segment.lang || 'код',
+		lang: segment.lang,
+		code: codeText(key, segment),
+	})
+}
+
+/**
+ * A code block whose fence names a file meets the sandbox's own bookkeeping:
+ * created and changed files of this very reply give the card its
+ * «файл создан/изменён +N −M» badge without the model counting anything.
+ */
+function activityFor(
+	message: AiMessage,
+	segment: { file?: string; diffAdded?: number; diffRemoved?: number; lines: string[] },
+): { created: boolean; added: number; removed: number } | null {
+	if (!segment.file) {
+		if (segment.diffAdded === undefined && segment.diffRemoved === undefined) return null
+		return { created: false, added: segment.diffAdded ?? 0, removed: segment.diffRemoved ?? 0 }
+	}
+	const activity = message.activity
+	const samePath = (tracked: string) => tracked === segment.file || tracked.endsWith(`/${segment.file}`)
+	if (activity) {
+		if (activity.filesCreated.some(samePath))
+			return { created: true, added: segment.lines.length, removed: 0 }
+		const changed = activity.filesChanged.find((change) => samePath(change.path))
+		if (changed) return { created: false, added: changed.added, removed: changed.removed }
+	}
+	if (segment.diffAdded === undefined && segment.diffRemoved === undefined) return null
+	return { created: false, added: segment.diffAdded ?? 0, removed: segment.diffRemoved ?? 0 }
+}
+
+const FILE_CLAIM_RE =
+	/(создал|создаёт|создаю|сгенерировал|записал|написал|переписал|сохранил|изменил|изменяю|обновил|поправил|исправил)\s+(?:файлы?\s+)?[`"]?([\w.\\/-]+\.[A-Za-z0-9]{1,8})[`"]?/gi
+
+/**
+ * Files the assistant merely NAMES in plain prose («создал файл main.py»):
+ * the launcher draws them as chips too, unless the sandbox already counted them.
+ */
+function declaredFiles(message: AiMessage): { path: string; verb: string }[] {
+	const out: { path: string; verb: string }[] = []
+	if (!message.content) return out
+	const seen = new Set<string>()
+	for (const match of message.content.matchAll(FILE_CLAIM_RE)) {
+		const path = match[2]
+		const key = path.toLowerCase()
+		if (seen.has(key)) continue
+		seen.add(key)
+		const activity = message.activity
+		const samePath = (tracked: string) => tracked === path || tracked.endsWith(`/${path}`)
+		if (activity && (activity.filesCreated.some(samePath) || activity.filesChanged.some((change) => samePath(change.path))))
+			continue
+		out.push({ path, verb: match[1] })
+	}
+	return out
+}
+
+function clearPings() {
+	aiPings.value = []
+}
+
 /** Fenced code becomes its own segment; prose is scanned for links. */
 function parseSegments(content: string): AiSegment[] {
 	const segments: AiSegment[] = []
@@ -928,9 +1033,20 @@ function parseSegments(content: string): AiSegment[] {
 		const block = blocks[i]
 		if (i % 2 === 1) {
 			const newline = block.indexOf('\n')
-			const lang = newline >= 0 ? block.slice(0, newline).trim() : ''
+			const metaTokens = (newline >= 0 ? block.slice(0, newline).trim() : '').split(/\s+/).filter(Boolean)
+			const lang = metaTokens.shift() ?? ''
+			let file: string | undefined
+			let diffAdded: number | undefined
+			let diffRemoved: number | undefined
+			for (const token of metaTokens) {
+				const plus = /^\+(\d+)$/.exec(token)
+				const minus = /^-(\d+)$/.exec(token)
+				if (plus) diffAdded = Number(plus[1])
+				else if (minus) diffRemoved = Number(minus[1])
+				else if (/^[\w./\\-]+\.[A-Za-z0-9]{1,8}$/.test(token)) file = token
+			}
 			const code = newline >= 0 ? block.slice(newline + 1) : block
-			segments.push({ kind: 'code', lang, lines: code.replace(/\n+$/, '').split('\n') })
+			segments.push({ kind: 'code', lang, file, diffAdded, diffRemoved, lines: code.replace(/\n+$/, '').split('\n') })
 		} else {
 			const prose = stripLooseCommands(block).replace(/\n{3,}/g, '\n\n')
 			if (prose.trim())
@@ -1340,16 +1456,53 @@ defineExpose({ send })
 								>
 									<div class="ai-code-head">
 										<FileCodeIcon class="size-3.5 shrink-0" />
-										<span class="grow truncate">{{ segment.lang || 'код' }}</span>
+										<span class="grow truncate">
+											{{ segment.lang || 'код' }}<template v-if="segment.file"> · {{ segment.file }}</template>
+										</span>
+										<span
+											v-if="activityFor(message, segment)"
+											class="ai-code-diff"
+											:class="{ 'ai-code-diff--created': activityFor(message, segment)?.created }"
+										>
+											{{
+												activityFor(message, segment)?.created
+													? formatMessage(messages.codeFileCreated)
+													: formatMessage(messages.codeFileChanged)
+											}}
+											<span class="text-green">+{{ activityFor(message, segment)?.added ?? 0 }}</span
+											><span class="text-red"> −{{ activityFor(message, segment)?.removed ?? 0 }}</span>
+										</span>
 										<span class="ai-code-count"
 											>{{ segment.lines.length }} {{ linesWord(segment.lines.length) }}</span
 										>
+										<button
+											v-tooltip="formatMessage(messages.codePingHint)"
+											type="button"
+											class="ai-code-btn"
+											:aria-label="formatMessage(messages.codePing)"
+											@click="() => pingCode(`${index}-${segmentIndex}`, segment)"
+										>
+											<TextQuoteIcon class="size-3.5" />
+										</button>
+										<button
+											v-tooltip="editingCode[`${index}-${segmentIndex}`] ? formatMessage(messages.codeDone) : formatMessage(messages.codeEdit)"
+											type="button"
+											class="ai-code-btn"
+											:aria-label="editingCode[`${index}-${segmentIndex}`] ? formatMessage(messages.codeDone) : formatMessage(messages.codeEdit)"
+											@click="() => toggleEdit(`${index}-${segmentIndex}`, segment)"
+										>
+											<CheckIcon
+												v-if="editingCode[`${index}-${segmentIndex}`]"
+												class="size-3.5 text-green"
+											/>
+											<PencilIcon v-else class="size-3.5" />
+										</button>
 										<button
 											v-tooltip="'Скопировать'"
 											type="button"
 											class="ai-code-btn"
 											aria-label="Скопировать"
-											@click="() => copyCode(`${index}-${segmentIndex}`, segment.lines.join('\n'))"
+											@click="() => copyCode(`${index}-${segmentIndex}`, codeText(`${index}-${segmentIndex}`, segment))"
 										>
 											<CheckIcon
 												v-if="copiedCode === `${index}-${segmentIndex}`"
@@ -1384,13 +1537,28 @@ defineExpose({ send })
 											/>
 										</button>
 									</div>
-									<pre class="ai-code-pre m-0"><code><span
+									<pre
+										v-if="!editingCode[`${index}-${segmentIndex}`]"
+										class="ai-code-pre m-0"
+									><code><span
 										v-for="(line, lineIndex) in segment.lines"
 										:key="lineIndex"
 										class="ai-code-line"
 										:class="{ 'ai-code-animated': aiSettings.chatEffects }"
 										:style="{ animationDelay: `${Math.min(lineIndex * 70, 2800)}ms` }"
-									>{{ line }}</span></code></pre>
+									><template v-if="segment.lang"><span
+											v-for="(token, tokenIndex) in highlightLine(line, segment.lang)"
+											:key="tokenIndex"
+											:class="token.c"
+										>{{ token.t }}</span></template><template v-else>{{ line }}</template></span></code></pre>
+									<textarea
+										v-else
+										v-model="codeEdits[`${index}-${segmentIndex}`]"
+										class="ai-code-edit"
+										spellcheck="false"
+										:rows="Math.min(segment.lines.length + 1, 24)"
+										@focus="initEdit(`${index}-${segmentIndex}`, segment)"
+									/>
 									<button
 										v-if="codeFolded(`${index}-${segmentIndex}`, segment.lines.length)"
 										type="button"
@@ -1430,6 +1598,14 @@ defineExpose({ send })
 								{{ formatMessage(messages.filesChanged) }}: {{ change.path }}
 								<span class="text-green">+{{ change.added }}</span
 								>/<span class="text-red"> −{{ change.removed }}</span>
+							</span>
+							<span
+								v-for="claim in declaredFiles(message)"
+								:key="`d-${claim.path}`"
+								class="ai-activity-chip ai-activity-claimed"
+							>
+								<FileCodeIcon class="size-3.5" />
+								{{ claim.verb }}: {{ claim.path }}
 							</span>
 							<span
 								v-for="(image, imageIndex) in message.activity.images ?? []"
@@ -1804,6 +1980,22 @@ defineExpose({ send })
 				</button>
 			</div>
 
+			<div v-if="aiPings.length > 0" class="mb-2 flex flex-wrap gap-2">
+				<span v-for="ping in aiPings" :key="ping.id" class="ai-ping-chip">
+					<TextQuoteIcon v-if="ping.kind === 'code'" class="size-3.5 shrink-0" />
+					<SparklesIcon v-else class="size-3.5 shrink-0" />
+					<span class="max-w-64 truncate">
+						{{ formatMessage(messages.pingsTitle) }}: {{ ping.title }}
+					</span>
+					<button
+						class="ml-1 cursor-pointer border-none bg-transparent p-0 text-secondary hover:text-primary"
+						:aria-label="formatMessage(messages.clear)"
+						@click="removeAiPing(ping.id)"
+					>
+						<XIcon class="size-3.5" />
+					</button>
+				</span>
+			</div>
 			<div v-if="attachments.length > 0" class="mb-2 flex flex-wrap gap-2">
 				<span
 					v-for="(file, index) in attachments"
@@ -3219,5 +3411,109 @@ defineExpose({ send })
 	border-radius: 0.3rem;
 	font-size: 0.6875rem;
 	color: var(--color-secondary);
+}
+
+.ai-code-diff {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	flex-shrink: 0;
+	padding: 0.05rem 0.45rem;
+	border-radius: 999px;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	background: color-mix(in srgb, var(--color-brand) 14%, transparent);
+	color: var(--color-secondary);
+}
+
+.ai-code-diff--created {
+	background: color-mix(in srgb, var(--color-green) 16%, transparent);
+}
+
+.ai-code-edit {
+	width: 100%;
+	margin: 0;
+	padding: 0.6rem 0.75rem;
+	border: 1px solid color-mix(in srgb, var(--color-brand) 35%, transparent);
+	border-radius: 0 0 0.6rem 0.6rem;
+	background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+	color: var(--color-contrast);
+	font-family: var(--monospace-font, ui-monospace, monospace);
+	font-size: 0.78rem;
+	line-height: 1.55;
+	resize: vertical;
+	outline: none;
+}
+
+.ai-code-edit:focus {
+	border-color: var(--color-brand);
+}
+
+.ai-ping-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.2rem 0.55rem;
+	border-radius: 999px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--color-contrast);
+	background: color-mix(in srgb, var(--color-brand) 16%, transparent);
+	border: 1px solid color-mix(in srgb, var(--color-brand) 35%, transparent);
+	animation: ai-ping-in 0.25s ease;
+}
+
+@keyframes ai-ping-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.35rem) scale(0.94);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.ai-activity-claimed {
+	border: 1px dashed color-mix(in srgb, var(--color-brand) 45%, transparent);
+	background: color-mix(in srgb, var(--color-brand) 8%, transparent);
+}
+
+/* Подсветка синтаксиса: палитра «One Dark» без зависимостей. */
+.tok-kw {
+	color: #c678dd;
+}
+
+.tok-str {
+	color: #98c379;
+}
+
+.tok-num {
+	color: #d19a66;
+}
+
+.tok-com {
+	color: #8b949e;
+	font-style: italic;
+}
+
+.tok-fn {
+	color: #61afef;
+}
+
+.tok-tag {
+	color: #e06c75;
+}
+
+.tok-attr {
+	color: #d19a66;
+}
+
+.tok-prop {
+	color: #56b6c2;
+}
+
+.tok-typ {
+	color: #e5c07b;
 }
 </style>
