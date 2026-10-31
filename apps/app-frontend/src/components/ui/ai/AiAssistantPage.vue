@@ -447,9 +447,7 @@ async function installSkin(skin: AiSkinCard) {
 	if (skinInstalling.value.includes(skin.hash)) return
 	skinInstalling.value = [...skinInstalling.value, skin.hash]
 	try {
-		const texture = skin.url
-			? await fetchSkinTexture(skin.url)
-			: await labySkinTexture(skin.hash)
+		const texture = skin.url ? await fetchSkinTexture(skin.url) : await labySkinTexture(skin.hash)
 		await add_and_equip_custom_skin(texture, skin.variant)
 		skinInstalledSkins.value = [...skinInstalledSkins.value, skin.hash]
 	} catch {
@@ -915,7 +913,14 @@ interface AiSegmentPart {
 	url?: string
 }
 type AiSegment =
-	| { kind: 'code'; lang: string; file?: string; diffAdded?: number; diffRemoved?: number; lines: string[] }
+	| {
+			kind: 'code'
+			lang: string
+			file?: string
+			diffAdded?: number
+			diffRemoved?: number
+			lines: string[]
+	  }
 	| { kind: 'text'; text: string; parts: AiSegmentPart[] }
 
 const LINK_RE = /(\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>"')\]]+)/g
@@ -985,7 +990,8 @@ function activityFor(
 		return { created: false, added: segment.diffAdded ?? 0, removed: segment.diffRemoved ?? 0 }
 	}
 	const activity = message.activity
-	const samePath = (tracked: string) => tracked === segment.file || tracked.endsWith(`/${segment.file}`)
+	const samePath = (tracked: string) =>
+		tracked === segment.file || tracked.endsWith(`/${segment.file}`)
 	if (activity) {
 		if (activity.filesCreated.some(samePath))
 			return { created: true, added: segment.lines.length, removed: 0 }
@@ -1014,7 +1020,11 @@ function declaredFiles(message: AiMessage): { path: string; verb: string }[] {
 		seen.add(key)
 		const activity = message.activity
 		const samePath = (tracked: string) => tracked === path || tracked.endsWith(`/${path}`)
-		if (activity && (activity.filesCreated.some(samePath) || activity.filesChanged.some((change) => samePath(change.path))))
+		if (
+			activity &&
+			(activity.filesCreated.some(samePath) ||
+				activity.filesChanged.some((change) => samePath(change.path)))
+		)
 			continue
 		out.push({ path, verb: match[1] })
 	}
@@ -1033,7 +1043,9 @@ function parseSegments(content: string): AiSegment[] {
 		const block = blocks[i]
 		if (i % 2 === 1) {
 			const newline = block.indexOf('\n')
-			const metaTokens = (newline >= 0 ? block.slice(0, newline).trim() : '').split(/\s+/).filter(Boolean)
+			const metaTokens = (newline >= 0 ? block.slice(0, newline).trim() : '')
+				.split(/\s+/)
+				.filter(Boolean)
 			const lang = metaTokens.shift() ?? ''
 			let file: string | undefined
 			let diffAdded: number | undefined
@@ -1046,7 +1058,14 @@ function parseSegments(content: string): AiSegment[] {
 				else if (/^[\w./\\-]+\.[A-Za-z0-9]{1,8}$/.test(token)) file = token
 			}
 			const code = newline >= 0 ? block.slice(newline + 1) : block
-			segments.push({ kind: 'code', lang, file, diffAdded, diffRemoved, lines: code.replace(/\n+$/, '').split('\n') })
+			segments.push({
+				kind: 'code',
+				lang,
+				file,
+				diffAdded,
+				diffRemoved,
+				lines: code.replace(/\n+$/, '').split('\n'),
+			})
 		} else {
 			const prose = stripLooseCommands(block).replace(/\n{3,}/g, '\n\n')
 			if (prose.trim())
@@ -1286,7 +1305,22 @@ defineExpose({ send })
 
 <template>
 	<div class="ai-page flex h-full min-h-0 flex-col">
-		<div class="flex items-start justify-end gap-3 px-6 pt-6">
+		<!-- The page's own header: who Portalus is on the left, the chat's
+		     paperwork (a fresh start, the past ones) on the right. -->
+		<header class="flex shrink-0 items-center justify-between gap-3 px-6 pt-5 pb-3">
+			<div class="flex min-w-0 items-center gap-2.5">
+				<span class="ai-mark" aria-hidden="true">
+					<SparklesIcon class="size-5" />
+				</span>
+				<div class="min-w-0">
+					<p class="m-0 truncate text-sm font-bold text-primary">
+						{{ formatMessage(messages.aiName) }}
+					</p>
+					<p class="m-0 truncate text-xs text-secondary">
+						{{ formatMessage(messages.description) }}
+					</p>
+				</div>
+			</div>
 			<div class="relative flex shrink-0 items-center gap-1">
 				<IconButton
 					v-tooltip="formatMessage(messages.historyNewChat)"
@@ -1311,7 +1345,7 @@ defineExpose({ send })
 				/>
 				<div
 					v-if="historyOpen"
-					class="ai-menu absolute right-0 top-full z-20 mt-2 flex max-h-[30rem] w-[24rem] flex-col rounded-2xl border border-solid border-surface-5 bg-surface-2 p-2"
+					class="ai-menu absolute right-0 top-full z-20 mt-2 flex max-h-[30rem] w-[24rem] flex-col rounded-2xl border border-solid border-surface-5 p-2"
 				>
 					<div class="mb-1 flex items-center justify-between gap-2 px-2">
 						<p class="m-0 text-sm font-semibold text-primary">
@@ -1379,17 +1413,22 @@ defineExpose({ send })
 					</div>
 				</div>
 			</div>
-		</div>
+		</header>
 
 		<div ref="scrollBox" class="min-h-0 grow overflow-y-auto px-6 py-4">
 			<div
 				v-if="visibleHistory.length === 0"
-				class="flex h-full flex-col items-center justify-center gap-2 text-center"
+				class="flex h-full flex-col items-center justify-center gap-2.5 text-center"
 			>
-				<p class="m-0 text-2xl font-bold text-primary">{{ formatMessage(messages.aiName) }}</p>
-				<p class="m-0 text-lg font-semibold text-primary">
-					{{ formatMessage(messages.emptyTitle) }}
-				</p>
+				<span class="ai-mark ai-mark--lg" aria-hidden="true">
+					<SparklesIcon class="size-7" />
+				</span>
+				<div>
+					<p class="m-0 text-2xl font-bold text-primary">{{ formatMessage(messages.aiName) }}</p>
+					<p class="m-0 mt-0.5 text-lg font-semibold text-primary">
+						{{ formatMessage(messages.emptyTitle) }}
+					</p>
+				</div>
 				<p class="m-0 max-w-xl text-sm text-secondary">
 					{{ formatMessage(messages.emptyHint) }}
 				</p>
@@ -1398,6 +1437,7 @@ defineExpose({ send })
 						v-for="suggestion in suggestions"
 						:key="suggestion"
 						size="sm"
+						class="ai-suggest"
 						@click="() => send(suggestion)"
 					>
 						{{ suggestion }}
@@ -1457,7 +1497,8 @@ defineExpose({ send })
 									<div class="ai-code-head">
 										<FileCodeIcon class="size-3.5 shrink-0" />
 										<span class="grow truncate">
-											{{ segment.lang || 'код' }}<template v-if="segment.file"> · {{ segment.file }}</template>
+											{{ segment.lang || 'код'
+											}}<template v-if="segment.file"> · {{ segment.file }}</template>
 										</span>
 										<span
 											v-if="activityFor(message, segment)"
@@ -1469,8 +1510,11 @@ defineExpose({ send })
 													? formatMessage(messages.codeFileCreated)
 													: formatMessage(messages.codeFileChanged)
 											}}
-											<span class="text-green">+{{ activityFor(message, segment)?.added ?? 0 }}</span
-											><span class="text-red"> −{{ activityFor(message, segment)?.removed ?? 0 }}</span>
+											<span class="text-green"
+												>+{{ activityFor(message, segment)?.added ?? 0 }}</span
+											><span class="text-red">
+												−{{ activityFor(message, segment)?.removed ?? 0 }}</span
+											>
 										</span>
 										<span class="ai-code-count"
 											>{{ segment.lines.length }} {{ linesWord(segment.lines.length) }}</span
@@ -1485,10 +1529,18 @@ defineExpose({ send })
 											<TextQuoteIcon class="size-3.5" />
 										</button>
 										<button
-											v-tooltip="editingCode[`${index}-${segmentIndex}`] ? formatMessage(messages.codeDone) : formatMessage(messages.codeEdit)"
+											v-tooltip="
+												editingCode[`${index}-${segmentIndex}`]
+													? formatMessage(messages.codeDone)
+													: formatMessage(messages.codeEdit)
+											"
 											type="button"
 											class="ai-code-btn"
-											:aria-label="editingCode[`${index}-${segmentIndex}`] ? formatMessage(messages.codeDone) : formatMessage(messages.codeEdit)"
+											:aria-label="
+												editingCode[`${index}-${segmentIndex}`]
+													? formatMessage(messages.codeDone)
+													: formatMessage(messages.codeEdit)
+											"
 											@click="() => toggleEdit(`${index}-${segmentIndex}`, segment)"
 										>
 											<CheckIcon
@@ -1502,7 +1554,13 @@ defineExpose({ send })
 											type="button"
 											class="ai-code-btn"
 											aria-label="Скопировать"
-											@click="() => copyCode(`${index}-${segmentIndex}`, codeText(`${index}-${segmentIndex}`, segment))"
+											@click="
+												() =>
+													copyCode(
+														`${index}-${segmentIndex}`,
+														codeText(`${index}-${segmentIndex}`, segment),
+													)
+											"
 										>
 											<CheckIcon
 												v-if="copiedCode === `${index}-${segmentIndex}`"
@@ -1941,7 +1999,7 @@ defineExpose({ send })
 			</div>
 		</div>
 
-		<div class="shrink-0 px-6 pb-6">
+		<div class="ai-composer-wrap relative shrink-0 px-6 pb-5">
 			<div v-if="agentQueue.length > 0" class="mb-2 flex flex-col gap-1">
 				<div v-for="(queued, queueIndex) in agentQueue" :key="queued.ts" class="ai-queued">
 					<span class="ai-queued-badge">{{ formatMessage(messages.queuedBadge) }}</span>
@@ -2042,7 +2100,7 @@ defineExpose({ send })
 					<p class="ai-slash-foot">↑↓ — выбор · Enter/Tab — выбрать · Esc — закрыть</p>
 				</div>
 			</Transition>
-			<div class="ai-input-row flex items-center gap-2 rounded-3xl bg-surface-2 p-2">
+			<div class="ai-input-row flex items-center gap-2 rounded-3xl p-2">
 				<div class="relative shrink-0">
 					<IconButton
 						v-tooltip="formatMessage(messages.plus)"
@@ -2058,7 +2116,7 @@ defineExpose({ send })
 					/>
 					<div
 						v-if="plusOpen"
-						class="ai-menu absolute bottom-full left-0 z-20 mb-2 flex min-w-56 flex-col gap-1 rounded-xl border border-solid border-surface-5 bg-surface-2 p-1"
+						class="ai-menu absolute bottom-full left-0 z-20 mb-2 flex min-w-56 flex-col gap-1 rounded-xl border border-solid border-surface-5 p-1"
 					>
 						<button class="ai-menu-item" @click="plusAttach">
 							<FileIcon class="size-4" />
@@ -2160,7 +2218,7 @@ defineExpose({ send })
 					/>
 					<div
 						v-if="buildsOpen"
-						class="ai-menu absolute bottom-full left-0 z-20 mb-2 flex max-h-[26rem] w-[22rem] flex-col overflow-y-auto rounded-2xl border border-solid border-surface-5 bg-surface-2 p-2"
+						class="ai-menu absolute bottom-full left-0 z-20 mb-2 flex max-h-[26rem] w-[22rem] flex-col overflow-y-auto rounded-2xl border border-solid border-surface-5 p-2"
 					>
 						<p class="m-0 mb-2 px-1 text-sm font-semibold text-primary">
 							{{ formatMessage(messages.builds) }}
@@ -2210,7 +2268,7 @@ defineExpose({ send })
 					/>
 					<div
 						v-if="modelsOpen"
-						class="ai-menu absolute bottom-full right-0 z-20 mb-2 w-[34rem] rounded-2xl border border-solid border-surface-5 bg-surface-2 p-4"
+						class="ai-menu absolute bottom-full right-0 z-20 mb-2 w-[34rem] rounded-2xl border border-solid border-surface-5 p-4"
 					>
 						<p class="m-0 mb-3 text-sm font-semibold text-primary">
 							{{ formatMessage(messages.models) }}
@@ -2245,16 +2303,66 @@ defineExpose({ send })
 </template>
 
 <style scoped>
-.ai-bubble-user {
-	background: color-mix(in srgb, var(--color-brand) 18%, var(--color-button-bg));
+/* Portalus's mark: a small brand-tinted square of glass, the same one in the
+   header, on the empty page and nowhere else - it says who is talking without
+   an avatar on every reply. */
+.ai-mark {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	flex-shrink: 0;
+	border-radius: 0.7rem;
 	border: 1px solid color-mix(in srgb, var(--color-brand) 30%, transparent);
+	background: color-mix(in srgb, var(--color-brand) 16%, transparent);
+	color: var(--color-brand);
+	backdrop-filter: blur(10px) saturate(1.2);
+	-webkit-backdrop-filter: blur(10px) saturate(1.2);
+}
+
+.ai-mark--lg {
+	width: 3.25rem;
+	height: 3.25rem;
+	border-radius: 1.1rem;
+}
+
+/* The replies: glass over whatever page background stands behind them, the
+   user's own painted in the accent so the two sides never read alike. */
+.ai-bubble {
+	backdrop-filter: blur(16px) saturate(1.25);
+	-webkit-backdrop-filter: blur(16px) saturate(1.25);
+	box-shadow: 0 4px 16px rgb(0 0 0 / 14%);
+}
+
+.ai-bubble-user {
+	background: color-mix(in srgb, var(--color-brand) 20%, transparent);
+	border: 1px solid color-mix(in srgb, var(--color-brand) 38%, transparent);
 	border-bottom-right-radius: 0.5rem;
 }
 
 .ai-bubble-assistant {
-	background: var(--color-button-bg);
-	border: 1px solid var(--surface-5);
+	background: color-mix(in srgb, var(--color-raised-bg) 72%, transparent);
+	border: 1px solid color-mix(in srgb, var(--color-contrast) 12%, transparent);
 	border-bottom-left-radius: 0.5rem;
+}
+
+/* A first-time suggestion: a quiet glass pill, not a loud button. */
+.ai-page :deep(.ai-suggest) {
+	border: 1px solid color-mix(in srgb, var(--color-contrast) 14%, transparent);
+	background: color-mix(in srgb, var(--color-raised-bg) 55%, transparent);
+	backdrop-filter: blur(12px) saturate(1.2);
+	-webkit-backdrop-filter: blur(12px) saturate(1.2);
+	transition:
+		background-color 0.16s ease,
+		border-color 0.16s ease,
+		transform 0.16s ease;
+}
+
+.ai-page :deep(.ai-suggest:hover) {
+	border-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+	background: color-mix(in srgb, var(--color-raised-bg) 75%, transparent);
+	transform: translateY(-1px);
 }
 
 .ai-action-chip {
@@ -2354,16 +2462,58 @@ defineExpose({ send })
 
 .ai-error {
 	border: 1px solid color-mix(in srgb, var(--color-red) 40%, transparent);
-	background: color-mix(in srgb, var(--color-red) 12%, transparent);
+	background: color-mix(in srgb, var(--color-red) 14%, transparent);
+	backdrop-filter: blur(14px) saturate(1.2);
+	-webkit-backdrop-filter: blur(14px) saturate(1.2);
 	color: var(--color-red);
+	box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
 }
 
+/* The composer: one pane of glass the whole chat stands on. It lifts toward
+   the brand while focused, so it is clear where the words will go. */
 .ai-input-row {
-	box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+	background: color-mix(in srgb, var(--color-raised-bg) 62%, transparent);
+	border: 1px solid color-mix(in srgb, var(--color-contrast) 12%, transparent);
+	backdrop-filter: blur(20px) saturate(1.35);
+	-webkit-backdrop-filter: blur(20px) saturate(1.35);
+	box-shadow: 0 10px 32px rgb(0 0 0 / 22%);
+	transition:
+		border-color 0.18s ease,
+		box-shadow 0.18s ease;
 }
 
+.ai-input-row:focus-within {
+	border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+	box-shadow:
+		0 10px 32px rgb(0 0 0 / 22%),
+		0 0 0 3px color-mix(in srgb, var(--color-brand) 14%, transparent);
+}
+
+/* The messages fade out under the composer rather than meeting it edge to
+   edge - the seam between the two is never a hard line. */
+.ai-composer-wrap::before {
+	content: '';
+	position: absolute;
+	top: -2.75rem;
+	left: 0;
+	right: 0;
+	height: 2.75rem;
+	background: linear-gradient(
+		to top,
+		color-mix(in srgb, var(--color-bg) 88%, transparent),
+		transparent
+	);
+	pointer-events: none;
+}
+
+/* Every dropdown the chat opens: one kind of glass, one shadow. */
 .ai-menu {
-	box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+	background: color-mix(in srgb, var(--color-raised-bg) 78%, transparent);
+	backdrop-filter: blur(22px) saturate(1.3);
+	-webkit-backdrop-filter: blur(22px) saturate(1.3);
+	box-shadow:
+		0 12px 36px rgb(0 0 0 / 26%),
+		inset 0 0 0 1px color-mix(in srgb, var(--color-contrast) 6%, transparent);
 }
 
 .ai-menu-item {
@@ -2497,8 +2647,11 @@ defineExpose({ send })
 }
 
 .ai-question-card {
-	background: color-mix(in srgb, var(--color-brand) 10%, var(--color-button-bg));
+	background: color-mix(in srgb, var(--color-brand) 12%, transparent);
 	border: 1px solid color-mix(in srgb, var(--color-brand) 35%, transparent);
+	backdrop-filter: blur(16px) saturate(1.25);
+	-webkit-backdrop-filter: blur(16px) saturate(1.25);
+	box-shadow: 0 6px 20px rgb(0 0 0 / 14%);
 	max-width: 85%;
 }
 
@@ -3063,7 +3216,9 @@ defineExpose({ send })
 	gap: 0.5rem;
 	border: 1px dashed var(--surface-5);
 	border-radius: 0.75rem;
-	background: color-mix(in srgb, var(--color-button-bg) 60%, transparent);
+	background: color-mix(in srgb, var(--color-raised-bg) 55%, transparent);
+	backdrop-filter: blur(12px) saturate(1.2);
+	-webkit-backdrop-filter: blur(12px) saturate(1.2);
 	padding: 0.3rem 0.6rem;
 	font-size: 0.8125rem;
 	color: var(--color-secondary);
