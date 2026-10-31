@@ -84,11 +84,8 @@ function stateOf(index: number): 'done' | 'current' | 'ahead' {
 	gap: 0.5rem;
 	padding: 0.625rem 0.75rem;
 	border: 1px solid color-mix(in srgb, var(--color-brand) 22%, transparent);
-	border-radius: 0.875rem;
-	background: color-mix(in srgb, var(--color-raised-bg) 55%, transparent);
-	backdrop-filter: blur(16px) saturate(1.25);
-	-webkit-backdrop-filter: blur(16px) saturate(1.25);
-	box-shadow: 0 6px 20px rgb(0 0 0 / 14%);
+	border-radius: 0.75rem;
+	background: color-mix(in srgb, var(--color-bg) 55%, transparent);
 }
 
 .ai-task-head {
