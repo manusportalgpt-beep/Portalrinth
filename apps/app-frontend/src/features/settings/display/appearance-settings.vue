@@ -40,6 +40,7 @@ import { type ColorTheme, isDarkTheme, useTheme } from '@/composables/use-theme.
 import { injectAppSettingsModal } from '@/features/settings/app-settings-modal/context'
 import DesignEditorOverlay from '@/features/settings/display/DesignEditorOverlay.vue'
 import PortalrinthBackgroundSettings from '@/features/settings/display/PortalrinthBackgroundSettings.vue'
+import PortalrinthPageEditorSettings from '@/features/settings/display/PortalrinthPageEditorSettings.vue'
 import type { ThemeAccent } from '@/helpers/portalrinth-themes'
 import { type AppSettings, get, set } from '@/helpers/settings.ts'
 
@@ -219,8 +220,7 @@ const messages = defineMessages({
 	},
 	accentShimmerDescription: {
 		id: 'app.appearance-settings.accent.gradient-shimmer.description',
-		defaultMessage:
-			'The colours of a gradient accent slowly move across what they fill.',
+		defaultMessage: 'The colours of a gradient accent slowly move across what they fill.',
 	},
 	iconsAccentTitle: {
 		id: 'app.appearance-settings.accent-icons.title',
@@ -563,10 +563,7 @@ provideAppearanceSettings({
 		-->
 		<div class="mt-3 flex items-center justify-between gap-4">
 			<div class="min-w-0">
-				<h3
-					id="accent-gradient-shimmer-label"
-					class="m-0 text-lg font-semibold text-contrast"
-				>
+				<h3 id="accent-gradient-shimmer-label" class="m-0 text-lg font-semibold text-contrast">
 					{{ formatMessage(messages.accentShimmerTitle) }}
 				</h3>
 				<p class="m-0 mt-1 text-secondary">
@@ -607,13 +604,11 @@ provideAppearanceSettings({
 					{{ formatMessage(messages.iconsAccentDescription) }}
 				</p>
 			</div>
-			<Toggle
-				id="accent-icons"
-				v-model="iconsAccentMode"
-				aria-labelledby="accent-icons-label"
-			/>
+			<Toggle id="accent-icons" v-model="iconsAccentMode" aria-labelledby="accent-icons-label" />
 		</div>
 	</div>
+
+	<PortalrinthPageEditorSettings />
 
 	<PortalrinthBackgroundSettings
 		:accent="{

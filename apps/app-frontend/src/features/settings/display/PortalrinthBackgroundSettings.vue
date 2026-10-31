@@ -28,13 +28,6 @@ import {
 	savePageShade,
 	setBackgroundFromPath,
 } from '@/helpers/portalrinth-background'
-import {
-	chooseThemeSound,
-	decorEditorOpen,
-	removeThemeSound,
-	themeSound,
-	themeSoundOn,
-} from '@/helpers/portalrinth-decor'
 import type { ThemeAccent } from '@/helpers/portalrinth-themes'
 
 import PortalrinthThemes from './PortalrinthThemes.vue'
@@ -60,20 +53,6 @@ const messages = defineMessages({
 		defaultMessage: 'Or drop a picture onto the window.',
 	},
 	dropHere: { id: 'portalrinth.settings.background.drop-here', defaultMessage: 'Drop it here' },
-	editorTitle: { id: 'portalrinth.settings.editor.title', defaultMessage: 'Редактор страниц' },
-	editorDescription: {
-		id: 'portalrinth.settings.editor.description',
-		defaultMessage:
-			'Ставь картинки, GIF и видео на любую страницу лаунчера: перетаскивай, тяни за уголок, удаляй. Экспорт и импорт темы — .prth, в нём же фон, цвет и звук.',
-	},
-	editorOpen: { id: 'portalrinth.settings.editor.open', defaultMessage: 'Открыть редактор' },
-	editorHint: {
-		id: 'portalrinth.settings.editor.hint',
-		defaultMessage: 'Закрой окно настроек — редактор ждёт тебя прямо на страницах.',
-	},
-	soundTitle: { id: 'portalrinth.settings.editor.sound', defaultMessage: 'Звук темы' },
-	soundChoose: { id: 'portalrinth.settings.editor.sound-choose', defaultMessage: 'Выбрать звук' },
-	soundRemove: { id: 'portalrinth.settings.editor.sound-remove', defaultMessage: 'Убрать' },
 	blurTitle: {
 		id: 'portalrinth.settings.background.blur.title',
 		defaultMessage: 'Blur the picture',
@@ -234,33 +213,6 @@ onUnmounted(() => {
 				/>
 			</div>
 			<PortalrinthThemes :accent="accent" @apply-accent="emit('applyAccent', $event)" />
-			<div class="flex flex-col gap-2.5">
-				<div>
-					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.editorTitle) }}
-					</h3>
-					<p class="m-0 mt-1 text-secondary">{{ formatMessage(messages.editorDescription) }}</p>
-				</div>
-				<div class="flex flex-wrap items-center gap-2">
-					<Button @click="decorEditorOpen = true">
-						{{ formatMessage(messages.editorOpen) }}
-					</Button>
-					<Button v-if="!themeSound" @click="run(() => chooseThemeSound())">
-						{{ formatMessage(messages.soundChoose) }}
-					</Button>
-					<template v-else>
-						<Toggle :model-value="themeSoundOn" @update:model-value="(value: boolean) => (themeSoundOn = value)">
-							{{ formatMessage(messages.soundTitle) }}
-						</Toggle>
-						<Button @click="run(() => removeThemeSound())">
-							{{ formatMessage(messages.soundRemove) }}
-						</Button>
-					</template>
-				</div>
-				<p v-if="decorEditorOpen" class="m-0 text-xs text-secondary">
-					{{ formatMessage(messages.editorHint) }}
-				</p>
-			</div>
 			<div class="flex flex-col gap-2.5">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">

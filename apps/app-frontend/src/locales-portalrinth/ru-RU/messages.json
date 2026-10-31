@@ -3899,6 +3899,12 @@
 	"portalrinth.settings.editor.hint": {
 		"message": "Закрой окно настроек — редактор ждёт прямо на страницах."
 	},
+	"portalrinth.settings.editor.placed": {
+		"message": "Расставлено: {count}"
+	},
+	"portalrinth.settings.editor.empty": {
+		"message": "Пока ничего не расставлено — открой редактор и перетащи картинку или видео на любую страницу."
+	},
 	"portalrinth.settings.editor.sound": {
 		"message": "Звук темы"
 	},

@@ -2366,6 +2366,12 @@
 	"portalrinth.settings.editor.hint": {
 		"message": "Close the settings window - the editor waits right on the pages."
 	},
+	"portalrinth.settings.editor.placed": {
+		"message": "Placed: {count}"
+	},
+	"portalrinth.settings.editor.empty": {
+		"message": "Nothing placed yet - open the editor and drop a picture or a video on any page."
+	},
 	"portalrinth.settings.editor.sound": {
 		"message": "Theme sound"
 	},
