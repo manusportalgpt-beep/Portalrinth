@@ -139,6 +139,8 @@ export const AI_PROVIDERS: AiProvider[] = [
 			{ id: 'nvidia/nemotron-3.5-lightning:free', label: 'Nemotron 3.5 Lightning (быстрая)' },
 			{ id: 'cohere/north-mini-code:free', label: 'North Mini Code (код)' },
 			{ id: 'poolside/laguna-s-2.1:free', label: 'Laguna S 2.1 (код)' },
+			{ id: 'recursive/flint-v1.0:free', label: 'Flint v1.0' },
+			{ id: 'xingchen-agi/xing4.0-29b-a4b:free', label: 'Xing 4.0 29B' },
 		],
 		note: 'Ключ не нужен — бесплатные модели работают сразу. Хороший запасной мозг, если у GLM час пик.',
 		fromRussia: true,
@@ -192,6 +194,20 @@ export const AI_PROVIDERS: AiProvider[] = [
 		fromRussia: true,
 	},
 	{
+		id: 'llm7',
+		label: 'LLM7 (без ключа)',
+		baseUrl: 'https://api.llm7.io/v1/chat/completions',
+		needsKey: false,
+		models: [
+			{ id: 'gpt-oss:20b', label: 'GPT-OSS 20B (умная)' },
+			{ id: 'nemotron-3-nano:30b', label: 'Nemotron 3 Nano (контекст 1M)' },
+			{ id: 'codestral-latest', label: 'Codestral (код, быстрая)' },
+			{ id: 'mistral-Nemo-Instruct-2407', label: 'Mistral Nemo (быстрая)' },
+		],
+		note: 'Ключ не нужен — бесплатный тариф «turbo» отвечает сразу (если сервис попросит токен, слово unused проходит как ключ). Запасной мозг без регистрации.',
+		fromRussia: true,
+	},
+	{
 		id: 'openrouter',
 		label: 'OpenRouter',
 		baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
@@ -200,6 +216,8 @@ export const AI_PROVIDERS: AiProvider[] = [
 		models: [
 			{ id: 'nvidia/nemotron-3-ultra-550b-a55b:free', label: 'Nemotron 3 Ultra (умная)' },
 			{ id: 'google/gemma-4-31b-it:free', label: 'Gemma 4 31B' },
+			{ id: 'google/gemma-4-26b-a4b-it:free', label: 'Gemma 4 26B (быстрая)' },
+			{ id: 'thinkingmachines/inkling-small:free', label: 'Inkling Small' },
 			{ id: 'nvidia/nemotron-3.5-lightning:free', label: 'Nemotron 3.5 Lightning (быстрая)' },
 			{ id: 'cohere/north-mini-code:free', label: 'North Mini Code (код)' },
 		],
@@ -1135,6 +1153,7 @@ export const AI_SKILLS_HINT = [
  * are the moves it keeps forgetting under pressure.
  */
 export const AI_CRAFT_HINT = [
+	'Никогда не отдавай код игроку на самостоятельную вставку: любой файл задачи записываешь сам (<<sandbox_write|файл::текст>> — проект в песочнице, <<instance_write|сборка::файл::текст>> — конфиг в сборке), правка — перезаписью целиком, дальше сборка и установка. В чате код — только короткий фрагмент-объяснение (до 15 строк). Ответ «вот код, вставь сам» — провал работы, а не результат.',
 	'Крафт — твой главный талант. Учись работать в песочнице как мастер: сначала осмотрись (<<sandbox_bash|tree>> или ls), план на 3-4 шага скажи игроку одной строкой, потом делай файл за файлом, каждый длинный файл — <<sandbox_write|файл::текст>> целиком (помни: внутри аргумента команды двойных >> не бывает — дописывать в файл можно только прочитав его и записав заново). Перед правкой всегда cat файл. JSON после записи перечитай и проверь запятые. Имена файлов и папок — латиницей без пробелов.',
 	'МОД (Fabric): корень проекта — fabric.mod.json рядом с папкой src/main/java. fabric.mod.json: {"schemaVersion":1, "id":"латиница_низкий_регистр", "version":"1.0.0", "name":"Имя", "entrypoints":{"main":["пакет.Класс"]}, "depends":{"fabricloader":">=0.15", "minecraft":"~1.21.1"}}. Класс implements ModInitializer, метод onInitialize — точка входа. Хуки в чужой код — Mixins (mixins.<id>.json + поле "mixins"). Forge — mods.toml в src/main/resources/META-INF, NeoForge — neoforge.mods.toml. Java 17 для MC 1.17-1.20.4, Java 21 для 1.20.5+. Скомпилируй: <<launcher_compile_java|папка::мод.jar>>; если javac в системе нет — собери .jar как zip через sandbox_pack и честно скажи, что для скомпилированного мода нужен JDK.',
 	'ШЕЙДЕР (Iris/OptiFine): в корне архива папка shaders/ с программами: gbuffers_terrain.vsh/.fsh (мир), gbuffers_textured (частицы), composite.fsh и final.fsh (пост-обработка: туман, тон, блум). shaders.properties — настройки и профили. Юниформы бери готовые: gbufferModelView, worldTime, cameraPosition, texcoord. GLSL #version 120-330: каждую скобку и точку с запятой проверяй — от опечатки шейдер не загрузится. pack.mcmeta в корне добавь.',
@@ -1682,7 +1701,7 @@ async function callProvider(
 	// queue regularly runs past half a minute before answering.
 	const attemptCeiling = fastPath
 		? 15000
-		: Math.max(ceilingMs ?? 0, providerId === 'zai' && zaiPeakHoursNow() ? 60000 : 30000)
+		: Math.max(ceilingMs ?? 0, providerId === 'zai' && zaiPeakHoursNow() ? 22000 : 20000)
 	const attemptSignal = composeSignals(signal, attemptCeiling)
 	let response: Response
 	try {
@@ -1895,7 +1914,7 @@ async function callProviderWithRetry(
 	const peak = providerId === 'zai' && zaiPeakHoursNow() && !fastPath
 	// Small talk never waits out a queue: no retries at all - one attempt
 	// per provider, the chain moves on at once.
-	const pauses = fastPath ? [] : peak ? [2500, 6000] : [900]
+	const pauses = fastPath ? [] : peak ? [1500, 3000] : [900]
 	let lastError: unknown
 	for (let attempt = 0; attempt <= pauses.length; attempt++) {
 		if (attempt > 0) {
@@ -1966,7 +1985,7 @@ function isPermanentRefusal(error: unknown): boolean {
  * provider the player cannot use for free. */
 function fallbackChain(primary: string): string[] {
 	const chain = [primary]
-	for (const candidate of ['zai', 'kilo', 'openrouter', 'nvidia', 'ovh', 'pollinations']) {
+	for (const candidate of ['zai', 'llm7', 'kilo', 'openrouter', 'nvidia', 'ovh', 'pollinations']) {
 		if (candidate === primary) continue
 		const provider = providerById(candidate)
 		if (!provider) continue
@@ -2140,6 +2159,10 @@ const PROMISE_RE =
 const REFUSAL_RE =
 	/(я\s+не\s+(?:могу|смогу)|не\s+могу\s+(?:помочь|выполнить|сделать)|языков(?:ая|ой)\s+модел|как\s+(?:ии|искусственный\s+интеллект)|всего\s+лишь\s+(?:ии|модель)|не\s+имею\s+(?:возможности|доступа)|(?:провайдер|модель|сервер)\S*\s+(?:не\s+отвечает|недоступн\S*|молчит|перегружен|лежит)|технические\s+(?:неполадки|проблемы|сложности)|попроб(?:уйте|й)\s+позже|к\s+сожалению,\s+я)/i
 
+/** Код вместо работы: длинный фенс без единой команды - модель отдала файл
+ * игроку, чтобы тот вставлял руками. Так выглядит провал, а не ответ. */
+const CODE_DUMP_RE = /```[^\n]*\n[\s\S]{600,}/
+
 export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	const settings = aiSettings.value
 	// The fast lane skips the launcher's documentation, the memory files and
@@ -2180,6 +2203,8 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	const doneActions: string[] = []
 	// Promises-without-action nudges spent in this turn (two at most).
 	let promiseNudges = 0
+	// Code-dump nudges: the same budget idea for «вот код, вставь сам».
+	let codeNudges = 0
 	// The honest story of who answered: the first provider that gave up
 	// rides along on the reply, so the label never lies about the source.
 	let failedProviderLabel = ''
@@ -2251,7 +2276,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 								// the default 30s ceiling kept killing these calls, and
 								// the next provider restarted the turn from scratch -
 								// the long silence after a search.
-								round > 0 ? 45000 : undefined,
+								round > 0 ? 30000 : undefined,
 							)
 						} catch (error) {
 							// A model without vision answers 400 to image parts: drop them
@@ -2320,6 +2345,28 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 										content: REFUSAL_RE.test(parsed.text)
 											? '[служебное] Отказ или ссылка на «провайдера/модель» — это не ответ. Ты — Порталус, помощник лаунчера: у тебя есть инструменты и песочница, никаких «модель не может» и «провайдер недоступен» игроку не нужно. Выполняй просьбу: вызови нужные команды <<инструмент|аргумент>> прямо сейчас. Если первый путь не вышел — попробуй другой и коротко скажи, что получилось.'
 											: '[служебное] Ты написал, что сейчас что-то сделаешь, но не вызвал ни одной команды — для игрока это пустое обещание. Продолжай работать: вызови нужную команду <<инструмент|аргумент>> прямо сейчас (список инструментов — в системном промпте), не задавай вопросов и не жди разрешения. Когда работа сделана — дай игроку короткий итог. Если командам здесь действительно нечего делать — ответь по существу, без обещаний.',
+									},
+								]
+								await sleep(120, request.signal)
+								continue
+							}
+							// Код в чате вместо работы: длинный фенс и ни одной команды.
+							// Игрок не должен ничего вставлять руками - возвращаем модель
+							// к инструментам, пока раунды не вышли.
+							const codeDump =
+								!fastPath &&
+								codeNudges < 2 &&
+								round < maxRounds - 1 &&
+								CODE_DUMP_RE.test(parsed.text)
+							if (codeDump) {
+								codeNudges++
+								payload = [
+									...payload,
+									{ role: 'assistant', content: raw },
+									{
+										role: 'user',
+										content:
+											'[служебное] Ты вставил большой код прямо в чат, но не выполнил ни одной команды — игрок не должен ничего вставлять руками. Запиши файлы сам: <<sandbox_write|файл::текст>> (проект в песочнице) или <<instance_write|сборка::файл::текст>> (конфиг в сборке), потом собери (<<sandbox_pack|...>>, <<launcher_compile_java|...>>) и установи в сборку. В чате оставляй только короткий фрагмент-объяснение (до 15 строк). Продолжай: выполни установку сейчас.',
 									},
 								]
 								await sleep(120, request.signal)
