@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { PaintbrushIcon, PlusIcon, XIcon } from '@modrinth/assets'
+import { PlusIcon, XIcon } from '@modrinth/assets'
 import {
 	AppearanceSettingsLayout,
-	Button,
 	ColorPicker,
 	defineMessages,
 	injectAuth,
@@ -38,15 +37,11 @@ import {
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { type ColorTheme, isDarkTheme, useTheme } from '@/composables/use-theme.ts'
 import { injectAppSettingsModal } from '@/features/settings/app-settings-modal/context'
-import DesignEditorOverlay from '@/features/settings/display/DesignEditorOverlay.vue'
 import PortalrinthBackgroundSettings from '@/features/settings/display/PortalrinthBackgroundSettings.vue'
 import type { ThemeAccent } from '@/helpers/portalrinth-themes'
 import { type AppSettings, get, set } from '@/helpers/settings.ts'
 
 const theme = useTheme()
-
-/** Редактор дизайна открывается поверх всей настройки и правит вид вживую. */
-const showDesignEditor = ref(false)
 
 /** The colour the wheel is on. It is not the accent until it is chosen. */
 const pickedColor = ref('#c1121f')
@@ -145,14 +140,6 @@ const savedAccent = ref({
 const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
-	designEditor: {
-		id: 'app.design.title',
-		defaultMessage: 'Редактор дизайна',
-	},
-	designEditorHint: {
-		id: 'app.design.description',
-		defaultMessage: 'Меняй вид лаунчера вживую: акцент, фон, стекло. «Сброс» вернёт всё как было.',
-	},
 	accentPickTitle: {
 		id: 'app.appearance-settings.accent.pick',
 		defaultMessage: 'Pick an accent colour',
@@ -219,8 +206,7 @@ const messages = defineMessages({
 	},
 	accentShimmerDescription: {
 		id: 'app.appearance-settings.accent.gradient-shimmer.description',
-		defaultMessage:
-			'The colours of a gradient accent slowly move across what they fill.',
+		defaultMessage: 'The colours of a gradient accent slowly move across what they fill.',
 	},
 	iconsAccentTitle: {
 		id: 'app.appearance-settings.accent-icons.title',
@@ -432,12 +418,6 @@ provideAppearanceSettings({
 
 	<!-- Portalrinth's own: the shared layout has no notion of an accent that can
 	     be chosen, so the picker is added here rather than to it. -->
-	<Button class="mt-6" type="outlined" @click="showDesignEditor = true">
-		<PaintbrushIcon aria-hidden="true" />
-		{{ formatMessage(messages.designEditor) }}
-	</Button>
-	<p class="m-0 mt-1 text-sm text-secondary">{{ formatMessage(messages.designEditorHint) }}</p>
-	<DesignEditorOverlay :open="showDesignEditor" @close="showDesignEditor = false" />
 	<div class="mt-6 flex flex-col gap-3">
 		<div>
 			<h2 class="m-0 text-lg font-semibold text-contrast">
@@ -563,10 +543,7 @@ provideAppearanceSettings({
 		-->
 		<div class="mt-3 flex items-center justify-between gap-4">
 			<div class="min-w-0">
-				<h3
-					id="accent-gradient-shimmer-label"
-					class="m-0 text-lg font-semibold text-contrast"
-				>
+				<h3 id="accent-gradient-shimmer-label" class="m-0 text-lg font-semibold text-contrast">
 					{{ formatMessage(messages.accentShimmerTitle) }}
 				</h3>
 				<p class="m-0 mt-1 text-secondary">
@@ -607,11 +584,7 @@ provideAppearanceSettings({
 					{{ formatMessage(messages.iconsAccentDescription) }}
 				</p>
 			</div>
-			<Toggle
-				id="accent-icons"
-				v-model="iconsAccentMode"
-				aria-labelledby="accent-icons-label"
-			/>
+			<Toggle id="accent-icons" v-model="iconsAccentMode" aria-labelledby="accent-icons-label" />
 		</div>
 	</div>
 
