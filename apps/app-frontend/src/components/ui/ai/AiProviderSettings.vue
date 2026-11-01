@@ -1,5 +1,16 @@
 <script setup lang="ts">
-import { ChevronDownIcon, ExternalIcon, EyeIcon, EyeOffIcon, KeyIcon, XIcon } from '@modrinth/assets'
+import {
+	CheckIcon,
+	ChevronDownIcon,
+	ExternalIcon,
+	EyeIcon,
+	EyeOffIcon,
+	KeyIcon,
+	SettingsIcon,
+	SignalIcon,
+	SpinnerIcon,
+	XIcon,
+} from '@modrinth/assets'
 import { Button, Input, Toggle, useVIntl } from '@modrinth/ui'
 import { computed, onMounted, ref } from 'vue'
 
@@ -133,6 +144,11 @@ const imageProvider = computed(
 
 function toggleGroup(id: string) {
 	openGroups.value = { ...openGroups.value, [id]: !openGroups.value[id] }
+}
+
+function providerMeta(p: AiProvider): string {
+	if (p.needsKey && !hasKey(p)) return 'нужен ключ'
+	return [p.fromRussia ? 'РФ' : '', p.needsKey ? '' : 'free'].filter(Boolean).join(' · ')
 }
 
 function groupOpen(id: string): boolean {
@@ -322,19 +338,34 @@ onMounted(() => {
 
 <template>
 	<div class="flex flex-col" :class="compact ? 'gap-3' : 'gap-4'">
-		<div class="flex flex-col gap-1.5">
-			<span class="text-sm font-semibold text-primary">{{
-				formatMessage(messages.workGroup)
-			}}</span>
-			<p v-if="!managing" class="ai-model-hint m-0">{{ formatMessage(messages.pickerHint) }}</p>
-			<p v-else class="ai-model-hint m-0">{{ formatMessage(messages.manageHint) }}</p>
+		<div class="flex flex-col" :class="compact ? 'gap-1' : 'gap-1.5'">
+			<template v-if="!compact">
+				<span class="text-sm font-semibold text-primary">{{
+					formatMessage(messages.workGroup)
+				}}</span>
+				<p v-if="!managing" class="ai-model-hint m-0">{{ formatMessage(messages.pickerHint) }}</p>
+				<p v-else class="ai-model-hint m-0">{{ formatMessage(messages.manageHint) }}</p>
+			</template>
+			<p v-else-if="managing" class="ai-model-hint m-0 px-1 pb-1">
+				{{ formatMessage(messages.manageHint) }}
+			</p>
 
-			<div v-for="p in AI_PROVIDERS" :key="p.id" class="ai-provider-group">
+			<div
+				v-for="p in AI_PROVIDERS"
+				:key="p.id"
+				class="ai-provider-group"
+				:class="{
+					'ai-provider-group--flat': compact,
+					'ai-provider-group--current': p.id === aiSettings.provider,
+				}"
+			>
 				<button type="button" class="ai-provider-head" @click="() => toggleGroup(p.id)">
 					<span class="ai-provider-name">{{ p.label }}</span>
-					<span v-if="p.fromRussia" class="ai-badge ai-badge-rf">РФ</span>
-					<span v-if="!p.needsKey" class="ai-badge ai-badge-free">free</span>
-					<span v-if="p.needsKey && !hasKey(p)" class="ai-badge ai-badge-key">нужен ключ</span>
+					<span
+						class="ai-provider-meta"
+						:class="{ 'ai-provider-meta--warn': p.needsKey && !hasKey(p) }"
+						>{{ providerMeta(p) }}</span
+					>
 					<ChevronDownIcon class="ai-provider-chevron" :class="{ 'ai-provider-chevron--open': groupOpen(p.id) }" />
 				</button>
 
@@ -444,31 +475,28 @@ onMounted(() => {
 				</div>
 			</div>
 
-			<Button
-				v-if="!managing"
-				class="ai-manage-btn"
-				@click="() => (managing = true)"
-			>
-				{{ formatMessage(messages.manage) }}
-			</Button>
-			<Button
-				v-else
-				color="brand"
-				class="ai-manage-btn"
-				@click="() => (managing = false)"
-			>
-				{{ formatMessage(messages.done) }}
-			</Button>
+			<div v-if="!compact" class="flex">
+				<Button v-if="!managing" @click="() => (managing = true)">
+					<SettingsIcon />
+					{{ formatMessage(messages.manage) }}
+				</Button>
+				<Button v-else color="brand" @click="() => (managing = false)">
+					<CheckIcon />
+					{{ formatMessage(messages.done) }}
+				</Button>
+			</div>
 		</div>
 
-		<p v-if="provider.id === 'pollinations'" class="m-0 text-sm text-secondary">
-			{{ formatMessage(messages.noteFree) }}
-		</p>
-		<p v-else-if="provider.note" class="m-0 text-sm text-secondary">{{ provider.note }}</p>
-		<p class="m-0 flex items-center gap-1.5 text-sm text-secondary">
-			<KeyIcon class="size-4 shrink-0" />
-			{{ formatMessage(messages.fallback) }}
-		</p>
+		<template v-if="!compact">
+			<p v-if="provider.id === 'pollinations'" class="m-0 text-sm text-secondary">
+				{{ formatMessage(messages.noteFree) }}
+			</p>
+			<p v-else-if="provider.note" class="m-0 text-sm text-secondary">{{ provider.note }}</p>
+			<p class="m-0 flex items-center gap-1.5 text-sm text-secondary">
+				<KeyIcon class="size-4 shrink-0" />
+				{{ formatMessage(messages.fallback) }}
+			</p>
+		</template>
 
 		<div v-if="!compact" class="flex flex-col gap-1.5">
 			<span class="text-sm font-semibold text-primary">
@@ -520,27 +548,32 @@ onMounted(() => {
 			</p>
 		</div>
 
-		<div class="flex flex-col gap-1.5">
-			<div class="flex items-center gap-2">
-				<button
-					type="button"
-					class="ai-provider-card ai-test-button"
-					:disabled="testState === 'running'"
-					@click="runConnectionTest"
-				>
-					{{
-						testState === 'running'
-							? formatMessage(messages.testRunning)
-							: formatMessage(messages.test)
-					}}
-				</button>
-				<span v-if="testState === 'ok'" class="ai-test-dot ai-test-ok">
-					{{ testResult }} — {{ formatMessage(messages.testOk) }}
-				</span>
-				<span v-else-if="testState === 'fail'" class="ai-test-dot ai-test-fail">
-					{{ formatMessage(messages.testFail) }}: {{ testResult }}
-				</span>
-			</div>
+		<div class="ai-picker-footer" :class="{ 'ai-picker-footer--compact': compact }">
+			<template v-if="compact">
+				<Button v-if="!managing" size="sm" @click="() => (managing = true)">
+					<SettingsIcon />
+					{{ formatMessage(messages.manage) }}
+				</Button>
+				<Button v-else size="sm" color="brand" @click="() => (managing = false)">
+					<CheckIcon />
+					{{ formatMessage(messages.done) }}
+				</Button>
+			</template>
+			<Button size="sm" :disabled="testState === 'running'" @click="runConnectionTest">
+				<SpinnerIcon v-if="testState === 'running'" class="animate-spin" />
+				<SignalIcon v-else />
+				{{
+					testState === 'running'
+						? formatMessage(messages.testRunning)
+						: formatMessage(messages.test)
+				}}
+			</Button>
+			<span v-if="testState === 'ok'" class="ai-test-dot ai-test-ok">
+				{{ testResult }}
+			</span>
+			<span v-else-if="testState === 'fail'" class="ai-test-dot ai-test-fail" :title="testResult">
+				{{ formatMessage(messages.testFail) }}: {{ testResult }}
+			</span>
 		</div>
 
 		<div v-if="!compact" class="ai-skill-section flex flex-col gap-1.5">
@@ -771,10 +804,6 @@ onMounted(() => {
 	color: var(--color-orange, #e0a12f);
 }
 
-.ai-manage-btn {
-	margin-top: 0.25rem;
-}
-
 .ai-manage-list {
 	display: flex;
 	flex-direction: column;
@@ -862,11 +891,6 @@ onMounted(() => {
 	color: var(--color-green);
 }
 
-.ai-badge-key {
-	background: color-mix(in srgb, var(--color-orange, #e0a12f) 20%, transparent);
-	color: var(--color-orange, #e0a12f);
-}
-
 .ai-provider-card {
 	border: 1px solid var(--surface-5);
 	background: var(--color-button-bg);
@@ -891,12 +915,46 @@ onMounted(() => {
 	background: color-mix(in srgb, var(--color-brand) 12%, var(--color-button-bg));
 }
 
-.ai-test-button:disabled {
-	opacity: 0.6;
-	cursor: default;
+.ai-provider-meta {
+	flex-shrink: 0;
+	font-size: 0.6875rem;
+	font-weight: 500;
+	color: var(--color-secondary);
+}
+
+.ai-provider-meta--warn {
+	color: var(--color-orange, #e0a12f);
+}
+
+.ai-provider-group--flat {
+	border-color: transparent;
+	background: transparent;
+}
+
+.ai-provider-group--flat:hover {
+	border-color: transparent;
+	background: color-mix(in srgb, var(--color-contrast) 3%, transparent);
+}
+
+.ai-provider-group--flat.ai-provider-group--current .ai-provider-name {
+	color: var(--color-brand);
+}
+
+.ai-picker-footer {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.ai-picker-footer--compact {
+	margin-top: 0.25rem;
+	padding-top: 0.6rem;
+	border-top: 1px solid var(--surface-5);
 }
 
 .ai-test-dot {
+	min-width: 0;
 	font-size: 0.75rem;
 	line-height: 1.35;
 	overflow-wrap: anywhere;

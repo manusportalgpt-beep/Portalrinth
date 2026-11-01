@@ -3336,7 +3336,13 @@
 		"message": "Файл не выбран"
 	},
 	"app.ai.models": {
-		"message": "Модель и ключ"
+		"message": "Модель"
+	},
+	"app.ai.models.peak-busy": {
+		"message": "Z.AI: часы пик"
+	},
+	"app.ai.models.peak-free": {
+		"message": "Z.AI: свободно"
 	},
 	"app.ai.activity.commands": {
 		"message": "команд"
@@ -3846,31 +3852,7 @@
 		"message": "Включить ИИ-Помощника"
 	},
 	"app.settings.ai-assistant.enabled-hint": {
-		"message": "вкладка «ИИ-Помощник» исчезнет, пока снова не включишь здесь."
-	},
-	"app.decor.editor.title": {
-		"message": "Редактор страниц"
-	},
-	"app.decor.editor.add-image": {
-		"message": "Картинка/GIF"
-	},
-	"app.decor.editor.add-video": {
-		"message": "Видео"
-	},
-	"app.decor.editor.done": {
-		"message": "Готово"
-	},
-	"app.decor.editor.clear": {
-		"message": "Очистить страницу"
-	},
-	"app.decor.editor.export": {
-		"message": "Экспорт темы (.prth)"
-	},
-	"app.decor.editor.import": {
-		"message": "Импорт темы"
-	},
-	"app.decor.editor.hint": {
-		"message": "Перетаскивай мышкой, тяни за круглый уголок — размер, крестик — убрать. Страница определяется там, где ты находишься."
+		"message": "вкладка ИИ скрыта из лаунчера, включить снова можно здесь."
 	},
 	"app.skin-browse.profile": {
 		"message": "Профиль игрока"
@@ -3887,56 +3869,11 @@
 	"app.skin-browse.profile-copied": {
 		"message": "Скопировано"
 	},
-	"portalrinth.settings.editor.title": {
-		"message": "Редактор страниц"
-	},
-	"portalrinth.settings.editor.description": {
-		"message": "Ставь картинки, GIF и видео на любую страницу лаунчера: перетаскивай, меняй размер, удаляй. Вся тема уезжает одним файлом .prth — фон, цвет/градиент, звук и все украшения."
-	},
-	"portalrinth.settings.editor.open": {
-		"message": "Открыть редактор"
-	},
-	"portalrinth.settings.editor.hint": {
-		"message": "Закрой окно настроек — редактор ждёт прямо на страницах."
-	},
-	"portalrinth.settings.editor.sound": {
-		"message": "Звук темы"
-	},
-	"portalrinth.settings.editor.sound-choose": {
-		"message": "Выбрать звук темы"
-	},
-	"portalrinth.settings.editor.sound-remove": {
-		"message": "Убрать звук"
-	},
 	"app.skin-browse.arm-classic": {
 		"message": "Классика"
 	},
 	"app.skin-browse.arm-slim": {
 		"message": "Slim"
-	},
-	"app.decor.editor.opacity": {
-		"message": "Прозрачность"
-	},
-	"app.decor.editor.layer-up": {
-		"message": "Слой выше"
-	},
-	"app.decor.editor.layer-down": {
-		"message": "Слой ниже"
-	},
-	"app.decor.editor.duplicate": {
-		"message": "Дублировать"
-	},
-	"app.decor.editor.move": {
-		"message": "Перенести на страницу"
-	},
-	"app.decor.editor.sound-pick": {
-		"message": "Выбрать звук"
-	},
-	"app.decor.editor.sound-remove": {
-		"message": "Убрать звук"
-	},
-	"app.decor.editor.selected": {
-		"message": "Выбрано"
 	},
 	"app.nav.hosting-paid": {
 		"message": "Modrinth Hosting (платно)"

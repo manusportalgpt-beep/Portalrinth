@@ -68,6 +68,7 @@ import {
 	stopAgentRun,
 	stripLooseCommands,
 	zaiPeakHoursLabel,
+	zaiPeakHoursNow,
 } from '@/helpers/ai-assistant'
 import { highlightLine } from '@/helpers/ai-code-highlight'
 import { buildSitePreview } from '@/helpers/ai-launcher-tools'
@@ -92,7 +93,7 @@ import { getInstanceIconUrl, list as listInstances } from '@/helpers/instance'
 import { labySkinPreview, labySkinTexture } from '@/helpers/laby-skins'
 import { proxiedFetch } from '@/helpers/proxy-fetch'
 import { skinRenderUrl } from '@/helpers/skin-render-service'
-import { add_and_equip_custom_skin } from '@/helpers/skins'
+import { add_and_equip_custom_skin, flush_pending_skin_change } from '@/helpers/skins'
 
 const { formatMessage } = useVIntl()
 
@@ -150,7 +151,9 @@ const messages = {
 		id: 'app.ai.attach-empty',
 		defaultMessage: 'Файл не выбран',
 	},
-	models: { id: 'app.ai.models', defaultMessage: 'Модель и ключ' },
+	models: { id: 'app.ai.models', defaultMessage: 'Модель' },
+	peakBusy: { id: 'app.ai.models.peak-busy', defaultMessage: 'Z.AI: часы пик' },
+	peakFree: { id: 'app.ai.models.peak-free', defaultMessage: 'Z.AI: свободно' },
 	commands: { id: 'app.ai.activity.commands', defaultMessage: 'команд' },
 	codeEdit: { id: 'app.ai.code.edit', defaultMessage: 'Редактировать' },
 	codeDone: { id: 'app.ai.code.done', defaultMessage: 'Готово' },
@@ -451,6 +454,7 @@ async function installSkin(skin: AiSkinCard) {
 			? await fetchSkinTexture(skin.url)
 			: await labySkinTexture(skin.hash)
 		await add_and_equip_custom_skin(texture, skin.variant)
+		await flush_pending_skin_change()
 		skinInstalledSkins.value = [...skinInstalledSkins.value, skin.hash]
 	} catch {
 		/* the card stays installable - a failed try is not a verdict */
@@ -2208,18 +2212,28 @@ defineExpose({ send })
 						class="fixed inset-0 z-10 cursor-default"
 						@click="modelsOpen = false"
 					/>
-					<div
-						v-if="modelsOpen"
-						class="ai-menu absolute bottom-full right-0 z-20 mb-2 w-[34rem] rounded-2xl border border-solid border-surface-5 bg-surface-2 p-4"
-					>
-						<p class="m-0 mb-3 text-sm font-semibold text-primary">
-							{{ formatMessage(messages.models) }}
-						</p>
-						<p class="ai-peak-note m-0 mb-3 text-xs">
-							{{ zaiPeakHoursLabel() }}
-						</p>
-						<AiProviderSettings compact />
-					</div>
+					<Transition name="ai-pop">
+						<div
+							v-if="modelsOpen"
+							class="ai-menu ai-model-menu absolute bottom-full right-0 z-20 mb-2 flex w-[26rem] flex-col rounded-2xl border border-solid border-surface-5 p-2"
+						>
+							<div class="flex items-baseline justify-between gap-3 px-2 pb-2 pt-1">
+								<span class="text-sm font-semibold text-contrast">
+									{{ formatMessage(messages.models) }}
+								</span>
+								<span
+									v-if="aiSettings.provider === 'zai'"
+									class="ai-peak-note truncate text-xs"
+									:title="zaiPeakHoursLabel()"
+								>
+									{{ formatMessage(zaiPeakHoursNow() ? messages.peakBusy : messages.peakFree) }}
+								</span>
+							</div>
+							<div class="ai-model-menu-body">
+								<AiProviderSettings compact />
+							</div>
+						</div>
+					</Transition>
 				</div>
 				<Button
 					v-if="sending"
@@ -2364,6 +2378,45 @@ defineExpose({ send })
 
 .ai-menu {
 	box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.ai-model-menu {
+	max-height: min(36rem, calc(100vh - 12rem));
+	background: var(--color-raised-bg);
+	backdrop-filter: blur(24px) saturate(1.2);
+	-webkit-backdrop-filter: blur(24px) saturate(1.2);
+	transform-origin: bottom right;
+}
+
+.ai-model-menu-body {
+	min-height: 0;
+	overflow-y: auto;
+	padding: 0 0.25rem 0.25rem;
+}
+
+.ai-pop-enter-active,
+.ai-pop-leave-active {
+	transition:
+		opacity 0.16s ease,
+		transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ai-pop-enter-from,
+.ai-pop-leave-to {
+	opacity: 0;
+	transform: translateY(0.35rem) scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ai-pop-enter-active,
+	.ai-pop-leave-active {
+		transition: opacity 0.12s ease;
+	}
+
+	.ai-pop-enter-from,
+	.ai-pop-leave-to {
+		transform: none;
+	}
 }
 
 .ai-menu-item {

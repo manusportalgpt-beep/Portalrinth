@@ -375,6 +375,104 @@ async fn collect_java_sources(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> 
     Ok(())
 }
 
+async fn collect_by_extension(dir: &Path, extension: &str, out: &mut Vec<PathBuf>) -> Result<()> {
+    let mut entries = tokio::fs::read_dir(dir)
+        .await
+        .map_err(|e| error(format!("не удалось открыть папку {}: {e}", dir.display())))?;
+    while let Some(entry) = entries
+        .next_entry()
+        .await
+        .map_err(|e| error(format!("не удалось прочитать папку {}: {e}", dir.display())))?
+    {
+        let path = entry.path();
+        let Ok(kind) = entry.file_type().await else {
+            continue;
+        };
+        if kind.is_dir() {
+            Box::pin(collect_by_extension(&path, extension, out)).await?;
+        } else if kind.is_file()
+            && path
+                .extension()
+                .map(|ext| ext.eq_ignore_ascii_case(extension))
+                .unwrap_or(false)
+        {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+/// Puts a mod project's non-code files into the compiled jar: everything
+/// under src/main/resources lands at the jar root, as Gradle would do it,
+/// and loose files next to the sources (fabric.mod.json, assets/, data/,
+/// META-INF/) keep their place. Sources, libraries and build output stay out.
+async fn copy_mod_resources(source: &Path, classes: &Path) -> Result<Vec<String>> {
+    let mut copied = Vec::new();
+    let mut stack = vec![(source.to_path_buf(), String::new())];
+    while let Some((current, prefix)) = stack.pop() {
+        let mut entries = tokio::fs::read_dir(&current)
+            .await
+            .map_err(|e| error(format!("не удалось открыть папку {}: {e}", current.display())))?;
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| error(format!("не удалось прочитать папку {}: {e}", current.display())))?
+        {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            let rel = if prefix.is_empty() {
+                name.clone()
+            } else {
+                format!("{prefix}/{name}")
+            };
+            let Ok(kind) = entry.file_type().await else {
+                continue;
+            };
+            if kind.is_dir() {
+                if name.starts_with('.')
+                    || matches!(name.as_str(), "libs" | "build" | "out" | "bin" | "gradle")
+                    || rel == "src/main/java"
+                    || rel == "src/test"
+                {
+                    continue;
+                }
+                stack.push((path, rel));
+                continue;
+            }
+            if !kind.is_file() {
+                continue;
+            }
+            let lower = name.to_lowercase();
+            if lower.ends_with(".java")
+                || lower.ends_with(".jar")
+                || lower.ends_with(".gradle")
+                || lower.ends_with(".kts")
+                || matches!(lower.as_str(), "gradlew" | "gradlew.bat" | "gradle.properties" | "readme.md")
+            {
+                continue;
+            }
+            let target_rel = rel
+                .strip_prefix("src/main/resources/")
+                .unwrap_or(&rel)
+                .to_string();
+            if target_rel.starts_with("src/") {
+                continue;
+            }
+            let target = classes.join(&target_rel);
+            if let Some(parent) = target.parent() {
+                tokio::fs::create_dir_all(parent)
+                    .await
+                    .map_err(|e| error(format!("не удалось создать {}: {e}", parent.display())))?;
+            }
+            tokio::fs::copy(&path, &target)
+                .await
+                .map_err(|e| error(format!("не удалось скопировать {}: {e}", path.display())))?;
+            copied.push(target_rel);
+        }
+    }
+    Ok(copied)
+}
+
 /// Archives a folder's contents into a zip/jar with the entries at the
 /// archive root - the layout a mod jar expects (com/..., fabric.mod.json...).
 async fn pack_flat_jar(dir: &Path, dest: &Path) -> Result<usize> {
@@ -459,6 +557,7 @@ pub async fn archiver_compile_java<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     source_dir: String,
     output_jar: String,
+    release: Option<u32>,
 ) -> Result<String> {
     let roots = allowed_roots(&app);
     let source = PathBuf::from(&source_dir);
@@ -495,24 +594,56 @@ pub async fn archiver_compile_java<R: tauri::Runtime>(
         .await
         .map_err(|e| error(format!("не удалось создать папку классов: {e}")))?;
 
-    let mut command = tokio::process::Command::new(&javac);
-    command
-        .arg("-encoding")
-        .arg("UTF-8")
-        .arg("-nowarn")
-        .arg("-d")
-        .arg(&classes)
-        .args(&sources);
-    #[cfg(windows)]
-    {
-        // javac is a console program: without CREATE_NO_WINDOW a black
-        // terminal flashes on the player's screen on every compile.
-        command.creation_flags(0x0800_0000);
+    let project = if source.ends_with("src/main/java") {
+        source.ancestors().nth(3).unwrap_or(&source).to_path_buf()
+    } else {
+        source.clone()
+    };
+    let mut libraries = Vec::new();
+    for dir in [project.join("libs"), project.parent().unwrap_or(&project).join("libs")] {
+        if dir.is_dir() {
+            collect_by_extension(&dir, "jar", &mut libraries).await?;
+        }
     }
-    let output = command
-        .output()
+    libraries.sort();
+    libraries.dedup();
+
+    let run_javac = |with_release: bool| {
+        let mut command = tokio::process::Command::new(&javac);
+        command
+            .arg("-encoding")
+            .arg("UTF-8")
+            .arg("-nowarn")
+            .arg("-proc:none")
+            .arg("-d")
+            .arg(&classes);
+        if with_release && let Some(release) = release {
+            command.arg("--release").arg(release.to_string());
+        }
+        if !libraries.is_empty() {
+            let classpath = std::env::join_paths(&libraries).unwrap_or_default();
+            command.arg("-cp").arg(classpath);
+        }
+        command.args(&sources);
+        #[cfg(windows)]
+        {
+            command.creation_flags(0x0800_0000);
+        }
+        command.output()
+    };
+    let mut output = run_javac(true)
         .await
         .map_err(|e| error(format!("компилятор не запустился: {e}")))?;
+    let mut release_note = release.map(|r| format!(", Java {r}")).unwrap_or_default();
+    if !output.status.success()
+        && release.is_some()
+        && String::from_utf8_lossy(&output.stderr).contains("release")
+    {
+        output = run_javac(false)
+            .await
+            .map_err(|e| error(format!("компилятор не запустился: {e}")))?;
+        release_note = ", без --release: JDK старее нужной версии".to_string();
+    }
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     if !output.status.success() {
         let _ = tokio::fs::remove_dir_all(&classes).await;
@@ -524,11 +655,22 @@ pub async fn archiver_compile_java<R: tauri::Runtime>(
         return Err(error(format!("ошибки компиляции:\n{}", tail)));
     }
 
+    let resources = copy_mod_resources(&project, &classes).await?;
     let count = pack_flat_jar(&classes, &jar_path).await?;
     let _ = tokio::fs::remove_dir_all(&classes).await;
+    let manifest = ["fabric.mod.json", "quilt.mod.json", "META-INF/mods.toml", "META-INF/neoforge.mods.toml"]
+        .iter()
+        .any(|name| resources.iter().any(|rel| rel == name));
     Ok(format!(
-        "скопилировано {count} записей в {} (файлов .java: {})",
+        "скомпилировано: {count} записей в {} (.java: {}, ресурсов: {}, библиотек в classpath: {}{release_note}){}",
         jar_path.display(),
-        sources.len()
+        sources.len(),
+        resources.len(),
+        libraries.len(),
+        if manifest {
+            ""
+        } else {
+            ". ВНИМАНИЕ: в jar нет fabric.mod.json / quilt.mod.json / META-INF/mods.toml / META-INF/neoforge.mods.toml - загрузчик не увидит мод"
+        }
     ))
 }

@@ -27,8 +27,7 @@ const messages = defineMessages({
 	},
 	masterHint: {
 		id: 'app.settings.ai-assistant.enabled-hint',
-		defaultMessage:
-			'Выключишь — вкладка «ИИ-Помощник» исчезнет из настроек, пока не вернёшься сюда.',
+		defaultMessage: 'вкладка ИИ скрыта из лаунчера, включить снова можно здесь.',
 	},
 	brainTitle: {
 		id: 'app.settings.ai-assistant.brain.title',
@@ -67,6 +66,7 @@ const anyFreeProvider = AI_PROVIDERS.some((p) => !p.needsKey)
 				<template v-if="!aiSettings.enabled"> — {{ formatMessage(messages.masterHint) }}</template>
 			</Toggle>
 			<Toggle
+				v-if="aiSettings.enabled"
 				:model-value="aiSettings.chatEffects"
 				@update:model-value="
 					(value) => {
@@ -79,7 +79,7 @@ const anyFreeProvider = AI_PROVIDERS.some((p) => !p.needsKey)
 			</Toggle>
 		</section>
 
-		<section class="flex flex-col gap-3">
+		<section v-if="aiSettings.enabled" class="flex flex-col gap-3">
 			<h2 class="m-0 text-lg font-bold text-primary">{{ formatMessage(messages.brainTitle) }}</h2>
 			<p class="m-0 text-sm text-secondary">
 				{{ formatMessage(messages.brainDescription) }}

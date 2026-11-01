@@ -1716,7 +1716,13 @@
 		"message": "No file chosen"
 	},
 	"app.ai.models": {
-		"message": "Model & key"
+		"message": "Model"
+	},
+	"app.ai.models.peak-busy": {
+		"message": "Z.AI: peak hours"
+	},
+	"app.ai.models.peak-free": {
+		"message": "Z.AI: quiet"
 	},
 	"app.ai.activity.commands": {
 		"message": "commands"
@@ -2313,31 +2319,7 @@
 		"message": "Enable AI assistant"
 	},
 	"app.settings.ai-assistant.enabled-hint": {
-		"message": "the AI assistant tab disappears until you turn it back on here."
-	},
-	"app.decor.editor.title": {
-		"message": "Page editor"
-	},
-	"app.decor.editor.add-image": {
-		"message": "Picture/GIF"
-	},
-	"app.decor.editor.add-video": {
-		"message": "Video"
-	},
-	"app.decor.editor.done": {
-		"message": "Done"
-	},
-	"app.decor.editor.clear": {
-		"message": "Clear the page"
-	},
-	"app.decor.editor.export": {
-		"message": "Export theme (.prth)"
-	},
-	"app.decor.editor.import": {
-		"message": "Import theme"
-	},
-	"app.decor.editor.hint": {
-		"message": "Drag to move, the round corner resizes, the cross removes. A page is wherever you are."
+		"message": "the AI tab is hidden from the launcher; turn it back on here."
 	},
 	"app.skin-browse.profile": {
 		"message": "Player profile"
@@ -2354,56 +2336,11 @@
 	"app.skin-browse.profile-copied": {
 		"message": "Copied"
 	},
-	"portalrinth.settings.editor.title": {
-		"message": "Page editor"
-	},
-	"portalrinth.settings.editor.description": {
-		"message": "Put pictures, GIFs and videos on any launcher page: drag, resize, remove. The whole look travels in one .prth file - background, color/gradient, sound and every decoration."
-	},
-	"portalrinth.settings.editor.open": {
-		"message": "Open the editor"
-	},
-	"portalrinth.settings.editor.hint": {
-		"message": "Close the settings window - the editor waits right on the pages."
-	},
-	"portalrinth.settings.editor.sound": {
-		"message": "Theme sound"
-	},
-	"portalrinth.settings.editor.sound-choose": {
-		"message": "Choose a theme sound"
-	},
-	"portalrinth.settings.editor.sound-remove": {
-		"message": "Remove the sound"
-	},
 	"app.skin-browse.arm-classic": {
 		"message": "Classic"
 	},
 	"app.skin-browse.arm-slim": {
 		"message": "Slim"
-	},
-	"app.decor.editor.opacity": {
-		"message": "Opacity"
-	},
-	"app.decor.editor.layer-up": {
-		"message": "Bring forward"
-	},
-	"app.decor.editor.layer-down": {
-		"message": "Send backward"
-	},
-	"app.decor.editor.duplicate": {
-		"message": "Duplicate"
-	},
-	"app.decor.editor.move": {
-		"message": "Move to page"
-	},
-	"app.decor.editor.sound-pick": {
-		"message": "Choose sound"
-	},
-	"app.decor.editor.sound-remove": {
-		"message": "Remove sound"
-	},
-	"app.decor.editor.selected": {
-		"message": "Selected"
 	},
 	"app.nav.hosting-paid": {
 		"message": "Modrinth Hosting (paid)"

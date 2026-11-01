@@ -427,10 +427,15 @@ async function copy(key: string, text: string) {
 					{{ totalTime }}
 				</span>
 			</span>
-			<ChevronDownIcon class="ai-chevron size-4" :class="{ 'ai-chevron--open': open }" />
+			<ChevronDownIcon
+				v-if="steps.length > 0"
+				class="ai-chevron size-4"
+				:class="{ 'ai-chevron--open': open }"
+			/>
+			<span v-else-if="live" class="ai-dots" aria-hidden="true"><span /><span /><span /></span>
 		</button>
 
-		<div class="ai-fold" :class="{ 'ai-fold--open': open }">
+		<div v-if="steps.length > 0" class="ai-fold" :class="{ 'ai-fold--open': open }">
 			<div class="ai-fold-inner">
 				<TransitionGroup tag="ol" name="ai-step" class="ai-step-list">
 					<li
@@ -621,10 +626,6 @@ async function copy(key: string, text: string) {
 						</div>
 					</li>
 				</TransitionGroup>
-				<p v-if="live && steps.length === 0" class="ai-steps-waiting">
-					<span class="ai-dots"><span /><span /><span /></span>
-					<span class="ai-shimmer">{{ phase }}</span>
-				</p>
 			</div>
 		</div>
 	</div>
@@ -1196,17 +1197,9 @@ async function copy(key: string, text: string) {
 	animation: ai-text-sweep 1.8s linear infinite;
 }
 
-.ai-steps-waiting {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	margin: 0;
-	padding: 0.1rem 0.9rem 0.65rem;
-	font-size: 0.75rem;
-}
-
 .ai-dots {
 	display: inline-flex;
+	margin-left: auto;
 	gap: 3px;
 }
 

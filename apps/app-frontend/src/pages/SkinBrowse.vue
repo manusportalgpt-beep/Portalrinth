@@ -74,7 +74,12 @@ import {
 	similarSkinReference,
 } from '@/helpers/laby-skins'
 import { playSoundEffect } from '@/helpers/portalrinth-sfx'
-import { add_and_equip_custom_skin, type Cape, get_available_capes } from '@/helpers/skins'
+import {
+	add_and_equip_custom_skin,
+	type Cape,
+	flush_pending_skin_change,
+	get_available_capes,
+} from '@/helpers/skins'
 import { type BreadcrumbDefinition, injectBreadcrumbManager } from '@/shared/breadcrumbs'
 
 const { formatMessage } = useVIntl()
@@ -846,6 +851,7 @@ async function install() {
 	try {
 		const texture = await labySkinTexture(skin.image_hash)
 		await add_and_equip_custom_skin(texture, armVariant.value, selectedCape.value)
+		await flush_pending_skin_change()
 		addNotification({
 			type: 'success',
 			title: formatMessage(messages.installed),

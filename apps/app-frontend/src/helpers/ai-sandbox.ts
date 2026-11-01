@@ -8,9 +8,9 @@
  * to these folders plus the usual user directories - the assistant has no
  * way to spell a path outside them.
  */
-import * as fs from '@tauri-apps/plugin-fs'
 import { invoke } from '@tauri-apps/api/core'
 import { appDataDir } from '@tauri-apps/api/path'
+import * as fs from '@tauri-apps/plugin-fs'
 import { ref } from 'vue'
 
 const SANDBOX_DIR = 'portalrinth-sandbox'
@@ -284,8 +284,25 @@ export async function sandboxReveal(rel: string): Promise<string> {
 	}
 }
 
+/** The Java a Minecraft version runs on: class files newer than it do not load. */
+export function javaReleaseFor(gameVersion: string): number | undefined {
+	const match = gameVersion.trim().match(/^(\d+)\.(\d+)(?:\.(\d+))?/)
+	if (!match) return undefined
+	const [major, minor, patch] = [Number(match[1]), Number(match[2]), Number(match[3] ?? 0)]
+	if (major >= 26) return 25
+	if (major !== 1) return undefined
+	if (minor < 17) return 8
+	if (minor === 17) return 16
+	if (minor < 20 || (minor === 20 && patch < 5)) return 17
+	return 21
+}
+
 /** Compiles every .java under a sandbox folder into a real .jar. */
-export async function sandboxCompileJava(sourceRel: string, jarRel: string): Promise<string> {
+export async function sandboxCompileJava(
+	sourceRel: string,
+	jarRel: string,
+	gameVersion = '',
+): Promise<string> {
 	countCommand()
 	const source = sourceRel.trim()
 	const jar = jarRel.trim()
@@ -295,6 +312,7 @@ export async function sandboxCompileJava(sourceRel: string, jarRel: string): Pro
 		return await invoke('plugin:portalrinth-archiver|archiver_compile_java', {
 			sourceDir: await resolveIn(source, root()),
 			outputJar: await resolveIn(jar, root()),
+			release: javaReleaseFor(gameVersion) ?? null,
 		})
 	} catch (error) {
 		return `Компиляция не удалась: ${String(error).slice(0, 600)}`

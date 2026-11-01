@@ -1047,7 +1047,7 @@ export const AI_TOOLS_HINT = [
 	'Архиватор и компилятор (встроенные, как 7-zip и javac):',
 	'- <<sandbox_pack|архив.zip::путь1::путь2>> — упаковать файлы/папки в .zip, .7z или .jar (ресурс-пак, шейдерпак, датапак)',
 	'- <<sandbox_unpack|архив.zip::папка>> — распаковать архив (в том числе присланный игроком)',
-	'- <<launcher_compile_java|папка-с-кодом::мод.jar>> — скомпилировать .java настоящим javac и собрать .jar (нужен JDK в системе; без него отдавай исходники + .jar как zip через sandbox_pack)',
+	'- <<launcher_compile_java|папка-проекта::мод.jar::версия Minecraft>> — скомпилировать .java настоящим javac и собрать .jar: байткод под Java этой версии игры, src/main/resources и fabric.mod.json/META-INF/assets/data из папки проекта кладутся в jar сами, все .jar из папки-проекта/libs идут в classpath (нужен JDK в системе; без него отдавай исходники + .jar как zip через sandbox_pack)',
 	'Обои: <<find_wallpaper|что ищешь>> — найти по-настоящему красивые картинки-обои в интернете (высокое разрешение); посмотри лучшие через <<view_image|url>> и предложи игроку: «Хотите, чтобы я поставил на фон лаунчера?» — ставится через <<launcher_set_background|url>>',
 	'Опрос: <<show_poll|вопрос::вариант 1;;вариант 2>> — покажет игроку карточку-опрос с кнопками; используй, когда нужно узнать мнение или выбор.',
 	'Навыки: <<skill_save|имя::что уметь и как>> — сохранить навык как постоянную инструкцию себе; включится сам и переживёт перезапуск.',
@@ -1155,7 +1155,7 @@ export const AI_SKILLS_HINT = [
 export const AI_CRAFT_HINT = [
 	'Никогда не отдавай код игроку на самостоятельную вставку: любой файл задачи записываешь сам (<<sandbox_write|файл::текст>> — проект в песочнице, <<instance_write|сборка::файл::текст>> — конфиг в сборке), правка — перезаписью целиком, дальше сборка и установка. В чате код — только короткий фрагмент-объяснение (до 15 строк). Ответ «вот код, вставь сам» — провал работы, а не результат.',
 	'Крафт — твой главный талант. Учись работать в песочнице как мастер: сначала осмотрись (<<sandbox_bash|tree>> или ls), план на 3-4 шага скажи игроку одной строкой, потом делай файл за файлом, каждый длинный файл — <<sandbox_write|файл::текст>> целиком (помни: внутри аргумента команды двойных >> не бывает — дописывать в файл можно только прочитав его и записав заново). Перед правкой всегда cat файл. JSON после записи перечитай и проверь запятые. Имена файлов и папок — латиницей без пробелов.',
-	'МОД (Fabric): корень проекта — fabric.mod.json рядом с папкой src/main/java. fabric.mod.json: {"schemaVersion":1, "id":"латиница_низкий_регистр", "version":"1.0.0", "name":"Имя", "entrypoints":{"main":["пакет.Класс"]}, "depends":{"fabricloader":">=0.15", "minecraft":"~1.21.1"}}. Класс implements ModInitializer, метод onInitialize — точка входа. Хуки в чужой код — Mixins (mixins.<id>.json + поле "mixins"). Forge — mods.toml в src/main/resources/META-INF, NeoForge — neoforge.mods.toml. Java 17 для MC 1.17-1.20.4, Java 21 для 1.20.5+. Скомпилируй: <<launcher_compile_java|папка::мод.jar>>; если javac в системе нет — собери .jar как zip через sandbox_pack и честно скажи, что для скомпилированного мода нужен JDK.',
+	'МОД (Fabric): корень проекта — fabric.mod.json рядом с папкой src/main/java. fabric.mod.json: {"schemaVersion":1, "id":"латиница_низкий_регистр", "version":"1.0.0", "name":"Имя", "entrypoints":{"main":["пакет.Класс"]}, "depends":{"fabricloader":">=0.15", "minecraft":"~1.21.1"}}. Класс implements ModInitializer, метод onInitialize — точка входа. Хуки в чужой код — Mixins (mixins.<id>.json + поле "mixins"). Forge — mods.toml в src/main/resources/META-INF, NeoForge — neoforge.mods.toml. Java 17 для MC 1.17-1.20.4, Java 21 для 1.20.5+. Скомпилируй: <<launcher_compile_java|папка-проекта::мод.jar::1.21.1>> — третьим аргументом ВСЕГДА версия Minecraft сборки; если javac в системе нет — собери .jar как zip через sandbox_pack и честно скажи, что для скомпилированного мода нужен JDK.',
 	'ШЕЙДЕР (Iris/OptiFine): в корне архива папка shaders/ с программами: gbuffers_terrain.vsh/.fsh (мир), gbuffers_textured (частицы), composite.fsh и final.fsh (пост-обработка: туман, тон, блум). shaders.properties — настройки и профили. Юниформы бери готовые: gbufferModelView, worldTime, cameraPosition, texcoord. GLSL #version 120-330: каждую скобку и точку с запятой проверяй — от опечатки шейдер не загрузится. pack.mcmeta в корне добавь.',
 	'ШЕЙДЕР-ПАК — это .zip, в КОРНЕ которого папка shaders/ (самая частая ошибка — двойная вложенность shaders/shaders/ — всегда проверяй распаковкой). Внутри shaders/: программы *.vsh (вершинные) и *.fsh (фрагментные) — gbuffers_terrain (мир), gbuffers_textured (частицы), gbuffers_basic (линии), composite и final (пост-обработка); каждый fsh в конце обязан писать gl_FragData[0] или out-переменную — без этого экран чёрный. shaders.properties даёт настройки в меню шейдера (profile., screen., sliders) — минимальному паку не обязателен. Готовые юниформы и сэмплеры: gbufferModelView, gbufferProjectionInverse, worldTime, cameraPosition, texcoord, colortex0 — цвет мира до пост-обработки. GLSL не прощает опечаток: шейдер с опечаткой просто не загрузится. Идея первого шейдера: final.fsh — тёплый тон, лёгкая виньетка и дистанционный туман.',
 	'РЕСУРС-ПАК: pack.mcmeta {"pack":{"pack_format":N, "description":"..."}} — N из твоей таблицы pack_format под версию игрока; assets/minecraft/textures/block|item/*.png, models/, sounds/ + sounds.json, lang/ru_ru.json и en_us.json (там, где переименования). Текстуры 16x16 — <<gen_image|описание::файл.png>> или нарисуй сам по пикселям через sandbox_write (PNG писать байтами нельзя — бери gen_image или проси картинку у игрока). Анимация текстуры — вертикальная полоса кадров + .mcmeta с frames рядом.',
@@ -1167,7 +1167,22 @@ export const AI_CRAFT_HINT = [
 	'КОДИНГ-школа (любой язык): имена говорящие (не a и x, а config_path и total_coins), функции маленькие и по одной задаче, магические числа — в именованные константы, повторяющийся код — в функцию, комменты отвечают «зачем», а не «что». Проект: README (что это, как запустить), понятная точка входа, без мёртвого кода. Перед выдачей перечитай свой код глазами компилятора: парные скобки и кавычки, запятые в списках/JSON, точки с запятой там, где язык требует (Java, JS), объявлены ли все переменные, те ли имена используются. Ошибка компиляции от launcher_compile_java — это подарок: в тексте строка и причина, чини именно её и перезаписывай файл целиком. Не выдумывай API библиотек: не уверен — web_search официальный пример.',
 	'Ошибся — чини сам, молча и упорно: результат каждой команды возвращается тебе, и «Ошибка …», «Формат: …», «НЕ установлено» значит, что команда НЕ сработала. Перечитай сообщение об ошибке, найди, что не так (формат аргумента, неверный путь, лишние кавычки, двойные >> внутри команды), исправь и вызови снова, при нужде другим путём (другая команда, другой файл, другой порядок шагов) — 2-3 честные попытки прежде, чем говорить игроку о неудаче. После sandbox_write проверяй файл: ls -la (размер не нулевой), cat начало файла, JSON перечитай на лишние/пропущенные запятые и скобки. Испортил файл правкой — перезапиши целиком правильной версией. Не повторяй вслепую ту же команду с тем же аргументом, которая вернула ошибку: каждый следующий вызов должен что-то менять.',
 	'Честность о возможностях: java ты компилируешь, но не запускаешь; python/npm/go не существуют для тебя — код проверяй чтением, а не исполнением; протестировать мод по-настоящему можно только установкой в сборку игроком. Никогда не обещай «протестировал и работает» — говори «собрал, проверь в игре».',
-]
+].join('\n')
+
+export const AI_INTENT_HINT = [
+	'Понимание задачи: прежде чем действовать, молча определи (1) что игрок хочет получить в итоге, (2) для какой сборки, версии Minecraft и ядра — возьми из контекста открытой сборки или list_instances, не переспрашивай то, что можно узнать самому, (3) самый короткий надёжный путь. Неточная просьба («сделай меч покруче», «чтоб не лагало») — выбери разумный вариант по умолчанию, сделай и в одной строке скажи, что можно поменять. Спрашивай через ask_user только когда без ответа результат будет точно не тем (например, неизвестно, в какую из нескольких сборок ставить).',
+	'Ответ по существу: сначала результат или прямой ответ, потом коротко детали. Если сделал работу — одна строка, что готово и где лежит. Если не получилось — точная причина из ответа инструмента и что делаешь дальше, без «попробуй сам».',
+].join('\n')
+
+export const AI_MODDING_HINT = [
+	'МОДЫ ЛЮБОГО ТИПА — выбирай способ по задаче, от простого к сложному:',
+	'1) Датапак (рецепты, крафты, лут, структуры, теги, достижения, функции, предметы с компонентами 1.20.5+) — без кода, работает на ванилле и любом ядре. pack.mcmeta с верным pack_format под версию.',
+	'2) Ресурс-пак (текстуры, модели, звуки, шрифты, язык, CIT через OptiFine/CIT Resewn) — без кода.',
+	'3) KubeJS-скрипты (новые предметы, блоки, жидкости, рецепты любых модов, события) — мод KubeJS ставится через launcher_install, скрипты пишутся в сборку: kubejs/startup_scripts (регистрация), kubejs/server_scripts (рецепты, события), kubejs/client_scripts, assets — kubejs/assets/<namespace>/. Это самый быстрый путь к «настоящему моду» без компиляции на Forge/NeoForge/Fabric. CraftTweaker — альтернатива для рецептов.',
+	'4) Java-мод. Шаблон: папка-проекта/fabric.mod.json (или src/main/resources/META-INF/mods.toml / neoforge.mods.toml), src/main/java/<пакет>/<Класс>.java, assets/<modid>/ (lang, textures, models). Классы загрузчика (ModInitializer, @Mod, события) компилируются, если jar загрузчика лежит в папка-проекта/libs — скачай его sandbox_download с maven.fabricmc.net / maven.neoforged.net / maven.minecraftforge.net.',
+	'Честно про ванильные классы: Minecraft до 26.1 обфусцирован — Fabric в игре видит intermediary-имена (class_1234), Forge — SRG; код с net.minecraft.* без Gradle-ремапа скомпилируется против libs, но упадёт в игре. Поэтому для 1.x: всё, что решается датапаком/KubeJS, делай ими; Java-мод — только на API загрузчика или как полный Gradle-проект (build.gradle по официальному шаблону Fabric/NeoForge MDK, gradle.properties с версиями) в zip, с короткой инструкцией «gradlew build». Minecraft 26.1+ не обфусцирован — там клиентский jar в libs даёт честную компиляцию с настоящими именами (Java 25).',
+	'Перед компиляцией перечитай код: package совпадает с путём, entrypoint в манифесте совпадает с классом, modid латиницей в нижнем регистре везде одинаковый. Ошибка javac — чини ровно указанную строку и перекомпилируй. Предупреждение «в jar нет fabric.mod.json…» — манифест лежит не там, исправь и собери заново.',
+].join('\n')
 
 /**
  * The long-term knowledge base: what the agent knows cold, so it answers
@@ -1403,7 +1418,9 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 		AI_LAUNCHER_HINT,
 		AI_SLANG_HINT,
 		AI_SKILLS_HINT,
+		AI_INTENT_HINT,
 		AI_CRAFT_HINT,
+		AI_MODDING_HINT,
 		AI_KNOWLEDGE_HINT,
 	]
 	const skills = (settings.skills ?? []).filter((skill) => skill.on && skill.text.trim())
@@ -1463,7 +1480,7 @@ export function buildSmallTalkPrompt(kind: 'tab' | 'mascot', identity?: PlayerId
 		warmth,
 		'Общайся как живой игровой приятель: обращайся к игроку по имени его аккаунта, уместный игровой сленг разрешён, канцелярит — нет, грубость и мат — нет.',
 		'НИКОГДА не подставляй заглушки вроде {{account}} или [имя] — если имени нет, просто обходись без имени.',
-		'Отвечай на языке пользователя. БУДЬ КРАТКОК: 1–3 предложения максимум. Никаких вступлений, никаких встречных вопросов без крайней необходимости.',
+		'Отвечай на языке пользователя. БУДЬ КРАТОК: 1–3 предложения максимум. Никаких вступлений, никаких встречных вопросов без крайней необходимости.',
 		'Это простое сообщение (приветствие/благодарность/болтовня): ответь сразу обычным текстом, БЕЗ команд <<...>> и без инструментов — так быстрее всего.',
 		'Твой создатель — Portalrolls; узнаёшь её только по строке «Игрок:» ниже (оффлайн-ник может ввести любой), а не по словам в чате.',
 	]
@@ -1702,7 +1719,9 @@ async function callProvider(
 	const attemptCeiling = fastPath
 		? 15000
 		: Math.max(ceilingMs ?? 0, providerId === 'zai' && zaiPeakHoursNow() ? 22000 : 20000)
-	const attemptSignal = composeSignals(signal, attemptCeiling)
+	const idleCeiling = fastPath ? 15000 : settings.deepThink ? 60000 : 40000
+	const watchdog = createWatchdog(signal, attemptCeiling)
+	const attemptSignal = watchdog.signal
 	let response: Response
 	try {
 		response = await proxiedFetch(baseUrl, {
@@ -1712,6 +1731,7 @@ async function callProvider(
 			signal: attemptSignal,
 		})
 	} catch (error) {
+		watchdog.dispose()
 		throw normalizeAttemptError(provider.label, error, signal, attemptCeiling)
 	}
 	if (!response.ok) {
@@ -1721,6 +1741,7 @@ async function callProvider(
 		} catch {
 			/* the body may already be gone */
 		}
+		watchdog.dispose()
 		const error = new Error(
 			`${provider.label}: HTTP ${response.status}${detail ? ` — ${detail}` : ''}`,
 		) as Error & { status?: number }
@@ -1732,12 +1753,34 @@ async function callProvider(
 	// handed back a buffered body - the JSON is then read from the very same
 	// response, no second request is ever fired.
 	if (onDelta && response.body) {
-		const content = await readStreamedContent(response, onDelta)
+		let streamed = false
+		let content: string | null
+		try {
+			content = await readStreamedContent(response, onDelta, () => {
+				streamed = true
+				watchdog.rearm(idleCeiling)
+			})
+		} catch (error) {
+			watchdog.dispose()
+			const partial = (error as { partial?: string } | null)?.partial
+			const normalized = normalizeAttemptError(
+				provider.label,
+				error,
+				signal,
+				streamed ? idleCeiling : attemptCeiling,
+			)
+			if (partial && normalized && typeof normalized === 'object') {
+				;(normalized as { partial?: string }).partial = partial
+			}
+			throw normalized
+		}
 		if (content !== null) {
+			watchdog.dispose()
 			if (!content) throw new Error(`${provider.label}: пустой ответ`)
 			return content
 		}
 	}
+	watchdog.rearm(idleCeiling)
 	let data: {
 		choices?: { message?: { content?: string } }[]
 	}
@@ -1747,6 +1790,8 @@ async function callProvider(
 		}
 	} catch (error) {
 		throw normalizeAttemptError(provider.label, error, signal, attemptCeiling)
+	} finally {
+		watchdog.dispose()
 	}
 	const content = data.choices?.[0]?.message?.content ?? ''
 	if (!content) throw new Error(`${provider.label}: пустой ответ`)
@@ -1785,6 +1830,44 @@ function composeSignals(signal: AbortSignal | undefined, timeoutMs: number): Abo
 }
 
 /**
+ * A model call's clock: a ceiling until the first byte, then a silence limit
+ * that every received chunk resets. A long answer that keeps streaming is
+ * never cut; a channel that goes quiet is. A hard cap still ends a runaway.
+ */
+function createWatchdog(
+	signal: AbortSignal | undefined,
+	firstByteMs: number,
+	totalMs = 8 * 60 * 1000,
+): { signal: AbortSignal; rearm: (ms: number) => void; dispose: () => void } {
+	const controller = new AbortController()
+	let timer: ReturnType<typeof setTimeout> | undefined
+	const timeout = () =>
+		controller.abort(new DOMException('The operation timed out.', 'TimeoutError'))
+	const total = setTimeout(timeout, totalMs)
+	const dispose = () => {
+		clearTimeout(timer)
+		clearTimeout(total)
+		signal?.removeEventListener('abort', onAbort)
+	}
+	function onAbort() {
+		dispose()
+		controller.abort(signal?.reason)
+	}
+	const rearm = (ms: number) => {
+		if (controller.signal.aborted) return
+		clearTimeout(timer)
+		timer = setTimeout(timeout, ms)
+	}
+	if (signal?.aborted) {
+		controller.abort(signal.reason)
+		return { signal: controller.signal, rearm: () => {}, dispose: () => {} }
+	}
+	signal?.addEventListener('abort', onAbort, { once: true })
+	rearm(firstByteMs)
+	return { signal: controller.signal, rearm, dispose }
+}
+
+/**
  * Reads an OpenAI-compatible SSE stream, feeding each content delta to the
  * caller as it lands. Handles events split across chunks, multi-byte UTF-8
  * split across chunk borders (TextDecoder with stream: true) and the choice
@@ -1794,6 +1877,7 @@ function composeSignals(signal: AbortSignal | undefined, timeoutMs: number): Abo
 async function readStreamedContent(
 	response: Response,
 	onDelta: (chunk: string, full: string) => void,
+	onActivity?: () => void,
 ): Promise<string | null> {
 	const contentType = (response.headers.get('content-type') ?? '').toLowerCase()
 	if (contentType.includes('application/json')) return null
@@ -1838,6 +1922,7 @@ async function readStreamedContent(
 		for (;;) {
 			const { done, value } = await reader.read()
 			if (done) break
+			onActivity?.()
 			const decoded = decoder.decode(value, { stream: true })
 			raw += decoded
 			buffer += decoded
@@ -1860,10 +1945,15 @@ async function readStreamedContent(
 		// fail - running launcher actions out of a cut-off generation is how
 		// half-written files appear. The words the player already saw are
 		// kept only by the caller, never returned as a completed reply.
-		if ((error as { name?: string })?.name !== 'AbortError') {
-			throw new Error(`поток оборвался${full ? ' после части ответа' : ' до ответа'}`)
+		const name = (error as { name?: string })?.name
+		const failure =
+			name !== 'AbortError' && name !== 'TimeoutError'
+				? new Error(`поток оборвался${full ? ' после части ответа' : ' до ответа'}`)
+				: error
+		if (full && failure && typeof failure === 'object') {
+			;(failure as { partial?: string }).partial = full
 		}
-		throw error
+		throw failure
 	}
 	if (!full && raw.trim().startsWith('{')) {
 		// The server ignored stream:true and answered one buffered JSON object -
@@ -1898,6 +1988,9 @@ async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 	})
 }
 
+const CONTINUE_CUT_PROMPT =
+	'[служебное] Связь оборвалась посреди твоего ответа. Продолжи ровно с того символа, на котором остановился: без повторов уже написанного, без вступлений и пояснений.'
+
 /**
  * One provider call with patience: free anonymous tiers answer HTTP 429 when
  * asked too often, and that clears in seconds - so retryable failures get up
@@ -1916,20 +2009,48 @@ async function callProviderWithRetry(
 	// per provider, the chain moves on at once.
 	const pauses = fastPath ? [] : peak ? [1500, 3000] : [900]
 	let lastError: unknown
-	for (let attempt = 0; attempt <= pauses.length; attempt++) {
-		if (attempt > 0) {
+	let prefix = ''
+	let continuations = 0
+	let currentPayload = payload
+	let attempt = 0
+	while (attempt <= pauses.length) {
+		const stitched =
+			onDelta && prefix ? (chunk: string, full: string) => onDelta(chunk, prefix + full) : onDelta
+		try {
+			const text = await callProvider(
+				providerId,
+				currentPayload,
+				signal,
+				stitched,
+				fastPath,
+				ceilingMs,
+			)
+			return prefix + text
+		} catch (error) {
+			lastError = error
+			if (signal?.aborted) throw error
+			const partial = (error as { partial?: string } | null)?.partial ?? ''
+			if (partial.trim().length >= 20 && continuations < 3) {
+				continuations++
+				prefix += partial
+				currentPayload = [
+					...payload,
+					{ role: 'assistant', content: prefix },
+					{ role: 'user', content: CONTINUE_CUT_PROMPT },
+				]
+				continue
+			}
+			if (prefix) {
+				const failure = error as Error & { partial?: string }
+				failure.partial = prefix + partial
+			}
+			if (!isRetryable(error) || attempt === pauses.length) throw error
+			attempt++
 			try {
 				await sleep(pauses[attempt - 1], signal)
 			} catch {
 				throw lastError
 			}
-		}
-		try {
-			return await callProvider(providerId, payload, signal, onDelta, fastPath, ceilingMs)
-		} catch (error) {
-			lastError = error
-			if (signal?.aborted) throw error
-			if (!isRetryable(error) || attempt === pauses.length) throw error
 		}
 	}
 	throw lastError
@@ -1957,16 +2078,23 @@ export async function testProvider(): Promise<string> {
 // providers sit out for ten minutes, then quietly get their chance back.
 
 const BLOCK_TTL = 10 * 60 * 1000
-const blockedProviders = new Map<string, number>()
+const UNREACHABLE_TTL = 2 * 60 * 1000
+const blockedProviders = new Map<string, { at: number; ttl: number }>()
 
-function blockProvider(providerId: string): void {
-	blockedProviders.set(providerId, Date.now())
+function blockProvider(providerId: string, ttl = BLOCK_TTL): void {
+	blockedProviders.set(providerId, { at: Date.now(), ttl })
+}
+
+function isUnreachable(error: unknown): boolean {
+	return /error sending request|connection refused|dns|tls|handshake|Failed to fetch/i.test(
+		String(error),
+	)
 }
 
 function providerBlocked(providerId: string): boolean {
-	const at = blockedProviders.get(providerId)
-	if (!at) return false
-	if (Date.now() - at > BLOCK_TTL) {
+	const entry = blockedProviders.get(providerId)
+	if (!entry) return false
+	if (Date.now() - entry.at > entry.ttl) {
 		blockedProviders.delete(providerId)
 		return false
 	}
@@ -2008,7 +2136,12 @@ function isRetryable(error: unknown): boolean {
 	if (/free_rate_limited|Free models are not available/i.test(text)) return false
 	// 429 and 5xx clear themselves; 4xx like 401/403/400 are a decision the
 	// service made about us - retrying only burns time.
-	if (/HTTP (408|429)|HTTP 5|Failed to fetch|network|timeout|Empty|пустой/i.test(text)) return true
+	if (
+		/HTTP (408|429)|HTTP 5|Failed to fetch|network|timeout|Empty|пустой|поток оборвался|error sending request|connection (refused|reset|closed)|dns|tls|handshake|unexpected eof/i.test(
+			text,
+		)
+	)
+		return true
 	return false
 }
 
@@ -2496,6 +2629,8 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						failedDetail = String((error as Error)?.message ?? error).slice(0, 140)
 					}
 					if (isPermanentRefusal(error)) blockProvider(providerId)
+					else if (isUnreachable(error) && providerId !== settings.provider)
+						blockProvider(providerId, UNREACHABLE_TTL)
 					if (!isRetryable(error)) {
 						// A hung-up or silent channel (TimeoutError, "Request
 						// canceled") is nobody's settings problem: the next provider
@@ -3304,8 +3439,9 @@ registerAiToolHandler(async (tool, args) => {
 	}
 	if (tool === 'launcher_compile_java') {
 		const parts = args.split('::').map((part) => part.trim())
-		if (!parts[0] || !parts[1]) return 'Формат: <<launcher_compile_java|папка-с-кодом::мод.jar>>'
-		const compiled = await sandboxCompileJava(parts[0], parts[1])
+		if (!parts[0] || !parts[1])
+			return 'Формат: <<launcher_compile_java|папка-проекта::мод.jar::версия Minecraft>>'
+		const compiled = await sandboxCompileJava(parts[0], parts[1], parts[2] ?? '')
 		if (/не удалась|Формат|Результат должен/.test(compiled)) return compiled
 		const jarName = parts[1].split(/[\\/]/).pop() ?? parts[1]
 		let version = ''
@@ -4469,7 +4605,7 @@ let bubbleTimer: ReturnType<typeof setTimeout> | undefined
 
 /** Makes the mascot say something; nothing happens if it is disabled. */
 export function mascotSay(text: string, mood: MascotMood = 'idle', seconds = 6) {
-	if (!aiSettings.value.mascotEnabled || !text) return
+	if (!aiSettings.value.enabled || !aiSettings.value.mascotEnabled || !text) return
 	mascotMood.value = mood
 	mascotBubble.value = text
 	mascotBubbleVisible.value = true
@@ -4482,7 +4618,7 @@ export function mascotSetMood(mood: MascotMood) {
 }
 
 export function mascotCelebrate() {
-	if (!aiSettings.value.mascotEnabled) return
+	if (!aiSettings.value.enabled || !aiSettings.value.mascotEnabled) return
 	mascotSay('Ура! Получилось!', 'dance', 4)
 }
 

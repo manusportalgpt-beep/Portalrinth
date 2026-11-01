@@ -15,30 +15,12 @@ import {
 	headerShadeOpacity,
 	pageShade,
 } from '@/helpers/portalrinth-background'
-import { decorUrl, themeSound, themeSoundOn } from '@/helpers/portalrinth-decor'
 
 /*
  * A background video plays silent unless its sound is turned on in
  * Settings → Sound; then at the volume set there or under the title bar's
  * sound button.
  */
-/** The theme's own sound, if a theme came with one and it is wanted. */
-const themeAudio = ref<HTMLAudioElement | null>(null)
-const themeSoundUrl = ref<string | null>(null)
-watchEffect(async () => {
-	if (!themeSoundOn.value || !themeSound.value) {
-		themeSoundUrl.value = null
-		return
-	}
-	themeSoundUrl.value = await decorUrl(themeSound.value.asset, themeSound.value.ext)
-})
-function applyThemeSoundVolume() {
-	if (themeAudio.value && themeSound.value) {
-		themeAudio.value.volume = Math.min(1, Math.max(0, themeSound.value.volume / 100))
-	}
-}
-watchEffect(applyThemeSoundVolume)
-
 const video = ref<HTMLVideoElement | null>(null)
 function applyVideoVolume() {
 	if (video.value) video.value.volume = Math.min(1, Math.max(0, audioSettings.videoVolume / 100))
@@ -95,15 +77,6 @@ watchEffect(() => {
 			@loadedmetadata="applyVideoVolume"
 		/>
 	</Transition>
-	<!-- A theme can carry a quiet sound of its own; it loops under everything. -->
-	<audio
-		v-if="themeSoundUrl && themeSoundOn"
-		ref="themeAudio"
-		:src="themeSoundUrl"
-		loop
-		autoplay
-		@loadedmetadata="applyThemeSoundVolume"
-	/>
 </template>
 
 <style>
@@ -220,39 +193,7 @@ watchEffect(() => {
    the page's arcs itself - otherwise its square corner shows past them. */
 :root.portalrinth-backdrop-active .browse-install-header {
 	border-top-left-radius: var(--radius-xl);
-}
-
-/* Its right end is square: it meets the scrollbar's strip, which is painted
-   in the bar's own dark (below), and the page's arc is drawn by the page
-   itself past that strip. A rounded tip here left a light notch between the
-   bar and the strip. */
-
-/* The scrollbar runs down the page's right edge, past the pinned bar; its
-   track keeps the bar's own dark, so the bar's rounded tip is not cut off by
-   a lighter strip. */
-:root.portalrinth-backdrop-active .app-viewport::-webkit-scrollbar-track {
-	background: color-mix(in srgb, var(--color-bg) var(--portalrinth-header-shade, 60%), transparent);
-}
-
-/* A page too short to scroll has no track to paint: the strip beside the
-   pinned bar takes the bar's dark from the page's own background instead,
-   as high as the bar (the height comes from the bar itself). */
-:root.portalrinth-backdrop-active .app-viewport:has(.browse-install-header) {
-	background-image: linear-gradient(
-		color-mix(in srgb, var(--color-bg) var(--portalrinth-header-shade, 60%), transparent),
-		color-mix(in srgb, var(--color-bg) var(--portalrinth-header-shade, 60%), transparent)
-	);
-	background-origin: border-box;
-	background-position: right top;
-	background-repeat: no-repeat;
-	background-size: 16px var(--browse-install-header-height, 0px);
-}
-
-/* The little cap at the scrollbar's top (the arc's room, global.scss) is the
-   strip's own part - left transparent it was the light gap in the bar's
-   top-right corner. */
-:root.portalrinth-backdrop-active .app-viewport::-webkit-scrollbar-button:single-button:vertical:decrement {
-	background: color-mix(in srgb, var(--color-bg) var(--portalrinth-header-shade, 60%), transparent);
+	border-top-right-radius: var(--app-viewport-top-right-radius, 0);
 }
 
 /* Menus and tooltips too, a touch more solid: they are small and read fast. */

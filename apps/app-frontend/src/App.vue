@@ -77,6 +77,7 @@ import AppTitleBar from '@/app/shell/title-bar/index.vue'
 import AgentNavNotice from '@/components/ui/ai/AgentNavNotice.vue'
 import AiViewerHost from '@/components/ui/ai/AiViewerHost.vue'
 import CurseforgePendingFilesModal from '@/components/ui/curseforge/CurseforgePendingFilesModal.vue'
+import { trackExternalFileDownload } from '@/components/ui/download-manager/external-file-downloads'
 import ErrorModal from '@/components/ui/ErrorModal.vue'
 import HostingUpdateRequired from '@/components/ui/HostingUpdateRequired.vue'
 import AddServerToInstanceModal from '@/components/ui/install_flow/AddServerToInstanceModal.vue'
@@ -95,7 +96,6 @@ import NotesLaunchPopup from '@/components/ui/NotesLaunchPopup.vue'
 import ViewportScrollbar from '@/components/ui/portalrinth-widgets/ViewportScrollbar.vue'
 import PortalrinthBackdrop from '@/components/ui/PortalrinthBackdrop.vue'
 import PortalrinthCrashModal from '@/components/ui/PortalrinthCrashModal.vue'
-import PortalrinthDecorOverlay from '@/components/ui/PortalrinthDecorOverlay.vue'
 import PortalrinthSwipeNavigation from '@/components/ui/PortalrinthSwipeNavigation.vue'
 import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
 import SharedInstanceInviteHandler from '@/components/ui/shared-instances/shared-instance-invite-handler/index.vue'
@@ -123,7 +123,13 @@ import {
         should_show_ads_consent_popup,
         take_ads_window_hold,
 } from '@/helpers/ads.js'
-import { mascotCelebrate, maybeMarkPlayerInterrupt, noteAgentNavigation, registerAiToolHandler } from '@/helpers/ai-assistant'
+import {
+        aiSettings,
+        mascotCelebrate,
+        maybeMarkPlayerInterrupt,
+        noteAgentNavigation,
+        registerAiToolHandler,
+} from '@/helpers/ai-assistant'
 import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { refreshBedrockProfiles } from '@/helpers/bedrock'
@@ -200,7 +206,6 @@ import {
         instanceListQueryOptions,
         screenshotKeys,
 } from '@/pages/instance/query-options'
-import { trackExternalFileDownload } from '@/components/ui/download-manager/external-file-downloads'
 import { createFileDownload } from '@/platform/adapters/file-download'
 import { createAppClient } from '@/platform/modrinth-client'
 import {
@@ -234,6 +239,13 @@ const appSettings = useAppSettings()
 const appTheme = useTheme()
 const quickInstances = useQuickInstanceLimit()
 const router = useRouter()
+router.beforeEach((to) => (to.path.startsWith('/ai') && !aiSettings.value.enabled ? '/' : true))
+watch(
+        () => aiSettings.value.enabled,
+        (enabled) => {
+                if (!enabled && router.currentRoute.value.path.startsWith('/ai')) void router.replace('/')
+        },
+)
 const route = useRoute()
 
 const TITLE_SHEEN_CLASS = 'portalrinth-title-sheen'
@@ -1765,12 +1777,16 @@ onMounted(() => {
         registerHotkeyHandler('page-mods', () => router.push('/browse/mod'))
         registerHotkeyHandler('page-modpacks', () => router.push('/browse/modpack'))
         registerHotkeyHandler('page-skins', () => router.push('/browse/skin'))
-        registerHotkeyHandler('page-ai', () => router.push('/ai'))
+        registerHotkeyHandler('page-ai', () => {
+                if (aiSettings.value.enabled) void router.push('/ai')
+        })
         registerHotkeyHandler('page-screenshots', () => router.push('/screenshots'))
         registerHotkeyHandler('page-settings', () => {
                 void appSettingsModal.value?.show()
         })
-        registerHotkeyHandler('new-chat', () => router.push('/ai'))
+        registerHotkeyHandler('new-chat', () => {
+                if (aiSettings.value.enabled) void router.push('/ai')
+        })
         registerHotkeyHandler('kill-game', async () => {
                 try {
                         const helpers = await import('@/helpers/process')
@@ -2741,6 +2757,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                                 <ImageIcon />
                         </NavButton>
                         <NavButton
+                                v-if="aiSettings.enabled"
                                 v-tooltip.right="formatMessage(messages.ai)"
                                 to="/ai"
                                 :is-primary="(r) => r.path === '/ai'"
@@ -2998,7 +3015,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
         />
         <SharedInstanceInviteHandler ref="sharedInstanceInviteHandler" />
         <AgentNavNotice />
-        <PortalrinthDecorOverlay />
         <NotesLaunchPopup />
         <InstallToPlayModal ref="installToPlayModal" :show-external-warnings="false" />
         <UpdateToPlayModal ref="updateToPlayModal" :show-external-warnings="false" />
@@ -3069,6 +3085,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
                 .app-viewport {
                         border-top-right-radius: var(--radius-xl);
+                        --app-viewport-top-right-radius: var(--radius-xl);
                 }
 
                 .app-sidebar {

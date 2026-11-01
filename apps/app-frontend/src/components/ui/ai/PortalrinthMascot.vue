@@ -588,7 +588,10 @@ function walkStep() {
 
 // ---- Lifecycle -----------------------------------------------------------
 
-const hidden = computed(() => !aiSettings.value.mascotEnabled || route.path.startsWith('/ai'))
+const hidden = computed(
+	() =>
+		!aiSettings.value.enabled || !aiSettings.value.mascotEnabled || route.path.startsWith('/ai'),
+)
 
 function onResize() {
 	clampPos()
