@@ -153,7 +153,10 @@ pub async fn archiver_pack<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     sources: Vec<String>,
     dest: String,
+    skip_unreadable: Option<bool>,
 ) -> Result<String> {
+    let skip_unreadable = skip_unreadable.unwrap_or(false);
+    let mut skipped = 0usize;
     if sources.is_empty() {
         return Err(error("не указано, что упаковывать"));
     }
@@ -194,14 +197,24 @@ pub async fn archiver_pack<R: tauri::Runtime>(
             for source in &source_paths {
                 collect_files(source, &mut files).await?;
             }
-            let writer = tokio::fs::File::create(&dest_path)
+            let partial = dest_path.with_extension("part");
+            let writer = tokio::fs::File::create(&partial)
                 .await
                 .map_err(|e| error(format!("не удалось создать архив: {e}")))?;
             let mut writer = async_zip::tokio::write::ZipFileWriter::with_tokio(writer);
             for (name, path) in files {
-                let bytes = tokio::fs::read(&path)
-                    .await
-                    .map_err(|e| error(format!("не удалось прочитать {}: {e}", path.display())))?;
+                let bytes = match tokio::fs::read(&path).await {
+                    Ok(bytes) => bytes,
+                    Err(_) if skip_unreadable => {
+                        skipped += 1;
+                        continue;
+                    }
+                    Err(e) => {
+                        drop(writer);
+                        let _ = tokio::fs::remove_file(&partial).await;
+                        return Err(error(format!("не удалось прочитать {}: {e}", path.display())));
+                    }
+                };
                 let builder = async_zip::ZipEntryBuilder::new(
                     name.clone().into(),
                     async_zip::Compression::Deflate,
@@ -211,10 +224,14 @@ pub async fn archiver_pack<R: tauri::Runtime>(
                     .await
                     .map_err(|e| error(format!("не удалось добавить {name} в архив: {e}")))?;
             }
-            writer
-                .close()
+            if let Err(e) = writer.close().await {
+                let _ = tokio::fs::remove_file(&partial).await;
+                return Err(error(format!("не удалось закрыть архив: {e}")));
+            }
+            let _ = tokio::fs::remove_file(&dest_path).await;
+            tokio::fs::rename(&partial, &dest_path)
                 .await
-                .map_err(|e| error(format!("не удалось закрыть архив: {e}")))?;
+                .map_err(|e| error(format!("не удалось сохранить архив: {e}")))?;
         }
         Err(e) => return Err(e),
     }
@@ -223,8 +240,13 @@ pub async fn archiver_pack<R: tauri::Runtime>(
         .map(|meta| meta.len())
         .unwrap_or(0);
     Ok(format!(
-        "архив собран: {} ({size} байт)",
-        dest_path.display()
+        "архив собран: {} ({size} байт){}",
+        dest_path.display(),
+        if skipped > 0 {
+            format!(", пропущено занятых файлов: {skipped}")
+        } else {
+            String::new()
+        }
     ))
 }
 
@@ -235,7 +257,9 @@ pub async fn archiver_unpack<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     archive: String,
     dest_dir: String,
+    strip_top: Option<bool>,
 ) -> Result<String> {
+    let strip_top = strip_top.unwrap_or(false);
     let roots = allowed_roots(&app);
     let archive_path = PathBuf::from(&archive);
     ensure_allowed(&roots, &archive_path)?;
@@ -273,10 +297,16 @@ pub async fn archiver_unpack<R: tauri::Runtime>(
                 if name.is_empty() {
                     continue;
                 }
-                if name.starts_with('/') || name.contains("..") {
+                if name.starts_with('/') || name.split(['/', '\\']).any(|part| part == "..") {
                     return Err(error(format!("опасное имя файла в архиве: {name}")));
                 }
-                let safe_name = name.replace('\\', "/");
+                let mut safe_name = name.replace('\\', "/");
+                if strip_top {
+                    match safe_name.split_once('/') {
+                        Some((_, rest)) if !rest.is_empty() => safe_name = rest.to_string(),
+                        _ => continue,
+                    }
+                }
                 let target = dest_path.join(&safe_name);
                 if !target.starts_with(&dest_path) {
                     return Err(error(format!("опасное имя файла в архиве: {name}")));

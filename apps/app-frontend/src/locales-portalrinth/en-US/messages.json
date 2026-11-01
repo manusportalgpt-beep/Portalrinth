@@ -2271,7 +2271,7 @@
 		"message": "A note pinned to this build: plans, things to check, the server address. It pops up on screen before every game launch."
 	},
 	"app.instance.notes.placeholder": {
-		"message": "For example: remember to turn shaders on and join the server…"
+		"message": "For example: remember to enable shaders and join the server…"
 	},
 	"app.instance.notes.save": {
 		"message": "Save"
@@ -2453,5 +2453,47 @@
 	},
 	"app.ai.mode.handoff-prompt": {
 		"message": "Do it"
+	},
+	"instance.settings.backups.running": {
+		"message": "Close the game first — its files are locked while it runs."
+	},
+	"instance.settings.backups.restored": {
+		"message": "Backup restored."
+	},
+	"app.quick-instance-switcher.reset-order": {
+		"message": "Reset order"
+	},
+	"app.instance.notes.note": {
+		"message": "Note"
+	},
+	"app.instance.notes.tasks": {
+		"message": "Tasks"
+	},
+	"app.instance.notes.task-placeholder": {
+		"message": "New task"
+	},
+	"app.instance.notes.add-task": {
+		"message": "Add"
+	},
+	"app.instance.notes.remove-task": {
+		"message": "Remove task"
+	},
+	"app.instance.notes.clear-done": {
+		"message": "Clear completed"
+	},
+	"app.instance.notes.no-tasks": {
+		"message": "No tasks"
+	},
+	"app.instance.notes.remind": {
+		"message": "Show before launch"
+	},
+	"app.instance.notes.saving": {
+		"message": "Saving…"
+	},
+	"app.instance.notes.chars": {
+		"message": "{count} chars"
+	},
+	"app.instance.notes.clear": {
+		"message": "Clear"
 	}
 }

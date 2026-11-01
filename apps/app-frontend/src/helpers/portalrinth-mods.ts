@@ -113,25 +113,48 @@ export async function cleanLaunch(instanceId: string): Promise<void> {
 
 // ---- Backups --------------------------------------------------------------
 
-/** Packs the whole instance into a timestamped backup zip. Used by the
- * Backups tab and fired automatically before big updates, so a broken
- * update never costs the player their worlds. */
+export async function instanceBackupsDir(instanceId: string): Promise<string> {
+	const { appDataDir } = await import('@tauri-apps/api/path')
+	const base = (await appDataDir()).replace(/[\\/]+$/, '')
+	const sep = base.includes('\\') ? '\\' : '/'
+	const folder = instanceId.replace(/[<>:"/\\|?*]+/g, '_').replace(/[. ]+$/, '') || 'instance'
+	return `${base}${sep}portalrinth-backups${sep}${folder}`
+}
+
+export async function createInstanceBackup(instanceId: string): Promise<string> {
+	const instancePath = await get_full_path(instanceId)
+	const dir = await instanceBackupsDir(instanceId)
+	const sep = dir.includes('\\') ? '\\' : '/'
+	const fs = await import('@tauri-apps/plugin-fs')
+	await fs.mkdir(dir, { recursive: true })
+	const stamp = new Date()
+	const pad = (value: number) => String(value).padStart(2, '0')
+	const name = `backup-${stamp.getFullYear()}-${pad(stamp.getMonth() + 1)}-${pad(stamp.getDate())}-${pad(stamp.getHours())}-${pad(stamp.getMinutes())}-${pad(stamp.getSeconds())}.zip`
+	const dest = `${dir}${sep}${name}`
+	const { invoke } = await import('@tauri-apps/api/core')
+	await invoke('plugin:portalrinth-archiver|archiver_pack', {
+		sources: [instancePath],
+		dest,
+		skipUnreadable: true,
+	})
+	return dest
+}
+
+export async function restoreInstanceBackup(instanceId: string, archive: string): Promise<void> {
+	const running = await get_by_instance_id(instanceId).catch(() => [])
+	if (Array.isArray(running) && running.length > 0) throw new Error('instance-running')
+	const instancePath = await get_full_path(instanceId)
+	const { invoke } = await import('@tauri-apps/api/core')
+	await invoke('plugin:portalrinth-archiver|archiver_unpack', {
+		archive,
+		destDir: instancePath,
+		stripTop: true,
+	})
+}
+
 export async function backupInstance(instanceId: string): Promise<string | null> {
 	try {
-		const instancePath = await get_full_path(instanceId)
-		const { appDataDir } = await import('@tauri-apps/api/path')
-		const base = (await appDataDir()).replace(/[\\/]+$/, '')
-		const sep = base.includes('\\') ? '\\' : '/'
-		const dir = `${base}${sep}portalrinth-backups${sep}${instanceId}`
-		const fs = await import('@tauri-apps/plugin-fs')
-		await fs.mkdir(dir, { recursive: true })
-		const stamp = new Date()
-		const pad = (value: number) => String(value).padStart(2, '0')
-		const name = `backup-${stamp.getFullYear()}-${pad(stamp.getMonth() + 1)}-${pad(stamp.getDate())}-${pad(stamp.getHours())}-${pad(stamp.getMinutes())}-${pad(stamp.getSeconds())}.zip`
-		const dest = `${dir}${sep}${name}`
-		const { invoke } = await import('@tauri-apps/api/core')
-		await invoke('plugin:portalrinth-archiver|archiver_pack', { sources: [instancePath], dest })
-		return dest
+		return await createInstanceBackup(instanceId)
 	} catch {
 		return null
 	}

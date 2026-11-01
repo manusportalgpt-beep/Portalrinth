@@ -7,9 +7,17 @@
  */
 import { portalrinthFeatures } from './portalrinth-features'
 
+export interface InstanceNoteTask {
+	id: string
+	text: string
+	done: boolean
+}
+
 export interface InstanceNote {
 	text: string
 	neverRemind: boolean
+	tasks: InstanceNoteTask[]
+	updatedAt: number
 }
 
 const PREFIX = 'portalrinth-instance-notes:'
@@ -26,12 +34,36 @@ export function read_instance_note(instanceId: string): InstanceNote {
 			return {
 				text: typeof parsed.text === 'string' ? parsed.text : '',
 				neverRemind: parsed.neverRemind === true,
+				tasks: Array.isArray(parsed.tasks)
+					? parsed.tasks
+							.filter((task) => task && typeof task.text === 'string')
+							.map((task) => ({
+								id: typeof task.id === 'string' ? task.id : crypto.randomUUID(),
+								text: task.text,
+								done: task.done === true,
+							}))
+					: [],
+				updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0,
 			}
 		}
 	} catch {
 		/* a broken note is the same as no note */
 	}
-	return { text: '', neverRemind: false }
+	return { text: '', neverRemind: false, tasks: [], updatedAt: 0 }
+}
+
+export function write_instance_note(instanceId: string, patch: Partial<InstanceNote>): InstanceNote {
+	const note = { ...read_instance_note(instanceId), ...patch, updatedAt: Date.now() }
+	try {
+		localStorage.setItem(keyOf(instanceId), JSON.stringify(note))
+	} catch {
+		/* a full quota should never take the note down */
+	}
+	return note
+}
+
+export function open_instance_tasks(instanceId: string): InstanceNoteTask[] {
+	return read_instance_note(instanceId).tasks.filter((task) => !task.done && task.text.trim())
 }
 
 export function read_instance_notes(instanceId: string): string {
@@ -39,12 +71,7 @@ export function read_instance_notes(instanceId: string): string {
 }
 
 export function write_instance_notes(instanceId: string, text: string): void {
-	const note = read_instance_note(instanceId)
-	try {
-		localStorage.setItem(keyOf(instanceId), JSON.stringify({ ...note, text }))
-	} catch {
-		/* a full quota should never take the note down */
-	}
+	write_instance_note(instanceId, { text })
 }
 
 export function never_remind_instance_notes(instanceId: string): void {
@@ -90,5 +117,6 @@ export function unmute_all_instance_notes(): number {
 export function should_show_instance_notes(instanceId: string): boolean {
 	if (!portalrinthFeatures.value.notesPopup) return false
 	const note = read_instance_note(instanceId)
-	return note.text.trim().length > 0 && !note.neverRemind
+	if (note.neverRemind) return false
+	return note.text.trim().length > 0 || note.tasks.some((task) => !task.done && task.text.trim())
 }

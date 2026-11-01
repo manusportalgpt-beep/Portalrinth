@@ -3510,7 +3510,7 @@
 		"message": "Чистый запуск (без модов)"
 	},
 	"instance.settings.tabs.mods-sync": {
-		"message": "Синхронизация"
+		"message": "Синхронизация модов"
 	},
 	"instance.settings.tabs.backups": {
 		"message": "Бэкапы"
@@ -3986,5 +3986,47 @@
 	},
 	"app.ai.mode.handoff-prompt": {
 		"message": "Сделай это"
+	},
+	"instance.settings.backups.running": {
+		"message": "Сначала закрой игру — пока она запущена, файлы сборки заняты."
+	},
+	"instance.settings.backups.restored": {
+		"message": "Копия восстановлена."
+	},
+	"app.quick-instance-switcher.reset-order": {
+		"message": "Сбросить порядок"
+	},
+	"app.instance.notes.note": {
+		"message": "Заметка"
+	},
+	"app.instance.notes.tasks": {
+		"message": "Задачи"
+	},
+	"app.instance.notes.task-placeholder": {
+		"message": "Новая задача"
+	},
+	"app.instance.notes.add-task": {
+		"message": "Добавить"
+	},
+	"app.instance.notes.remove-task": {
+		"message": "Удалить задачу"
+	},
+	"app.instance.notes.clear-done": {
+		"message": "Убрать выполненные"
+	},
+	"app.instance.notes.no-tasks": {
+		"message": "Задач нет"
+	},
+	"app.instance.notes.remind": {
+		"message": "Показывать перед запуском"
+	},
+	"app.instance.notes.saving": {
+		"message": "Сохраняю…"
+	},
+	"app.instance.notes.chars": {
+		"message": "{count} симв."
+	},
+	"app.instance.notes.clear": {
+		"message": "Очистить"
 	}
 }

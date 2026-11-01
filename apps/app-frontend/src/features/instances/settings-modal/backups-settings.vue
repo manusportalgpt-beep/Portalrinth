@@ -3,7 +3,11 @@ import { ArchiveIcon, PlusIcon } from '@modrinth/assets'
 import { Button, defineMessages, useVIntl } from '@modrinth/ui'
 import { ref } from 'vue'
 
-import { get_full_path } from '@/helpers/instance'
+import {
+	createInstanceBackup,
+	instanceBackupsDir,
+	restoreInstanceBackup,
+} from '@/helpers/portalrinth-mods'
 
 import { injectInstanceSettings } from './instance-settings-context'
 
@@ -53,6 +57,14 @@ const messages = defineMessages({
 		id: 'instance.settings.backups.fail',
 		defaultMessage: 'Не получилось',
 	},
+	running: {
+		id: 'instance.settings.backups.running',
+		defaultMessage: 'Сначала закрой игру — пока она запущена, файлы сборки заняты.',
+	},
+	restored: {
+		id: 'instance.settings.backups.restored',
+		defaultMessage: 'Копия восстановлена.',
+	},
 })
 
 interface BackupEntry {
@@ -68,19 +80,18 @@ const making = ref(false)
 const restoringPath = ref('')
 const confirmPath = ref('')
 const errorText = ref('')
+const doneText = ref('')
 
-async function backupsDir(): Promise<string> {
-	const { appDataDir } = await import('@tauri-apps/api/path')
-	const base = await appDataDir()
-	const sep = base.includes('\\') ? '\\' : '/'
-	return `${base.replace(/[\\/]+$/, '')}${sep}portalrinth-backups${sep}${instance.value.id}`
+function failText(error: unknown): string {
+	if (error instanceof Error && error.message === 'instance-running') return formatMessage(messages.running)
+	return `${formatMessage(messages.fail)}: ${String(error).slice(0, 200)}`
 }
 
 async function refresh() {
 	loading.value = true
 	try {
 		const fs = await import('@tauri-apps/plugin-fs')
-		const dir = await backupsDir()
+		const dir = await instanceBackupsDir(instance.value.id)
 		const entries = await fs.readDir(dir).catch(() => [])
 		const found: BackupEntry[] = []
 		for (const entry of entries) {
@@ -117,25 +128,13 @@ function labelOf(entry: BackupEntry): string {
 async function makeBackup() {
 	if (making.value) return
 	errorText.value = ''
+	doneText.value = ''
 	making.value = true
 	try {
-		const instancePath = await get_full_path(instance.value.id)
-		const stamp = new Date()
-		const pad = (value: number) => String(value).padStart(2, '0')
-		const name = `backup-${stamp.getFullYear()}-${pad(stamp.getMonth() + 1)}-${pad(stamp.getDate())}-${pad(stamp.getHours())}-${pad(stamp.getMinutes())}-${pad(stamp.getSeconds())}.zip`
-		const dir = await backupsDir()
-		const sep = dir.includes('\\') ? '\\' : '/'
-		const destination = `${dir}${sep}${name}`
-		const fs = await import('@tauri-apps/plugin-fs')
-		await fs.mkdir(dir, { recursive: true })
-		const { invoke } = await import('@tauri-apps/api/core')
-		await invoke('plugin:portalrinth-archiver|archiver_pack', {
-			sources: [instancePath],
-			dest: destination,
-		})
+		await createInstanceBackup(instance.value.id)
 		await refresh()
 	} catch (error) {
-		errorText.value = `${formatMessage(messages.fail)}: ${String(error).slice(0, 200)}`
+		errorText.value = failText(error)
 	} finally {
 		making.value = false
 	}
@@ -150,17 +149,13 @@ async function restoreBackup(entry: BackupEntry) {
 	confirmPath.value = ''
 	restoringPath.value = entry.path
 	errorText.value = ''
+	doneText.value = ''
 	try {
-		const instancePath = await get_full_path(instance.value.id)
-		const parent = instancePath.replace(/[\\/][^\\/]+$/, '')
-		const { invoke } = await import('@tauri-apps/api/core')
-		await invoke('plugin:portalrinth-archiver|archiver_unpack', {
-			archive: entry.path,
-			destDir: parent,
-		})
+		await restoreInstanceBackup(instance.value.id, entry.path)
+		doneText.value = formatMessage(messages.restored)
 		await refresh()
 	} catch (error) {
-		errorText.value = `${formatMessage(messages.fail)}: ${String(error).slice(0, 200)}`
+		errorText.value = failText(error)
 	} finally {
 		restoringPath.value = ''
 	}
@@ -172,7 +167,7 @@ async function deleteBackup(entry: BackupEntry) {
 		await fs.remove(entry.path)
 		await refresh()
 	} catch (error) {
-		errorText.value = `${formatMessage(messages.fail)}: ${String(error).slice(0, 200)}`
+		errorText.value = failText(error)
 	}
 }
 
@@ -196,6 +191,7 @@ void refresh()
 				</Button>
 			</div>
 			<p v-if="errorText" class="m-0 text-sm text-red">{{ errorText }}</p>
+			<p v-else-if="doneText" class="m-0 text-sm text-green">{{ doneText }}</p>
 
 			<p v-if="!loading && backups.length === 0" class="m-0 text-sm text-secondary">
 				{{ formatMessage(messages.empty) }}

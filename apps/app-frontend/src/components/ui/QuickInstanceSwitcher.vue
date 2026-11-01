@@ -4,6 +4,7 @@ import {
 	FolderOpenIcon,
 	PinIcon,
 	PlayIcon,
+	RefreshCwIcon,
 	SpinnerIcon,
 	StopCircleIcon,
 	TagLoaderBedrockIcon,
@@ -95,13 +96,96 @@ const visibleCount = computed(() =>
 )
 // Portalrinth: pinned builds never fall out of the quick panel - any pinned
 // instance cut off by the visible window is appended back below the recent ones.
-const recentInstances = computed(() => {
-	const visible = allInstances.value.slice(0, visibleCount.value)
-	const pinnedOutside = allInstances.value.filter(
+const manualOrder = useStorage('portalrinth-quick-order', [])
+const orderedInstances = computed(() => {
+	if (manualOrder.value.length === 0) return allInstances.value
+	const rank = new Map(manualOrder.value.map((id, index) => [id, index]))
+	const fresh = allInstances.value.filter((instance) => !rank.has(instance.id))
+	const placed = allInstances.value
+		.filter((instance) => rank.has(instance.id))
+		.sort((a, b) => rank.get(a.id) - rank.get(b.id))
+	return [...fresh, ...placed]
+})
+const shownInstances = computed(() => {
+	const visible = orderedInstances.value.slice(0, visibleCount.value)
+	const pinnedOutside = orderedInstances.value.filter(
 		(instance) => isPinned(instance.id) && !visible.some((shown) => shown.id === instance.id),
 	)
 	return pinnedOutside.length > 0 ? [...visible, ...pinnedOutside] : visible
 })
+const dragOrder = ref(null)
+const reorderingId = ref(null)
+const recentInstances = computed(() => {
+	if (!dragOrder.value) return shownInstances.value
+	const byId = new Map(shownInstances.value.map((instance) => [instance.id, instance]))
+	return dragOrder.value.map((id) => byId.get(id)).filter(Boolean)
+})
+
+const instanceList = ref()
+let reorderPointer = null
+let suppressClick = false
+
+function slotIndexAt(clientY) {
+	const list = instanceList.value?.$el ?? instanceList.value
+	if (!list) return 0
+	const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+	const stride = 3.25 * rem
+	const offset = clientY - list.getBoundingClientRect().top
+	return Math.max(0, Math.min(dragOrder.value.length - 1, Math.floor(offset / stride)))
+}
+
+function onItemPointerDown(event, instance) {
+	if (event.button !== 0 || dragging.value) return
+	reorderPointer = { id: instance.id, startY: event.clientY, pointerId: event.pointerId, target: event.currentTarget }
+}
+
+function onItemPointerMove(event) {
+	if (!reorderPointer || event.pointerId !== reorderPointer.pointerId) return
+	if (!reorderingId.value) {
+		if (Math.abs(event.clientY - reorderPointer.startY) < 6) return
+		reorderingId.value = reorderPointer.id
+		dragOrder.value = shownInstances.value.map((instance) => instance.id)
+		reorderPointer.target?.setPointerCapture?.(event.pointerId)
+		document.body.classList.add('quick-instance-reordering')
+	}
+	const from = dragOrder.value.indexOf(reorderingId.value)
+	const to = slotIndexAt(event.clientY)
+	if (from === -1 || from === to) return
+	const next = dragOrder.value.slice()
+	next.splice(from, 1)
+	next.splice(to, 0, reorderingId.value)
+	dragOrder.value = next
+}
+
+function onItemPointerUp(event) {
+	if (!reorderPointer || event.pointerId !== reorderPointer.pointerId) return
+	const target = reorderPointer.target
+	reorderPointer = null
+	if (target?.hasPointerCapture?.(event.pointerId)) target.releasePointerCapture(event.pointerId)
+	if (!reorderingId.value) return
+	const placed = dragOrder.value
+	if (event.type !== 'pointercancel') {
+		manualOrder.value = [...placed, ...manualOrder.value.filter((id) => !placed.includes(id))]
+		suppressClick = true
+		setTimeout(() => {
+			suppressClick = false
+		}, 0)
+	}
+	reorderingId.value = null
+	dragOrder.value = null
+	document.body.classList.remove('quick-instance-reordering')
+}
+
+function onItemClickCapture(event) {
+	if (!suppressClick) return
+	event.preventDefault()
+	event.stopPropagation()
+	suppressClick = false
+}
+
+function resetOrder() {
+	manualOrder.value = []
+}
 const canDrag = computed(() => maxVisible.value > 0)
 const showOverdrag = ref(false)
 
@@ -245,6 +329,7 @@ onMounted(() => {
 onUnmounted(() => {
 	resizeObserver?.disconnect()
 	document.body.classList.remove('quick-instance-dragging')
+	document.body.classList.remove('quick-instance-reordering')
 	clearOverdragFlash()
 })
 
@@ -275,6 +360,10 @@ const messages = defineMessages({
 	},
 	pin: { id: 'app.library.instance.action.pin', defaultMessage: 'Pin to top' },
 	unpin: { id: 'app.library.instance.action.unpin', defaultMessage: 'Unpin' },
+	resetOrder: {
+		id: 'app.quick-instance-switcher.reset-order',
+		defaultMessage: 'Reset order',
+	},
 })
 
 const dividerTooltip = computed(() => {
@@ -351,6 +440,16 @@ function openContextMenu(event, instance) {
 			icon: PinIcon,
 			action: () => togglePin(instance.id),
 		},
+		...(manualOrder.value.length > 0
+			? [
+					{
+						id: 'reset_order',
+						label: formatMessage(messages.resetOrder),
+						icon: RefreshCwIcon,
+						action: resetOrder,
+					},
+				]
+			: []),
 	])
 }
 </script>
@@ -366,14 +465,27 @@ function openContextMenu(event, instance) {
 			</div>
 		</Transition>
 		<div :aria-label="formatMessage(messages.title)">
-			<TransitionGroup name="quick-instance" tag="div" class="flex shrink-0 flex-col items-center">
+			<TransitionGroup
+				ref="instanceList"
+				name="quick-instance"
+				tag="div"
+				class="flex shrink-0 flex-col items-center"
+				:class="{ 'is-reordering': reorderingId }"
+				@click.capture="onItemClickCapture"
+			>
 				<NavButton
 					v-for="instance in recentInstances"
 					:key="instance.id"
-					v-tooltip.right="instance.name"
-					class="quick-instance-item relative"
+					v-tooltip.right="reorderingId ? null : instance.name"
+					class="quick-instance-item relative touch-none"
+					:class="{ 'is-lifted': reorderingId === instance.id }"
 					:to="`/instance/${encodeURIComponent(instance.id)}`"
 					@contextmenu.prevent.stop="(event) => openContextMenu(event, instance)"
+					@pointerdown="(event) => onItemPointerDown(event, instance)"
+					@pointermove="onItemPointerMove"
+					@pointerup="onItemPointerUp"
+					@pointercancel="onItemPointerUp"
+					@dragstart.prevent
 				>
 					<Avatar
 						:src="getInstanceIconUrl(instance.icon_path)"
@@ -481,6 +593,18 @@ function openContextMenu(event, instance) {
 	}
 }
 
+.quick-instance-item.is-lifted {
+	z-index: 20;
+	overflow: visible;
+	transform: scale(1.1);
+	opacity: 0.85;
+	transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.quick-instance-move {
+	transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 .quick-instance-enter-active,
 .quick-instance-leave-active {
 	transition:
@@ -502,7 +626,9 @@ function openContextMenu(event, instance) {
 	.top-divider-enter-active,
 	.top-divider-leave-active,
 	.quick-instance-enter-active,
-	.quick-instance-leave-active {
+	.quick-instance-leave-active,
+	.quick-instance-move,
+	.quick-instance-item.is-lifted {
 		transition: none;
 	}
 
@@ -526,5 +652,11 @@ function openContextMenu(event, instance) {
 body.quick-instance-dragging,
 body.quick-instance-dragging * {
 	cursor: ns-resize !important;
+}
+
+body.quick-instance-reordering,
+body.quick-instance-reordering * {
+	cursor: grabbing !important;
+	user-select: none;
 }
 </style>

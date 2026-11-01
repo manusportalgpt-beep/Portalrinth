@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { StickyNotePlusIcon, XIcon } from '@modrinth/assets'
+import { SquareIcon, StickyNotePlusIcon, XIcon } from '@modrinth/assets'
 import { Button, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
 import { ref } from 'vue'
 
 import { useAppEvent } from '@/composables/use-app-event'
 import { get } from '@/helpers/instance'
 import {
+	type InstanceNoteTask,
 	never_remind_instance_notes,
+	open_instance_tasks,
 	read_instance_notes,
 	should_show_instance_notes,
 } from '@/helpers/portalrinth-notes'
@@ -33,6 +35,7 @@ const messages = defineMessages({
 const popup = ref()
 const instanceName = ref('')
 const noteText = ref('')
+const noteTasks = ref<InstanceNoteTask[]>([])
 let noteInstanceId = ''
 
 useAppEvent('process', async (payload) => {
@@ -41,6 +44,7 @@ useAppEvent('process', async (payload) => {
 	if (!instanceId || !should_show_instance_notes(instanceId)) return
 	noteInstanceId = instanceId
 	noteText.value = read_instance_notes(instanceId)
+	noteTasks.value = open_instance_tasks(instanceId)
 	try {
 		const instance = await get(instanceId)
 		instanceName.value = instance?.name ?? instanceId
@@ -69,9 +73,22 @@ function neverRemind() {
 			</span>
 		</template>
 		<div class="flex max-w-[34rem] flex-col gap-3">
-			<p class="m-0 max-h-[50vh] overflow-y-auto whitespace-pre-wrap break-words text-sm leading-6 text-contrast">
+			<p
+				v-if="noteText.trim()"
+				class="m-0 max-h-[40vh] overflow-y-auto whitespace-pre-wrap break-words text-sm leading-6 text-contrast"
+			>
 				{{ noteText }}
 			</p>
+			<ul v-if="noteTasks.length" class="m-0 flex list-none flex-col gap-1.5 p-0">
+				<li
+					v-for="task in noteTasks"
+					:key="task.id"
+					class="flex items-start gap-2 break-words text-sm text-contrast"
+				>
+					<SquareIcon class="mt-0.5 size-4 shrink-0 text-secondary" />
+					{{ task.text }}
+				</li>
+			</ul>
 		</div>
 		<template #actions>
 			<div class="flex w-full items-center justify-between gap-2">

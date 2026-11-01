@@ -36,8 +36,8 @@ import GeneralSettings from './general-settings.vue'
 import HooksSettings from './hooks-settings.vue'
 import InstallationSettings from './installation-settings.vue'
 import { provideInstanceSettings } from './instance-settings-context.ts'
-import ModsSyncSettings from './mods-sync-settings.vue'
 import JavaSettings from './java-settings.vue'
+import ModsSyncSettings from './mods-sync-settings.vue'
 import SharingSettings from './sharing-settings.vue'
 import SyncedOptionsSettings from './synced-options-settings.vue'
 import WindowSettings from './window-settings.vue'
@@ -138,6 +138,24 @@ const tabs = computed<TabbedModalTab[]>(() => [
 	},
 	{
 		name: defineMessage({
+			id: 'instance.settings.tabs.mods-sync',
+			defaultMessage: 'Mod sync',
+		}),
+		icon: RefreshCwIcon,
+		category: tabCategories.instance,
+		content: ModsSyncSettings,
+	},
+	{
+		name: defineMessage({
+			id: 'instance.settings.tabs.backups',
+			defaultMessage: 'Backups',
+		}),
+		icon: ArchiveIcon,
+		category: tabCategories.instance,
+		content: BackupsSettings,
+	},
+	{
+		name: defineMessage({
 			id: 'instance.settings.tabs.java.label',
 			defaultMessage: 'Java and memory',
 		}),
@@ -171,24 +189,6 @@ const tabs = computed<TabbedModalTab[]>(() => [
 		icon: Settings2Icon,
 		category: tabCategories.game,
 		content: SyncedOptionsSettings,
-	},
-	{
-		name: defineMessage({
-			id: 'instance.settings.tabs.mods-sync',
-			defaultMessage: 'Mod sync',
-		}),
-		icon: RefreshCwIcon,
-		category: tabCategories.instance,
-		content: ModsSyncSettings,
-	},
-	{
-		name: defineMessage({
-			id: 'instance.settings.tabs.backups',
-			defaultMessage: 'Backups',
-		}),
-		icon: ArchiveIcon,
-		category: tabCategories.instance,
-		content: BackupsSettings,
 	},
 ])
 
