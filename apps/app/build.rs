@@ -719,6 +719,14 @@ fn main() {
                     ),
             )
             .plugin(
+                "portalrinth-gradle",
+                InlinedPlugin::new()
+                    .commands(&["gradle_status", "gradle_build", "gradle_remove"])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "portalrinth-dns",
                 InlinedPlugin::new()
                     .commands(&["dns_check"])

@@ -21,6 +21,7 @@ import { useTheme } from '../composables/use-theme'
 import { describeBuild } from './ai-build-info'
 import {
 	type AttachedFile,
+	currentSessionId,
 	formatSize,
 	inboxSave,
 	readSessionsOverview,
@@ -28,6 +29,7 @@ import {
 	sandboxBash,
 	sandboxCompileJava,
 	sandboxDelete,
+	sandboxGradleBuild,
 	sandboxList,
 	sandboxPack,
 	sandboxRead,
@@ -277,7 +279,15 @@ export interface AiSettings {
 	effort: 'low' | 'medium' | 'high'
 	/** Model ids hidden from the picker, keyed '<provider>::<model>'. */
 	disabledModels: Record<string, boolean>
+	/** Ask answers only and looks things up; Build also acts in the launcher. */
+	mode: AiMode
+	/** What the player works on right now: narrows hints and references. */
+	focus: AiFocus
 }
+
+export type AiMode = 'ask' | 'build'
+export const AI_FOCUSES = ['any', 'mods', 'shaders', 'resourcepacks', 'datapacks', 'modpacks'] as const
+export type AiFocus = (typeof AI_FOCUSES)[number]
 
 const SETTINGS_KEY = 'portalrinth-ai-settings'
 
@@ -300,6 +310,8 @@ const DEFAULT_SETTINGS: AiSettings = {
 	enabled: true,
 	effort: 'high',
 	disabledModels: {},
+	mode: 'build',
+	focus: 'any',
 }
 
 function readSettings(): AiSettings {
@@ -319,6 +331,8 @@ function readSettings(): AiSettings {
 		if (settings.mascotName === 'Крафт') {
 			settings.mascotName = 'Portalus'
 		}
+		if (settings.mode !== 'ask') settings.mode = 'build'
+		if (!AI_FOCUSES.includes(settings.focus)) settings.focus = 'any'
 		return settings
 	} catch {
 		return { ...DEFAULT_SETTINGS }
@@ -646,7 +660,11 @@ function progressTask(task: AiTask, tool: string, args: string): AiTask {
 			tool === 'gen_image' ||
 			tool === 'sandbox_unpack' ||
 			(bash ? /echo|>|cp\s|mv\s|unzip|unrar/.test(bash) : false)
-	else if (index === 3) hit = tool === 'launcher_compile_java' || tool === 'sandbox_pack'
+	else if (index === 3)
+		hit =
+			tool === 'launcher_compile_java' ||
+			tool === 'launcher_gradle_build' ||
+			tool === 'sandbox_pack'
 	else hit = tool === 'install_to_instance' || tool === 'launcher_install'
 	if (!hit) return task
 	const stages = task.stages.map((stage, i) => (i === index ? { ...stage, done: true } : stage))
@@ -1047,6 +1065,7 @@ export const AI_TOOLS_HINT = [
 	'Архиватор и компилятор (встроенные, как 7-zip и javac):',
 	'- <<sandbox_pack|архив.zip::путь1::путь2>> — упаковать файлы/папки в .zip, .7z или .jar (ресурс-пак, шейдерпак, датапак)',
 	'- <<sandbox_unpack|архив.zip::папка>> — распаковать архив (в том числе присланный игроком)',
+	'- <<launcher_gradle_build|папка-проекта::задачи>> — настоящая сборка Gradle (Fabric Loom, NeoForge MDK, Forge): проект с build.gradle/settings.gradle, задачи по умолчанию build. Gradle (≈150 МБ) скачивается лаунчером при первой сборке, нужный JDK из toolchain скачивает сам Gradle. Первая сборка Loom/MDK идёт 3–10 минут (маппинги, зависимости) — предупреди игрока. Готовый jar — build/libs/*.jar без -sources/-dev. Используй для модов с зависимостями (Fabric API, GeckoLib, датаген); простой мод без зависимостей быстрее через launcher_compile_java.',
 	'- <<launcher_compile_java|папка-проекта::мод.jar::версия Minecraft>> — скомпилировать .java настоящим javac и собрать .jar: байткод под Java этой версии игры, src/main/resources и fabric.mod.json/META-INF/assets/data из папки проекта кладутся в jar сами, все .jar из папки-проекта/libs идут в classpath (нужен JDK в системе; без него отдавай исходники + .jar как zip через sandbox_pack)',
 	'Обои: <<find_wallpaper|что ищешь>> — найти по-настоящему красивые картинки-обои в интернете (высокое разрешение); посмотри лучшие через <<view_image|url>> и предложи игроку: «Хотите, чтобы я поставил на фон лаунчера?» — ставится через <<launcher_set_background|url>>',
 	'Опрос: <<show_poll|вопрос::вариант 1;;вариант 2>> — покажет игроку карточку-опрос с кнопками; используй, когда нужно узнать мнение или выбор.',
@@ -1182,6 +1201,43 @@ export const AI_MODDING_HINT = [
 	'4) Java-мод. Шаблон: папка-проекта/fabric.mod.json (или src/main/resources/META-INF/mods.toml / neoforge.mods.toml), src/main/java/<пакет>/<Класс>.java, assets/<modid>/ (lang, textures, models). Классы загрузчика (ModInitializer, @Mod, события) компилируются, если jar загрузчика лежит в папка-проекта/libs — скачай его sandbox_download с maven.fabricmc.net / maven.neoforged.net / maven.minecraftforge.net.',
 	'Честно про ванильные классы: Minecraft до 26.1 обфусцирован — Fabric в игре видит intermediary-имена (class_1234), Forge — SRG; код с net.minecraft.* без Gradle-ремапа скомпилируется против libs, но упадёт в игре. Поэтому для 1.x: всё, что решается датапаком/KubeJS, делай ими; Java-мод — только на API загрузчика или как полный Gradle-проект (build.gradle по официальному шаблону Fabric/NeoForge MDK, gradle.properties с версиями) в zip, с короткой инструкцией «gradlew build». Minecraft 26.1+ не обфусцирован — там клиентский jar в libs даёт честную компиляцию с настоящими именами (Java 25).',
 	'Перед компиляцией перечитай код: package совпадает с путём, entrypoint в манифесте совпадает с классом, modid латиницей в нижнем регистре везде одинаковый. Ошибка javac — чини ровно указанную строку и перекомпилируй. Предупреждение «в jar нет fabric.mod.json…» — манифест лежит не там, исправь и собери заново.',
+].join('\n')
+
+/**
+ * Reference projects the agent learns from before building: real, maintained
+ * open-source mods, shaders, resource packs and datapacks. It reads their
+ * files with web_fetch (raw.githubusercontent.com) and copies the structure,
+ * not the code. The quality bars turn vague wishes into concrete features.
+ */
+export const AI_REFERENCES = {
+	mods: [
+		'Образцы модов (GitHub, читай через web_fetch https://raw.githubusercontent.com/<репо>/<ветка>/<путь>, дерево — https://api.github.com/repos/<репо>/git/trees/<ветка>?recursive=1):',
+		'- Шаблоны: FabricMC/fabric-example-mod (Fabric), neoforged/MDK (NeoForge) — build.gradle, gradle.properties, манифест, entrypoint.',
+		'- Много предметов и блоков, датаген, модели, lang, рецепты: vectorwing/FarmersDelight, MehVahdJukaar/Supplementaries, VazkiiMods/Quark, VazkiiMods/Botania, TeamTwilight/twilightforest, Glitchfiend/BiomesOPlenty, TerraformersMC/Terrestria.',
+		'- Механизмы и сложные модели: Creators-of-Create/Create, AppliedEnergistics/Applied-Energistics-2, mekanism/Mekanism, BluSunrize/ImmersiveEngineering.',
+		'- Существа и анимации: AlexModGuy/AlexsMobs, bernie-g/geckolib (анимированные модели из Blockbench, JannisX11/blockbench).',
+		'- Скрипты без компиляции: KubeJS-Mods/KubeJS.',
+		'Планка качества мода: у каждого предмета/блока своя текстура 16×16 (или 32×32 по стилю), модель в models/item|block, blockstate, перевод в lang/en_us.json и ru_ru.json, рецепт, тег, лут блока; набор связан по смыслу (материал → инструменты → броня → блоки), а не один предмет. Объёмные модели — JSON-элементы или GeckoLib, а не плоская текстура.',
+	].join('\n'),
+	shaders: [
+		'Образцы шейдеров (OptiFine/Iris, GLSL): ComplementaryDevelopment/ComplementaryReimagined, sixthsurge/photon, X0nk/Bliss-Shader, Eldeston/Super-Duper-Vanilla, BelmuTM/Noble, gri573/rethinking-voxels (воксельный свет), javiergcim/MakeUpUltraFast (быстрый). Документация: IrisShaders/ShaderDoc, McTsts/Minecraft-Shaders-Wiki.',
+		'Структура пака: shaders/ (gbuffers_*, deferred, composite*, final, shadow.vsh/fsh), shaders.properties, lang/*.lang, block.properties/item.properties для материалов. Перед работой открой файлы образца и сделай так же.',
+		'Планка качества шейдера — переводи слова игрока в функции: «реалистично/красиво» → тени от солнца (shadow map с PCF, мягкие края), цветной свет от факелов, объёмные лучи (god rays) и туман, отражения воды (SSR) с волнами и преломлением, облака, тонмаппинг (ACES) и bloom; «уютно/тепло» → тёплый закат, мягкий AO, туман у земли; «мрачно» → низкая экспозиция, густой туман, холодные тени; «как RTX» → PBR (labPBR: normal/specular карты), отражения, глобальное освещение; «для слабого ПК» → без объёмного света, тени 1024, без SSR. Каждую функцию — переключателем в меню (shaders.properties + lang), профили LOW/MEDIUM/HIGH.',
+	].join('\n'),
+	resourcepacks: [
+		'Образцы ресурс-паков: Faithful-Pack/Default-Java (32×32 в ванильном стиле), PoeticRainbow/golden-days, Fogg05/CozyUI-Plus (интерфейс), Poudingue/Vanilla-Normals-Renewed (PBR-карты для шейдеров). Ванильные ассеты и модели для сверки — misode/mcmeta (ветки assets/assets-json).',
+		'Планка качества ресурс-пака: единая палитра и стиль на все текстуры, pack.png и описание, верный pack_format, модели и blockstates без ошибок, анимации через .mcmeta, при PBR — _n и _s карты.',
+	].join('\n'),
+	datapacks: [
+		'Образцы датапаков: Gamemode4Dev/GM4_Datapacks (модули), mcbookshelf/Bookshelf (библиотека функций), Stardust-Labs-MC/Terralith (генерация мира). Ванильные data-файлы — misode/mcmeta (ветка data-json), генераторы — misode.github.io, проверка — SpyglassMC/Spyglass.',
+		'Планка качества датапака: свой namespace, load/tick через теги функций, ресурсы по папкам текущей версии (1.21+: function, recipe, loot_table в единственном числе), сообщение о загрузке, без постоянных тяжёлых tick-команд.',
+	].join('\n'),
+}
+
+export const AI_REFERENCES_HINT = [
+	'Делаешь мод, шейдер, ресурс-пак или датапак — сначала открой 1–2 подходящих образца (web_fetch raw-файлов: манифест, build.gradle, пара классов/шейдеров, модели) и повтори их структуру и уровень качества. Не копируй чужой код целиком, учись на нём.',
+	AI_REFERENCES.mods,
+	AI_REFERENCES.shaders,
 ].join('\n')
 
 /**
@@ -1421,6 +1477,7 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 		AI_INTENT_HINT,
 		AI_CRAFT_HINT,
 		AI_MODDING_HINT,
+		AI_REFERENCES_HINT,
 		AI_KNOWLEDGE_HINT,
 	]
 	const skills = (settings.skills ?? []).filter((skill) => skill.on && skill.text.trim())
@@ -1437,8 +1494,30 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 	} else {
 		lines.push('Структурируй ответ: списки и короткие абзацы.')
 	}
+	const focus = AI_FOCUS_HINTS[settings.focus]
+	if (focus) lines.push(focus)
+	if (settings.mode === 'ask') lines.push(AI_ASK_MODE_HINT)
 	if (extra) lines.push(extra)
 	return lines.join('\n')
+}
+
+const AI_FOCUS_HINTS: Record<AiFocus, string> = {
+	any: '',
+	mods: 'Категория работы: МОДЫ. Игрок сейчас делает или подбирает моды — думай о предметах, блоках, моделях, рецептах, загрузчике и версии.',
+	shaders:
+		'Категория работы: ШЕЙДЕРЫ. Игрок сейчас делает или настраивает шейдеры — думай об освещении, тенях, воде, небе, производительности и Iris/OptiFine.',
+	resourcepacks: `Категория работы: РЕСУРС-ПАКИ.\n${AI_REFERENCES.resourcepacks}`,
+	datapacks: `Категория работы: ДАТАПАКИ.\n${AI_REFERENCES.datapacks}`,
+	modpacks:
+		'Категория работы: СБОРКИ. Игрок собирает или чинит сборку — следи за совместимостью модов, загрузчиком, версией, памятью и конфликтами.',
+}
+
+const AI_ASK_MODE_HINT =
+	'Режим Ask: игрок хочет ответ, а не действия. Отвечай текстом; искать и читать можно (web_search, web_fetch, list_instances, instance_info, sandbox_read). НЕ устанавливай, не создавай и не меняй файлы, сборки и настройки. Если для задачи нужны действия — коротко опиши план и предложи переключиться в режим Build в меню «+».'
+
+/** Tools Ask mode allows: the ones that only look, never change. */
+function askModeBlocks(tool: string): boolean {
+	return aiSettings.value.mode === 'ask' && tool !== 'ask_user' && !PARALLEL_TOOLS.has(tool)
 }
 
 /**
@@ -1450,14 +1529,32 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
  * free models answer in seconds instead of chewing through thousands of
  * tokens of launcher documentation before saying hello.
  */
-const SIMPLE_CHAT_PATTERN =
-	/^(прив+ет|прив|приветствую|здравствуй(те)?|здаров|здорово|хай|хеллоу|хелло|hello|hi|hey|ку|кку|доброе утро|добрый день|добрый вечер|доброй ночи|спасибо|спс|спасиб|благодарю|thanks|thank you|ок|окей|хорошо|ладно|понял|понятно|ага|угу|как дела|как ты|как жизнь|что делаешь|чем занимаешься|ты тут|ты здесь|ты живой|норм|нормально|прекрасно|отлично|супер|класс|круто|молодец|красава)[!.,:;) ]*$/i
+const SIMPLE_CHAT_PHRASE =
+	/^(прив+ет|прив|приветик|приветствую|здравствуй(те)?|здаров|здорово|хай|хеллоу|хелло|hello|hi|hey|yo|ку|кку|йоу|доброе утро|добрый день|добрый вечер|доброй ночи|спокойной ночи|пока|до встречи|спасибо( большое)?|спс|спасиб|благодарю|thanks|thank you|thx|ок|окей|хорошо|ладно|понял|понятно|ясно|ага|угу|как дела|как ты|как жизнь|как сам|что делаешь|чем занимаешься|ты тут|ты здесь|ты живой|норм|нормально|прекрасно|отлично|супер|класс|круто|молодец|красава|лол|хаха+|ахаха+)$/i
 
-/** True for plain small talk that needs neither tools nor the big prompt. */
+const SIMPLE_CHAT_ADDRESS = /^(portalus|порталус|портал|бро|брат|друг|дружище|чел)$/i
+
+/** True for plain small talk that needs neither tools nor the big prompt:
+ * every comma-separated piece of the message is a greeting, a thank-you or
+ * a way of addressing the agent - «Привет, Порталус! Как дела?» counts,
+ * «Привет, создай мод» does not. */
 export function isSimpleChat(text: string): boolean {
 	const trimmed = text.trim()
-	if (trimmed.length > 100) return false
-	return SIMPLE_CHAT_PATTERN.test(trimmed)
+	if (!trimmed || trimmed.length > 80) return false
+	const pieces = trimmed
+		.toLowerCase()
+		.replace(/ё/g, 'е')
+		.split(/[!?.,:;)(\-—]+/)
+		.map((piece) => piece.replace(/\s+/g, ' ').trim())
+		.filter(Boolean)
+	if (pieces.length === 0) return false
+	return pieces.every((piece) => {
+		const words = piece.split(' ')
+		while (words.length > 1 && SIMPLE_CHAT_ADDRESS.test(words[words.length - 1])) words.pop()
+		while (words.length > 1 && SIMPLE_CHAT_ADDRESS.test(words[0])) words.shift()
+		const core = words.join(' ')
+		return SIMPLE_CHAT_PHRASE.test(core) || SIMPLE_CHAT_ADDRESS.test(core)
+	})
 }
 
 /**
@@ -1685,11 +1782,14 @@ async function callProvider(
 		else headers.Authorization = `Bearer ${key}`
 	}
 	const vision = payloadHasImages(payload)
-	const model = turnModel(settings, providerId, vision)
+	const model = fastPath
+		? turnModel({ ...settings, deepThink: false }, providerId, vision)
+		: turnModel(settings, providerId, vision)
+	const effort = fastPath ? 'low' : (settings.effort ?? 'high')
 	const body: Record<string, unknown> = {
 		model,
 		messages: payload,
-		temperature: settings.deepThink ? 0.4 : 0.6,
+		temperature: settings.deepThink && !fastPath ? 0.4 : 0.6,
 		// Small talk never needs a lecture back; real work keeps the headroom.
 		// Free reasoning models spend part of the budget thinking before the
 		// first visible word, so even a greeting gets room for that.
@@ -1698,7 +1798,7 @@ async function callProvider(
 	}
 	if (providerId === 'openrouter') {
 		headers['X-Title'] = 'Portalrinth Launcher'
-		body.reasoning = { effort: settings.effort ?? 'high' }
+		body.reasoning = fastPath ? { effort: 'low', exclude: true } : { effort }
 	}
 	if (providerId === 'zai') {
 		// GLM's reasoning is the quiet speed killer: 4.5 Flash can switch it
@@ -1708,7 +1808,7 @@ async function callProvider(
 		if (/^glm-4\.5-flash/.test(model)) {
 			body.thinking = { type: 'disabled' }
 		} else if (/^glm-(4\.7|5\.)/.test(model)) {
-			body.reasoning_effort = settings.effort ?? 'high'
+			body.reasoning_effort = effort
 		}
 	}
 	// A jammed model (free DeepSeek at rush hour, a stalled relay) must not
@@ -2296,17 +2396,30 @@ const REFUSAL_RE =
  * игроку, чтобы тот вставлял руками. Так выглядит провал, а не ответ. */
 const CODE_DUMP_RE = /```[^\n]*\n[\s\S]{600,}/
 
+/** Small talk keeps only the last few lines of the chat, with the tool
+ * protocol cut out: a greeting after a build must not drag the whole build
+ * log (and the full prompt) along with it. */
+function smallTalkHistory(messages: ChatMessagePayload[]): ChatMessagePayload[] {
+	const plain: ChatMessagePayload[] = []
+	for (const message of messages.slice(-6)) {
+		if (typeof message.content !== 'string') continue
+		const content = message.content
+			.replace(/<<[\s\S]*?>>/g, '')
+			.replace(/```[\s\S]*?```/g, '')
+			.trim()
+			.slice(0, 600)
+		if (content) plain.push({ ...message, content })
+	}
+	return plain
+}
+
 export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	const settings = aiSettings.value
 	// The fast lane skips the launcher's documentation, the memory files and
 	// the sessions overview: a greeting needs none of them, and reading them
 	// costs seconds the player watches a spinner.
-	const fastPath =
-		Boolean(request.fastPath) &&
-		!(request.images && request.images.length > 0) &&
-		(request.messages ?? []).every(
-			(message) => typeof message.content !== 'string' || !message.content.includes('<<'),
-		)
+	const fastPath = Boolean(request.fastPath) && !(request.images && request.images.length > 0)
+	const history = fastPath ? smallTalkHistory(request.messages ?? []) : (request.messages ?? [])
 	const system = fastPath
 		? buildSmallTalkPrompt(request.kind, await playerIdentity())
 		: buildSystemPrompt(request.kind, request.systemExtra) +
@@ -2314,7 +2427,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 	const presearch = fastPath ? '' : await presearchFor(request)
 	const base: ChatMessagePayload[] = [
 		{ role: 'system', content: presearch ? `${system}\n${presearch}` : system },
-		...(request.messages ?? []),
+		...history,
 	]
 	let rounds = withImages(base, request.images)
 	const hasImages = rounds !== base
@@ -2488,6 +2601,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 							// к инструментам, пока раунды не вышли.
 							const codeDump =
 								!fastPath &&
+								settings.mode !== 'ask' &&
 								codeNudges < 2 &&
 								round < maxRounds - 1 &&
 								CODE_DUMP_RE.test(parsed.text)
@@ -2549,7 +2663,13 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 							cursor = end
 							for (const action of group) request.onActionStart?.(action.tool, action.args)
 							const results = await Promise.all(
-								group.map((action) => runTool(action.tool, action.args)),
+								group.map((action) =>
+									askModeBlocks(action.tool)
+										? Promise.resolve(
+												'Режим Ask: действия выключены. Ответь текстом и предложи переключиться в Build, если нужно сделать это в лаунчере.',
+											)
+										: runTool(action.tool, action.args),
+								),
 							)
 							group.forEach((action, index) => {
 								const result = results[index]
@@ -3437,6 +3557,10 @@ registerAiToolHandler(async (tool, args) => {
 		useTheme().preferred.value = theme as 'dark' | 'light' | 'oled' | 'retro' | 'system'
 		return `Тема лаунчера сменена на ${theme}`
 	}
+	if (tool === 'launcher_gradle_build') {
+		const [project, tasks = ''] = args.split('::').map((part) => part.trim())
+		return sandboxGradleBuild(project ?? '', tasks)
+	}
 	if (tool === 'launcher_compile_java') {
 		const parts = args.split('::').map((part) => part.trim())
 		if (!parts[0] || !parts[1])
@@ -4226,6 +4350,10 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 	}
 	const controller = new AbortController()
 	runController = controller
+	const turnSession = currentSessionId.value
+	const pushTurnMessage = (message: AiMessage) => {
+		if (currentSessionId.value === turnSession) pushAiMessage(message)
+	}
 
 	let attachmentNote = ''
 	let inboxNote = ''
@@ -4404,9 +4532,9 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 		// with one buffered JSON object.
 		if (aiSettings.value.chatEffects && !streamedAny) {
 			await typeOut(result.content)
-			pushAiMessage(done)
+			pushTurnMessage(done)
 		} else {
-			pushAiMessage(done)
+			pushTurnMessage(done)
 		}
 		// Portalus moved the player somewhere: leave a small top-center
 		// notch with his words, so the answer is never lost off-screen.
@@ -4419,7 +4547,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 	} catch (error) {
 		agentStreaming.value = ''
 		if (controller.signal.aborted) {
-			pushAiMessage({
+			pushTurnMessage({
 				role: 'assistant',
 				content: '⏹ Остановлено. Скажи, когда продолжить — или просто напиши следующее сообщение.',
 				ts: Date.now(),
@@ -4429,7 +4557,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 		} else {
 			const detail = String((error as Error)?.message ?? error)
 			errorOnTurn.value = detail
-			pushAiMessage({
+			pushTurnMessage({
 				role: 'assistant',
 				content: `Не вышло: ${detail}`,
 				ts: Date.now(),
@@ -4442,6 +4570,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 		agentStreaming.value = ''
 		agentBusy.value = false
 		agentPhase.value = 'thinking'
+		if (currentSessionId.value !== turnSession) agentQueue.value = []
 		void flushAgentQueue()
 	}
 }

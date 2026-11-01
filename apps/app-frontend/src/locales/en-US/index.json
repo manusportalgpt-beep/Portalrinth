@@ -5252,6 +5252,9 @@
   "ely-login.error.network": {
     "message": "Couldn't reach Ely.by servers. Check your internet connection."
   },
+  "ely-login.error.client": {
+    "message": "Ely.by sign-in through the page is not available in this build yet. Sign in with your password."
+  },
   "ely-login.error.page": {
     "message": "The sign-in did not finish. Try again, or use a password."
   },

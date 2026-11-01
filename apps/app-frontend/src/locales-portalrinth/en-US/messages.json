@@ -1653,7 +1653,7 @@
 		"message": "Show the mascot"
 	},
 	"app.settings.ai-assistant.effects": {
-		"message": "Chat effects (typewriter text)"
+		"message": "Chat effects"
 	},
 	"app.settings.ai-assistant.name": {
 		"message": "Mascot name"
@@ -2319,7 +2319,7 @@
 		"message": "Enable AI assistant"
 	},
 	"app.settings.ai-assistant.enabled-hint": {
-		"message": "the AI tab is hidden from the launcher; turn it back on here."
+		"message": "When off, the AI tab and the mascot are hidden from the launcher."
 	},
 	"app.skin-browse.profile": {
 		"message": "Player profile"
@@ -2390,5 +2390,59 @@
 	"app.ai.code.ping-hint": "Прицепить к следующему сообщению — ИИ будет знать, какой код иметь в виду",
 	"app.ai.code.file-created": "файл создан",
 	"app.ai.code.file-changed": "файл изменён",
-	"app.ai.pings": "Пинг"
+	"app.ai.pings": "Пинг",
+	"app.settings.ai-assistant.effects-hint": {
+		"message": "Replies type out letter by letter, code appears with an animation."
+	},
+	"ely-login.error.client": {
+		"message": "Ely.by sign-in through the page is not available in this build yet. Sign in with your password."
+	},
+	"app.ai.mode.ask": {
+		"message": "Ask"
+	},
+	"app.ai.mode.build": {
+		"message": "Build"
+	},
+	"app.ai.mode.ask-hint": {
+		"message": "Only answers and searches, changes nothing in the launcher"
+	},
+	"app.ai.mode.build-hint": {
+		"message": "Answers and acts: installs, creates, builds"
+	},
+	"app.ai.focus": {
+		"message": "Category"
+	},
+	"app.ai.focus.any": {
+		"message": "Anything"
+	},
+	"app.ai.focus.mods": {
+		"message": "Mods"
+	},
+	"app.ai.focus.shaders": {
+		"message": "Shaders"
+	},
+	"app.ai.focus.resourcepacks": {
+		"message": "Resource packs"
+	},
+	"app.ai.focus.datapacks": {
+		"message": "Datapacks"
+	},
+	"app.ai.focus.modpacks": {
+		"message": "Modpacks"
+	},
+	"app.settings.ai-assistant.gradle.title": {
+		"message": "Mod builds (Gradle)"
+	},
+	"app.settings.ai-assistant.gradle.description": {
+		"message": "Portalus builds mods with Gradle right in the launcher. Gradle and the JDK it needs are downloaded only on the first build and are not part of the installer."
+	},
+	"app.settings.ai-assistant.gradle.installed": {
+		"message": "Gradle {version} downloaded · {size} used"
+	},
+	"app.settings.ai-assistant.gradle.missing": {
+		"message": "Not downloaded · {size} used"
+	},
+	"app.settings.ai-assistant.gradle.remove": {
+		"message": "Remove Gradle and cache"
+	}
 }

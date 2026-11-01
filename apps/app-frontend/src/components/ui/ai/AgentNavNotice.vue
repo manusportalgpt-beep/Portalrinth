@@ -10,7 +10,7 @@
 				<!-- The pill: always there while Portalus has something going -->
 				<button type="button" class="ai-dock-pill" :aria-expanded="open" @click="toggle">
 					<span class="ai-dock-orb" :class="{ 'ai-dock-orb--busy': agentBusy }">
-						<SparklesIcon class="size-3" />
+						<MessagesSquareIcon class="size-3" />
 					</span>
 					<span class="ai-dock-name">Порталус</span>
 					<span v-if="statusText" class="ai-dock-status" :class="{ 'ai-dock-shimmer': agentBusy }">
@@ -116,8 +116,8 @@ import {
 	CheckCircleIcon,
 	ChevronDownIcon,
 	ExternalIcon,
+	MessagesSquareIcon,
 	SendIcon,
-	SparklesIcon,
 	StopCircleIcon,
 	XIcon,
 } from '@modrinth/assets'
@@ -344,7 +344,7 @@ onBeforeUnmount(() => {
 	display: flex;
 	flex-direction: column;
 	width: max-content;
-	max-width: min(26rem, calc(100vw - 2rem));
+	max-width: min(22rem, calc(100vw - 2rem));
 	border-radius: 1.1rem;
 	border: 1px solid color-mix(in srgb, var(--color-contrast) 14%, transparent);
 	background: color-mix(in srgb, var(--color-raised-bg) 62%, transparent);
@@ -362,16 +362,13 @@ onBeforeUnmount(() => {
 }
 
 .ai-dock--open {
-	width: min(26rem, calc(100vw - 2rem));
+	width: min(22rem, calc(100vw - 2rem));
 	border-radius: 1.1rem;
 	background: color-mix(in srgb, var(--color-raised-bg) 78%, transparent);
 }
 
 .ai-dock--busy {
-	box-shadow:
-		0 10px 32px rgb(0 0 0 / 28%),
-		0 0 0 1px color-mix(in srgb, var(--color-brand) 35%, transparent),
-		0 0 22px color-mix(in srgb, var(--color-brand) 22%, transparent);
+	border-color: color-mix(in srgb, var(--color-brand) 30%, transparent);
 }
 
 .ai-dock-pill {
@@ -397,13 +394,8 @@ onBeforeUnmount(() => {
 	height: 1.35rem;
 	flex-shrink: 0;
 	border-radius: 999px;
-	color: #fff;
-	background: radial-gradient(
-		circle at 30% 30%,
-		color-mix(in srgb, var(--color-brand) 70%, #fff),
-		var(--color-brand)
-	);
-	box-shadow: 0 0 10px color-mix(in srgb, var(--color-brand) 55%, transparent);
+	color: var(--color-brand);
+	background: color-mix(in srgb, var(--color-brand) 16%, transparent);
 }
 
 .ai-dock-orb--busy::after {
@@ -443,8 +435,6 @@ onBeforeUnmount(() => {
 	flex-shrink: 0;
 	border-radius: 999px;
 	background: var(--color-brand);
-	box-shadow: 0 0 8px var(--color-brand);
-	animation: ai-dock-pulse 1.6s ease-in-out infinite;
 }
 
 .ai-dock-chevron {
@@ -640,13 +630,6 @@ onBeforeUnmount(() => {
 @keyframes ai-dock-spin {
 	to {
 		transform: rotate(360deg);
-	}
-}
-
-@keyframes ai-dock-pulse {
-	50% {
-		opacity: 0.45;
-		transform: scale(0.8);
 	}
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowUpIcon, EyeIcon, EyeOffIcon, MoonIcon, SparklesIcon } from '@modrinth/assets'
+import { ArrowUpIcon, EyeIcon, EyeOffIcon, MoonIcon } from '@modrinth/assets'
 import { Button, Input, useVIntl } from '@modrinth/ui'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -8,6 +8,7 @@ import {
 	aiComplete,
 	aiHistory,
 	aiSettings,
+	isSimpleChat,
 	mascotRefs,
 	pushAiMessage,
 	saveAiSettings,
@@ -292,7 +293,12 @@ async function ask(prompt: string) {
 			content: m.content,
 		}))
 	try {
-		const result = await aiComplete({ kind: 'mascot', messages: payload })
+		const lastAssistant = [...aiHistory.value].reverse().find((m) => m.role === 'assistant')
+		const result = await aiComplete({
+			kind: 'mascot',
+			messages: payload,
+			fastPath: isSimpleChat(prompt) && !lastAssistant?.question,
+		})
 		pushAiMessage({
 			role: 'assistant',
 			content: result.content,
@@ -426,11 +432,12 @@ function drawPart(
 	pivotX: number,
 	pivotY: number,
 	angle: number,
+	above = false,
 ) {
 	ctx.save()
-	ctx.translate(pivotX * S, pivotY * S)
+	ctx.translate(pivotX, pivotY)
 	ctx.rotate(angle)
-	ctx.drawImage(img, sx, sy, w, h, (-w / 2) * S, 0, w * S, h * S)
+	ctx.drawImage(img, sx, sy, w, h, (-w / 2) * S, above ? -h * S : 0, w * S, h * S)
 	ctx.restore()
 }
 
@@ -551,8 +558,8 @@ function drawFrame(time: number) {
 	// Body
 	ctx.drawImage(img, 20, 20, 8, 12, 4 * S, 8 * S, 8 * S, 12 * S)
 	// Head (base + hat layer)
-	drawPart(ctx, img, 8, 8, 8, 8, 8 * S, 8 * S, headTilt)
-	drawPart(ctx, img, 40, 8, 8, 8, 8 * S, 8 * S, headTilt)
+	drawPart(ctx, img, 8, 8, 8, 8, 8 * S, 8 * S, headTilt, true)
+	drawPart(ctx, img, 40, 8, 8, 8, 8 * S, 8 * S, headTilt, true)
 	// Front arm
 	drawPart(ctx, img, armSourceX, 20, armW, 12, (12 + armW / 2 - 0.5) * S, 8.5 * S, armR)
 
@@ -737,9 +744,8 @@ const mascotName = computed(() => aiSettings.value.mascotName || 'Помощни
 			<div
 				class="pointer-events-none absolute left-1/2 -bottom-1 -translate-x-1/2 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-semibold text-secondary opacity-80"
 			>
-				<SparklesIcon v-if="thinking" class="mr-0.5 inline size-3 text-brand" />
-				<MoonIcon v-else-if="state.mood === 'sleep'" class="mr-0.5 inline size-3" />
-				{{ mascotName }}
+				<MoonIcon v-if="state.mood === 'sleep'" class="mr-0.5 inline size-3" />
+				{{ mascotName }}<template v-if="thinking">…</template>
 			</div>
 		</div>
 	</Teleport>

@@ -232,6 +232,11 @@ const messages = defineMessages({
 		defaultMessage:
 			'It works, and the password is sent straight to Ely.by. But signing in on their own page means nothing here ever sees it — use that unless it will not open.',
 	},
+	pageUnavailable: {
+		id: 'ely-login.error.client',
+		defaultMessage:
+			'Ely.by sign-in through the page is not available in this build yet. Sign in with your password.',
+	},
 	pageFailed: {
 		id: 'ely-login.error.page',
 		defaultMessage: 'The sign-in did not finish. Try again, or use a password.',
@@ -356,7 +361,13 @@ async function signInOnPage() {
 			hide()
 		}
 	} catch (error: unknown) {
-		errorMessage.value = formatPageError(extractErrorMessage(error))
+		const raw = extractErrorMessage(error)
+		if (/invalid_client|client authentication failed/i.test(raw)) {
+			mode.value = 'password'
+			errorMessage.value = formatMessage(messages.pageUnavailable)
+		} else {
+			errorMessage.value = formatPageError(raw)
+		}
 	} finally {
 		loading.value = false
 	}

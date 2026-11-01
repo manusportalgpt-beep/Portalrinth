@@ -40,7 +40,14 @@ use crate::util::fetch::INSECURE_REQWEST_CLIENT;
 ///
 /// Public, in the OAuth sense and in the plain one: it identifies the
 /// application and protects nothing.
-const CLIENT_ID: &str = "portalrinth";
+///
+/// It has to be registered at Ely.by as a *Desktop application*: only that
+/// type is a public client there. A build can carry its own id through
+/// `PORTALRINTH_ELY_CLIENT_ID` in `packages/app-lib/.env`.
+const CLIENT_ID: &str = match option_env!("PORTALRINTH_ELY_CLIENT_ID") {
+    Some(id) => id,
+    None => "portalrinth",
+};
 
 /// Where the player is sent to sign in.
 const AUTHORIZE_URL: &str = "https://account.ely.by/oauth2/v1";

@@ -54,6 +54,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { type Component, computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { injectMinecraftAccounts } from '@/features/minecraft-accounts/context'
 import {
 	findSimilarLabySkins,
 	findSkinByNick,
@@ -84,6 +85,7 @@ import { type BreadcrumbDefinition, injectBreadcrumbManager } from '@/shared/bre
 
 const { formatMessage } = useVIntl()
 const { handleError, addNotification } = injectNotificationManager()
+const minecraftAccounts = injectMinecraftAccounts()
 const route = useRoute()
 const router = useRouter()
 
@@ -850,8 +852,10 @@ async function install() {
 	installing.value = true
 	try {
 		const texture = await labySkinTexture(skin.image_hash)
-		await add_and_equip_custom_skin(texture, armVariant.value, selectedCape.value)
+		const equipped = await add_and_equip_custom_skin(texture, armVariant.value, selectedCape.value)
 		await flush_pending_skin_change()
+		await minecraftAccounts.value?.setEquippedSkin(equipped)
+		void minecraftAccounts.value?.refreshValues()
 		addNotification({
 			type: 'success',
 			title: formatMessage(messages.installed),

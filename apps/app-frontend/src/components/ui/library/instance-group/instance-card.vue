@@ -146,8 +146,8 @@ const toggleSelection = (event?: MouseEvent) => {
 	emit('toggle-selection', event?.shiftKey ?? false)
 }
 
-const togglePin = (event: MouseEvent) => {
-	event.stopPropagation()
+const togglePin = (event?: MouseEvent) => {
+	event?.stopPropagation()
 	toggleInstancePinned(props.instance.id)
 }
 

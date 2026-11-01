@@ -319,6 +319,54 @@ export async function sandboxCompileJava(
 	}
 }
 
+/** The newest Java 17+ the launcher already knows: Gradle runs on it. The
+ * launcher's Java settings are only read, never changed. */
+async function gradleJavaPath(): Promise<string | null> {
+	try {
+		const { get_java_versions } = await import('./jre.js')
+		const versions = (await get_java_versions()) as Record<
+			string,
+			{ parsed_version?: number; path?: string }
+		>
+		const best = Object.entries(versions ?? {})
+			.map(([major, java]) => ({ major: Number(major) || 0, path: java?.path ?? '' }))
+			.filter((java) => java.path && java.major >= 17)
+			.sort((a, b) => b.major - a.major)[0]
+		return best?.path ?? null
+	} catch {
+		return null
+	}
+}
+
+export async function sandboxGradleBuild(projectRel: string, tasks = ''): Promise<string> {
+	countCommand()
+	const project = projectRel.trim()
+	if (!project) return 'Формат: <<launcher_gradle_build|папка-проекта::задачи>>'
+	try {
+		return await invoke('plugin:portalrinth-gradle|gradle_build', {
+			projectDir: await resolveIn(project, root()),
+			tasks: tasks.trim() || null,
+			javaPath: await gradleJavaPath(),
+		})
+	} catch (error) {
+		return `Сборка Gradle не удалась: ${String(error).slice(0, 1500)}`
+	}
+}
+
+export interface GradleStatus {
+	installed: boolean
+	version: string
+	bytes: number
+}
+
+export function gradleStatus(): Promise<GradleStatus> {
+	return invoke('plugin:portalrinth-gradle|gradle_status')
+}
+
+export function gradleRemove(): Promise<void> {
+	return invoke('plugin:portalrinth-gradle|gradle_remove')
+}
+
 // ---- The little shell ------------------------------------------------------
 
 /**
@@ -613,22 +661,24 @@ export function startNewSession(): void {
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 
 /** Persists the conversation into the sessions folder, debounced. */
+const trashedIds = new Set<string>()
+
 export function saveSession(messages: unknown[]): void {
 	clearTimeout(saveTimer)
+	const id = currentSessionId.value
+	if (trashedIds.has(id)) return
 	saveTimer = setTimeout(async () => {
+		if (trashedIds.has(id)) return
 		try {
 			const dir = await sessionsRoot()
 			await fs.mkdir(dir, { recursive: true }).catch(() => {})
 			const session: StoredSession = {
-				id: currentSessionId.value,
+				id,
 				started: Date.now(),
 				updated: Date.now(),
 				messages,
 			}
-			await fs.writeTextFile(
-				joinPath(dir, `${currentSessionId.value}.json`),
-				JSON.stringify(session, null, '\t'),
-			)
+			await fs.writeTextFile(joinPath(dir, `${id}.json`), JSON.stringify(session, null, '\t'))
 		} catch {
 			/* a lost save is never worth a crash */
 		}
@@ -775,6 +825,8 @@ async function trashRoot(): Promise<string> {
 
 /** Moves a saved conversation to the trash (idempotent). */
 export async function trashSession(id: string): Promise<void> {
+	trashedIds.add(id)
+	if (currentSessionId.value === id) clearTimeout(saveTimer)
 	const dir = await sessionsRoot()
 	const bin = await trashRoot()
 	await fs.mkdir(bin, { recursive: true }).catch(() => {})
@@ -783,6 +835,7 @@ export async function trashSession(id: string): Promise<void> {
 
 /** Puts a trashed conversation back into the picker. */
 export async function restoreSession(id: string): Promise<void> {
+	trashedIds.delete(id)
 	const dir = await sessionsRoot()
 	const bin = await trashRoot()
 	await fs.rename(joinPath(bin, `${id}.json`), joinPath(dir, `${id}.json`)).catch(() => {})

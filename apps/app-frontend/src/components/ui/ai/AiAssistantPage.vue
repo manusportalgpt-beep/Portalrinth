@@ -2,6 +2,8 @@
 import {
 	ArrowUpIcon,
 	BookOpenIcon,
+	BoxIcon,
+	BracesIcon,
 	BrainCogIcon,
 	CheckIcon,
 	ChevronDownIcon,
@@ -16,11 +18,15 @@ import {
 	FilePlusIcon,
 	GaugeIcon,
 	GlobeIcon,
+	HammerIcon,
 	HistoryIcon,
 	HistoryIcon as MemoryIcon,
 	ImageIcon,
+	LayersIcon,
+	MessagesSquareIcon,
 	MonitorIcon,
 	PackageIcon,
+	PaletteIcon,
 	PencilIcon,
 	PlayIcon,
 	PlusIcon,
@@ -29,6 +35,7 @@ import {
 	ServerIcon,
 	SparklesIcon,
 	StopCircleIcon,
+	SunIcon,
 	TerminalSquareIcon,
 	TextQuoteIcon,
 	TrashIcon,
@@ -42,16 +49,19 @@ import AiProviderSettings from '@/components/ui/ai/AiProviderSettings.vue'
 import AiRichText from '@/components/ui/ai/AiRichText.vue'
 import AiSteps from '@/components/ui/ai/AiSteps.vue'
 import AiTaskCard from '@/components/ui/ai/AiTaskCard.vue'
+import { injectMinecraftAccounts } from '@/features/minecraft-accounts/context'
 import {
 	agentBusy,
 	agentPhase,
 	agentQueue,
 	agentStreaming,
 	agentTurn,
+	type AiFocus,
 	aiHistory,
 	type AiJarCard,
 	type AiMessage,
 	type AiModCard,
+	type AiMode,
 	aiSettings,
 	type AiSkinCard,
 	type AiWikiCard,
@@ -96,6 +106,7 @@ import { skinRenderUrl } from '@/helpers/skin-render-service'
 import { add_and_equip_custom_skin, flush_pending_skin_change } from '@/helpers/skins'
 
 const { formatMessage } = useVIntl()
+const minecraftAccounts = injectMinecraftAccounts()
 
 const messages = {
 	heading: { id: 'app.ai.heading', defaultMessage: 'ИИ-Помощник' },
@@ -143,6 +154,23 @@ const messages = {
 	},
 	plusAttach: { id: 'app.ai.plus.attach', defaultMessage: 'Прикрепить файл' },
 	effort: { id: 'app.ai.effort', defaultMessage: 'Раздумье' },
+	modeAsk: { id: 'app.ai.mode.ask', defaultMessage: 'Ask' },
+	modeBuild: { id: 'app.ai.mode.build', defaultMessage: 'Build' },
+	modeAskHint: {
+		id: 'app.ai.mode.ask-hint',
+		defaultMessage: 'Только отвечает и ищет, ничего не меняет в лаунчере',
+	},
+	modeBuildHint: {
+		id: 'app.ai.mode.build-hint',
+		defaultMessage: 'Отвечает и сам делает: ставит, создаёт, собирает',
+	},
+	focus: { id: 'app.ai.focus', defaultMessage: 'Категория' },
+	focusAny: { id: 'app.ai.focus.any', defaultMessage: 'Всё' },
+	focusMods: { id: 'app.ai.focus.mods', defaultMessage: 'Моды' },
+	focusShaders: { id: 'app.ai.focus.shaders', defaultMessage: 'Шейдеры' },
+	focusResourcepacks: { id: 'app.ai.focus.resourcepacks', defaultMessage: 'Ресурс-паки' },
+	focusDatapacks: { id: 'app.ai.focus.datapacks', defaultMessage: 'Датапаки' },
+	focusModpacks: { id: 'app.ai.focus.modpacks', defaultMessage: 'Сборки' },
 	effortLow: { id: 'app.ai.effort.low', defaultMessage: 'Низкий' },
 	effortMedium: { id: 'app.ai.effort.medium', defaultMessage: 'Средний' },
 	effortHigh: { id: 'app.ai.effort.high', defaultMessage: 'Высокий' },
@@ -453,8 +481,10 @@ async function installSkin(skin: AiSkinCard) {
 		const texture = skin.url
 			? await fetchSkinTexture(skin.url)
 			: await labySkinTexture(skin.hash)
-		await add_and_equip_custom_skin(texture, skin.variant)
+		const equipped = await add_and_equip_custom_skin(texture, skin.variant)
 		await flush_pending_skin_change()
+		await minecraftAccounts.value?.setEquippedSkin(equipped)
+		void minecraftAccounts.value?.refreshValues()
 		skinInstalledSkins.value = [...skinInstalledSkins.value, skin.hash]
 	} catch {
 		/* the card stays installable - a failed try is not a verdict */
@@ -644,6 +674,33 @@ function toggleWebSearch() {
 
 function toggleDeepThink() {
 	saveAiSettings({ deepThink: !aiSettings.value.deepThink })
+}
+
+function setMode(mode: AiMode) {
+	saveAiSettings({ mode })
+}
+
+const FOCUS_OPTIONS = computed(() => [
+	{ id: 'any' as const, icon: SparklesIcon, label: formatMessage(messages.focusAny) },
+	{ id: 'mods' as const, icon: BoxIcon, label: formatMessage(messages.focusMods) },
+	{ id: 'shaders' as const, icon: SunIcon, label: formatMessage(messages.focusShaders) },
+	{
+		id: 'resourcepacks' as const,
+		icon: PaletteIcon,
+		label: formatMessage(messages.focusResourcepacks),
+	},
+	{ id: 'datapacks' as const, icon: BracesIcon, label: formatMessage(messages.focusDatapacks) },
+	{ id: 'modpacks' as const, icon: LayersIcon, label: formatMessage(messages.focusModpacks) },
+])
+
+const activeFocus = computed(() =>
+	aiSettings.value.focus === 'any'
+		? null
+		: FOCUS_OPTIONS.value.find((option) => option.id === aiSettings.value.focus),
+)
+
+function setFocus(focus: AiFocus) {
+	saveAiSettings({ focus })
 }
 
 // Effort: how hard reasoning models think before the first word. GLM ships
@@ -2062,8 +2119,48 @@ defineExpose({ send })
 					/>
 					<div
 						v-if="plusOpen"
-						class="ai-menu absolute bottom-full left-0 z-20 mb-2 flex min-w-56 flex-col gap-1 rounded-xl border border-solid border-surface-5 bg-surface-2 p-1"
+						class="ai-menu absolute bottom-full left-0 z-20 mb-2 flex w-72 flex-col gap-1 rounded-xl border border-solid border-surface-5 bg-surface-2 p-1"
 					>
+						<div class="ai-mode-switch" role="radiogroup">
+							<button
+								v-tooltip="formatMessage(messages.modeAskHint)"
+								role="radio"
+								:aria-checked="aiSettings.mode === 'ask'"
+								class="ai-mode-option"
+								:class="{ 'ai-mode-option--on': aiSettings.mode === 'ask' }"
+								@click="setMode('ask')"
+							>
+								<MessagesSquareIcon class="size-4" />
+								{{ formatMessage(messages.modeAsk) }}
+							</button>
+							<button
+								v-tooltip="formatMessage(messages.modeBuildHint)"
+								role="radio"
+								:aria-checked="aiSettings.mode === 'build'"
+								class="ai-mode-option"
+								:class="{ 'ai-mode-option--on': aiSettings.mode === 'build' }"
+								@click="setMode('build')"
+							>
+								<HammerIcon class="size-4" />
+								{{ formatMessage(messages.modeBuild) }}
+							</button>
+						</div>
+						<p class="ai-menu-caption">{{ formatMessage(messages.focus) }}</p>
+						<div class="ai-focus-grid" role="radiogroup">
+							<button
+								v-for="option in FOCUS_OPTIONS"
+								:key="option.id"
+								role="radio"
+								:aria-checked="aiSettings.focus === option.id"
+								class="ai-focus-option"
+								:class="{ 'ai-focus-option--on': aiSettings.focus === option.id }"
+								@click="setFocus(option.id)"
+							>
+								<component :is="option.icon" class="size-3.5" />
+								{{ option.label }}
+							</button>
+						</div>
+						<div class="ai-menu-sep" />
 						<button class="ai-menu-item" @click="plusAttach">
 							<FileIcon class="size-4" />
 							{{ formatMessage(messages.plusAttach) }}
@@ -2114,9 +2211,32 @@ defineExpose({ send })
 					</div>
 				</div>
 				<div
-					v-if="aiSettings.webSearch || aiSettings.deepThink"
+					v-if="
+						aiSettings.webSearch ||
+						aiSettings.deepThink ||
+						aiSettings.mode === 'ask' ||
+						activeFocus
+					"
 					class="flex shrink-0 items-center gap-1"
 				>
+					<button
+						v-if="aiSettings.mode === 'ask'"
+						v-tooltip="formatMessage(messages.modeAskHint)"
+						class="ai-mode-chip"
+						@click="setMode('build')"
+					>
+						<MessagesSquareIcon class="size-3.5" />
+						<span class="ai-mode-label">{{ formatMessage(messages.modeAsk) }}</span>
+					</button>
+					<button
+						v-if="activeFocus"
+						v-tooltip="formatMessage(messages.focus)"
+						class="ai-mode-chip"
+						@click="setFocus('any')"
+					>
+						<component :is="activeFocus.icon" class="size-3.5" />
+						<span class="ai-mode-label">{{ activeFocus.label }}</span>
+					</button>
 					<button
 						v-if="aiSettings.webSearch"
 						v-tooltip="'Веб-поиск включён — нажми, чтобы выключить'"
@@ -3355,6 +3475,73 @@ defineExpose({ send })
 	height: 1px;
 	margin: 0.15rem 0.25rem;
 	background: var(--surface-5);
+}
+
+.ai-mode-switch {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.25rem;
+	padding: 0.2rem;
+	border-radius: 0.6rem;
+	background: var(--color-button-bg);
+}
+
+.ai-mode-option,
+.ai-focus-option {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	border: 0;
+	border-radius: 0.45rem;
+	background: transparent;
+	color: var(--color-secondary);
+	font: inherit;
+	font-size: 0.8125rem;
+	cursor: pointer;
+	transition:
+		background-color 0.15s ease,
+		color 0.15s ease;
+}
+
+.ai-mode-option {
+	padding: 0.35rem 0.5rem;
+	font-weight: 600;
+}
+
+.ai-mode-option:hover,
+.ai-focus-option:hover {
+	color: var(--color-contrast);
+}
+
+.ai-mode-option--on {
+	background: var(--color-raised-bg);
+	color: var(--color-contrast);
+}
+
+.ai-menu-caption {
+	margin: 0.25rem 0.5rem 0;
+	font-size: 0.75rem;
+	color: var(--color-secondary);
+}
+
+.ai-focus-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.25rem;
+	padding: 0 0.25rem;
+}
+
+.ai-focus-option {
+	justify-content: flex-start;
+	padding: 0.3rem 0.45rem;
+	font-size: 0.75rem;
+	white-space: nowrap;
+}
+
+.ai-focus-option--on {
+	background: color-mix(in srgb, var(--color-brand) 14%, transparent);
+	color: var(--color-brand);
 }
 
 /* Effort: how hard reasoning models think - a small slider in the "+" menu. */

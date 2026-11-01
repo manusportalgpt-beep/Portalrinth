@@ -23,14 +23,14 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .build()
 }
 
-fn error(message: impl ToString) -> crate::api::CommandError {
+pub(crate) fn error(message: impl ToString) -> crate::api::CommandError {
     anyhow::anyhow!(message.to_string()).into()
 }
 
 /// Fences of the archiver: the app's own data folder (the sandbox, the
 /// sessions, the profiles) plus the user folders the file-system scope
 /// already lets the interface reach.
-fn allowed_roots<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Vec<PathBuf> {
+pub(crate) fn allowed_roots<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Vec<PathBuf> {
     let path = app.path();
     let mut roots = Vec::new();
     for dir in [
@@ -68,7 +68,7 @@ fn normalize(path: &Path) -> PathBuf {
     text
 }
 
-fn ensure_allowed(roots: &[PathBuf], path: &Path) -> Result<()> {
+pub(crate) fn ensure_allowed(roots: &[PathBuf], path: &Path) -> Result<()> {
     let candidate = normalize(path);
     for root in roots {
         if candidate.starts_with(root) {
@@ -531,7 +531,7 @@ async fn pack_flat_jar(dir: &Path, dest: &Path) -> Result<usize> {
 }
 
 /// Finds javac: first on PATH, then under JAVA_HOME.
-fn find_javac() -> Option<PathBuf> {
+pub(crate) fn find_javac() -> Option<PathBuf> {
     let name = if cfg!(windows) { "javac.exe" } else { "javac" };
     if let Ok(home) = std::env::var("JAVA_HOME") {
         let candidate = PathBuf::from(home).join("bin").join(name);

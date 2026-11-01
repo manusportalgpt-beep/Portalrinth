@@ -1682,6 +1682,9 @@
 	"ely-login.error.network": {
 		"message": "Не удалось подключиться к серверам Ely.by. Проверьте интернет-соединение."
 	},
+	"ely-login.error.client": {
+		"message": "Вход через страницу Ely.by в этой сборке пока недоступен. Войдите по паролю."
+	},
 	"ely-login.error.page": {
 		"message": "Вход не завершился. Попробуйте снова или войдите по паролю."
 	},
@@ -3273,7 +3276,7 @@
 		"message": "Показывать маскота"
 	},
 	"app.settings.ai-assistant.effects": {
-		"message": "Эффекты чата (печатающийся текст)"
+		"message": "Эффекты чата"
 	},
 	"app.settings.ai-assistant.name": {
 		"message": "Имя маскота"
@@ -3852,7 +3855,7 @@
 		"message": "Включить ИИ-Помощника"
 	},
 	"app.settings.ai-assistant.enabled-hint": {
-		"message": "вкладка ИИ скрыта из лаунчера, включить снова можно здесь."
+		"message": "Если выключить, вкладка ИИ и маскот скрываются из лаунчера."
 	},
 	"app.skin-browse.profile": {
 		"message": "Профиль игрока"
@@ -3923,5 +3926,56 @@
 	"app.ai.code.ping-hint": "Прицепить к следующему сообщению — ИИ будет знать, какой код иметь в виду",
 	"app.ai.code.file-created": "файл создан",
 	"app.ai.code.file-changed": "файл изменён",
-	"app.ai.pings": "Пинг"
+	"app.ai.pings": "Пинг",
+	"app.settings.ai-assistant.effects-hint": {
+		"message": "Ответ печатается по буквам, код появляется с анимацией."
+	},
+	"app.ai.mode.ask": {
+		"message": "Ask"
+	},
+	"app.ai.mode.build": {
+		"message": "Build"
+	},
+	"app.ai.mode.ask-hint": {
+		"message": "Только отвечает и ищет, ничего не меняет в лаунчере"
+	},
+	"app.ai.mode.build-hint": {
+		"message": "Отвечает и сам делает: ставит, создаёт, собирает"
+	},
+	"app.ai.focus": {
+		"message": "Категория"
+	},
+	"app.ai.focus.any": {
+		"message": "Всё"
+	},
+	"app.ai.focus.mods": {
+		"message": "Моды"
+	},
+	"app.ai.focus.shaders": {
+		"message": "Шейдеры"
+	},
+	"app.ai.focus.resourcepacks": {
+		"message": "Ресурс-паки"
+	},
+	"app.ai.focus.datapacks": {
+		"message": "Датапаки"
+	},
+	"app.ai.focus.modpacks": {
+		"message": "Сборки"
+	},
+	"app.settings.ai-assistant.gradle.title": {
+		"message": "Сборка модов (Gradle)"
+	},
+	"app.settings.ai-assistant.gradle.description": {
+		"message": "Порталус собирает моды через Gradle прямо в лаунчере. Gradle и нужный JDK скачиваются только при первой сборке и не входят в установщик."
+	},
+	"app.settings.ai-assistant.gradle.installed": {
+		"message": "Gradle {version} скачан · занято {size}"
+	},
+	"app.settings.ai-assistant.gradle.missing": {
+		"message": "Не скачан · занято {size}"
+	},
+	"app.settings.ai-assistant.gradle.remove": {
+		"message": "Удалить Gradle и кэш"
+	}
 }
