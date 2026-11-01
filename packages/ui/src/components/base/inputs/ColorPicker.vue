@@ -268,7 +268,7 @@
 <script setup lang="ts">
 import { ArrowUpIcon, CheckIcon } from '@modrinth/assets'
 import { colord } from 'colord'
-import { computed, nextTick, onMounted, ref, shallowRef, useId, watch } from 'vue'
+import { computed, onMounted, ref, shallowRef, useId, watch } from 'vue'
 
 import { defineMessages, useVIntl } from '../../../composables/i18n'
 import {
