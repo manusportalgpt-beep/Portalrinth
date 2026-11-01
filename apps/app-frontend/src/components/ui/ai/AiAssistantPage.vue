@@ -162,8 +162,14 @@ const messages = {
 	},
 	modeBuildHint: {
 		id: 'app.ai.mode.build-hint',
-		defaultMessage: 'Отвечает и сам делает: ставит, создаёт, собирает',
+		defaultMessage: 'Ask + автоматизация: отвечает на вопросы и сам делает задачи',
 	},
+	handoffText: {
+		id: 'app.ai.mode.handoff',
+		defaultMessage: 'Порталус предложил план — выполнить его в Build?',
+	},
+	handoffAction: { id: 'app.ai.mode.handoff-action', defaultMessage: 'Сделать в Build' },
+	handoffPrompt: { id: 'app.ai.mode.handoff-prompt', defaultMessage: 'Сделай это' },
 	focus: { id: 'app.ai.focus', defaultMessage: 'Категория' },
 	focusAny: { id: 'app.ai.focus.any', defaultMessage: 'Всё' },
 	focusMods: { id: 'app.ai.focus.mods', defaultMessage: 'Моды' },
@@ -678,6 +684,17 @@ function toggleDeepThink() {
 
 function setMode(mode: AiMode) {
 	saveAiSettings({ mode })
+}
+
+const showHandoff = computed(() => {
+	if (aiSettings.value.mode !== 'ask' || sending.value) return false
+	const last = visibleHistory.value[visibleHistory.value.length - 1]
+	return last?.role === 'assistant' && /\bBuild\b/.test(last.content ?? '')
+})
+
+function handoffToBuild() {
+	setMode('build')
+	void send(formatMessage(messages.handoffPrompt))
 }
 
 const FOCUS_OPTIONS = computed(() => [
@@ -2018,6 +2035,14 @@ defineExpose({ send })
 				</div>
 			</div>
 
+			<div v-if="showHandoff" class="ai-handoff mb-2">
+				<HammerIcon class="size-3.5 shrink-0 text-brand" />
+				<span class="min-w-0 grow truncate">{{ formatMessage(messages.handoffText) }}</span>
+				<button class="ai-handoff-btn" @click="handoffToBuild">
+					{{ formatMessage(messages.handoffAction) }}
+				</button>
+			</div>
+
 			<div
 				v-if="errorText"
 				class="ai-error m-0 mb-2 flex items-start gap-2 rounded-xl px-3 py-2 text-sm"
@@ -3240,6 +3265,34 @@ defineExpose({ send })
 	padding: 0.3rem 0.6rem;
 	font-size: 0.8125rem;
 	color: var(--color-secondary);
+}
+
+.ai-handoff {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 0.75rem;
+	background: var(--color-button-bg);
+	padding: 0.3rem 0.35rem 0.3rem 0.6rem;
+	font-size: 0.8125rem;
+	color: var(--color-secondary);
+}
+
+.ai-handoff-btn {
+	flex-shrink: 0;
+	border: 0;
+	border-radius: 0.5rem;
+	background: var(--color-brand);
+	color: var(--color-accent-contrast, #fff);
+	padding: 0.25rem 0.6rem;
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.ai-handoff-btn:hover {
+	filter: brightness(1.1);
 }
 
 .ai-queued-badge {

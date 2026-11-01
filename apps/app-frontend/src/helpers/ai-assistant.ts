@@ -1199,7 +1199,7 @@ export const AI_MODDING_HINT = [
 	'2) Ресурс-пак (текстуры, модели, звуки, шрифты, язык, CIT через OptiFine/CIT Resewn) — без кода.',
 	'3) KubeJS-скрипты (новые предметы, блоки, жидкости, рецепты любых модов, события) — мод KubeJS ставится через launcher_install, скрипты пишутся в сборку: kubejs/startup_scripts (регистрация), kubejs/server_scripts (рецепты, события), kubejs/client_scripts, assets — kubejs/assets/<namespace>/. Это самый быстрый путь к «настоящему моду» без компиляции на Forge/NeoForge/Fabric. CraftTweaker — альтернатива для рецептов.',
 	'4) Java-мод. Шаблон: папка-проекта/fabric.mod.json (или src/main/resources/META-INF/mods.toml / neoforge.mods.toml), src/main/java/<пакет>/<Класс>.java, assets/<modid>/ (lang, textures, models). Классы загрузчика (ModInitializer, @Mod, события) компилируются, если jar загрузчика лежит в папка-проекта/libs — скачай его sandbox_download с maven.fabricmc.net / maven.neoforged.net / maven.minecraftforge.net.',
-	'Честно про ванильные классы: Minecraft до 26.1 обфусцирован — Fabric в игре видит intermediary-имена (class_1234), Forge — SRG; код с net.minecraft.* без Gradle-ремапа скомпилируется против libs, но упадёт в игре. Поэтому для 1.x: всё, что решается датапаком/KubeJS, делай ими; Java-мод — только на API загрузчика или как полный Gradle-проект (build.gradle по официальному шаблону Fabric/NeoForge MDK, gradle.properties с версиями) в zip, с короткой инструкцией «gradlew build». Minecraft 26.1+ не обфусцирован — там клиентский jar в libs даёт честную компиляцию с настоящими именами (Java 25).',
+	'Честно про ванильные классы: Minecraft до 26.1 обфусцирован — Fabric в игре видит intermediary-имена (class_1234), Forge — SRG; код с net.minecraft.* без Gradle-ремапа скомпилируется против libs, но упадёт в игре. Поэтому для 1.x: всё, что решается датапаком/KubeJS, делай ими; Java-мод с ванильными классами — полный Gradle-проект по официальному шаблону (FabricMC/fabric-example-mod или neoforged/MDK: build.gradle, settings.gradle, gradle.properties с версиями) и сборка прямо в лаунчере <<launcher_gradle_build|папка-проекта::build>>, затем jar из build/libs ставь через install_to_instance. Minecraft 26.1+ не обфусцирован — там клиентский jar в libs даёт честную компиляцию с настоящими именами (Java 25).',
 	'Перед компиляцией перечитай код: package совпадает с путём, entrypoint в манифесте совпадает с классом, modid латиницей в нижнем регистре везде одинаковый. Ошибка javac — чини ровно указанную строку и перекомпилируй. Предупреждение «в jar нет fabric.mod.json…» — манифест лежит не там, исправь и собери заново.',
 ].join('\n')
 
@@ -1496,7 +1496,7 @@ export function buildSystemPrompt(kind: 'tab' | 'mascot', extra?: string): strin
 	}
 	const focus = AI_FOCUS_HINTS[settings.focus]
 	if (focus) lines.push(focus)
-	if (settings.mode === 'ask') lines.push(AI_ASK_MODE_HINT)
+	lines.push(settings.mode === 'ask' ? AI_ASK_MODE_HINT : AI_BUILD_MODE_HINT)
 	if (extra) lines.push(extra)
 	return lines.join('\n')
 }
@@ -1514,6 +1514,36 @@ const AI_FOCUS_HINTS: Record<AiFocus, string> = {
 
 const AI_ASK_MODE_HINT =
 	'Режим Ask: игрок хочет ответ, а не действия. Отвечай текстом; искать и читать можно (web_search, web_fetch, list_instances, instance_info, sandbox_read). НЕ устанавливай, не создавай и не меняй файлы, сборки и настройки. Если для задачи нужны действия — коротко опиши план и предложи переключиться в режим Build в меню «+».'
+
+const AI_BUILD_MODE_HINT =
+	'Режим Build = Ask + автоматизация. Вопрос («как», «почему», «что лучше», «объясни») — ответь сразу по существу, как в Ask, без лишних команд (поиск и чтение — только если без них ответ будет неточным). Задача («сделай», «создай», «поставь», «почини») — выполняй сам до конца: файлы, сборка, установка, проверка. Смешанное сообщение — сначала коротко ответь на вопрос, потом сделай задачу. Закончил работу — одна строка, почему сделал именно так, чтобы игрок понимал и учился.'
+
+const AI_QUESTION_TURN_HINT =
+	'Это сообщение — вопрос, а не задача: ответь текстом по существу. Ничего не создавай и не устанавливай, пока игрок не попросит; в конце можешь одной строкой предложить сделать это самому.'
+
+const QUESTION_START =
+	/^(как|каким|какой|какая|какие|какое|что|чем|чего|почему|зачем|где|куда|когда|сколько|кто|чей|можно ли|стоит ли|есть ли|правда ли|объясни|расскажи|подскажи|посоветуй|в чём|в чем|what|how|why|which|where|when|is|are|can|should|does|do)(?=[\s,?!.]|$)/i
+
+const ACTION_WORDS =
+	/(сдела|созда|напиш|сгенерир|собер|скомпил|установ|постав|скача|добав|удал|убер|почин|исправ|запуст|включ|выключ|отключ|помен|смен|настро|переимен|обнов|перенес|нарис|make|create|build|install|download|add|remove|delete|fix|run|enable|disable|change|set up)/i
+
+/** A plain question: asks something and orders nothing. «Как сделать меч?»
+ * is a question, «Сделай меч» and «Как дела? Поставь Sodium» are tasks. */
+export function isQuestionOnly(text: string): boolean {
+	const trimmed = text.trim()
+	if (!trimmed || trimmed.length > 400) return false
+	const asks = /\?\s*$/.test(trimmed) || QUESTION_START.test(trimmed)
+	if (!asks) return false
+	const imperative = trimmed
+		.split(/[.!?\n]+/)
+		.map((part) => part.trim())
+		.filter(Boolean)
+		.some((part) => !QUESTION_START.test(part) && !part.endsWith('?') && ACTION_WORDS.test(part))
+	if (imperative) return false
+	if (/^(можешь|сможешь|а можешь|could you|can you|would you)/i.test(trimmed) && ACTION_WORDS.test(trimmed))
+		return false
+	return !/^(сделай|создай|установи|поставь|собери|напиши|почини|исправь)/i.test(trimmed)
+}
 
 /** Tools Ask mode allows: the ones that only look, never change. */
 function askModeBlocks(tool: string): boolean {
@@ -2425,8 +2455,18 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 		: buildSystemPrompt(request.kind, request.systemExtra) +
 			(await buildLiveContext().then((live) => (live ? `\n${live}` : '')))
 	const presearch = fastPath ? '' : await presearchFor(request)
+	const lastUser = [...(request.messages ?? [])].reverse().find((m) => m.role === 'user')
+	const questionTurn =
+		!fastPath &&
+		settings.mode === 'build' &&
+		typeof lastUser?.content === 'string' &&
+		isQuestionOnly(lastUser.content)
+	const turnNote = questionTurn ? `\n${AI_QUESTION_TURN_HINT}` : ''
 	const base: ChatMessagePayload[] = [
-		{ role: 'system', content: presearch ? `${system}\n${presearch}` : system },
+		{
+			role: 'system',
+			content: (presearch ? `${system}\n${presearch}` : system) + turnNote,
+		},
 		...history,
 	]
 	let rounds = withImages(base, request.images)
@@ -2578,6 +2618,8 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 							// tools instead of ending the turn on an empty promise.
 							const dodging =
 								!fastPath &&
+								!questionTurn &&
+								settings.mode !== 'ask' &&
 								promiseNudges < 2 &&
 								round < maxRounds - 1 &&
 								(PROMISE_RE.test(parsed.text) || REFUSAL_RE.test(parsed.text))
@@ -2602,6 +2644,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 							const codeDump =
 								!fastPath &&
 								settings.mode !== 'ask' &&
+								!questionTurn &&
 								codeNudges < 2 &&
 								round < maxRounds - 1 &&
 								CODE_DUMP_RE.test(parsed.text)

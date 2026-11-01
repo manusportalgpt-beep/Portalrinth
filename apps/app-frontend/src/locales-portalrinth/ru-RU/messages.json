@@ -3940,7 +3940,7 @@
 		"message": "Только отвечает и ищет, ничего не меняет в лаунчере"
 	},
 	"app.ai.mode.build-hint": {
-		"message": "Отвечает и сам делает: ставит, создаёт, собирает"
+		"message": "Ask + автоматизация: отвечает на вопросы и сам делает задачи"
 	},
 	"app.ai.focus": {
 		"message": "Категория"
@@ -3977,5 +3977,14 @@
 	},
 	"app.settings.ai-assistant.gradle.remove": {
 		"message": "Удалить Gradle и кэш"
+	},
+	"app.ai.mode.handoff": {
+		"message": "Порталус предложил план — выполнить его в Build?"
+	},
+	"app.ai.mode.handoff-action": {
+		"message": "Сделать в Build"
+	},
+	"app.ai.mode.handoff-prompt": {
+		"message": "Сделай это"
 	}
 }

@@ -2407,7 +2407,7 @@
 		"message": "Only answers and searches, changes nothing in the launcher"
 	},
 	"app.ai.mode.build-hint": {
-		"message": "Answers and acts: installs, creates, builds"
+		"message": "Ask + automation: answers questions and does the tasks itself"
 	},
 	"app.ai.focus": {
 		"message": "Category"
@@ -2444,5 +2444,14 @@
 	},
 	"app.settings.ai-assistant.gradle.remove": {
 		"message": "Remove Gradle and cache"
+	},
+	"app.ai.mode.handoff": {
+		"message": "Portalus suggested a plan — run it in Build?"
+	},
+	"app.ai.mode.handoff-action": {
+		"message": "Do it in Build"
+	},
+	"app.ai.mode.handoff-prompt": {
+		"message": "Do it"
 	}
 }
