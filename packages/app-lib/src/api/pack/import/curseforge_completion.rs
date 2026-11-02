@@ -34,6 +34,9 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::api::curseforge_search::{
+    cdn_path, download_url_candidates, encode_url_path,
+};
 use crate::event::emit::emit_warning;
 use crate::install::{
     InstallPhaseDetails, InstallPhaseId, InstallProgress,
@@ -269,14 +272,36 @@ async fn restore_one(
     expected: &ExpectedFile,
     disabled: bool,
 ) -> crate::Result<()> {
-    let Some(url) = expected.download_url.as_deref() else {
+    // Same order the modpack installer uses: the URL the metadata carries,
+    // encoded so a bracketed file name cannot sink it, then the public CDN
+    // path rebuilt from the numeric id. One host refusing a file is not the
+    // file being gone.
+    let mut mirrors = Vec::new();
+    if let Some(url) = expected.download_url.as_deref() {
+        let encoded = encode_url_path(url);
+        if !mirrors.contains(&encoded) {
+            mirrors.push(encoded);
+        }
+    }
+    if let Some(file_id) = expected.file_id.filter(|id| *id >= 1000) {
+        for url in download_url_candidates(&cdn_path(
+            file_id.max(0) as u64,
+            &expected.file_name,
+        )) {
+            if !mirrors.contains(&url) {
+                mirrors.push(url);
+            }
+        }
+    }
+    if mirrors.is_empty() {
         return Err(crate::ErrorKind::InputError(
             "CurseForge gives no way to download it".to_string(),
         )
         .into());
-    };
+    }
+    let mirrors: Vec<&str> = mirrors.iter().map(String::as_str).collect();
     let bytes = fetch::fetch_mirrors(
-        &[url],
+        &mirrors,
         expected.sha1.as_deref(),
         None,
         None,

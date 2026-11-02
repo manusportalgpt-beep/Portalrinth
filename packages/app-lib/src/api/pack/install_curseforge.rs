@@ -30,7 +30,9 @@ use reqwest::Method;
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt;
 
-use crate::api::curseforge_search::DependencyKind;
+use crate::api::curseforge_search::{
+    cdn_path, download_url_candidates, encode_url_path, DependencyKind,
+};
 
 use crate::install::{
     InstallErrorContext, InstallPhaseDetails, InstallPhaseId, InstallProgress,
@@ -49,7 +51,7 @@ const CF_FILES_ENDPOINT: &str = "https://api.curseforge.com/v1/mods/files";
 
 /// How many modpack content files are downloaded at the same time. Actual
 /// network parallelism is additionally bounded by the global fetch semaphore.
-const CF_CONTENT_DOWNLOAD_CONCURRENCY: usize = 8;
+const CF_CONTENT_DOWNLOAD_CONCURRENCY: usize = 16;
 
 /// How many failed files are listed by name in the aggregate error message.
 const CF_MAX_LISTED_FAILURES: usize = 8;
@@ -162,30 +164,34 @@ impl CfFileData {
             .map(|h| h.value.as_str())
     }
 
-    /// Reconstruct the public CDN URL from the numeric file id вЂ” works even
-    /// when the author disabled API distribution (which only nulls
-    /// `download_url`). Same workaround MultiMC / Prism use.
-    fn cdn_fallback_url(&self) -> Option<String> {
-        if self.id < 1000 || self.file_name.is_empty() {
-            return None;
-        }
-        let safe_name = self.file_name.replace(' ', "%20");
-        Some(format!(
-            "https://edge.forgecdn.net/files/{}/{}/{safe_name}",
-            self.id / 1000,
-            self.id % 1000
-        ))
-    }
-
+    /// The addresses the file is tried on, most likely first.
+    ///
+    /// The API's own URL comes first, percent-encoded so a file name full of
+    /// brackets and spaces cannot sink it — a raw `[` in the request path
+    /// makes the CDN answer with an empty page or a refusal, which surfaces
+    /// as a hash mismatch over a zero-byte file. Then the public CDN path
+    /// rebuilt from the numeric id, which is what still serves the files
+    /// whose authors turned API distribution off (`download_url` is `None`
+    /// for those). Each CDN host is a candidate of its own: a file one node
+    /// refuses another serves, and the id-built path is the same workaround
+    /// MultiMC and Prism use.
     fn download_candidates(&self) -> Vec<String> {
-        let mut urls = Vec::with_capacity(2);
+        let mut urls = Vec::with_capacity(4);
         if let Some(url) = &self.download_url {
-            urls.push(url.clone());
+            let encoded = encode_url_path(url);
+            if !urls.contains(&encoded) {
+                urls.push(encoded);
+            }
         }
-        if let Some(url) = self.cdn_fallback_url()
-            && !urls.contains(&url)
-        {
-            urls.push(url);
+        if self.id >= 1000 && !self.file_name.is_empty() {
+            for url in download_url_candidates(&cdn_path(
+                self.id.max(0) as u64,
+                &self.file_name,
+            )) {
+                if !urls.contains(&url) {
+                    urls.push(url);
+                }
+            }
         }
         urls
     }

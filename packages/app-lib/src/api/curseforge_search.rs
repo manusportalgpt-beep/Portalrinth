@@ -548,7 +548,7 @@ pub fn download_url_candidates(url: &str) -> Vec<String> {
 /// The first four digits are their own path segment and the rest is the second,
 /// which is not the same as the older `id / 1000` split their previous host
 /// used.
-fn cdn_path(file_id: u64, file_name: &str) -> String {
+pub(crate) fn cdn_path(file_id: u64, file_name: &str) -> String {
     let id = file_id.to_string();
     let head = &id[..id.len().min(4)];
     let tail = if id.len() > 4 {
@@ -572,6 +572,57 @@ fn urlencode(value: &str) -> String {
             other => out.push_str(&format!("%{other:02X}")),
         }
     }
+    out
+}
+
+/// Percent-encodes the path of a URL the CurseForge API handed over, leaving
+/// escapes that are already there alone.
+///
+/// The API returns a file name exactly as its author typed it, and mod names
+/// are full of `[`, `]` and spaces. A raw bracket in a request path makes the
+/// CDN answer with an empty page on some edge nodes and a refusal on others,
+/// which surfaces as a hash mismatch over a zero-byte file. Re-encoding is
+/// deliberately skipped for an existing `%XX`: turning the percent into `%25`
+/// would corrupt a URL that was already correct.
+pub(crate) fn encode_url_path(url: &str) -> String {
+    let Some(scheme_end) = url.find("://") else {
+        return urlencode(url);
+    };
+    let (scheme, rest) = url.split_at(scheme_end + 3);
+    let Some(slash) = rest.find('/') else {
+        return url.to_string();
+    };
+    let (authority, tail) = rest.split_at(slash);
+    // A query or a fragment is not a file name; leave it exactly as it came.
+    let (path, suffix) = match tail.find(['?', '#']) {
+        Some(cut) => (&tail[..cut], &tail[cut..]),
+        None => (tail, ""),
+    };
+
+    let mut out = String::with_capacity(url.len() + 8);
+    out.push_str(scheme);
+    out.push_str(authority);
+    let bytes = path.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%'
+            && index + 2 < bytes.len()
+            && bytes[index + 1].is_ascii_hexdigit()
+            && bytes[index + 2].is_ascii_hexdigit()
+        {
+            out.push_str(&path[index..index + 3]);
+            index += 3;
+            continue;
+        }
+        match bytes[index] {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b'/' => {
+                out.push(bytes[index] as char)
+            }
+            other => out.push_str(&format!("%{other:02X}")),
+        }
+        index += 1;
+    }
+    out.push_str(suffix);
     out
 }
 
