@@ -6,11 +6,13 @@ import { ModrinthApiError } from '@modrinth/api-client'
 import {
         ArrowLeftRightIcon,
         BellIcon,
+        CheckCircleIcon,
         CompassIcon,
         ImageIcon,
         LibraryIcon,
         LogInIcon,
         LogOutIcon,
+        MessagesSquareIcon,
         PlayIcon,
         PlusIcon,
         RadioTowerIcon,
@@ -124,6 +126,10 @@ import {
         take_ads_window_hold,
 } from '@/helpers/ads.js'
 import {
+        agentBusy,
+        aiDockDone,
+        aiDockOpen,
+        aiDockUnread,
         aiSettings,
         mascotCelebrate,
         maybeMarkPlayerInterrupt,
@@ -2623,6 +2629,12 @@ function switchNetMode(mode) {
         void router.push(mode === 'hosting' ? '/hosting/manage/' : '/lan')
 }
 const lanMenu = ref()
+/** Opens or folds Portalus's dock panel; the icon lives in the sidebar,
+ * right above the settings button. */
+function toggleAiDock() {
+        aiDockOpen.value = !aiDockOpen.value
+}
+
 function openLanMenu(event) {
         lanMenu.value?.open(event, [
                 {
@@ -2788,6 +2800,30 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                                         </NavButton>
                                 </QuickInstanceSwitcher>
                         </suspense>
+                        <NavButton
+                                v-if="aiSettings.enabled"
+                                v-tooltip.right="'Порталус'"
+                                :to="toggleAiDock"
+                                :is-primary="() => aiDockOpen"
+                        >
+                                <span class="portalus-dock-icon">
+                                        <MessagesSquareIcon />
+                                        <span
+                                                v-if="agentBusy"
+                                                class="portalus-dock-spin"
+                                        />
+                                        <span
+                                                v-else-if="aiDockDone"
+                                                class="portalus-dock-tick"
+                                        >
+                                                <CheckCircleIcon class="size-3" />
+                                        </span>
+                                        <span
+                                                v-else-if="aiDockUnread"
+                                                class="portalus-dock-dot"
+                                        />
+                                </span>
+                        </NavButton>
                         <NavButton
                                 v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
                                 :to="settingsActions.openSettings"
@@ -3047,6 +3083,53 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
         > :deep(*) {
                 flex-shrink: 0;
+        }
+}
+
+/* Portalus's sidebar icon: the orb with the busy ring, the ready tick
+ * and the unread dot all live on top of the same rounded button. */
+.portalus-dock-icon {
+        position: relative;
+        display: grid;
+        place-items: center;
+        color: var(--color-brand);
+}
+
+.portalus-dock-spin {
+        position: absolute;
+        inset: -0.35rem;
+        border-radius: 999px;
+        border: 2px solid transparent;
+        border-top-color: var(--color-brand);
+        animation: portalus-dock-rotate 0.9s linear infinite;
+}
+
+.portalus-dock-tick {
+        position: absolute;
+        right: -0.3rem;
+        bottom: -0.3rem;
+        display: grid;
+        place-items: center;
+        width: 0.85rem;
+        height: 0.85rem;
+        border-radius: 999px;
+        background: var(--color-raised-bg);
+        color: var(--color-green);
+}
+
+.portalus-dock-dot {
+        position: absolute;
+        right: -0.15rem;
+        top: -0.15rem;
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 999px;
+        background: var(--color-brand);
+}
+
+@keyframes portalus-dock-rotate {
+        to {
+                transform: rotate(360deg);
         }
 }
 

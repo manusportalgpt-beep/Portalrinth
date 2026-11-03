@@ -121,6 +121,7 @@
 							</TeleportOverflowMenu>
 						</template>
 						<template v-else>
+							<InstallProgressPopover :active="installing">
 							<Button
 								v-if="showSwitchVersion && onVersionsPage"
 								v-tooltip="formatMessage(messages.alreadyInstalled)"
@@ -165,6 +166,7 @@
 													: formatMessage(commonMessages.installButton)
 								}}
 							</Button>
+							</InstallProgressPopover>
 							<IconButton
 								v-tooltip="
 									formatMessage(
@@ -305,6 +307,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { SwapIcon } from '@/assets/icons/index.js'
+import InstallProgressPopover from '@/components/ui/InstallProgressPopover.vue'
 import InstanceIndicator from '@/components/ui/InstanceIndicator.vue'
 import ProjectMoreFromCreator from '@/components/ui/ProjectMoreFromCreator.vue'
 import SaveToCollectionButton from '@/components/ui/SaveToCollectionButton.vue'

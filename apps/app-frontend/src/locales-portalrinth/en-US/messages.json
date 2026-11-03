@@ -2495,5 +2495,11 @@
 	},
 	"app.instance.notes.clear": {
 		"message": "Clear"
+	},
+	"portalrinth.install.progress.waiting": {
+		"message": "Preparing…"
+	},
+	"portalrinth.install.progress.installing": {
+		"message": "Installing content…"
 	}
 }

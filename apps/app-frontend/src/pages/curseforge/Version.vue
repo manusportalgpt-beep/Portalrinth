@@ -28,6 +28,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { SwapIcon } from '@/assets/icons'
+import InstallProgressPopover from '@/components/ui/InstallProgressPopover.vue'
 import { curseforgeFileUrl, curseforgeVersionQueryOptions } from '@/helpers/curseforge'
 import { useBreadcrumb } from '@/shared/breadcrumbs'
 
@@ -195,6 +196,7 @@ const moreOptions = computed(() =>
 			:user-link-creator="() => owner?.url ?? undefined"
 		>
 			<template #headerActions>
+				<InstallProgressPopover :active="installing">
 				<Button
 					type="colored"
 					color="brand"
@@ -214,6 +216,7 @@ const moreOptions = computed(() =>
 									: formatMessage(commonMessages.installButton)
 					}}
 				</Button>
+				</InstallProgressPopover>
 				<TeleportOverflowMenu
 					v-if="moreOptions.length > 0"
 					type="outlined"

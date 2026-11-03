@@ -46,6 +46,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import InstallProgressPopover from '@/components/ui/InstallProgressPopover.vue'
 import InstanceIndicator from '@/components/ui/InstanceIndicator.vue'
 import {
 	curseforgeDescriptionQueryOptions,
@@ -448,6 +449,7 @@ async function install(fileId: string | null = null) {
 			<InstanceIndicator v-if="instance" :instance="instance" />
 			<ProjectPageHeader :project="headerProject">
 				<template #actions>
+					<InstallProgressPopover :active="installing">
 					<Button
 						type="colored"
 						color="brand"
@@ -467,6 +469,7 @@ async function install(fileId: string | null = null) {
 									: formatMessage(commonMessages.installButton)
 						}}
 					</Button>
+					</InstallProgressPopover>
 					<IconButton
 						v-tooltip="formatMessage(favorite ? messages.removeFavorite : messages.addFavorite)"
 						type="quiet"

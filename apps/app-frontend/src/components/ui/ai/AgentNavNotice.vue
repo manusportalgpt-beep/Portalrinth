@@ -1,14 +1,14 @@
 <template>
 	<Transition name="ai-dock">
-		<div v-if="visible" class="ai-dock-anchor" :style="{ left: `${anchorLeft}px` }">
+		<div v-if="panelVisible" class="ai-dock-anchor">
 			<div
 				class="ai-dock"
-				:class="{ 'ai-dock--open': open, 'ai-dock--busy': agentBusy }"
+				:class="{ 'ai-dock--busy': agentBusy, 'ai-dock--open': true }"
 				role="region"
 				aria-label="Порталус"
 			>
-				<!-- The pill: always there while Portalus has something going -->
-				<button type="button" class="ai-dock-pill" :aria-expanded="open" @click="toggle">
+				<!-- The head: who is talking and how the run is going -->
+				<div class="ai-dock-head">
 					<span class="ai-dock-orb" :class="{ 'ai-dock-orb--busy': agentBusy }">
 						<MessagesSquareIcon class="size-3" />
 					</span>
@@ -17,19 +17,25 @@
 						{{ statusText }}
 					</span>
 					<span
-						v-if="justDone"
+						v-if="aiDockDone && !agentBusy"
 						v-tooltip="'Готово — можно продолжать'"
 						class="ai-dock-tick"
 					>
 						<CheckCircleIcon class="size-3.5" />
 					</span>
-					<span v-if="unread && !open" class="ai-dock-dot" />
-					<ChevronDownIcon class="ai-dock-chevron size-3.5" :class="{ 'rotate-180': open }" />
-				</button>
+					<button
+						type="button"
+						class="ai-dock-close"
+						aria-label="Скрыть"
+						@click="dismiss"
+					>
+						<XIcon class="size-3.5" />
+					</button>
+				</div>
 
-				<!-- The panel: the live run or the last reply, and a way to answer -->
-				<div class="ai-dock-fold" :class="{ 'ai-dock-fold--open': open }">
-					<div class="ai-dock-fold-inner" :inert="!open || undefined">
+				<!-- The body: the live run or the last reply, and a way to answer -->
+				<div class="ai-dock-fold">
+					<div class="ai-dock-fold-inner">
 						<div class="ai-dock-body">
 							<div ref="scroller" class="ai-dock-scroll">
 								<AiSteps
@@ -62,7 +68,7 @@
 									v-model="draft"
 									class="ai-dock-input"
 									:placeholder="agentBusy ? 'Добавить к задаче…' : 'Попроси Порталуса…'"
-									@keydown.esc.prevent="open = false"
+									@keydown.esc.prevent="dismiss"
 								/>
 								<button
 									v-if="agentBusy"
@@ -89,10 +95,6 @@
 									<ExternalIcon class="size-3.5" />
 									Открыть чат
 								</button>
-								<button type="button" class="ai-dock-link" @click="dismiss">
-									<XIcon class="size-3.5" />
-									Скрыть
-								</button>
 							</div>
 						</div>
 					</div>
@@ -104,17 +106,16 @@
 
 <script setup lang="ts">
 /**
- * Portalus's dock: a glass pill to the left of the title-bar clock that
- * stays while he works or has something to say, on every screen. Clicked it
- * unfolds into the live run (the same step timeline as the chat) or his last
- * reply, with an input that talks to him right here - the player never has
- * to go back to the chat to keep working with him. When a run is over the
- * dock stays put with a green tick: Portalus is still reachable, the talk
- * goes on in the same panel.
+ * Portalus's dock: a glass panel that slides out of the left sidebar, right
+ * above the settings button (his icon sits there since the top pill is
+ * gone). The player clicks his icon in the sidebar and gets the live run -
+ * the same step timeline as the chat - or his last reply, with an input
+ * that talks to him right here, no need to go back to the chat. While a run
+ * is going the sidebar icon spins, after it the icon shows a green tick and
+ * an unread dot until the player opens the panel.
  */
 import {
 	CheckCircleIcon,
-	ChevronDownIcon,
 	ExternalIcon,
 	MessagesSquareIcon,
 	SendIcon,
@@ -122,7 +123,7 @@ import {
 	XIcon,
 } from '@modrinth/assets'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import AiSteps from '@/components/ui/ai/AiSteps.vue'
@@ -132,6 +133,9 @@ import {
 	agentPhase,
 	agentStreaming,
 	agentTurn,
+	aiDockDone,
+	aiDockOpen,
+	aiDockUnread,
 	aiHistory,
 	sendAgentMessage,
 	stopAgentRun,
@@ -139,26 +143,14 @@ import {
 
 const route = useRoute()
 const router = useRouter()
-const open = ref(false)
-const draft = ref('')
 const dismissed = ref(false)
-const unread = ref(false)
-/** True once Portalus ran at least one turn here: the dock stays afterwards. */
-const everBusy = ref(false)
-/** True right after a run ends: shows the green tick and "готово". */
-const justDone = ref(false)
 const input = ref<HTMLInputElement | null>(null)
 const scroller = ref<HTMLElement | null>(null)
 
-/** Shown off the chat page while there is a run, a fresh notice, or the
- * player opened it; and once Portalus worked this session it never vanishes
- * on its own - after a run it stays with the tick so the talk goes on.
- * "Скрыть" puts it away until Portalus has news again. */
-const visible = computed(
-	() =>
-		route.path !== '/ai' &&
-		!dismissed.value &&
-		(agentBusy.value || everBusy.value || agentNavNotice.value !== null || open.value),
+/** The panel shows only where the player asked for it, and never over the
+ * chat itself - on the chat page the talk is already in full view. */
+const panelVisible = computed(
+	() => route.path !== '/ai' && !dismissed.value && aiDockOpen.value,
 )
 
 const phaseLabel = computed(() =>
@@ -175,7 +167,7 @@ const statusText = computed(() => {
 		if (step?.kind === 'tool' && step.tool) return `${phaseLabel.value} · ${toolLabel(step.tool)}`
 		return `${phaseLabel.value}…`
 	}
-	if (agentNavNotice.value || justDone.value) return 'готово'
+	if (agentNavNotice.value || aiDockDone.value) return 'готово'
 	return ''
 })
 
@@ -219,6 +211,9 @@ const TOOL_LABELS: Record<string, string> = {
 	open_instance: 'открываю сборку',
 	show_poll: 'спрашиваю',
 	task_start: 'составляю план',
+	mod_toggle: 'переключаю мод',
+	mod_update: 'обновляю моды',
+	launcher_gradle_build: 'собираю мод',
 }
 
 function toolLabel(tool: string): string {
@@ -244,39 +239,42 @@ const lastUser = computed(() => {
 	return ''
 })
 
-// News un-hides the dock and marks it unread.
+// News marks the sidebar icon unread so the player knows to open the panel.
 watch(
 	() => agentNavNotice.value?.at,
 	(at) => {
 		if (!at) return
 		dismissed.value = false
-		if (!open.value) unread.value = true
+		if (!aiDockOpen.value) aiDockUnread.value = true
 	},
 )
 watch(agentBusy, (busy, was) => {
 	if (busy) {
-		everBusy.value = true
+		aiDockDone.value = false
 		dismissed.value = false
-		justDone.value = false
 	} else if (was) {
-		justDone.value = true
-		if (!open.value) unread.value = true
+		aiDockDone.value = true
+		if (!aiDockOpen.value) aiDockUnread.value = true
 	}
 })
-watch([() => agentTurn.value.steps.length, agentStreaming, open], () => {
-	void nextTick(() => {
-		const box = scroller.value
-		if (box) box.scrollTop = box.scrollHeight
-	})
-})
+watch(
+	[() => agentTurn.value.steps.length, agentStreaming, panelVisible],
+	() => {
+		if (!panelVisible.value) return
+		void nextTick(() => {
+			const box = scroller.value
+			if (box) box.scrollTop = box.scrollHeight
+		})
+	},
+)
 
-function toggle() {
-	open.value = !open.value
-	if (open.value) {
-		unread.value = false
+// Focus the input whenever the panel opens.
+watch(panelVisible, (shown) => {
+	if (shown) {
+		aiDockUnread.value = false
 		void nextTick(() => input.value?.focus())
 	}
-}
+})
 
 function reply() {
 	const text = draft.value.trim()
@@ -286,15 +284,17 @@ function reply() {
 	void sendAgentMessage(text)
 }
 
+const draft = ref('')
+
 function dismiss() {
-	open.value = false
+	aiDockOpen.value = false
 	dismissed.value = true
-	unread.value = false
+	aiDockUnread.value = false
 	agentNavNotice.value = null
 }
 
 function openChat() {
-	open.value = false
+	aiDockOpen.value = false
 	agentNavNotice.value = null
 	void router.push('/ai')
 }
@@ -302,52 +302,25 @@ function openChat() {
 function openLink(url: string) {
 	void openUrl(url).catch(() => window.open(url, '_blank'))
 }
-
-// Sits just left of the title-bar clock, so the time stays readable; the
-// CSS shifts the whole dock back by its own width (translateX(-100%)).
-const anchorLeft = ref(0)
-function place() {
-	const clock = document.querySelector<HTMLElement>('[data-titlebar-clock]')
-	const rect = clock?.getBoundingClientRect()
-	anchorLeft.value = rect && rect.width > 0 ? rect.left - 10 : window.innerWidth / 2 + 64
-}
-let observer: ResizeObserver | undefined
-onMounted(() => {
-	place()
-	window.addEventListener('resize', place)
-	const clock = document.querySelector<HTMLElement>('[data-titlebar-clock]')
-	if (clock && 'ResizeObserver' in window) {
-		observer = new ResizeObserver(place)
-		observer.observe(clock)
-	}
-})
-watch(visible, (shown) => {
-	if (shown) void nextTick(place)
-})
-onBeforeUnmount(() => {
-	window.removeEventListener('resize', place)
-	observer?.disconnect()
-})
 </script>
 
 <style scoped>
 .ai-dock-anchor {
 	position: fixed;
-	top: 0.3rem;
+	left: calc(var(--left-bar-width) + 0.65rem);
+	bottom: 7.5rem;
 	z-index: 80;
-	pointer-events: none;
-	transform: translateX(-100%);
+	max-width: calc(100vw - var(--left-bar-width) - 1.5rem);
 }
 
 .ai-dock {
-	pointer-events: auto;
 	display: flex;
 	flex-direction: column;
-	width: max-content;
-	max-width: min(22rem, calc(100vw - 2rem));
+	width: min(24rem, calc(100vw - var(--left-bar-width) - 1.5rem));
+	max-width: min(24rem, calc(100vw - var(--left-bar-width) - 1.5rem));
 	border-radius: 1.1rem;
 	border: 1px solid color-mix(in srgb, var(--color-contrast) 14%, transparent);
-	background: color-mix(in srgb, var(--color-raised-bg) 62%, transparent);
+	background: color-mix(in srgb, var(--color-raised-bg) 78%, transparent);
 	backdrop-filter: blur(18px) saturate(1.3);
 	-webkit-backdrop-filter: blur(18px) saturate(1.3);
 	box-shadow:
@@ -355,35 +328,23 @@ onBeforeUnmount(() => {
 		inset 0 1px 0 rgb(255 255 255 / 6%);
 	overflow: hidden;
 	transition:
-		width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
 		border-radius 0.3s ease,
 		background-color 0.25s ease,
 		box-shadow 0.25s ease;
-}
-
-.ai-dock--open {
-	width: min(22rem, calc(100vw - 2rem));
-	border-radius: 1.1rem;
-	background: color-mix(in srgb, var(--color-raised-bg) 78%, transparent);
 }
 
 .ai-dock--busy {
 	border-color: color-mix(in srgb, var(--color-brand) 30%, transparent);
 }
 
-.ai-dock-pill {
+.ai-dock-head {
 	display: flex;
 	align-items: center;
 	gap: 0.45rem;
 	min-width: 0;
-	padding: 0.3rem 0.6rem 0.3rem 0.35rem;
-	border: none;
-	background: transparent;
+	padding: 0.55rem 0.6rem 0.5rem 0.65rem;
 	color: var(--color-contrast);
-	font: inherit;
 	font-size: 0.75rem;
-	cursor: pointer;
-	text-align: left;
 }
 
 .ai-dock-orb {
@@ -429,28 +390,31 @@ onBeforeUnmount(() => {
 	color: var(--color-green);
 }
 
-.ai-dock-dot {
-	width: 0.45rem;
-	height: 0.45rem;
-	flex-shrink: 0;
-	border-radius: 999px;
-	background: var(--color-brand);
-}
-
-.ai-dock-chevron {
+.ai-dock-close {
+	display: grid;
+	place-items: center;
+	width: 1.5rem;
+	height: 1.5rem;
 	flex-shrink: 0;
 	margin-left: auto;
+	padding: 0;
+	border: none;
+	border-radius: 0.5rem;
+	background: transparent;
 	color: var(--color-secondary);
-	transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+	cursor: pointer;
+	transition:
+		background-color 0.18s ease,
+		color 0.18s ease;
+}
+
+.ai-dock-close:hover {
+	background: color-mix(in srgb, var(--color-contrast) 8%, transparent);
+	color: var(--color-contrast);
 }
 
 .ai-dock-fold {
 	display: grid;
-	grid-template-rows: 0fr;
-	transition: grid-template-rows 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.ai-dock-fold--open {
 	grid-template-rows: 1fr;
 }
 
@@ -575,7 +539,7 @@ onBeforeUnmount(() => {
 
 .ai-dock-foot {
 	display: flex;
-	justify-content: space-between;
+	justify-content: flex-start;
 }
 
 .ai-dock-link {
@@ -617,14 +581,14 @@ onBeforeUnmount(() => {
 .ai-dock-enter-active,
 .ai-dock-leave-active {
 	transition:
-		opacity 0.3s ease,
-		transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+		opacity 0.25s ease,
+		transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .ai-dock-enter-from,
 .ai-dock-leave-to {
 	opacity: 0;
-	transform: translateX(-100%) translateY(-8px) scale(0.96);
+	transform: translateX(-10px) scale(0.97);
 }
 
 @keyframes ai-dock-spin {
@@ -647,14 +611,12 @@ onBeforeUnmount(() => {
 
 @media (prefers-reduced-motion: reduce) {
 	.ai-dock,
-	.ai-dock-fold,
-	.ai-dock-chevron {
+	.ai-dock-fold {
 		transition: none;
 	}
 
 	.ai-dock-orb--busy::after,
-	.ai-dock-shimmer,
-	.ai-dock-dot {
+	.ai-dock-shimmer {
 		animation: none;
 	}
 }

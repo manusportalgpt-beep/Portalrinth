@@ -4028,5 +4028,11 @@
 	},
 	"app.instance.notes.clear": {
 		"message": "Очистить"
+	},
+	"portalrinth.install.progress.waiting": {
+		"message": "Подготовка…"
+	},
+	"portalrinth.install.progress.installing": {
+		"message": "Установка контента…"
 	}
 }

@@ -12,6 +12,7 @@
 			:dependency-link-creator="createDependencyLink"
 		>
 			<template #headerActions="{ primaryFile }">
+				<InstallProgressPopover :active="installing">
 				<Button
 					v-tooltip="
 						primaryFile?.url
@@ -36,6 +37,7 @@
 									: formatMessage(commonMessages.installButton)
 					}}
 				</Button>
+				</InstallProgressPopover>
 				<TeleportOverflowMenu
 					type="outlined"
 					label="More options"
@@ -101,6 +103,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { SwapIcon } from '@/assets/icons'
+import InstallProgressPopover from '@/components/ui/InstallProgressPopover.vue'
 import { get_project_many, get_version_many } from '@/helpers/cache.js'
 import { useBreadcrumb } from '@/shared/breadcrumbs'
 
