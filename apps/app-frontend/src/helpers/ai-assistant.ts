@@ -4767,10 +4767,9 @@ export const bridgeToggling = ref(false)
  * player to another screen: hover to read, answer without opening the chat. */
 export const agentNavNotice = ref<{ text: string; at: number } | null>(null)
 
-/** Dock panel state shared with the sidebar button: open flag, unread news
- * dot and the "ready" tick after a run. The panel itself lives in
- * AgentNavNotice.vue and reads these directly. */
-export const aiDockOpen = ref(false)
+/** Portalus chip state (the small icon by the title-bar clock): unread news
+ * dot and the "ready" tick after a run. The chip lives in AgentNavNotice.vue
+ * and reads these directly. */
 export const aiDockUnread = ref(false)
 export const aiDockDone = ref(false)
 export function showAgentNavNotice(text: string): void {
