@@ -105,20 +105,22 @@ export async function describeBuild(id: string, withList = false): Promise<strin
 		)
 		if (updates.length > 0) {
 			lines.push(
-				`Есть обновления (${updates.length}): ${updates.slice(0, 12).join(', ')}${updates.length > 12 ? '…' : ''} — обнови через <<update_mods|${id}>>.`,
+						`Есть обновления (${updates.length}): ${updates.slice(0, 20).join(', ')}${updates.length > 20 ? '…' : ''} — все разом: <<update_mods|${id}>>, точечно: <<mod_update|${id}::мод>>.`,
 			)
 		}
 		if (withList && items.length > 0) {
 			lines.push(
 				'Список:\n' +
 					items
-						.slice(0, 120)
+						.slice(0, 250)
 						.map(
 							(item) =>
 								`- ${item.project?.title ?? item.file_name}${item.version?.version_number ? ` ${item.version.version_number}` : ''} [${item.project_type}${item.enabled === false ? ', выкл' : ''}${item.has_update ? ', есть обновление' : ''}]`,
 						)
 						.join('\n') +
-					(items.length > 120 ? `\n…и ещё ${items.length - 120}` : ''),
+(items.length > 250
+										? `\n…и ещё ${items.length - 250} — фильтруй: <<instance_mods|${id}::часть имени>>`
+										: ''),
 			)
 		}
 	} catch {

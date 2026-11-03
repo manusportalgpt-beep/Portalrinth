@@ -424,6 +424,16 @@ function actionName(tool: string) {
 		skill_save: 'сохранил навык',
 		show_poll: 'устроил опрос',
 		task_start: 'объявил задачу',
+		instance_info: 'изучал сборку',
+		instance_mods: 'смотрел моды сборки',
+		update_mods: 'обновил моды сборки',
+		mod_update: 'обновил выбранные моды',
+		mod_toggle: 'переключил мод',
+		mod_delete: 'удалил моды',
+		fandom: 'читал вики',
+		launcher_get_settings: 'смотрел настройки',
+		launcher_set_memory: 'настроил память игры',
+		launcher_set_setting: 'поменял настройку игры',
 	}
 	return map[tool] ?? tool
 }

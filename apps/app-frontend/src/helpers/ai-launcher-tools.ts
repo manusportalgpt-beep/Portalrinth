@@ -457,7 +457,64 @@ registerAiToolHandler(async (tool, args) => {
 				return `Обновляю ${updates.length} в «${build.name}»: ${updates
 					.slice(0, 15)
 					.map((item) => item.project?.title ?? item.file_name)
-					.join(', ')} — идёт в фоне.`
+						.join(', ')} — идёт в фоне. Точечно (один-два мода) — <<mod_update|сборка::мод>>.`
+			} catch (error) {
+				return `Обновление не удалось: ${String(error).slice(0, 300)}`
+			}
+		}
+		case 'mod_update': {
+			const [buildRaw = '', modsRaw = ''] = args.split('::').map((part) => part.trim())
+			const build = await resolveBuild(buildRaw)
+			if (typeof build === 'string') return build
+			if (!modsRaw)
+				return 'Формат: <<mod_update|сборка::мод1;;мод2>> — обновить только названные моды (всю сборку разом — <<update_mods|сборка>>)'
+			try {
+				await refresh_content_updates(build.id).catch(() => {})
+				const items = await get_content_items(build.id)
+				const names = modsRaw.split(';;').map((part) => part.trim()).filter(Boolean)
+				const picked: { path: string; versionId: string; title: string }[] = []
+				const fresh: string[] = []
+				const missing: string[] = []
+				for (const name of names) {
+					const lower = name.toLowerCase()
+					const item =
+						items.find((x) => (x.project?.title ?? '').toLowerCase() === lower) ??
+						items.find((x) => (x.project?.title ?? '').toLowerCase().includes(lower)) ??
+						items.find((x) => x.file_name.toLowerCase() === lower) ??
+						items.find((x) => x.file_name.toLowerCase().includes(lower))
+					if (!item) {
+						missing.push(name)
+						continue
+					}
+					if (item.has_update && item.update_version_id && item.file_path) {
+						picked.push({
+							path: item.file_path,
+							versionId: item.update_version_id,
+							title: item.project?.title ?? item.file_name,
+						})
+					} else {
+						fresh.push(item.project?.title ?? item.file_name)
+					}
+				}
+				if (picked.length === 0) {
+					const parts = [
+						fresh.length ? `«${fresh.join('», «')}» уже свежие — обновлять нечего` : '',
+						missing.length ? `не нашёл в сборке: ${missing.join(', ')}` : '',
+					].filter(Boolean)
+					return `Обновлений для названных модов нет${parts.length ? `: ${parts.join('; ')}` : ''}. Список того, что устарело: <<instance_mods|${build.name}::обновления>>.`
+				}
+				await install_bulk_update_content(
+					build.id,
+					picked.map((item) => ({
+						project_path: item.path,
+						version_id: item.versionId,
+					})),
+				)
+				return `Обновляю в «${build.name}» (${picked.length}): ${picked
+					.map((item) => item.title)
+					.join(', ')} — идёт в фоне.${
+					fresh.length ? ` Уже свежие, не трогал: ${fresh.join(', ')}.` : ''
+				}${missing.length ? ` Не нашёл в сборке: ${missing.join(', ')}.` : ''}`
 			} catch (error) {
 				return `Обновление не удалось: ${String(error).slice(0, 300)}`
 			}
@@ -592,27 +649,49 @@ registerAiToolHandler(async (tool, args) => {
 			}
 		}
 		case 'instance_mods': {
-			const build = await resolveBuild(args)
+			const [buildRaw = '', filterRaw = ''] = args.split('::').map((part) => part.trim())
+			const build = await resolveBuild(buildRaw)
 			if (typeof build === 'string') return build
 			try {
 				const items = await get_content_items(build.id)
 				if (items.length === 0) return `В «${build.name}» контента нет — чистая сборка.`
+				const filter = filterRaw.toLowerCase()
+				const wantsUpdates = /^обнов|update|^апдейт/.test(filter)
+				const wantsOff = /^выкл|disabled|^off/.test(filter)
+				const filtered = filter
+					? items.filter((item) => {
+							if (wantsUpdates) return Boolean(item.has_update)
+							if (wantsOff) return item.enabled === false
+							const title = (item.project?.title ?? '').toLowerCase()
+							return title.includes(filter) || item.file_name.toLowerCase().includes(filter)
+						  })
+					: items
+				if (filtered.length === 0) {
+					return wantsUpdates
+						? `В «${build.name}» обновлений нет — всё свежее (проверял по данным Modrinth/CurseForge).`
+						: wantsOff
+							? `В «${build.name}» выключенного контента нет — включено всё.`
+							: `По фильтру «${filterRaw}» в «${build.name}» ничего не нашлось (всего контента: ${items.length}). Попробуй короче: <<instance_mods|${build.name}::часть имени>>.`
+				}
 				const typeLabel: Record<string, string> = {
 					mod: 'мод',
 					resourcepack: 'ресурс-пак',
 					shaderpack: 'шейдер',
 					datapack: 'датапак',
 				}
-				const lines = items
-					.slice(0, 100)
-					.map((item) => {
-						const kind = typeLabel[item.project_type] ?? item.project_type
-						const state = item.enabled === false ? 'ВЫКЛ' : 'вкл'
-						const version = item.version?.version_number ?? ''
-						const mark = item.has_update ? ' [есть обновление]' : ''
-						return `- ${kind} «${item.project?.title ?? item.file_name}» ${version} — ${state}${mark}`
-					})
-				return `Контент «${build.name}» (${items.length}):\n${lines.join('\n')}${items.length > 100 ? `\n…и ещё ${items.length - 100}` : ''}\nВыключить/включить — <<mod_toggle|…>>, удалить — <<mod_delete|…>>.`
+				const shown = filtered.slice(0, 200)
+				const lines = shown.map((item) => {
+					const kind = typeLabel[item.project_type] ?? item.project_type
+					const state = item.enabled === false ? 'ВЫКЛ' : 'вкл'
+					const version = item.version?.version_number ?? ''
+					const mark = item.has_update ? ' [есть обновление]' : ''
+					return `- ${kind} «${item.project?.title ?? item.file_name}» ${version} — ${state}${mark}`
+				})
+				const tail =
+					filtered.length > 200
+						? `\n…и ещё ${filtered.length - 200} — сузь фильтр: <<instance_mods|${build.name}::часть имени>>`
+						: ''
+				return `Контент «${build.name}»${filter ? ` (фильтр: «${filterRaw}»)` : ''} — ${filtered.length} из ${items.length}:\n${lines.join('\n')}${tail}\nОбновить названные: <<mod_update|сборка::мод1;;мод2>>. Выключить/включить — <<mod_toggle|…>>, удалить — <<mod_delete|…>>.`
 			} catch (error) {
 				return `Список контента не получился: ${String(error).slice(0, 300)}`
 			}
@@ -631,7 +710,18 @@ registerAiToolHandler(async (tool, args) => {
 					: item.enabled === false
 			try {
 				await toggle_disable_project(build.id, item.file_path ?? item.file_name, wantOn)
-				return `${wantOn ? 'Включил' : 'Выключил'} «${item.project?.title ?? item.file_name}» в «${build.name}».`
+				// Слово «выключил» стоит чего-то только тогда, когда состояние в
+				// сборке реально изменилось: перечитываем контент и сверяем,
+				// иначе честно сообщаем, что нет.
+				const after = await get_content_items(build.id).catch(() => [])
+				const verified = after.find(
+					(x) => (x.file_path ?? x.file_name) === (item.file_path ?? item.file_name),
+				)
+				const nowOn = verified ? verified.enabled !== false : wantOn
+				if (nowOn !== wantOn) {
+					return `Команду отправил, но состояние «${item.project?.title ?? item.file_name}» в «${build.name}» не изменилось (${nowOn ? 'всё ещё вкл' : 'всё ещё выкл'}) — проверь список контента сборки руками и скажи игроку правду.`
+				}
+				return `${wantOn ? 'Включил' : 'Выключил'} «${item.project?.title ?? item.file_name}» в «${build.name}» — проверил, состояние применилось.`
 			} catch (error) {
 				return `Не получилось переключить: ${String(error).slice(0, 300)}`
 			}
