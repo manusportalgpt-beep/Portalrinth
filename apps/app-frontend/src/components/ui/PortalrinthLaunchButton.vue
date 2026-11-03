@@ -49,8 +49,8 @@
 				class="absolute left-0 top-0 size-12 rounded-full portalrinth-gradient-fill"
 				:initial="false"
 				:animate="{
-					x: againVisible ? mainWidth + GAP : mainWidth - HEIGHT,
-					scale: againVisible ? 1 : 0.55,
+					x: mainWidth + GAP,
+					scale: againVisible ? 1 : 0,
 					opacity: againVisible ? 1 : 0,
 					backgroundColor: colors.again,
 				}"
@@ -90,9 +90,9 @@
 			:style="{ color: colors.text, pointerEvents: againVisible ? 'auto' : 'none' }"
 			:initial="false"
 			:animate="{
-				x: againVisible ? mainWidth + GAP : mainWidth - HEIGHT,
+				x: mainWidth + GAP,
 				opacity: againVisible ? 1 : 0,
-				scale: againVisible ? 1 : 0.55,
+				scale: againVisible ? 1 : 0,
 			}"
 			:transition="liquidSpring"
 			:disabled="againDisabled || !againVisible"
@@ -114,8 +114,9 @@
  * The instance's launch button as one shape that flows between its states:
  * Play, Starting, Installing, Stop and Stopping change its width and colour on a
  * spring rather than swapping one button for another, and the label rises and
- * falls through a blur. Starting a second copy is a drop that runs out of the
- * Stop button and back into it.
+ * falls through a blur. Starting a second copy is a drop parked just outside
+ * the main button, so its icon never crosses the main one — it scales in
+ * place when it appears.
  */
 import { LoaderSpinnerIcon, PlayIcon, StopCircleIcon } from '@modrinth/assets'
 import { Motion } from 'motion-v'

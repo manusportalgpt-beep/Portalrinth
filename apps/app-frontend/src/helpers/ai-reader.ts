@@ -8,6 +8,7 @@
  */
 import { reactive } from 'vue'
 
+import { curseforgeFiles, searchCurseforge } from './curseforge-api'
 import { proxiedFetch } from './proxy-fetch'
 
 const READER_UA =
@@ -275,16 +276,178 @@ async function readThroughJina(url: string): Promise<ReaderPage | null> {
 
 const cache = new Map<string, ReaderPage>()
 
-/** Reads any page: MediaWiki API first, then the page itself, then the reader. */
+/** Turns Markdown into plain paragraph HTML, enough for the reader window. */
+function markdownToHtml(markdown: string): string {
+	const escape = (value: string) =>
+		value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+	return markdown
+		.split(/\n{2,}/)
+		.map((raw) => {
+			const block = raw.trim()
+			if (!block) return ''
+			const heading = /^(#{1,4})\s+(.+)$/.exec(block)
+			if (heading) return `<h${heading[1].length + 1}>${escape(heading[2])}</h${heading[1].length + 1}>`
+			if (/^[-*]\s+/m.test(block) && block.split('\n').every((line) => /^[-*]\s+|^$/.test(line.trim()))) {
+				const items = block
+					.split('\n')
+					.filter((line) => line.trim())
+					.map((line) => `<li>${escape(line.trim().replace(/^[-*]\s+/, ''))}</li>`)
+					.join('')
+				return `<ul>${items}</ul>`
+			}
+			const linked = escape(block).replace(
+				/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,
+				(_m, text: string, href: string) => `<a href="${href}">${text}</a>`,
+			)
+			return `<p>${linked.replace(/\n/g, '<br>')}</p>`
+		})
+		.join('')
+}
+
+/**
+ * Modrinth pages read through the project API: the web page is a Vue shell
+ * with almost no text in it, while the API hands over the full description
+ * body. Covers /project/<slug> — which the site itself 404s — as well as
+ * every per-type route (/mod/, /resourcepack/, ...).
+ */
+async function readModrinth(url: URL): Promise<ReaderPage | null> {
+	if (!/(^|\.)modrinth\.com$/.test(url.hostname)) return null
+	const match = /^\/(?:project|mod|plugin|resourcepack|shader|datapack|modpack|server)\/([^/]+)\/?$/.exec(
+		url.pathname,
+	)
+	if (!match) return null
+	const slug = decodeURIComponent(match[1])
+	const response = await proxiedFetch(
+		`https://api.modrinth.com/v2/project/${encodeURIComponent(slug)}`,
+		{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(15000) },
+	)
+	if (!response.ok) return null
+	const project = (await response.json()) as {
+		title?: string
+		description?: string
+		body?: string
+		icon_url?: string
+		gallery?: { url?: string }[]
+	}
+	if (!project.title) return null
+	const body = (project.body ?? '').slice(0, 20000)
+	const text = [`# ${project.title}`, project.description ?? '', body]
+		.filter(Boolean)
+		.join('\n\n')
+	const images = [project.icon_url, ...(project.gallery ?? []).map((shot) => shot.url ?? '')].filter(
+		(src): src is string => !!src && /^https?:/.test(src),
+	)
+	return {
+		url: url.toString(),
+		title: project.title,
+		html: markdownToHtml(body),
+		text,
+		images,
+		site: 'modrinth.com',
+	}
+}
+
+/**
+ * CurseForge pages read through the launcher's own CurseForge search: the
+ * site sits behind a JavaScript gate no plain fetch passes. The slug in the
+ * address is what the search is asked for, and the answer carries the name,
+ * the summary, the author and the counters; the latest files come along so
+ * the model can see what versions exist.
+ */
+async function readCurseforge(url: URL): Promise<ReaderPage | null> {
+	if (!/(^|\.)curseforge\.com$/.test(url.hostname)) return null
+	const match = /^\/(?:[a-z0-9-]+)\/(?:mc-mods|modpacks|texture-packs|shaders|kbp-plugins)\/([^/]+)/.exec(
+		url.pathname,
+	)
+	if (!match) return null
+	const slug = decodeURIComponent(match[1])
+	const kind = /mc-mods|kbp-plugins/.test(url.pathname)
+		? 'mod'
+		: /modpacks/.test(url.pathname)
+			? 'modpack'
+			: /texture-packs/.test(url.pathname)
+				? 'resource_pack'
+				: 'shader'
+	let page: import('./curseforge-api').CurseforgeHit | undefined
+	try {
+		const search = await searchCurseforge({ filter: slug, pageSize: 20, kind })
+		page = search.hits.find((hit) => hit.slug === slug) ?? search.hits[0]
+	} catch {
+		return null
+	}
+	if (!page) return null
+	const lines = [
+		`# ${page.name}`,
+		page.author_name ? `Автор: ${page.author_name}` : '',
+		`Загрузки: ${page.download_count.toLocaleString('ru-RU')}`,
+		page.categories.length ? `Категории: ${page.categories.join(', ')}` : '',
+		page.summary ?? '',
+	]
+	try {
+		const files = await curseforgeFiles(page.id)
+		const recent = files
+			.slice(0, 8)
+			.map((file) => `- ${file.display_name} (${[file.game_version, file.loader].filter(Boolean).join(', ')})`)
+			.join('\n')
+		if (recent) lines.push(`Последние файлы:\n${recent}`)
+	} catch {
+		// The files are a bonus; the summary alone still answers most questions.
+	}
+	const text = lines.filter(Boolean).join('\n\n')
+	return {
+		url: url.toString(),
+		title: page.name,
+		html: markdownToHtml(text),
+		text,
+		images: page.icon_url ? [page.icon_url] : [],
+		site: 'curseforge.com',
+	}
+}
+
+/**
+ * Last resort when every live route failed: the Wayback Machine's latest
+ * snapshot, read as a regular page. Slow, and a page that was never saved
+ * has no snapshot — hence the null rather than an error.
+ */
+async function readThroughWayback(rawUrl: string): Promise<ReaderPage | null> {
+	const available = await proxiedFetch(
+		`https://archive.org/wayback/available?url=${encodeURIComponent(rawUrl)}`,
+		{ signal: AbortSignal.timeout(15000) },
+	)
+		.then((response) => (response.ok ? response.json() : null))
+		.catch(() => null)
+	const closest = available?.archived_snapshots?.closest
+	if (!closest?.available || closest.status !== '200' || !closest.url) return null
+	const snapshot = new URL(closest.url)
+	return readDirectPage(snapshot).catch(() => null)
+}
+
+/** Reads any page: Modrinth and CurseForge through their APIs, MediaWiki
+ * through its API, then the page itself, then the reader, then the archive. */
 export async function readPage(rawUrl: string): Promise<ReaderPage> {
 	const url = new URL(rawUrl.trim())
 	const cached = cache.get(url.toString())
 	if (cached) return cached
 	let page: ReaderPage | null = null
-	if (/fandom\.com$|minecraft\.wiki$|wikipedia\.org$|\.wiki$/.test(url.hostname)) {
+	page = await readModrinth(url).catch(() => null)
+	if (!page) page = await readCurseforge(url).catch(() => null)
+	if (!page && /fandom\.com$|minecraft\.wiki$|wikipedia\.org$|\.wiki$/.test(url.hostname)) {
 		page = await readMediaWiki(url).catch(() => null)
 	}
 	if (!page) {
+		page = await readDirectPage(url).catch(() => null)
+	}
+	if (!page) page = await readThroughJina(url.toString()).catch(() => null)
+	if (!page) page = await readThroughWayback(url.toString()).catch(() => null)
+	if (!page) throw new Error('страница не открылась')
+	cache.set(url.toString(), page)
+	if (cache.size > 30) cache.delete(cache.keys().next().value as string)
+	return page
+}
+
+/** One plain fetch of the page itself, cut down to its article. */
+async function readDirectPage(url: URL): Promise<ReaderPage | null> {
+	{
 		const response = await proxiedFetch(url.toString(), {
 			headers: {
 				Accept: 'text/html,application/xhtml+xml',
@@ -317,27 +480,39 @@ export async function readPage(rawUrl: string): Promise<ReaderPage> {
 				const hero = doc.querySelector('meta[property="og:image"]')?.getAttribute('content')
 				sanitize(block, url.toString(), images)
 				const text = textOf(block)
+				const heroUrl = hero ? absolute(hero, url.toString()) : ''
 				if (text.length > 200) {
 					const heroHtml =
-						hero && !images.includes(absolute(hero, url.toString()))
-							? `<img src="${absolute(hero, url.toString())}" alt="" loading="lazy">`
+						heroUrl && !images.includes(heroUrl)
+							? `<img src="${heroUrl}" alt="" loading="lazy">`
 							: ''
 					page = {
 						url: url.toString(),
 						title: title.trim(),
 						html: heroHtml + block.innerHTML,
 						text,
-						images: hero ? [absolute(hero, url.toString()), ...images] : images,
+						images: heroUrl ? [heroUrl, ...images] : images,
 						site: url.hostname,
+					}
+				} else {
+					// Script-built pages carry their meaning in the meta tags; a
+					// thin page beats no page at all.
+					const description =
+						doc.querySelector('meta[name="description"]')?.getAttribute('content') ?? ''
+					if (title.trim() || description) {
+						page = {
+							url: url.toString(),
+							title: title.trim() || url.hostname,
+							html: `<p>${description.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>`,
+							text: [title.trim(), description].filter(Boolean).join('\n'),
+							images: heroUrl ? [heroUrl] : [],
+							site: url.hostname,
+						}
 					}
 				}
 			}
 		}
 	}
-	if (!page) page = await readThroughJina(url.toString()).catch(() => null)
-	if (!page) throw new Error('страница не открылась')
-	cache.set(url.toString(), page)
-	if (cache.size > 30) cache.delete(cache.keys().next().value as string)
 	return page
 }
 
