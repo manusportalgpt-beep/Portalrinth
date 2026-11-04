@@ -3120,6 +3120,12 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
         overflow: hidden;
 }
 
+/* The viewport rounds its top-right corner while the sidebar is open; the
+   loading bar spans the same width, so it must follow the same arc. */
+.sidebar-enabled .loading-indicator-container {
+        border-top-right-radius: var(--radius-xl);
+}
+
 .app-sidebar {
         opacity: 0;
         transition: opacity 0.32s ease;

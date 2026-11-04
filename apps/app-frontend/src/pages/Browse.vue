@@ -16,6 +16,7 @@ import {
 	SettingsIcon,
 	ShirtIcon,
 	SpinnerIcon,
+	TrashIcon,
 	WrenchIcon,
 } from '@modrinth/assets'
 import type {
@@ -82,10 +83,12 @@ import { curseforgeCategoryIcon, curseforgeCategoryMessage } from '@/helpers/cur
 import { curseforgeKeyAvailable, curseforgeSettings } from '@/helpers/curseforge-settings'
 import {
 	get as getInstance,
+	get_content_items,
 	get_installed_project_ids as getInstalledProjectIds,
 	get_linked_modpack_content,
 	getInstanceIconUrl,
 	list as listInstances,
+	remove_project,
 } from '@/helpers/instance'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
 import {
@@ -424,6 +427,49 @@ async function refreshInstalledProjectIds() {
 	]
 }
 
+/*
+ * «Installed» on a card is a button, not a dead end: one click slides the
+ * red «Remove» in to its left, the next takes the project out of the
+ * instance the page was opened from.
+ */
+const revealedRemoveIds = ref<string[]>([])
+const removingCardIds = ref<string[]>([])
+
+function toggleCardRemove(projectId: string) {
+	revealedRemoveIds.value = revealedRemoveIds.value.includes(projectId)
+		? revealedRemoveIds.value.filter((id) => id !== projectId)
+		: [...revealedRemoveIds.value, projectId]
+}
+
+/** The file of this project inside the selected instance, for removal. */
+async function findInstalledCardPath(instanceId: string, projectId: string): Promise<string | null> {
+	const items = await get_content_items(instanceId)
+	const matches = (candidate?: string | null) =>
+		!!candidate &&
+		(candidate === projectId ||
+			(isCurseforgeId(projectId) && curseforgeIdOf(candidate.replace(/^cf-/, '')) === projectId))
+	const target = items.find((x) => matches(x.id) || matches(x.project?.id))
+	return target?.file_path ?? target?.file_name ?? null
+}
+
+async function removeCardProject(projectId: string) {
+	const instanceId = instance.value?.id
+	if (!instanceId || removingCardIds.value.includes(projectId)) return
+	removingCardIds.value = [...removingCardIds.value, projectId]
+	try {
+		const path = await findInstalledCardPath(instanceId, projectId)
+		if (!path) throw new Error('Installed file not found')
+		await remove_project(instanceId, path)
+		revealedRemoveIds.value = revealedRemoveIds.value.filter((id) => id !== projectId)
+		newlyInstalled.value = newlyInstalled.value.filter((id) => id !== projectId)
+		await refreshInstalledProjectIds()
+	} catch (err) {
+		handleError(err)
+	} finally {
+		removingCardIds.value = removingCardIds.value.filter((id) => id !== projectId)
+	}
+}
+
 async function initInstanceContext() {
 	debugLog('initInstanceContext', {
 		queryI: route.query.i,
@@ -631,6 +677,14 @@ const messages = defineMessages({
 	addToAnInstance: {
 		id: 'app.browse.add-to-an-instance',
 		defaultMessage: 'Add to an instance',
+	},
+	installedHint: {
+		id: 'app.project.install-button.installed-hint',
+		defaultMessage: 'Нажмите, чтобы удалить из сборки',
+	},
+	removeFromInstance: {
+		id: 'app.project.remove-from-instance',
+		defaultMessage: 'Удалить',
 	},
 	environmentProvidedByServer: {
 		id: 'search.filter.locked.server-environment.title',
@@ -1197,6 +1251,20 @@ function getCardActions(
 	const shouldUseInstallIcon = !!instance.value || isModpack
 
 	return [
+		...(showAsInstalled && revealedRemoveIds.value.includes(projectResult.project_id)
+			? [
+				{
+					key: 'remove',
+					label: formatMessage(messages.removeFromInstance),
+					tooltip: formatMessage(messages.removeFromInstance),
+					icon: TrashIcon,
+					disabled: removingCardIds.value.includes(projectResult.project_id) || isInstalling,
+					color: 'red',
+					type: 'outlined',
+					onClick: () => void removeCardProject(projectResult.project_id),
+				},
+			]
+			: []),
 		{
 			key: 'install',
 			label: formatMessage(
@@ -1210,10 +1278,15 @@ function getCardActions(
 			),
 			icon: isInstalling ? SpinnerIcon : showAsInstalled ? CheckIcon : PlusIcon,
 			iconClass: isInstalling ? 'animate-spin' : undefined,
-			disabled: showAsInstalled || isInstalling,
+			tooltip: showAsInstalled ? formatMessage(messages.installedHint) : undefined,
+			disabled: isInstalling,
 			color: 'brand',
 			type: 'outlined',
 			onClick: async () => {
+				if (showAsInstalled) {
+					toggleCardRemove(projectResult.project_id)
+					return
+				}
 				setProjectInstalling(projectResult.project_id, true)
 				try {
 					const selectedInstall = instance.value
@@ -1275,6 +1348,20 @@ function getCurseforgeCardActions(
 	const shouldUseInstallIcon = !!instance.value || isModpack
 
 	return [
+		...(isInstalled && revealedRemoveIds.value.includes(projectResult.project_id)
+			? [
+				{
+					key: 'remove',
+					label: formatMessage(messages.removeFromInstance),
+					tooltip: formatMessage(messages.removeFromInstance),
+					icon: TrashIcon,
+					disabled: removingCardIds.value.includes(projectResult.project_id) || isInstalling,
+					color: 'red',
+					type: 'outlined',
+					onClick: () => void removeCardProject(projectResult.project_id),
+				},
+			]
+			: []),
 		{
 			key: 'install',
 			label: formatMessage(
@@ -1288,10 +1375,15 @@ function getCurseforgeCardActions(
 			),
 			icon: isInstalling ? SpinnerIcon : isInstalled ? CheckIcon : PlusIcon,
 			iconClass: isInstalling ? 'animate-spin' : undefined,
-			disabled: isInstalled || isInstalling,
+			tooltip: isInstalled ? formatMessage(messages.installedHint) : undefined,
+			disabled: isInstalling,
 			color: 'brand',
 			type: 'outlined',
 			onClick: async () => {
+				if (isInstalled) {
+					toggleCardRemove(projectResult.project_id)
+					return
+				}
 				setProjectInstalling(projectResult.project_id, true)
 				try {
 					const selectedPreferences = getCurrentSelectedInstallPreferences(currentProjectType)

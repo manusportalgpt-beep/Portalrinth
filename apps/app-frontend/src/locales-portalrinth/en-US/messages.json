@@ -2262,7 +2262,7 @@
 		"message": "NMSR — the reference renderer, takes any texture hash"
 	},
 	"app.instance.tab.notes": {
-		"message": "Notes"
+		"message": "Info"
 	},
 	"app.instance.notes.title": {
 		"message": "Notes"
@@ -2549,5 +2549,32 @@
 	},
 	"app.download-manager.contents.open-page": {
 		"message": "Open the project page"
+	},
+	"app.instance.logs.copied": {
+		"message": "Copied"
+	},
+	"app.instance.logs.copy-hint": {
+		"message": "Right-click to copy the log"
+	},
+	"app.project.install-button.installed-hint": {
+		"message": "Click to remove from the instance"
+	},
+	"app.project.remove-from-instance": {
+		"message": "Remove"
+	},
+	"app.project.removed-from-instance": {
+		"message": "Removed from the instance"
+	},
+	"app.instance.info.playtime": {
+		"message": "Playtime"
+	},
+	"app.instance.info.playtime.last": {
+		"message": "Last played"
+	},
+	"app.instance.info.playtime.total": {
+		"message": "Total"
+	},
+	"app.instance.info.playtime.empty": {
+		"message": "No data yet - launch the game and a day-by-day graph will appear here"
 	}
 }

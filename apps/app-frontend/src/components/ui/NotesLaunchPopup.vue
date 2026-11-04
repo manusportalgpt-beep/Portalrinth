@@ -12,6 +12,12 @@ import {
 	read_instance_notes,
 	should_show_instance_notes,
 } from '@/helpers/portalrinth-notes'
+import {
+	cleanup_stale_playtime_sessions,
+	note_playtime_finished,
+	note_playtime_launched,
+	note_playtime_tick,
+} from '@/helpers/portalrinth-playtime'
 
 /**
  * When a game launches and its build carries a note, the note stands up in
@@ -38,7 +44,33 @@ const noteText = ref('')
 const noteTasks = ref<InstanceNoteTask[]>([])
 let noteInstanceId = ''
 
+/**
+ * The ledger of time played: a launch opens a session, a minute tick banks
+ * the elapsed minute, a finish closes it. The Info tab of the build reads
+ * the ledger for its day-by-day graph.
+ */
+let runningInstanceId = ''
+let playtimeTimer: ReturnType<typeof setInterval> | undefined
+cleanup_stale_playtime_sessions()
+
+function stopPlaytimeTimer() {
+	if (playtimeTimer) clearInterval(playtimeTimer)
+	playtimeTimer = undefined
+	runningInstanceId = ''
+}
+
 useAppEvent('process', async (payload) => {
+	if (payload.event === 'launched') {
+		if (payload.instance_id) {
+			note_playtime_launched(payload.instance_id)
+			runningInstanceId = payload.instance_id
+			if (playtimeTimer) clearInterval(playtimeTimer)
+			playtimeTimer = setInterval(() => note_playtime_tick(runningInstanceId), 60_000)
+		}
+	} else if (payload.event === 'finished') {
+		if (payload.instance_id) note_playtime_finished(payload.instance_id)
+		if (payload.instance_id === runningInstanceId) stopPlaytimeTimer()
+	}
 	if (payload.event !== 'launched') return
 	const instanceId = payload.instance_id
 	if (!instanceId || !should_show_instance_notes(instanceId)) return

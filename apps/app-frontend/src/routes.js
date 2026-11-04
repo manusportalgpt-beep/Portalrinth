@@ -209,6 +209,9 @@ export default new createRouter({
 					path: 'notes',
 					name: 'InstanceNotes',
 					component: () => import('@/pages/instance/notes/index.vue'),
+					meta: {
+						renderMode: 'fixed',
+					},
 				},
 				{
 					path: 'share',

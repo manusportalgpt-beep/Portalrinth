@@ -3768,7 +3768,7 @@
 		"message": "Убрано с другой команды"
 	},
 	"app.instance.tab.notes": {
-		"message": "Заметки"
+		"message": "Инфо"
 	},
 	"app.instance.notes.title": {
 		"message": "Заметки"
@@ -4085,5 +4085,32 @@
 	},
 	"content.filter.disabled": {
 		"message": "Выключено"
+	},
+	"app.instance.logs.copied": {
+		"message": "Скопировано"
+	},
+	"app.instance.logs.copy-hint": {
+		"message": "ПКМ — скопировать лог"
+	},
+	"app.project.install-button.installed-hint": {
+		"message": "Нажмите, чтобы удалить из сборки"
+	},
+	"app.project.remove-from-instance": {
+		"message": "Удалить"
+	},
+	"app.project.removed-from-instance": {
+		"message": "Удалено из сборки"
+	},
+	"app.instance.info.playtime": {
+		"message": "Время игры"
+	},
+	"app.instance.info.playtime.last": {
+		"message": "Последняя игра"
+	},
+	"app.instance.info.playtime.total": {
+		"message": "Всего"
+	},
+	"app.instance.info.playtime.empty": {
+		"message": "Пока нет данных — запустите игру, и здесь появится график по дням"
 	}
 }

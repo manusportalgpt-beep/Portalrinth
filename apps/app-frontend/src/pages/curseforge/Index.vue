@@ -21,6 +21,7 @@ import {
 	MoreVerticalIcon,
 	SpinnerIcon,
 	StarIcon,
+	TrashIcon,
 	VersionIcon,
 } from '@modrinth/assets'
 import {
@@ -60,8 +61,10 @@ import {
 } from '@/helpers/curseforge'
 import {
 	get as getInstance,
+	get_content_items,
 	get_linked_modpack_content,
 	get_projects as getInstanceProjects,
+	remove_project,
 } from '@/helpers/instance'
 import { get_game_versions, get_loaders } from '@/helpers/tags'
 import type { GameInstance } from '@/helpers/types'
@@ -87,6 +90,18 @@ const messages = defineMessages({
 		defaultMessage: 'Open on CurseForge',
 	},
 	moreOptions: { id: 'app.project.more-options', defaultMessage: 'More options' },
+	installedHint: {
+		id: 'app.project.install-button.installed-hint',
+		defaultMessage: 'Нажмите, чтобы удалить из сборки',
+	},
+	removeFromInstance: {
+		id: 'app.project.remove-from-instance',
+		defaultMessage: 'Удалить',
+	},
+	removedFromInstance: {
+		id: 'app.project.removed-from-instance',
+		defaultMessage: 'Удалено из сборки',
+	},
 	linkCopied: { id: 'app.project.copy-link.copied', defaultMessage: 'Link copied to clipboard' },
 	addFavorite: {
 		id: 'app.curseforge.project.add-favorite',
@@ -124,6 +139,50 @@ const instance = ref<GameInstance | null>(null)
 /** Each CurseForge project in the instance, by `cf-` id, to its file id. */
 const installedFiles = ref<Map<string, string | null>>(new Map())
 const installing = ref(false)
+
+/*
+ * «Installed» is a button here too: clicking it slides a red «Remove» out
+ * to the left, and one more click takes the CurseForge file out of the
+ * instance the page was opened from.
+ */
+const removeRevealed = ref(false)
+const removingProject = ref(false)
+
+/** Matches a content entry of this project, whether its id is bare or `cf-`-prefixed. */
+function matchesInstalledId(candidate?: string | null): boolean {
+	if (!candidate) return false
+	if (candidate === props.id) return true
+	return curseforgeIdOf(candidate.replace(/^cf-/, '')) === props.id
+}
+
+async function removeFromInstance() {
+	if (!instanceId.value || removingProject.value) return
+	removingProject.value = true
+	try {
+		const items = await get_content_items(instanceId.value)
+		const target = items.find(
+			(x) => matchesInstalledId(x.id) || matchesInstalledId(x.project?.id),
+		)
+		const path = target?.file_path ?? target?.file_name
+		if (!path) throw new Error('Installed file not found')
+		await remove_project(instanceId.value, path)
+		installedFiles.value.delete(props.id)
+		removeRevealed.value = false
+		addNotification({ title: formatMessage(messages.removedFromInstance), type: 'success' })
+	} catch (err) {
+		handleError(err)
+	} finally {
+		removingProject.value = false
+	}
+}
+
+function handleInstallClick() {
+	if (installed.value) {
+		removeRevealed.value = !removeRevealed.value
+		return
+	}
+	install(null)
+}
 
 async function refreshInstance() {
 	if (!instanceId.value) {
@@ -449,14 +508,29 @@ async function install(fileId: string | null = null) {
 			<InstanceIndicator v-if="instance" :instance="instance" />
 			<ProjectPageHeader :project="headerProject">
 				<template #actions>
+					<Transition name="install-remove-slide">
+						<Button
+							v-if="removeRevealed && installed"
+							type="colored"
+							color="red"
+							size="xl"
+							native-type="button"
+							:disabled="removingProject"
+							@click="removeFromInstance"
+						>
+							<SpinnerIcon v-if="removingProject" class="animate-spin" />
+							<TrashIcon v-else />
+							{{ formatMessage(messages.removeFromInstance) }}
+						</Button>
+					</Transition>
 					<InstallProgressPopover :active="installing">
 					<Button
 						type="colored"
 						color="brand"
 						size="xl"
 						native-type="button"
-						:disabled="installed || installing"
-						@click="install(null)"
+						:disabled="installing"
+						@click="handleInstallClick"
 					>
 						<SpinnerIcon v-if="installing" class="animate-spin" />
 						<CheckIcon v-else-if="installed" />
@@ -506,6 +580,28 @@ async function install(fileId: string | null = null) {
 		<p v-else class="p-6 text-secondary">{{ formatMessage(messages.loadError) }}</p>
 	</div>
 </template>
+
+<style scoped>
+.install-remove-slide-enter-active,
+.install-remove-slide-leave-active {
+	transition:
+		opacity 0.18s var(--nm-ease-out),
+		transform 0.18s var(--nm-ease-out);
+}
+
+.install-remove-slide-enter-from,
+.install-remove-slide-leave-to {
+	opacity: 0;
+	transform: translateX(0.75rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.install-remove-slide-enter-active,
+	.install-remove-slide-leave-active {
+		transition: none;
+	}
+}
+</style>
 
 <style scoped lang="scss">
 // The same sections, spacing and dividers as a Modrinth project's sidebar.

@@ -121,6 +121,21 @@
 							</TeleportOverflowMenu>
 						</template>
 						<template v-else>
+							<Transition name="install-remove-slide">
+								<Button
+									v-if="removeRevealed && installButtonInstalled && !serverProjectInstallContext"
+									type="colored"
+									color="red"
+									size="xl"
+									native-type="button"
+									:disabled="removingProject"
+									@click="removeFromInstance"
+								>
+									<SpinnerIcon v-if="removingProject" class="animate-spin" />
+									<TrashIcon v-else />
+									{{ formatMessage(messages.removeFromInstance) }}
+								</Button>
+							</Transition>
 							<InstallProgressPopover :active="installing">
 							<Button
 								v-if="showSwitchVersion && onVersionsPage"
@@ -144,14 +159,18 @@
 							<Button
 								v-else
 								v-tooltip="
-									installButtonInstalled ? formatMessage(messages.alreadyInstalled) : undefined
+									installButtonInstalled && !serverProjectInstallContext
+										? formatMessage(messages.installedHint)
+										: installButtonInstalled
+											? formatMessage(messages.alreadyInstalled)
+											: undefined
 								"
 								type="colored"
 								color="brand"
 								size="xl"
 								native-type="button"
-								:disabled="installButtonDisabled"
-								@click="install(null)"
+								:disabled="installButtonLoading || (installButtonInstalled && serverProjectInstallContext)"
+								@click="handleInstallClick"
 							>
 								<component :is="installButtonIcon" :class="installButtonIconClass" />
 								{{
@@ -274,6 +293,7 @@ import {
 	ReportIcon,
 	SpinnerIcon,
 	StopCircleIcon,
+	TrashIcon,
 } from '@modrinth/assets'
 import {
 	BrowseInstallHeader,
@@ -327,10 +347,12 @@ import {
 } from '@/helpers/cache.js'
 import {
 	get as getInstance,
+	get_content_items,
 	get_projects as getInstanceProjects,
 	getInstanceIconUrl,
 	kill,
 	list as listInstances,
+	remove_project,
 } from '@/helpers/instance'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
 import { followProject, isFollowingProject, unfollowProject } from '@/helpers/modrinth-api'
@@ -398,6 +420,18 @@ const messages = defineMessages({
 	alreadyInstalled: {
 		id: 'app.project.install-button.already-installed',
 		defaultMessage: 'This project is already installed',
+	},
+	installedHint: {
+		id: 'app.project.install-button.installed-hint',
+		defaultMessage: 'Нажмите, чтобы удалить из сборки',
+	},
+	removeFromInstance: {
+		id: 'app.project.remove-from-instance',
+		defaultMessage: 'Удалить',
+	},
+	removedFromInstance: {
+		id: 'app.project.removed-from-instance',
+		defaultMessage: 'Удалено из сборки',
 	},
 	switchVersion: {
 		id: 'app.project.install-button.switch-version',
@@ -945,6 +979,52 @@ watch(
 	},
 )
 
+/*
+ * «Installed» is a button, not a dead end: clicking it slides a red
+ * «Remove» out to the left, and one more click takes the project out of
+ * the instance the page was opened from.
+ */
+const removeRevealed = ref(false)
+const removingProject = ref(false)
+watch(installed, (value) => {
+	if (!value) removeRevealed.value = false
+})
+
+function handleInstallClick() {
+	if (serverProjectInstallContext.value) {
+		if (!installButtonDisabled.value) install(null)
+		return
+	}
+	if (installButtonInstalled.value) {
+		removeRevealed.value = !removeRevealed.value
+		return
+	}
+	if (installButtonDisabled.value) return
+	install(null)
+}
+
+async function removeFromInstance() {
+	if (!instance.value?.id || !data.value?.id || removingProject.value) return
+	removingProject.value = true
+	try {
+		const items = await get_content_items(instance.value.id)
+		const target = items.find(
+			(x) => x.id === data.value.id || (x.project && x.project.id === data.value.id),
+		)
+		const path = target?.file_path ?? target?.file_name
+		if (!path) throw new Error('Installed file not found')
+		await remove_project(instance.value.id, path)
+		installed.value = false
+		installedVersion.value = null
+		removeRevealed.value = false
+		addNotification({ title: formatMessage(messages.removedFromInstance), type: 'success' })
+	} catch (err) {
+		handleError(err)
+	} finally {
+		removingProject.value = false
+	}
+}
+
 async function install(version) {
 	if (serverProjectInstallContext.value && data.value) {
 		if (serverProjectSelected.value) {
@@ -1043,6 +1123,25 @@ const handleRightClick = (event) => {
 </script>
 
 <style scoped lang="scss">
+.install-remove-slide-enter-active,
+.install-remove-slide-leave-active {
+	transition:
+		opacity 0.18s var(--nm-ease-out),
+		transform 0.18s var(--nm-ease-out);
+}
+
+.install-remove-slide-enter-from,
+.install-remove-slide-leave-to {
+	opacity: 0;
+	transform: translateX(0.75rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.install-remove-slide-enter-active,
+	.install-remove-slide-leave-active {
+		transition: none;
+	}
+}
 .root-container {
 	display: flex;
 	flex-direction: row;

@@ -25,6 +25,9 @@ export interface ConsoleManagerContext {
 	deleteDisabled?: Ref<boolean> | ComputedRef<boolean>
 	deleteDisabledTooltip?: string
 
+	/** Portalrinth: right-clicking the log picker copies the selected log at once. */
+	onLogContextCopy?: () => void | Promise<void>
+
 	shareDisabled?: Ref<boolean> | ComputedRef<boolean>
 
 	emptyStateType?: 'server' | 'instance'
