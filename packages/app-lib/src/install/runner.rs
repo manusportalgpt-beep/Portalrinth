@@ -510,16 +510,15 @@ async fn start_inner(
         &state.pool,
     )
     .await?;
+    // Registered before anything slow runs: from this moment the player can
+    // cancel the job, even while its setup is still in progress.
+    let registration = super::control::register(id);
     emit_install_job(&record.snapshot()).await?;
 
     if let Err(error) =
         prepare_initial_instance(&request, &mut job_state, &state).await
     {
-        let error_view = install_error_view(
-            job_state.progress.phase,
-            &error,
-            job_state.context.clone(),
-        );
+        let error_view = start_error_view(id, &job_state, &error);
         if let Err(terminal_error) =
             terminalize_failed_job(id, job_state, error_view, &state).await
         {
@@ -532,11 +531,7 @@ async fn start_inner(
     let record = match store::update_state(id, &job_state, &state.pool).await {
         Ok(record) => record,
         Err(error) => {
-            let error_view = install_error_view(
-                job_state.progress.phase,
-                &error,
-                job_state.context.clone(),
-            );
+            let error_view = start_error_view(id, &job_state, &error);
             if let Err(terminal_error) =
                 terminalize_failed_job(id, job_state, error_view, &state).await
             {
@@ -551,11 +546,7 @@ async fn start_inner(
         target_guard = reserve_target(&job_state.target)?;
     }
     if let Err(error) = lock_install_target(&job_state, &state).await {
-        let error_view = install_error_view(
-            job_state.progress.phase,
-            &error,
-            job_state.context.clone(),
-        );
+        let error_view = start_error_view(id, &job_state, &error);
         if let Err(terminal_error) =
             terminalize_failed_job(id, job_state, error_view, &state).await
         {
@@ -565,10 +556,49 @@ async fn start_inner(
         }
         return Err(error);
     }
-    let registration = super::control::register(id);
+    // A cancel that arrived while the job was being set up ends it right here,
+    // before any of the heavy work starts.
+    if registration.control.is_canceling() {
+        let error_view = InstallErrorView::from_message(
+            "canceled",
+            job_state.progress.phase,
+            "install was canceled",
+        );
+        if let Err(terminal_error) =
+            terminalize_failed_job(id, job_state, error_view, &state).await
+        {
+            tracing::error!(
+                "Failed to terminalize canceled install job {id}: {terminal_error}"
+            );
+        }
+        bail!(ErrorKind::InputError("install was canceled".to_string()));
+    }
     emit_install_job(&record.snapshot()).await?;
     spawn_job(id, registration, target_guard, Arc::clone(&state));
     Ok(record.snapshot())
+}
+
+/// A failure while the job is still being set up: if the player canceled the
+/// job during this time, the error is the cancel itself, not whatever the
+/// interrupted step happened to see.
+fn start_error_view(
+    id: Uuid,
+    job_state: &InstallJobState,
+    error: &crate::Error,
+) -> InstallErrorView {
+    if super::control::get(id).is_some_and(|control| control.is_canceling()) {
+        InstallErrorView::from_message(
+            "canceled",
+            job_state.progress.phase,
+            "install was canceled",
+        )
+    } else {
+        install_error_view(
+            job_state.progress.phase,
+            error,
+            job_state.context.clone(),
+        )
+    }
 }
 
 fn prepare_initial_instance<'a>(

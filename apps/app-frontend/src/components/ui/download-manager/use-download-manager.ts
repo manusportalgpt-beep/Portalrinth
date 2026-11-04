@@ -65,6 +65,9 @@ export interface DownloadManagerJob {
 	canCopyDetails: boolean
 	copied: boolean
 	busy: boolean
+	/** Portalrinth: the eye opens for any active install job, not just
+	 * ones whose content download has already started. */
+	inspectable?: boolean
 	/** Live per-file detail of a content download, for the eye view. */
 	contents?: {
 		entries: InstallJobSnapshot['content_entries']
@@ -199,6 +202,7 @@ export function useDownloadManager() {
 					appSettings.alwaysShowCopyDetails,
 				copied: copiedJobs.value.has(job.job_id),
 				busy: busyJobs.value.has(job.job_id),
+				inspectable: true,
 				contents: job.content_entries
 					? {
 							entries: job.content_entries,

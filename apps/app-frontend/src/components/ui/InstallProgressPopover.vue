@@ -130,7 +130,9 @@ onBeforeUnmount(() => {
 
 .install-progress-pop {
         position: absolute;
-        bottom: calc(100% + 0.6rem);
+        /* Opens downward: the button sits right under the title bar, and a
+           panel opening upward is clipped away by the viewport's top edge. */
+        top: calc(100% + 0.6rem);
         left: 50%;
         transform: translateX(-50%);
         z-index: 60;
@@ -223,7 +225,7 @@ onBeforeUnmount(() => {
 .install-progress-pop-enter-from,
 .install-progress-pop-leave-to {
         opacity: 0;
-        transform: translateX(-50%) translateY(6px) scale(0.96);
+        transform: translateX(-50%) translateY(-6px) scale(0.96);
 }
 
 @media (prefers-reduced-motion: reduce) {

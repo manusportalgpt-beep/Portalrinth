@@ -161,7 +161,7 @@ const instanceLink = computed(() =>
 			</component>
 			<div class="flex items-center gap-0.5">
 				<IconButton
-					v-if="job.contents && !complete"
+					v-if="job.inspectable && !complete"
 					v-tooltip="formatMessage(messages.inspect)"
 					:label="formatMessage(messages.inspect)"
 					type="quiet"
