@@ -77,6 +77,10 @@ impl InstallJobRecord {
         let active = is_active(self.status);
         let mut snapshot = InstallJobSnapshot {
             content_count: self.state.content_count,
+            content_entries: None,
+            content_done: None,
+            content_failed: None,
+            content_active: None,
             job_id: self.id.to_string(),
             instance_id: self.instance_id.clone(),
             kind: self.kind,

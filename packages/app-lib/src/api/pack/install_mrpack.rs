@@ -835,9 +835,9 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
                     .cloned()
                     .unwrap_or_default(),
                 file_id: None,
-                path: file.path.clone(),
-                kind: crate::api::pack::manifest_preview::kind_from_path(&file.path),
-                title: crate::api::pack::manifest_preview::file_name_of(&file.path),
+                path: file.path.as_str().to_string(),
+                kind: crate::api::pack::manifest_preview::kind_from_path(file.path.as_str()),
+                title: crate::api::pack::manifest_preview::file_name_of(file.path.as_str()),
                 version: None,
                 author: None,
                 icon_url: None,
