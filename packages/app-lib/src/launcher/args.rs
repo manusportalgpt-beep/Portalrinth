@@ -114,9 +114,7 @@ pub fn get_class_paths(
                 .natives
                 .as_ref()
                 .is_some_and(|natives| !natives.is_empty());
-            if has_natives
-                && library.natives_os_key_and_classifiers(java_arch).is_none()
-            {
+            if has_natives {
                 return None;
             }
 
@@ -127,11 +125,7 @@ pub fn get_class_paths(
                 ));
             }
 
-            Some(get_lib_path(
-                libraries_path,
-                &library.name,
-                library.natives_os_key_and_classifiers(java_arch).is_some(),
-            ))
+            Some(get_lib_path(libraries_path, &library.name, false))
         }))
         .process_results(|iter| {
             iter.unique().join(classpath_separator(java_arch))

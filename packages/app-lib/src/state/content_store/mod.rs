@@ -11,7 +11,8 @@ pub(crate) use adapters::filesystem::{
     validate_parent_directories, writable_copy,
 };
 pub(crate) use adapters::sqlite::{
-    file_storage, find_file, instance_storage, retained_owners,
+    file_storage, find_file, instance_storage, remove_file_storage,
+    retained_owners,
     set_file_storage, set_setting, setting,
 };
 pub(crate) use commands::{
