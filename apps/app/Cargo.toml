@@ -56,6 +56,9 @@ uuid = { workspace = true, features = ["serde", "v4"] }
 workspace = true
 features = ["devtools", "macos-private-api", "protocol-asset"]
 
+[dev-dependencies]
+rustls = { workspace = true, features = ["std"] }
+
 [build-dependencies]
 tauri-build = { workspace = true, features = ["codegen"] }
 

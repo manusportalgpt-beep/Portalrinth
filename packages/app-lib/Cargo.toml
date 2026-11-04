@@ -86,6 +86,7 @@ reqwest = { workspace = true, features = [
   "stream",
 ] }
 rgb = { workspace = true }
+rustls = { workspace = true, features = ["logging", "ring", "std", "tls12"] }
 same-file = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
 serde-binhum = { workspace = true }
