@@ -291,6 +291,7 @@ const { selectedFilters, filterOptions, toggleFilter, applyFilters } = useConten
 		showUpdateFilter: false,
 		showWarningsFilter: false,
 		showStatusFilters: false,
+		showDisabledFilter: true,
 		showEnvironmentWarnings: ctx.showEnvironmentWarnings,
 		isPackLocked: ctx.isPackLocked,
 		persistKey: ctx.filterPersistKey,

@@ -41,6 +41,7 @@ import {
         aiDockDone,
         aiDockUnread,
 } from '@/helpers/ai-assistant'
+import { titlebarClockShift } from '@/helpers/titlebar-clock'
 
 const route = useRoute()
 const router = useRouter()
@@ -173,6 +174,11 @@ onMounted(() => {
 })
 watch(visible, (shown) => {
         if (shown) void nextTick(place)
+})
+
+// The clock steps aside for a long breadcrumb trail; Portalus rides along.
+watch(titlebarClockShift, () => {
+        void nextTick(place)
 })
 onBeforeUnmount(() => {
         window.removeEventListener('resize', place)

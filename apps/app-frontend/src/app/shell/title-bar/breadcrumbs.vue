@@ -67,6 +67,7 @@ import { Avatar } from '@modrinth/ui'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import { titlebarClockShift } from '@/helpers/titlebar-clock'
 import { injectBreadcrumbManager } from '@/shared/breadcrumbs'
 
 const { entries: breadcrumbs } = injectBreadcrumbManager()
@@ -90,6 +91,21 @@ function checkOverflow() {
 	const overflow = innerRef.value.scrollWidth - availableWidth
 	isOverflowing.value = overflow > 0
 	overflowAmount.value = overflow
+
+	// A long trail runs under the clock that sits centred in the bar, so the
+	// clock is asked to step aside for exactly as long as the trail needs it
+	// - and steps back the moment the path is short again.
+	const clock = document.querySelector<HTMLElement>('[data-titlebar-clock]')
+	if (!clock) {
+		titlebarClockShift.value = 0
+		return
+	}
+	const outerRect = outerRef.value.getBoundingClientRect()
+	const clockRect = clock.getBoundingClientRect()
+	const baseCenter = clockRect.left + clockRect.width / 2 - titlebarClockShift.value
+	const trailRight = outerRect.left + innerRef.value.scrollWidth
+	const needed = trailRight - (baseCenter - clockRect.width / 2 - 24)
+	titlebarClockShift.value = Math.max(0, Math.min(needed, Math.max(0, window.innerWidth / 2 - 220)))
 }
 
 function onMouseEnter() {

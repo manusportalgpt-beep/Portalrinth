@@ -5,18 +5,20 @@ import {
 	CopyIcon,
 	DownloadIcon,
 	ExternalIcon,
+	ImageIcon,
 	LanguagesIcon,
 	SpinnerIcon,
 	XIcon,
 	ZoomInIcon,
 	ZoomOutIcon,
 } from '@modrinth/assets'
-import { injectNotificationManager, useVIntl } from '@modrinth/ui'
+import { Avatar, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { save } from '@tauri-apps/plugin-dialog'
 import { writeFile } from '@tauri-apps/plugin-fs'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { readSelectedBuild } from '@/helpers/ai-assistant'
 import {
 	closeImageViewer,
 	closeReader,
@@ -26,6 +28,7 @@ import {
 	reader,
 	readerBack,
 } from '@/helpers/ai-reader'
+import { add_screenshot, getInstanceIconUrl, list as listInstances } from '@/helpers/instance'
 import { resolveTarget, translateHtml } from '@/helpers/portalrinth-translate'
 import { proxiedFetch } from '@/helpers/proxy-fetch'
 
@@ -153,6 +156,98 @@ async function copyImageLink() {
 
 const isRemoteImage = computed(() => /^https?:\/\//.test(imageViewer.src))
 
+// ---- Saving an image among the screenshots --------------------------------
+
+interface ScreenshotTarget {
+	id: string
+	name: string
+	icon?: string
+}
+
+const targets = ref<ScreenshotTarget[]>([])
+const chooserOpen = ref(false)
+const saving = ref(false)
+
+watch(
+	() => imageViewer.open,
+	async (open) => {
+		chooserOpen.value = false
+		if (!open) return
+		try {
+			const instances = await listInstances()
+			targets.value = instances.map((instance) => ({
+				id: instance.id,
+				name: instance.name,
+				icon: getInstanceIconUrl(instance.icon_path) ?? undefined,
+			}))
+		} catch {
+			targets.value = []
+		}
+	},
+)
+
+/** Any picture becomes a PNG here: the screenshots folder indexes PNGs, and
+ * a drawing from the assistant may arrive as anything else. */
+async function asPngBytes(src: string): Promise<Uint8Array> {
+	const bytes = await imageBytes(src)
+	try {
+		const bitmap = await createImageBitmap(new Blob([bytes.buffer as ArrayBuffer]))
+		const canvas = document.createElement('canvas')
+		canvas.width = bitmap.width
+		canvas.height = bitmap.height
+		const context = canvas.getContext('2d')
+		if (!context) throw new Error('canvas is unavailable')
+		context.drawImage(bitmap, 0, 0)
+		bitmap.close()
+		const blob = await new Promise<Blob | null>((resolve) =>
+			canvas.toBlob((result) => resolve(result), 'image/png'),
+		)
+		if (!blob) throw new Error('PNG encoding failed')
+		return new Uint8Array(await blob.arrayBuffer())
+	} catch {
+		// Already a PNG, most likely - the validator will have the last word.
+		return bytes
+	}
+}
+
+async function saveToScreenshots(target: ScreenshotTarget) {
+	if (!imageViewer.src || saving.value) return
+	saving.value = true
+	try {
+		const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+		const saved = await add_screenshot(
+			target.id,
+			`${imageViewer.name || 'portalus'}-${stamp}.png`.replace(/[\\/:*?"<>|]+/g, ' ').trim(),
+			await asPngBytes(imageViewer.src),
+		)
+		chooserOpen.value = false
+		addNotification({
+			title: 'Сохранено в скриншоты',
+			text: `«${target.name}» · ${saved.file_name}`,
+			type: 'success',
+		})
+	} catch (error) {
+		addNotification({ title: 'Не удалось сохранить в скриншоты', text: String(error), type: 'error' })
+	} finally {
+		saving.value = false
+	}
+}
+
+async function onSaveToScreenshots() {
+	if (saving.value) return
+	const selectedId = readSelectedBuild()?.id
+	const selected = targets.value.find((target) => target.id === selectedId)
+	if (selected && targets.value.length <= 1) {
+		await saveToScreenshots(selected)
+		return
+	}
+	if (targets.value.length === 1) {
+		await saveToScreenshots(targets.value[0])
+		return
+	}
+	chooserOpen.value = !chooserOpen.value
+}
+
 function onKey(event: KeyboardEvent) {
 	if (event.key !== 'Escape') return
 	if (imageViewer.open) closeImageViewer()
@@ -251,6 +346,32 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 						<ZoomInIcon class="size-4" />
 					</button>
 					<span class="ai-image-sep" />
+					<div class="relative">
+						<button
+							class="ai-viewer-btn ai-viewer-btn--text"
+							:disabled="saving || !targets.length"
+							@click="onSaveToScreenshots"
+						>
+							<SpinnerIcon v-if="saving" class="size-4 animate-spin" />
+							<ImageIcon v-else class="size-4" />
+							В скриншоты
+						</button>
+						<div v-if="chooserOpen" class="ai-screens-chooser">
+							<p class="m-0 px-2 pt-1.5 text-xs font-semibold text-secondary">
+								В какую сборку?
+							</p>
+							<button
+								v-for="target in targets"
+								:key="target.id"
+								type="button"
+								class="ai-screens-option"
+								@click="() => saveToScreenshots(target)"
+							>
+								<Avatar v-if="target.icon" :src="target.icon" size="22px" no-shadow class="!rounded-md" />
+								<span class="truncate">{{ target.name }}</span>
+							</button>
+						</div>
+					</div>
 					<button class="ai-viewer-btn ai-viewer-btn--text" :disabled="downloading" @click="downloadImage">
 						<SpinnerIcon v-if="downloading" class="size-4 animate-spin" />
 						<DownloadIcon v-else class="size-4" />
@@ -535,6 +656,43 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 	height: 1.25rem;
 	margin: 0 0.25rem;
 	background: var(--surface-5);
+}
+
+.ai-screens-chooser {
+	position: absolute;
+	right: 0;
+	bottom: calc(100% + 0.5rem);
+	z-index: 5;
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	max-height: 16rem;
+	min-width: 14rem;
+	overflow-y: auto;
+	padding: 0.35rem 0.25rem 0.4rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 0.8rem;
+	background: color-mix(in srgb, var(--color-raised-bg) 92%, transparent);
+	backdrop-filter: blur(18px);
+	box-shadow: 0 12px 32px rgb(0 0 0 / 35%);
+}
+
+.ai-screens-option {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	border: none;
+	border-radius: 0.6rem;
+	padding: 0.35rem 0.5rem;
+	background: transparent;
+	color: var(--color-contrast);
+	font-size: 0.85rem;
+	cursor: pointer;
+	text-align: left;
+}
+
+.ai-screens-option:hover {
+	background: color-mix(in srgb, var(--color-contrast) 8%, transparent);
 }
 
 .ai-viewer-enter-active,

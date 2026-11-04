@@ -27,6 +27,12 @@ struct InstallProgressReporterState {
 }
 
 impl InstallProgressReporter {
+    /// The job whose progress this reports, for the places that file live
+    /// detail (the per-file names of a content download) under the same id.
+    pub fn job_id(&self) -> Uuid {
+        self.job_id
+    }
+
     pub fn new(job_id: Uuid, state: InstallJobState, pool: SqlitePool) -> Self {
         Self {
             job_id,

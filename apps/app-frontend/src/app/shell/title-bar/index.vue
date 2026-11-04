@@ -7,6 +7,7 @@ import ClockWidget from '@/components/ui/portalrinth-widgets/ClockWidget.vue'
 import CloudWidget from '@/components/ui/portalrinth-widgets/CloudWidget.vue'
 import PortalrinthLogo from '@/components/ui/PortalrinthLogo.vue'
 import { portalrinthFeatures } from '@/helpers/portalrinth-features'
+import { titlebarClockShift } from '@/helpers/titlebar-clock'
 
 import AppActionBar from './action-bar.vue'
 import Breadcrumbs from './breadcrumbs.vue'
@@ -41,6 +42,10 @@ const messages = defineMessages({
 			v-if="portalrinthFeatures.clock"
 			data-titlebar-clock
 			class="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-contrast"
+			:style="{
+				transform: `translate(calc(-50% + ${titlebarClockShift}px), -50%)`,
+				transition: 'transform 0.25s ease',
+			}"
 		/>
 		<div data-tauri-drag-region class="flex min-w-0 flex-1 items-center overflow-hidden p-2">
 			<PortalrinthLogo class="shrink-0" />

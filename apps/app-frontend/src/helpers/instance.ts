@@ -212,6 +212,20 @@ export async function list_synced_screenshots(): Promise<InstanceScreenshot[]> {
 	return await invoke('plugin:instance|instance_list_synced_screenshots')
 }
 
+/** Files a picture that did not come from the game - an image the
+ * assistant drew, say - in as a screenshot of the instance. */
+export async function add_screenshot(
+	instanceId: string,
+	fileName: string,
+	pngBytes: Uint8Array,
+): Promise<InstanceScreenshot> {
+	return await invoke('plugin:instance|instance_add_screenshot', {
+		instanceId,
+		fileName,
+		bytes: Array.from(pngBytes),
+	})
+}
+
 export async function save_edited_screenshot(
 	key: ScreenshotKey,
 	pngBytes: Uint8Array,

@@ -863,6 +863,13 @@ const SITE_MARKER = /@@SITE@@(\{.*\})/g
 export interface AiPoll {
 	text: string
 	options: string[]
+	/** `instances`: the buttons are the player's own builds, and a click
+	 * installs the pending content straight into the one picked. */
+	mode?: 'instances'
+	/** What to install the moment an instance is picked from the card. */
+	pending?: { projectIds: string[]; kind: string }
+	/** The instance the player picked, so the card shows it as answered. */
+	answered?: string
 }
 
 /** A skin the agent recommends - rendered as a card right in the chat. */
@@ -930,9 +937,30 @@ export function extractCards(result: string): ParsedCards {
 		})
 		.replace(POLL_MARKER, (_match, json: string) => {
 			try {
-				const raw = JSON.parse(json) as { text?: string; options?: string[] }
+				const raw = JSON.parse(json) as {
+					text?: string
+					options?: string[]
+					mode?: string
+					pending?: { projectIds?: string[]; kind?: string }
+				}
 				const options = (raw.options ?? []).map((option) => String(option)).filter(Boolean)
-				if (raw.text && options.length > 0) polls.push({ text: raw.text, options })
+				if (!raw.text) return
+				const mode = raw.mode === 'instances' ? 'instances' : undefined
+				if (mode === 'instances') {
+					const projectIds = (raw.pending?.projectIds ?? [])
+						.map((id) => String(id).trim())
+						.filter(Boolean)
+					if (projectIds.length > 0) {
+						polls.push({
+							text: raw.text,
+							options,
+							mode,
+							pending: { projectIds, kind: raw.pending?.kind ?? 'mod' },
+						})
+					}
+					return
+				}
+				if (options.length > 0) polls.push({ text: raw.text, options })
 			} catch {
 				/* and here */
 			}
@@ -1040,7 +1068,7 @@ export const AI_TOOLS_HINT = [
 	'- <<instance_write|сборка::путь::текст>> — записать текстовый файл в сборку (config/*.toml, *.json, *.properties): сам правь конфиги под задачу, не спрашивая; бинарные (jar, png, dat) писать нельзя.',
 	'- <<instance_worlds|сборка>> — миры и серверы сборки (режим, хардкор, когда играли, адреса серверов)',
 	'- <<launcher_search_mods|запрос::тип>> — найти контент сразу в Modrinth и CurseForge; тип (необязательно, но указывай!): mod, modpack, resourcepack, shader, datapack, plugin — например <<launcher_search_mods|мини-карта::mod>>, <<launcher_search_mods|выживание с магией::modpack>>; в ответе id для установки и пометка ✓/✗ — подходит ли к выбранной сборке (страница: <<navigate|/project/<id>>> или <<navigate|/curseforge/<id>>>)',
-	'- <<launcher_install|id::тип::id сборки>> — установить контент (тип: mod, resourcepack, shader, datapack) в сборку; несколько id через запятую (id1,cf:123,id3) — поставятся пачкой в фоне с зависимостями, игрок увидит карточки модов; сборку можно не указывать — тогда выбранная',
+	'- <<launcher_install|id::тип::id сборки>> — установить контент (тип: mod, resourcepack, shader, datapack) в сборку; несколько id через запятую (id1,cf:123,id3) — поставятся пачкой в фоне с зависимостями, игрок увидит карточки модов; сборку можно не указывать — тогда выбранная; если выбранной нет и сборок несколько, игроку сразу покажется карточка выбора сборки — клик поставит файл мгновенно, НЕ спрашивай сборку текстом в таком случае',
 	'Оформление лаунчера (ты им полностью управляешь, всё сохраняется после перезапуска):',
 	'- <<launcher_appearance|>> — узнать текущую тему, акцент, градиент, пресеты и сохранённые темы игрока',
 	'- <<launcher_set_accent|цвет или пресет>> — цвет акцента: hex (#22c55e), название («синий») или пресет (crimson, blood, ember, sunset, amethyst, nightshade, midnight, glacier, verdant, moss, lantern, rose, theme…)',
@@ -3283,6 +3311,30 @@ export function contentTypeOf(raw: string): string {
 	return ''
 }
 
+/** The player picked a build in the chooser card: the file goes in right
+ * away, and what came of it is told in the chat without a model round-trip. */
+export async function completeInstancePick(
+	poll: AiPoll,
+	instanceId: string,
+	instanceName: string,
+): Promise<void> {
+	const pending = poll.pending
+	if (!pending) return
+	const outcomes: string[] = []
+	for (const projectId of pending.projectIds) {
+		try {
+			outcomes.push(await installOneProject(projectId, pending.kind, instanceId))
+		} catch (error) {
+			outcomes.push(`Не установилось: ${String(error).slice(0, 200)}`)
+		}
+	}
+	pushAiMessage({
+		role: 'assistant',
+		content: `Поставил в «${instanceName}»:\n${outcomes.join('\n\n')}`,
+		ts: Date.now(),
+	})
+}
+
 async function installOneProject(
 	projectId: string,
 	kind: string,
@@ -3679,6 +3731,19 @@ registerAiToolHandler(async (tool, args) => {
 			return 'Укажите id проекта (из launcher_search_mods или /project/<id>)'
 		if (!['mod', 'resourcepack', 'shader', 'datapack'].includes(kind)) {
 			return 'Тип бывает: mod, resourcepack, shader, datapack (сборки ставятся через open_creation_modal)'
+		}
+		// Nowhere unambiguous to put it? The player chooses - and the file
+		// goes in the moment they click, without a round of questions.
+		if (!instanceId && !readSelectedBuild()?.id) {
+			const instances = await list()
+			if (instances.length > 1) {
+				return `выбор сборки показан@@POLL@@${JSON.stringify({
+					text: 'В какую сборку поставить?',
+					options: [],
+					mode: 'instances',
+					pending: { projectIds, kind },
+				})}`
+			}
 		}
 		if (projectIds.length > 1) {
 			// A batch: everything goes out at once, in the background, and the

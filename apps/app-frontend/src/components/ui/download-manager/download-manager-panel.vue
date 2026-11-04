@@ -29,6 +29,7 @@ defineEmits<{
 	copyDetails: [id: string]
 	clearCompleted: []
 	open: []
+	inspect: [id: string]
 }>()
 
 const { formatMessage } = useVIntl()
@@ -169,6 +170,7 @@ defineExpose({ focus: () => panel.value?.focus() })
 										@toggle-pause="$emit('togglePause', $event)"
 										@dismiss="$emit('dismiss', $event)"
 										@copy-details="$emit('copyDetails', $event)"
+										@inspect="$emit('inspect', $event)"
 										@open="$emit('open')"
 									/>
 								</div>

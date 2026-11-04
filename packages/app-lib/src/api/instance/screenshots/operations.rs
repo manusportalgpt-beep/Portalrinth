@@ -318,6 +318,74 @@ pub async fn get_screenshot_path(
     Ok(canonical_path)
 }
 
+/// Files a picture that did not come from the game - an image the assistant
+/// drew, say - into an instance's screenshots. Same folder, same indexing,
+/// same reconciliation as every other screenshot; a name that is already
+/// taken just gets a " (n)" beside it.
+pub async fn add_screenshot(
+    instance_id: &str,
+    file_name: &str,
+    bytes: Vec<u8>,
+) -> crate::Result<InstanceScreenshot> {
+    let state = State::get().await?;
+    let source =
+        instance_rows::get_instance_screenshot_source(instance_id, &state.pool)
+            .await?
+            .ok_or(ErrorKind::InputError("unknown instance".to_string()))?;
+    let _lock = state.instance_locks.lock_screenshots(&source.id).await;
+
+    let png_bytes = tokio::task::spawn_blocking(move || {
+        validate_png_dimensions(&bytes)?;
+        Ok::<_, crate::Error>(bytes)
+    })
+    .await
+    .context(ErrorKind::InputError(
+        "could not read the picture as PNG".to_string(),
+    ))??;
+
+    let screenshots_dir =
+        source_screenshots_dir(&state.directories, &source).await?;
+    let target_path = available_target_path(&screenshots_dir, file_name).await?;
+    let target_file_name = target_path
+        .file_name()
+        .and_then(|file_name| file_name.to_str())
+        .ok_or(ErrorKind::InputError(
+            "could not determine screenshot file name".to_string(),
+        ))?
+        .to_string();
+
+    io::write(&target_path, png_bytes).await?;
+
+    let scanned = scan_source_screenshots(&state.directories, &source).await?;
+    let reconciled =
+        reconcile_source_screenshots(&state, &source, scanned).await?;
+    let mut saved = reconciled
+        .into_iter()
+        .find(|screenshot| screenshot.file_name == target_file_name)
+        .ok_or(ErrorKind::InputError(
+            "could not index the added screenshot".to_string(),
+        ))?;
+
+    let saved_row = screenshot_rows::get_screenshot_by_key(
+        &saved.instance_id,
+        &saved.file_name,
+        &state.pool,
+    )
+    .await?
+    .ok_or(ErrorKind::InputError(
+        "could not load the added screenshot".to_string(),
+    ))?;
+    saved.modified_at = saved_row.modified_at;
+    saved.group_id = saved_row.group_id;
+
+    let _ = emit_instance(
+        &saved.instance_id,
+        InstancePayloadType::ScreenshotsUpdated,
+    );
+
+    Ok(saved)
+}
+
 pub async fn save_edited_screenshot(
     key: ScreenshotKey,
     png_bytes: Vec<u8>,

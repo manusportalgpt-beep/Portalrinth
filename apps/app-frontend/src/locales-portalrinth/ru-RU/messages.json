@@ -4034,5 +4034,56 @@
 	},
 	"portalrinth.install.progress.installing": {
 		"message": "Установка контента…"
+	},
+	"app.download-manager.contents.title": {
+		"message": "Что загружается"
+	},
+	"app.download-manager.contents.current": {
+		"message": "Загружается сейчас"
+	},
+	"app.download-manager.contents.loaded": {
+		"message": "Загруженные"
+	},
+	"app.download-manager.contents.pending": {
+		"message": "Загружаемые"
+	},
+	"app.download-manager.contents.preparing": {
+		"message": "Подготовка…"
+	},
+	"app.download-manager.contents.failure": {
+		"message": "Ошибка"
+	},
+	"app.download-manager.contents.inspect": {
+		"message": "Что загружается"
+	},
+	"app.download-manager.contents.kind.all": {
+		"message": "Все"
+	},
+	"app.download-manager.contents.kind.mod": {
+		"message": "Моды"
+	},
+	"app.download-manager.contents.kind.resource_pack": {
+		"message": "Ресурс-паки"
+	},
+	"app.download-manager.contents.kind.shader": {
+		"message": "Шейдеры"
+	},
+	"app.download-manager.contents.kind.data_pack": {
+		"message": "Дата-паки"
+	},
+	"app.download-manager.contents.likes": {
+		"message": "Лайки"
+	},
+	"app.download-manager.contents.downloads": {
+		"message": "Загрузки"
+	},
+	"app.download-manager.contents.updated": {
+		"message": "Обновлялось"
+	},
+	"app.download-manager.contents.open-page": {
+		"message": "Открыть страницу проекта"
+	},
+	"content.filter.disabled": {
+		"message": "Выключено"
 	}
 }

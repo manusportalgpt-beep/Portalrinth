@@ -727,6 +727,13 @@ function overridesFor(id: string, tint: boolean): Map<string, string> {
 	// sidebar, the promo cards, the dialog dimmer, the loading bar — follows the
 	// preset whether or not the greys do. It was the brand's before; it is the
 	// brand's now.
+	// The one colour the run comes down to: the first stop of a chosen
+	// gradient, or the accent itself. Text selection takes it.
+	next.set(
+		'--portalrinth-accent-first',
+		hex ?? accentColorFor(preset as AccentPreset),
+	)
+
 	const accent = `${red} ${green} ${blue}`
 	const borderAlpha = alphaOf(base.get('--brand-gradient-border') ?? '')
 	for (const [variable, value] of Object.entries(brandGradients(accent, borderAlpha))) {

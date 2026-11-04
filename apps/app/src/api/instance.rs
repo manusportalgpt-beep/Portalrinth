@@ -58,6 +58,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_list_all_screenshots,
             instance_list_synced_screenshots,
             instance_save_edited_screenshot,
+            instance_add_screenshot,
             instance_list_screenshot_groups,
             instance_create_screenshot_group,
             instance_rename_screenshot_group,
@@ -723,6 +724,19 @@ pub async fn instance_list_synced_screenshots<R: Runtime>(
 ) -> Result<Vec<InstanceScreenshot>> {
     let screenshots = theseus::instance::list_synced_screenshots().await?;
     serialize_screenshots(&app_handle, screenshots)
+}
+
+#[tauri::command]
+pub async fn instance_add_screenshot<R: Runtime>(
+    app_handle: AppHandle<R>,
+    instance_id: String,
+    file_name: String,
+    bytes: Vec<u8>,
+) -> Result<InstanceScreenshot> {
+    let screenshot =
+        theseus::instance::add_screenshot(&instance_id, &file_name, bytes)
+            .await?;
+    serialize_screenshot(&app_handle, screenshot)
 }
 
 #[tauri::command]

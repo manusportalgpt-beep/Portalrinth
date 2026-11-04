@@ -30,3 +30,13 @@ html.retro-mode {
 
 	--loading-bar-gradient: linear-gradient(to right, var(--color-brand) 0%, #9fd677 100%);
 }
+
+/*
+ * The text selection follows the accent: the first colour of the chosen run,
+ * or the accent itself when it is one colour. White text on top of it stays
+ * readable on every preset.
+ */
+::selection {
+	background: var(--portalrinth-accent-first, var(--color-brand));
+	color: #ffffff;
+}

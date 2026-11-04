@@ -65,6 +65,13 @@ export interface DownloadManagerJob {
 	canCopyDetails: boolean
 	copied: boolean
 	busy: boolean
+	/** Live per-file detail of a content download, for the eye view. */
+	contents?: {
+		entries: InstallJobSnapshot['content_entries']
+		done: string[]
+		failed: string[]
+		active: string[]
+	}
 }
 
 const verificationMessages = defineMessages({
@@ -192,6 +199,14 @@ export function useDownloadManager() {
 					appSettings.alwaysShowCopyDetails,
 				copied: copiedJobs.value.has(job.job_id),
 				busy: busyJobs.value.has(job.job_id),
+				contents: job.content_entries
+					? {
+							entries: job.content_entries,
+							done: job.content_done ?? [],
+							failed: job.content_failed ?? [],
+							active: job.content_active ?? [],
+						}
+					: undefined,
 			}
 		}),
 	)

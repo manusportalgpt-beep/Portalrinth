@@ -29,6 +29,10 @@ use crate::util::io;
 /// options file — is `Other`, because it is not something to be picked a version
 /// of or turned off.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "export-ts",
+    derive(ts_rs::TS, postcard_bindgen::PostcardBindings)
+)]
 #[serde(rename_all = "snake_case")]
 pub enum PackEntryKind {
     Mod,
@@ -39,7 +43,11 @@ pub enum PackEntryKind {
 }
 
 /// One thing in the pack, with whatever is known about it.
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(
+    feature = "export-ts",
+    derive(ts_rs::TS, postcard_bindgen::PostcardBindings)
+)]
 pub struct PackManifestEntry {
     /// Where the pack says this comes from: `curseforge`, `modrinth` or `file`.
     pub source: String,
@@ -349,7 +357,7 @@ pub fn kind_from_path(path: &str) -> PackEntryKind {
     PackEntryKind::Other
 }
 
-fn file_name_of(path: &str) -> String {
+pub fn file_name_of(path: &str) -> String {
     path.rsplit(['/', '\\']).next().unwrap_or(path).to_string()
 }
 

@@ -41,7 +41,7 @@ import {
 	TrashIcon,
 	XIcon,
 } from '@modrinth/assets'
-import { Button, IconButton, Input, useVIntl } from '@modrinth/ui'
+import { Avatar, Button, IconButton, Input, useVIntl } from '@modrinth/ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -62,11 +62,13 @@ import {
 	type AiMessage,
 	type AiModCard,
 	type AiMode,
+	type AiPoll,
 	aiSettings,
 	type AiSkinCard,
 	type AiWikiCard,
 	chosenModel,
 	clearAiHistory,
+	completeInstancePick,
 	errorOnTurn,
 	noteAgentNavigation,
 	providerById,
@@ -1220,9 +1222,53 @@ async function openLink(url: string) {
 	}
 }
 
+interface AiInstanceOption {
+	id: string
+	name: string
+	game_version: string
+	loader: string
+	icon?: string
+}
+
 function answerPoll(option: string) {
 	if (sending.value) return
 	void send(option)
+}
+
+/** The chooser card asks for the player's own builds, so those are loaded
+ * once there is a card on screen that needs them. */
+const pollInstances = ref<AiInstanceOption[]>([])
+
+async function refreshPollInstances() {
+	try {
+		const instances = await listInstances()
+		pollInstances.value = instances.map((instance) => ({
+			id: instance.id,
+			name: instance.name,
+			game_version: instance.game_version ?? '?',
+			loader: instance.loader ?? 'vanilla',
+			icon: getInstanceIconUrl(instance.icon_path) ?? undefined,
+		}))
+	} catch {
+		pollInstances.value = []
+	}
+}
+
+watch(
+	() =>
+		aiHistory.value.some((message) =>
+			message.activity?.polls?.some((poll) => poll.mode === 'instances' && !poll.answered),
+		),
+	(needed) => {
+		if (needed) void refreshPollInstances()
+	},
+	{ immediate: true },
+)
+
+async function pickInstance(poll: AiPoll, instance: AiInstanceOption) {
+	if (sending.value || poll.answered) return
+	poll.answered = instance.name
+	await completeInstancePick(poll, instance.id, instance.name)
 }
 
 function toggleGallery(key: string) {
@@ -1923,7 +1969,39 @@ defineExpose({ send })
 								class="ai-poll-card"
 							>
 								<p class="ai-card-title m-0">{{ poll.text }}</p>
-								<div class="mt-1 flex flex-wrap gap-2">
+								<template v-if="poll.mode === 'instances'">
+									<div class="mt-1 flex flex-col gap-1.5">
+										<button
+											v-for="instance in pollInstances"
+											:key="instance.id"
+											type="button"
+											class="ai-instance-option"
+											:disabled="sending || !!poll.answered"
+											@click="() => pickInstance(poll, instance)"
+										>
+											<Avatar
+												v-if="instance.icon"
+												:src="instance.icon"
+												size="28px"
+												no-shadow
+												class="!rounded-lg"
+											/>
+											<span class="min-w-0 flex-1 truncate text-left">
+												<span class="block truncate text-sm font-semibold text-contrast">
+													{{ instance.name }}
+												</span>
+												<span class="block truncate text-xs text-secondary">
+													Minecraft {{ instance.game_version }} · {{ instance.loader }}
+												</span>
+											</span>
+											<CheckIcon v-if="poll.answered === instance.name" class="size-4 text-green" />
+										</button>
+									</div>
+									<p v-if="poll.answered" class="m-0 mt-1 text-xs font-medium text-secondary">
+										{{ poll.answered }}
+									</p>
+								</template>
+								<div v-else class="mt-1 flex flex-wrap gap-2">
 									<Button
 										v-for="option in poll.options"
 										:key="option"
@@ -3134,6 +3212,32 @@ defineExpose({ send })
 		opacity: 1;
 		transform: none;
 	}
+}
+
+.ai-instance-option {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	gap: 0.6rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 0.75rem;
+	padding: 0.45rem 0.6rem;
+	background: transparent;
+	cursor: pointer;
+	text-align: left;
+	transition:
+		background-color 0.15s ease,
+		border-color 0.15s ease;
+}
+
+.ai-instance-option:hover:not(:disabled) {
+	background: var(--surface-3);
+	border-color: var(--surface-4);
+}
+
+.ai-instance-option:disabled {
+	cursor: default;
+	opacity: 0.6;
 }
 
 .ai-poll-card {

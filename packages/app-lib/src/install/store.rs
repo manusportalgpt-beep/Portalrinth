@@ -102,6 +102,12 @@ impl InstallJobRecord {
             job.apply_progress(&mut snapshot);
             job.snapshot = Some(snapshot.clone());
         }
+        if active && let Some(live) = super::content_live::snapshot(self.id) {
+            snapshot.content_entries = Some(live.entries);
+            snapshot.content_done = Some(live.done);
+            snapshot.content_failed = Some(live.failed);
+            snapshot.content_active = Some(live.active);
+        }
         snapshot
     }
 }

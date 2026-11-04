@@ -33,6 +33,9 @@ export interface ContentFilterConfig {
 	showUpdateFilter?: boolean
 	showWarningsFilter?: boolean
 	showStatusFilters?: boolean
+	/** Only the disabled one of the status filters, and only when something
+	 * is actually disabled - the chip the mods tab keeps right of the rest. */
+	showDisabledFilter?: boolean
 	showEnvironmentWarnings?: boolean
 	isPackLocked?: Ref<boolean>
 	persistKey?: string
@@ -109,6 +112,10 @@ export function useContentFilters(items: Ref<ContentItem[]>, config?: ContentFil
 					label: formatMessage(status === 'enabled' ? messages.enabled : messages.disabled),
 				})
 			}
+		}
+
+		if (config?.showDisabledFilter && items.value.some((item) => !item.enabled)) {
+			options.push({ id: 'disabled', label: formatMessage(messages.disabled) })
 		}
 
 		return options

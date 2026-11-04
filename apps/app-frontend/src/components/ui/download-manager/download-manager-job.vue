@@ -4,6 +4,7 @@ import {
 	CheckIcon,
 	CopyIcon,
 	DownloadIcon,
+	EyeIcon,
 	PauseIcon,
 	PlayIcon,
 	TrashIcon,
@@ -36,6 +37,7 @@ defineEmits<{
 	dismiss: [id: string]
 	copyDetails: [id: string]
 	open: []
+	inspect: [id: string]
 }>()
 
 const { formatMessage } = useVIntl()
@@ -52,6 +54,10 @@ const messages = defineMessages({
 	cancel: { id: 'app.download-manager.cancel', defaultMessage: 'Cancel installation' },
 	remove: { id: 'app.download-manager.remove', defaultMessage: 'Remove from history' },
 	openInstance: { id: 'app.action-bar.install.open-instance', defaultMessage: 'Open instance' },
+	inspect: {
+		id: 'app.download-manager.contents.inspect',
+		defaultMessage: 'What is being downloaded',
+	},
 	eta: {
 		id: 'app.download-manager.eta',
 		defaultMessage: 'Estimated time remaining for this download',
@@ -154,6 +160,16 @@ const instanceLink = computed(() =>
 				</div>
 			</component>
 			<div class="flex items-center gap-0.5">
+				<IconButton
+					v-if="job.contents && !complete"
+					v-tooltip="formatMessage(messages.inspect)"
+					:label="formatMessage(messages.inspect)"
+					type="quiet"
+					size="sm"
+					@click="$emit('inspect', job.id)"
+				>
+					<EyeIcon class="text-primary" />
+				</IconButton>
 				<IconButton
 					v-if="job.canPause"
 					v-tooltip="formatMessage(job.paused ? messages.resume : messages.pause)"

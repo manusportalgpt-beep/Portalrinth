@@ -2501,5 +2501,53 @@
 	},
 	"portalrinth.install.progress.installing": {
 		"message": "Installing content…"
+	},
+	"app.download-manager.contents.title": {
+		"message": "What is being downloaded"
+	},
+	"app.download-manager.contents.current": {
+		"message": "Downloading now"
+	},
+	"app.download-manager.contents.loaded": {
+		"message": "Downloaded"
+	},
+	"app.download-manager.contents.pending": {
+		"message": "To be downloaded"
+	},
+	"app.download-manager.contents.preparing": {
+		"message": "Preparing…"
+	},
+	"app.download-manager.contents.failure": {
+		"message": "Failed"
+	},
+	"app.download-manager.contents.inspect": {
+		"message": "What is being downloaded"
+	},
+	"app.download-manager.contents.kind.all": {
+		"message": "All"
+	},
+	"app.download-manager.contents.kind.mod": {
+		"message": "Mods"
+	},
+	"app.download-manager.contents.kind.resource_pack": {
+		"message": "Resource packs"
+	},
+	"app.download-manager.contents.kind.shader": {
+		"message": "Shaders"
+	},
+	"app.download-manager.contents.kind.data_pack": {
+		"message": "Data packs"
+	},
+	"app.download-manager.contents.likes": {
+		"message": "Likes"
+	},
+	"app.download-manager.contents.downloads": {
+		"message": "Downloads"
+	},
+	"app.download-manager.contents.updated": {
+		"message": "Last updated"
+	},
+	"app.download-manager.contents.open-page": {
+		"message": "Open the project page"
 	}
 }
