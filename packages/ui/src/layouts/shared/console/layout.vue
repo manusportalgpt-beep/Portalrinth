@@ -29,12 +29,7 @@
 					size="medium"
 					clearable
 				/>
-				<div
-					v-if="ctx.logSources?.value && ctx.activeLogSourceIndex"
-					v-tooltip="formatMessage(messages.logCopyHint)"
-					class="w-[220px]"
-					@contextmenu.prevent="ctx.onLogContextCopy?.()"
-				>
+				<div v-if="ctx.logSources?.value && ctx.activeLogSourceIndex" class="w-[220px]">
 					<Combobox
 						:model-value="ctx.activeLogSourceIndex.value"
 						:options="logSourceOptions"
