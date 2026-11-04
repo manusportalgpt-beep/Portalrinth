@@ -775,11 +775,16 @@ fn main() {
 mod tests {
     /// Builds a TLS config the way crates relying on rustls's process-level
     /// provider do (e.g. async-tungstenite for the friends socket), with the
-    /// app's full dependency graph. This only fails here, not in app-lib's
-    /// own tests, because a conflicting provider feature can come from
-    /// unifying app-lib's dependencies with the Tauri plugins'.
+    /// app's full dependency graph.
+    ///
+    /// The fork keeps rustls's default features on, so both `ring` and
+    /// `aws-lc-rs` are in the graph and rustls refuses to pick one by itself —
+    /// that is exactly why `main` calls `install_crypto_provider` first. The
+    /// test mirrors that order: with the ring provider installed, the builder
+    /// must resolve instead of panicking on the ambiguous choice.
     #[test]
     fn rustls_process_provider_is_resolvable() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
         let _ = rustls::ClientConfig::builder();
     }
 }
