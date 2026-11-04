@@ -25,6 +25,15 @@
 			{{ formatMessage(commonMessages.deleteLabel) }}
 		</Button>
 		<Button
+			v-if="showCopy && hasLogs"
+			type="quiet"
+			class="!text-sm !font-medium"
+			@click="emit('copy')"
+		>
+			<CopyIcon aria-hidden="true" />
+			{{ formatMessage(messages.copy) }}
+		</Button>
+		<Button
 			v-if="hasLogs"
 			v-tooltip="shareDisabled ? shareDisabledTooltip : undefined"
 			type="quiet"
@@ -48,6 +57,7 @@
 <script setup lang="ts">
 import {
 	ContractIcon,
+	CopyIcon,
 	ExpandIcon,
 	ShareIcon,
 	SpinnerIcon,
@@ -65,6 +75,10 @@ const messages = defineMessages({
 		id: 'console.actions.share',
 		defaultMessage: 'Share',
 	},
+	copy: {
+		id: 'console.actions.copy',
+		defaultMessage: 'Copy',
+	},
 	collapse: {
 		id: 'console.actions.collapse',
 		defaultMessage: 'Collapse',
@@ -78,6 +92,7 @@ const messages = defineMessages({
 defineProps<{
 	showClear?: boolean
 	hasLogs?: boolean
+	showCopy?: boolean
 	shareDisabled?: boolean
 	shareDisabledTooltip?: string
 	sharing?: boolean
@@ -91,6 +106,7 @@ defineProps<{
 
 const emit = defineEmits<{
 	clear: []
+	copy: []
 	share: []
 	'toggle-fullscreen': []
 	delete: []

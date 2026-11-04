@@ -46,15 +46,13 @@ import { titlebarClockShift } from '@/helpers/titlebar-clock'
 const route = useRoute()
 const router = useRouter()
 const dismissed = ref(false)
-/** True once Portalus ran at least one turn here: the icon stays afterwards,
- * just like the old pill did - Portalus stays reachable by the clock. */
-const everBusy = ref(false)
-
+/** One showing per action: while Portalus works the icon is up, a click that
+ * opens the chat puts it away, and only the next run brings it back. */
 const visible = computed(
         () =>
                 route.path !== '/ai' &&
                 !dismissed.value &&
-                (agentBusy.value || everBusy.value || agentNavNotice.value !== null || aiDockUnread.value),
+                (agentBusy.value || aiDockDone.value || agentNavNotice.value !== null || aiDockUnread.value),
 )
 
 const phaseLabel = computed(() =>
@@ -139,7 +137,6 @@ watch(
 )
 watch(agentBusy, (busy, was) => {
         if (busy) {
-                everBusy.value = true
                 aiDockDone.value = false
                 dismissed.value = false
         } else if (was) {
@@ -151,6 +148,9 @@ watch(agentBusy, (busy, was) => {
 function openChat() {
         agentNavNotice.value = null
         aiDockUnread.value = false
+        // The talk has been handed over to the chat: the icon goes to sleep
+        // until the next finished action.
+        dismissed.value = true
         void router.push('/ai')
 }
 
@@ -159,8 +159,26 @@ function openChat() {
 const anchorLeft = ref(0)
 function place() {
         const clock = document.querySelector<HTMLElement>('[data-titlebar-clock]')
-        const rect = clock?.getBoundingClientRect()
-        anchorLeft.value = rect && rect.width > 0 ? rect.left - 8 : window.innerWidth / 2 + 64
+        if (!clock) {
+                anchorLeft.value = window.innerWidth / 2 + 64
+                return
+        }
+        // The clock eases to its new place (a 0.25s transform), so its rect is
+        // mid-flight while a long breadcrumb trail settles - reading it is how
+        // Portalus used to end up sitting on the time. Its centre, though, is
+        // exactly the title bar's centre plus the shift the breadcrumbs asked
+        // for: compute from that instead of chasing a moving target. Only the
+        // width is taken from the clock, and a transform never changes it.
+        const clockWidth = clock.getBoundingClientRect().width
+        if (clockWidth <= 0) {
+                anchorLeft.value = window.innerWidth / 2 + 64
+                return
+        }
+        const bar = clock.closest<HTMLElement>('.app-title-bar')
+        const barRect = bar?.getBoundingClientRect()
+        const center =
+                barRect && barRect.width > 0 ? barRect.left + barRect.width / 2 : window.innerWidth / 2
+        anchorLeft.value = center + titlebarClockShift.value - clockWidth / 2 - 8
 }
 let observer: ResizeObserver | undefined
 onMounted(() => {
@@ -177,8 +195,10 @@ watch(visible, (shown) => {
 })
 
 // The clock steps aside for a long breadcrumb trail; Portalus rides along.
+// The shift is the source of truth, so a plain re-place is enough - no
+// waiting for the clock's own transition to settle.
 watch(titlebarClockShift, () => {
-        void nextTick(place)
+        place()
 })
 onBeforeUnmount(() => {
         window.removeEventListener('resize', place)

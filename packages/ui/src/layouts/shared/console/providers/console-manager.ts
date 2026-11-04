@@ -26,6 +26,7 @@ export interface ConsoleManagerContext {
 	deleteDisabledTooltip?: string
 
 	shareDisabled?: Ref<boolean> | ComputedRef<boolean>
+	onCopyLog?: () => void
 
 	emptyStateType?: 'server' | 'instance'
 

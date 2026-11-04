@@ -49,11 +49,12 @@ const { formatMessage } = useVIntl()
 
 const messages = defineMessages({
 	liveLog: { id: 'app.instance.logs.live', defaultMessage: 'Live Log' },
+	logCopied: { id: 'app.instance.logs.copied', defaultMessage: 'Copied' },
 	unknownLog: { id: 'app.instance.logs.unknown-file', defaultMessage: 'Unknown' },
 })
 
 const client = injectModrinthClient()
-const { handleError } = injectNotificationManager()
+const { addNotification, handleError } = injectNotificationManager()
 const instancePage = injectInstancePage()
 const instanceId = instancePage.instanceId
 const {
@@ -205,6 +206,31 @@ const deleteDisabled = computed(() => {
 	return log.filename === 'latest.log' && instancePage.playing.value
 })
 
+/**
+ * The copy button puts the picked log on the clipboard at once - no menus,
+ * no dialogs. The live log copies what the console holds; a file log is read
+ * from the cache first, then from the disk.
+ */
+async function copySelectedLog() {
+	const log = selectedLog.value
+	let text = ''
+	if (!log || log.live) {
+		text = liveConsole.output.value.map((l) => l.text).join('\n')
+	} else {
+		text =
+			getHistoricalContent(log.filename) ??
+			(await get_output_by_filename(instanceId.value, log.log_type, log.filename).catch(() => null)) ??
+			''
+	}
+	if (!text.trim()) return
+	try {
+		await navigator.clipboard.writeText(text)
+		addNotification({ title: formatMessage(messages.logCopied), type: 'success' })
+	} catch (err) {
+		handleError(err)
+	}
+}
+
 async function deleteSelectedLog() {
 	const log = selectedLog.value
 	if (!log || log.live) return
@@ -226,6 +252,7 @@ provideConsoleManager({
 		void clearLive()
 	},
 	onDelete: deleteSelectedLog,
+	onCopyLog: () => void copySelectedLog(),
 	deleteDisabled,
 	deleteDisabledTooltip: 'Cannot delete latest.log while the instance is running',
 	shareDisabled: instancePage.offline,

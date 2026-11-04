@@ -2554,7 +2554,7 @@
 		"message": "Copied"
 	},
 	"app.instance.logs.copy-hint": {
-		"message": "Right-click to copy the log"
+		"message": "Copy log"
 	},
 	"app.project.install-button.installed-hint": {
 		"message": "Click to remove from the instance"
@@ -2576,5 +2576,17 @@
 	},
 	"app.instance.info.playtime.empty": {
 		"message": "No data yet - launch the game and a day-by-day graph will appear here"
+	},
+	"app.crash.use-ai": {
+		"message": "Use AI"
+	},
+	"app.crash.copy-file": {
+		"message": "Copy file"
+	},
+	"app.crash.copied": {
+		"message": "Copied"
+	},
+	"console.actions.copy": {
+		"message": "Copy"
 	}
 }

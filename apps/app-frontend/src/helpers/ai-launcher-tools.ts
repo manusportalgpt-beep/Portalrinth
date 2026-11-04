@@ -348,6 +348,44 @@ async function findContentItem(buildId: string, wanted: string) {
 	return found
 }
 
+/**
+ * Библиотеки-зависимости: на них держатся другие моды, и выключить или удалить
+ * такую при разборе краша — сломать сборку сильнее, чем был сам краш.
+ */
+const LIB_NAME_RE = /\b(lib|library|api|core|config|framework|kotlin)\b/i
+const LIB_NAME_PARTS = [
+	'geckolib',
+	'architectury',
+	'citadel',
+	'moonlight',
+	'collective',
+	'balm',
+	'bookshelf',
+	'clothconfig',
+	'owo-lib',
+	'puzzleslib',
+	'iceberg',
+	'curios',
+	'kotlinforforge',
+	'forgeconfig',
+	'nightconfig',
+	'azurelib',
+	'smartbrainlib',
+]
+const libWarned = new Set<string>()
+
+function looksLikeLibrary(item: { project?: { title?: string } | null; file_name: string }): boolean {
+	const title = item.project?.title ?? ''
+	const file = item.file_name ?? ''
+	const lowTitle = title.toLowerCase()
+	const lowFile = file.toLowerCase()
+	return (
+		LIB_NAME_RE.test(title) ||
+		LIB_NAME_RE.test(file) ||
+		LIB_NAME_PARTS.some((part) => lowTitle.includes(part) || lowFile.includes(part))
+	)
+}
+
 registerAiToolHandler(async (tool, args) => {
 	switch (tool) {
 		case 'instance_info': {
@@ -708,6 +746,18 @@ registerAiToolHandler(async (tool, args) => {
 				: /выкл|off|disable/i.test(stateRaw)
 					? false
 					: item.enabled === false
+			// Библиотека с зависимыми: первый вызов предупреждает и ничего
+			// не делает, повторный с теми же аргументами выполняет —
+			// решение взвешено дважды, а зависимости не пострадали молча.
+			const targetTitle = item.project?.title ?? item.file_name
+			if (!wantOn && looksLikeLibrary(item)) {
+				const key = `${build.id}::${item.file_path ?? item.file_name}`
+				if (!libWarned.has(key)) {
+					libWarned.add(key)
+					return `СТОП: «${targetTitle}» похоже на библиотеку — на таких модах держатся другие, и выключишь её — сломаешь их. Краш указывает на библиотеку? Значит, настоящий виновник — зависимый мод, который использует её не той версией: посмотри <<instance_mods|${build.name}>> и чини только его. Если игрок сам попросил выключить именно эту библиотеку — вызови ту же команду ещё раз, и я выполню.`
+				}
+				libWarned.delete(key)
+			}
 			try {
 				await toggle_disable_project(build.id, item.file_path ?? item.file_name, wantOn)
 				// Слово «выключил» стоит чего-то только тогда, когда состояние в
@@ -735,8 +785,16 @@ registerAiToolHandler(async (tool, args) => {
 			if (typeof build === 'string') return build
 			if (!modsRaw) return 'Формат: <<mod_delete|сборка::мод1;;мод2::да>>'
 			const names = modsRaw.split(';;').map((part) => part.trim()).filter(Boolean)
+			const libHits = names.filter(
+				(name) =>
+					LIB_NAME_RE.test(name) ||
+					LIB_NAME_PARTS.some((part) => name.toLowerCase().includes(part)),
+			)
+			const libNote = libHits.length
+				? ` ВНИМАНИЕ: ${libHits.join(', ')} похоже на библиотеку — на ней держатся другие моды, удаление сломает их. Предупреди игрока об этом прямо в вопросе.`
+				: ''
 			if (!confirmed) {
-				return `Удаление необратимо — сначала спроси игрока: <<ask_user|Удалить из «${build.name}»: ${names.join(', ')}? Файлы модов будут стёрты.::Да, удалить;;Отмена>> — и только после ответа «Да, удалить» вызови <<mod_delete|${buildRaw || build.name}::${modsRaw}::да>>. Без подтверждения я ничего не стираю.`
+				return `Удаление необратимо — сначала спроси игрока: <<ask_user|Удалить из «${build.name}»: ${names.join(', ')}? Файлы модов будут стёрты.::Да, удалить;;Отмена>> — и только после ответа «Да, удалить» вызови <<mod_delete|${buildRaw || build.name}::${modsRaw}::да>>. Без подтверждения я ничего не стираю.${libNote}`
 			}
 			const results: string[] = []
 			for (const name of names) {

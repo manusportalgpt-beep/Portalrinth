@@ -10,10 +10,12 @@ import {
 	CheckIcon,
 	ChevronDownIcon,
 	CodeIcon,
+	CopyIcon,
 	FolderOpenIcon,
 	InfoIcon,
 	IssuesIcon,
 	MemoryStickIcon,
+	MessagesSquareIcon,
 	PowerOffIcon,
 	SettingsIcon,
 	XIcon,
@@ -27,8 +29,11 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+import { queuedUserMessage } from '@/helpers/ai-assistant'
 import { edit, toggle_disable_project } from '@/helpers/instance'
+import { get_logs, get_output_by_filename } from '@/helpers/logs.js'
 import type { CrashFinding, CrashSeverity } from '@/helpers/portalrinth-crash'
 import { showInstanceInFolder } from '@/helpers/utils.js'
 
@@ -44,7 +49,8 @@ const props = defineProps<{
 const emit = defineEmits<{ dismiss: [] }>()
 
 const { formatMessage } = useVIntl()
-const { handleError } = injectNotificationManager()
+const { addNotification, handleError } = injectNotificationManager()
+const router = useRouter()
 
 /**
  * The settings tab Java and memory live on.
@@ -74,6 +80,9 @@ const messages = defineMessages({
 	openFolder: { id: 'app.crash.open-folder', defaultMessage: 'Open instance folder' },
 	dismiss: { id: 'app.crash.dismiss', defaultMessage: 'Dismiss' },
 	foundIn: { id: 'app.crash.found-in', defaultMessage: 'In {file}' },
+	useAi: { id: 'app.crash.use-ai', defaultMessage: 'Use AI' },
+	copyFile: { id: 'app.crash.copy-file', defaultMessage: 'Copy the file' },
+	copied: { id: 'app.crash.copied', defaultMessage: 'Copied' },
 
 	// One title and one fix per rule. A rule with nothing useful to suggest has
 	// no fix line rather than a filler one.
@@ -911,6 +920,56 @@ function runAction(finding: CrashFinding) {
 		void showInstanceInFolder(props.instanceId).catch(handleError)
 	}
 }
+
+/**
+ * Hands the whole reading to Portalus: the rules engine is one opinion, and
+ * the agent is the second - it re-checks the verdicts against the logs and
+ * does the fixing itself, without ever touching library mods.
+ */
+function useAi() {
+	const lines = props.findings.slice(0, 10).map((finding, index) => {
+		const evidence = finding.evidence.trim().split('\n').slice(0, 5).join(' | ').slice(0, 300)
+		const fix = fixOf(finding)
+		const head = `${index + 1}) [${finding.severity}] ${titleOf(finding)}`
+		const where = `Файл: ${finding.source_name}. Строки из лога: ${evidence}`
+		return fix ? `${head}\nКак читает лаунчер: ${fix}\n${where}` : `${head}\n${where}`
+	})
+	queuedUserMessage.value = [
+		`Лаунчер сам разобрал краш сборки (id: ${props.instanceId}) — это разбор первого ИИ-движка. Проверь его выводы сам по логам и почини сборку.`,
+		lines.join('\n'),
+		`Как чинить: сначала <<instance_logs|${props.instanceId}::краш>> и <<instance_logs|${props.instanceId}>> — убедись в виновнике сам. Библиотеки, на которых держатся другие моды (Fabric API, GeckoLib, Moonlight Lib и всё с Lib/API/Core/Config в имени), НЕ выключать и НЕ удалять — чини только зависимый мод. Починил — запусти <<launch_instance|${props.instanceId}>> и проверь, что краш ушёл.`,
+	].join('\n\n')
+	void router.push('/ai')
+}
+
+/**
+ * The copy icon beside a source file: its full text goes to the clipboard at
+ * once - no right-click, no dialogs. The file is read the same way the console
+ * reads it; whatever the rules captured stays the fallback.
+ */
+async function copyFindingFile(finding: CrashFinding) {
+	const logs = (await get_logs(props.instanceId, true).catch(() => [])) as {
+		filename: string
+		log_type: string
+	}[]
+	const entry =
+		logs.find((log) => log.filename === finding.source_name) ??
+		logs.find((log) => finding.source_name !== '' && log.filename.endsWith(finding.source_name))
+	const text =
+		(entry
+			? String(
+					(await get_output_by_filename(props.instanceId, entry.log_type, entry.filename).catch(() => '')) ??
+						'',
+				)
+			: '') || finding.evidence
+	if (!text.trim()) return
+	try {
+		await navigator.clipboard.writeText(text)
+		addNotification({ title: formatMessage(messages.copied), type: 'success' })
+	} catch (error) {
+		handleError(error as Error)
+	}
+}
 </script>
 
 <template>
@@ -943,15 +1002,21 @@ function runAction(finding: CrashFinding) {
 						{{ formatMessage(messages.gameSaid, { description: headline.values.description }) }}
 					</p>
 				</div>
-				<IconButton
-					v-if="!permanent"
-					v-tooltip="formatMessage(messages.dismiss)"
-					:label="formatMessage(messages.dismiss)"
-					type="quiet"
-					@click="emit('dismiss')"
-				>
-					<XIcon />
-				</IconButton>
+				<div class="flex shrink-0 items-center gap-2">
+					<Button type="colored" color="brand" size="sm" @click="useAi">
+						<MessagesSquareIcon aria-hidden="true" />
+						{{ formatMessage(messages.useAi) }}
+					</Button>
+					<IconButton
+						v-if="!permanent"
+						v-tooltip="formatMessage(messages.dismiss)"
+						:label="formatMessage(messages.dismiss)"
+						type="quiet"
+						@click="emit('dismiss')"
+					>
+						<XIcon />
+					</IconButton>
+				</div>
 			</header>
 
 			<TransitionGroup tag="ol" name="nm-list" appear class="m-0 flex list-none flex-col p-0">
@@ -969,12 +1034,23 @@ function runAction(finding: CrashFinding) {
 					<div class="flex min-w-0 flex-1 flex-col gap-1">
 						<div class="flex items-start justify-between gap-3">
 							<span class="font-semibold leading-snug text-contrast">{{ titleOf(finding) }}</span>
+							<div class="flex max-w-[40%] shrink-0 items-center gap-1">
 							<span
-								class="max-w-[40%] shrink-0 truncate rounded-full bg-surface-4 px-2 py-0.5 text-xs text-secondary"
+								class="min-w-0 truncate rounded-full bg-surface-4 px-2 py-0.5 text-xs text-secondary"
 								:title="finding.source_name"
 							>
 								{{ finding.source_name }}
 							</span>
+							<button
+								v-tooltip="formatMessage(messages.copyFile)"
+								type="button"
+								class="shrink-0 cursor-pointer border-0 bg-transparent p-0 text-secondary transition-colors hover:text-contrast"
+								:aria-label="formatMessage(messages.copyFile)"
+								@click="copyFindingFile(finding)"
+							>
+								<CopyIcon class="size-3.5" />
+							</button>
+						</div>
 						</div>
 						<p v-if="fixOf(finding)" class="m-0 text-sm leading-relaxed text-secondary">
 							{{ fixOf(finding) }}

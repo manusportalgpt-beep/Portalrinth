@@ -56,10 +56,12 @@
 					:show-delete="showDelete"
 					:delete-disabled="resolvedDeleteDisabled"
 					:delete-disabled-tooltip="ctx.deleteDisabledTooltip"
+					:show-copy="ctx.onCopyLog != null"
 					@clear="handleClear"
 					@share="handleShare"
 					@toggle-fullscreen="toggleFullscreen"
 					@delete="handleDelete"
+					@copy="ctx.onCopyLog?.()"
 				/>
 			</div>
 		</div>

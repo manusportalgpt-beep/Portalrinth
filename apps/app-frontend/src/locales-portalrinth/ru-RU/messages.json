@@ -4090,7 +4090,7 @@
 		"message": "Скопировано"
 	},
 	"app.instance.logs.copy-hint": {
-		"message": "ПКМ — скопировать лог"
+		"message": "Скопировать лог"
 	},
 	"app.project.install-button.installed-hint": {
 		"message": "Нажмите, чтобы удалить из сборки"
@@ -4112,5 +4112,17 @@
 	},
 	"app.instance.info.playtime.empty": {
 		"message": "Пока нет данных — запустите игру, и здесь появится график по дням"
+	},
+	"app.crash.use-ai": {
+		"message": "Использовать ИИ"
+	},
+	"app.crash.copy-file": {
+		"message": "Скопировать файл"
+	},
+	"app.crash.copied": {
+		"message": "Скопировано"
+	},
+	"console.actions.copy": {
+		"message": "Скопировать"
 	}
 }
