@@ -13,6 +13,7 @@ import {
 	searchWeb,
 } from './ai-assistant'
 import { describeBuild, loaderLabel } from './ai-build-info'
+import { setPendingConfirm } from './ai-pending-confirm'
 import { sandboxRead } from './ai-sandbox'
 import {
 	install_bulk_update_content,
@@ -793,24 +794,43 @@ registerAiToolHandler(async (tool, args) => {
 			const libNote = libHits.length
 				? ` ВНИМАНИЕ: ${libHits.join(', ')} похоже на библиотеку — на ней держатся другие моды, удаление сломает их. Предупреди игрока об этом прямо в вопросе.`
 				: ''
+			// Само удаление: по клику «Да, удалить» его выполняет отложенное
+			// подтверждение (минуя модель), повторный вызов с «::да» — тоже работает.
+			const deleteNow = async (): Promise<string> => {
+				const results: string[] = []
+				for (const name of names) {
+					const item = await findContentItem(build.id, name)
+					if (typeof item === 'string') {
+						results.push(`- ${name}: ${item}`)
+						continue
+					}
+					try {
+						await remove_project(build.id, item.file_path ?? item.file_name)
+						results.push(`- удалил «${item.project?.title ?? item.file_name}»`)
+					} catch (error) {
+						results.push(`- «${item.project?.title ?? item.file_name}»: ${String(error).slice(0, 160)}`)
+					}
+				}
+				return `Удаление в «${build.name}»:\n${results.join('\n')}`
+			}
 			if (!confirmed) {
-				return `Удаление необратимо — сначала спроси игрока: <<ask_user|Удалить из «${build.name}»: ${names.join(', ')}? Файлы модов будут стёрты.::Да, удалить;;Отмена>> — и только после ответа «Да, удалить» вызови <<mod_delete|${buildRaw || build.name}::${modsRaw}::да>>. Без подтверждения я ничего не стираю.${libNote}`
+				// Парковка: клик игрока по «Да, удалить» выполнит удаление сам,
+				// без нового хода модели — «Хорошо, удаляю» без дела исключено.
+				setPendingConfirm({
+					question: `Удалить из «${build.name}»: ${names.join(', ')}?`,
+					confirmOption: 'Да, удалить',
+					cancelOption: 'Отмена',
+					run: async (answer) => {
+						if (/отмен|нет|не надо|не нужно|cancel|^no/i.test(answer)) {
+							return `Отменил: ничего не стёрто — ${names.join(', ')} остаются в «${build.name}».`
+						}
+						return await deleteNow()
+					},
+				})
+				const toggles = names.map((name) => `<<mod_toggle|${buildRaw || build.name}::${name}::выкл>>`).join(' ')
+				return `Удаление необратимо, но сначала проверь, нельзя ли обойтись выключением: ${toggles} — это обратимо, файл остаётся в сборке и мод можно вернуть. Удаляй только когда это крайне необходимо: битый файл, дубль, ломающий загрузку, или игрок сам прямо велел стереть. Если удалять действительно нужно — спроси игрока: <<ask_user|Удалить из «${build.name}»: ${names.join(', ')}? Файлы модов будут стёрты.::Да, удалить;;Отмена>> — по клику «Да, удалить» лаунчер сам выполнит удаление и покажет итог, повторно вызывать mod_delete не нужно.${libNote}`
 			}
-			const results: string[] = []
-			for (const name of names) {
-				const item = await findContentItem(build.id, name)
-				if (typeof item === 'string') {
-					results.push(`- ${name}: ${item}`)
-					continue
-				}
-				try {
-					await remove_project(build.id, item.file_path ?? item.file_name)
-					results.push(`- удалил «${item.project?.title ?? item.file_name}»`)
-				} catch (error) {
-					results.push(`- «${item.project?.title ?? item.file_name}»: ${String(error).slice(0, 160)}`)
-				}
-			}
-			return `Удаление в «${build.name}»:\n${results.join('\n')}`
+			return await deleteNow()
 		}
 		case 'fandom':
 		case 'wiki':
