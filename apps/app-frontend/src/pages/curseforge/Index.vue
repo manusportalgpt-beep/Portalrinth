@@ -25,6 +25,7 @@ import {
 	VersionIcon,
 } from '@modrinth/assets'
 import {
+	BrowseInstallHeader,
 	Button,
 	commonMessages,
 	defineMessages,
@@ -62,6 +63,7 @@ import {
 import {
 	get as getInstance,
 	get_content_items,
+	getInstanceIconUrl,
 	get_linked_modpack_content,
 	get_projects as getInstanceProjects,
 	remove_project,
@@ -90,6 +92,10 @@ const messages = defineMessages({
 		defaultMessage: 'Open on CurseForge',
 	},
 	moreOptions: { id: 'app.project.more-options', defaultMessage: 'More options' },
+	backToInstance: {
+		id: 'app.instance.navigation.back-to-instance',
+		defaultMessage: 'Back to instance',
+	},
 	installedHint: {
 		id: 'app.project.install-button.installed-hint',
 		defaultMessage: 'Нажмите, чтобы удалить из сборки',
@@ -183,6 +189,25 @@ function handleInstallClick() {
 	}
 	install(null)
 }
+
+/*
+ * Coming from an instance, the page opens in its install context: the same
+ * header strip a Modrinth project shows — round back arrow, the build's
+ * icon and «Установка контента • Minecraft … • loader» — instead of the
+ * compact instance strip.
+ */
+const projectInstallContext = computed(() => {
+	if (!instance.value) return null
+	return {
+		name: instance.value.name,
+		loader: instance.value.loader,
+		gameVersion: instance.value.game_version,
+		iconSrc: getInstanceIconUrl(instance.value.icon_path),
+		backUrl: `/instance/${encodeURIComponent(instance.value.id)}`,
+		backLabel: formatMessage(messages.backToInstance),
+		heading: formatMessage(commonMessages.installingContentLabel),
+	}
+})
 
 async function refreshInstance() {
 	if (!instanceId.value) {
@@ -505,7 +530,13 @@ async function install(fileId: string | null = null) {
 			</div>
 		</Teleport>
 		<div v-if="headerProject" class="flex flex-col gap-4 p-6">
-			<InstanceIndicator v-if="instance" :instance="instance" />
+			<div
+				v-if="projectInstallContext"
+				class="browse-install-header sticky top-0 z-20 -mx-6 -mt-6 rounded-tl-[--radius-xl] border-0 border-b border-solid bg-surface-1 pl-3 pr-[2.5rem] py-4 border-surface-5"
+			>
+				<BrowseInstallHeader :install-context="projectInstallContext" />
+			</div>
+			<InstanceIndicator v-else-if="instance" :instance="instance" />
 			<ProjectPageHeader :project="headerProject">
 				<template #actions>
 					<Transition name="install-remove-slide">
@@ -530,6 +561,7 @@ async function install(fileId: string | null = null) {
 						size="xl"
 						native-type="button"
 						:disabled="installing"
+						:class="installed ? 'installed-quiet' : ''"
 						@click="handleInstallClick"
 					>
 						<SpinnerIcon v-if="installing" class="animate-spin" />
@@ -593,6 +625,13 @@ async function install(fileId: string | null = null) {
 .install-remove-slide-leave-to {
 	opacity: 0;
 	transform: translateX(0.75rem);
+}
+
+/* «Установлено» тихое, пока курсор не нашёл его: полупрозрачный чип,
+ * при наведении — плотная фирменная кнопка. */
+.installed-quiet:not(:hover) {
+	background: color-mix(in srgb, var(--color-brand) 26%, transparent) !important;
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-brand) 40%, transparent) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

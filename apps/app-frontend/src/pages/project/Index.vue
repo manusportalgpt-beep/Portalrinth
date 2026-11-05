@@ -170,6 +170,7 @@
 								size="xl"
 								native-type="button"
 								:disabled="installButtonLoading || (installButtonInstalled && serverProjectInstallContext)"
+						:class="installButtonInstalled && !serverProjectInstallContext ? 'installed-quiet' : ''"
 								@click="handleInstallClick"
 							>
 								<component :is="installButtonIcon" :class="installButtonIconClass" />
@@ -1134,6 +1135,12 @@ const handleRightClick = (event) => {
 .install-remove-slide-leave-to {
 	opacity: 0;
 	transform: translateX(0.75rem);
+}
+
+/* «Установлено» тихое, пока курсор не нашёл его. */
+.installed-quiet:not(:hover) {
+	background: color-mix(in srgb, var(--color-brand) 26%, transparent) !important;
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-brand) 40%, transparent) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
