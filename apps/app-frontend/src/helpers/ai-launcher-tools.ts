@@ -5,6 +5,9 @@
  * sandbox. Registered once from App.vue; every result is a short plain text
  * the model can act on, cards ride along as markers.
  */
+import type { ContentItem } from '@modrinth/ui'
+import { invoke } from '@tauri-apps/api/core'
+import * as fs from '@tauri-apps/plugin-fs'
 import {
 	noteAgentThought,
 	playerTookOver,
@@ -14,7 +17,7 @@ import {
 } from './ai-assistant'
 import { describeBuild, loaderLabel } from './ai-build-info'
 import { setPendingConfirm } from './ai-pending-confirm'
-import { sandboxRead } from './ai-sandbox'
+import { sandboxAbsolutePath, sandboxRead } from './ai-sandbox'
 import {
 	install_bulk_update_content,
 	install_create_instance,
@@ -26,6 +29,7 @@ import {
 import {
 	get,
 	get_content_items,
+	get_full_path,
 	kill,
 	list,
 	refresh_content_updates,
@@ -374,6 +378,174 @@ const LIB_NAME_PARTS = [
 	'smartbrainlib',
 ]
 const libWarned = new Set<string>()
+// ---- Зависимости: граф Modrinth и манифесты jar -----------------------------
+
+interface ModrinthDep {
+	project_id?: string | null
+	version_id?: string | null
+	dependency_type?: string | null
+}
+
+interface ModrinthVersionFull {
+	id: string
+	dependencies?: ModrinthDep[]
+}
+
+const DEP_LABELS: Record<string, string> = {
+	required: 'обязательно',
+	optional: 'опционально',
+	embedded: 'встроено',
+	incompatible: 'НЕСОВМЕСТИМО',
+}
+
+/** Modrinth batch: полные версии по id, пачками по 100 (лимит API). */
+async function fetchModrinthVersions(ids: string[]): Promise<ModrinthVersionFull[]> {
+	const out: ModrinthVersionFull[] = []
+	for (let index = 0; index < ids.length; index += 100) {
+		const chunk = ids.slice(index, index + 100)
+		const response = await proxiedFetch(
+			`https://api.modrinth.com/v2/versions?ids=${encodeURIComponent(JSON.stringify(chunk))}`,
+			{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(15000) },
+		)
+		if (!response.ok) continue
+		const data = (await response.json()) as ModrinthVersionFull[]
+		if (Array.isArray(data)) out.push(...data)
+	}
+	return out
+}
+
+/** Modrinth batch: названия проектов по id — для зависимостей вне сборки. */
+async function fetchModrinthTitles(ids: string[]): Promise<Map<string, string>> {
+	const out = new Map<string, string>()
+	for (let index = 0; index < ids.length; index += 100) {
+		const chunk = ids.slice(index, index + 100)
+		try {
+			const response = await proxiedFetch(
+				`https://api.modrinth.com/v2/projects?ids=${encodeURIComponent(JSON.stringify(chunk))}`,
+				{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(15000) },
+			)
+			if (!response.ok) continue
+			const data = (await response.json()) as { id: string; title: string }[]
+			for (const project of Array.isArray(data) ? data : []) out.set(project.id, project.title)
+		} catch {
+			/* чужие названия — приятное дополнение, не обязанность */
+		}
+	}
+	return out
+}
+
+/** Установленные моды, чья версия Modrinth ТРЕБУЕТ целевой проект: при
+ * выключении или удалении цели сломаются именно они. */
+async function requiredDependents(items: ContentItem[], target: ContentItem): Promise<string[]> {
+	const targetProjectId = target.project?.id
+	if (!targetProjectId) return []
+	const versionIds = [...new Set(items.map((item) => item.version?.id).filter(Boolean) as string[])]
+	if (versionIds.length === 0) return []
+	const versions = await fetchModrinthVersions(versionIds).catch(() => [])
+	if (versions.length === 0) return []
+	const selfKey = target.file_path ?? target.file_name
+	const dependents: string[] = []
+	for (const version of versions) {
+		const owner = items.find((item) => item.version?.id === version.id)
+		if (!owner || (owner.file_path ?? owner.file_name) === selfKey) continue
+		if (
+			version.dependencies?.some(
+				(dep) =>
+					dep.project_id === targetProjectId &&
+					((dep.dependency_type ?? 'required') as string) === 'required',
+			)
+		) {
+			dependents.push(owner.project?.title ?? owner.file_name)
+		}
+	}
+	return dependents
+}
+
+/** Свободный матч id зависимости с установленными модами: "geckolib"
+ * находит geckolib-forge-1.20.1-4.4.9.jar. Короткие id — шум, пропускаем. */
+function matchDepToItems(depId: string, items: ContentItem[]): ContentItem[] {
+	const needle = depId.toLowerCase().replace(/[^a-z0-9]+/g, '')
+	if (needle.length < 4) return []
+	return items.filter((item) => {
+		const hay = `${item.project?.title ?? ''} ${item.file_name}`.toLowerCase().replace(/[^a-z0-9]+/g, '')
+		return hay.includes(needle)
+	})
+}
+
+/** Что заявляет сам jar мода: вскрываем его во временную папку песочницы,
+ * читаем fabric.mod.json / quilt.mod.json / mods.toml, убираем за собой. */
+async function jarDependencies(
+	jarPath: string,
+): Promise<{ id: string; deps: { id: string; kind: string }[] } | string> {
+	let tmp = ''
+	try {
+		tmp = await sandboxAbsolutePath('.jardeps')
+		await invoke('plugin:portalrinth-archiver|archiver_unpack', { archive: jarPath, destDir: tmp })
+	} catch (error) {
+		if (tmp) await fs.remove(tmp, { recursive: true }).catch(() => {})
+		return `не смог вскрыть jar: ${String(error).slice(0, 140)}`
+	}
+	const sep = tmp.includes('\\') ? '\\' : '/'
+	const read = async (rel: string): Promise<string | null> => {
+		try {
+			return await fs.readTextFile(`${tmp}${sep}${rel}`)
+		} catch {
+			return null
+		}
+	}
+	const deps: { id: string; kind: string }[] = []
+	let id = ''
+	const fabric = await read('fabric.mod.json')
+	if (fabric) {
+		try {
+			const meta = JSON.parse(fabric) as {
+				id?: string
+				provides?: string[]
+				depends?: Record<string, string>
+				recommends?: Record<string, string>
+				suggests?: Record<string, string>
+			}
+			id = meta.id ?? ''
+			for (const key of Object.keys(meta.depends ?? {})) deps.push({ id: key, kind: 'обязательно' })
+			for (const key of Object.keys(meta.recommends ?? {})) deps.push({ id: key, kind: 'опционально' })
+			for (const key of Object.keys(meta.suggests ?? {})) deps.push({ id: key, kind: 'опционально' })
+			for (const alias of meta.provides ?? []) deps.push({ id: alias, kind: 'алиас' })
+		} catch {
+			/* битый манифест — всё ещё jar */
+		}
+	}
+	if (!fabric) {
+		const quilt = await read('quilt.mod.json')
+		if (quilt) {
+			try {
+				const meta = JSON.parse(quilt) as {
+					quilt_loader?: { id?: string; depends?: ({ id?: string } | string)[] }
+				}
+				id = meta.quilt_loader?.id ?? id
+				for (const dep of meta.quilt_loader?.depends ?? []) {
+					const depId = typeof dep === 'string' ? dep : dep.id
+					if (depId) deps.push({ id: depId, kind: 'обязательно' })
+				}
+			} catch {
+				/* ignore */
+			}
+		}
+	}
+	if (!fabric && deps.length === 0) {
+		const toml = (await read('META-INF/mods.toml')) ?? (await read('META-INF/neoforge.mods.toml'))
+		if (toml) {
+			id = /(?:^|\n)\s*modId\s*=\s*"([^"]+)"/.exec(toml)?.[1] ?? id
+			for (const block of toml.split(/\[\[dependencies\.[^\]]*\]\]/).slice(1)) {
+				const depId = /modId\s*=\s*"([^"]+)"/.exec(block)?.[1]
+				if (!depId) continue
+				const required = /mandatory\s*=\s*true|type\s*=\s*"required"/i.test(block)
+				deps.push({ id: depId, kind: required ? 'обязательно' : 'опционально' })
+			}
+		}
+	}
+	await fs.remove(tmp, { recursive: true }).catch(() => {})
+	return { id, deps }
+}
 
 function looksLikeLibrary(item: { project?: { title?: string } | null; file_name: string }): boolean {
 	const title = item.project?.title ?? ''
@@ -724,13 +896,13 @@ registerAiToolHandler(async (tool, args) => {
 					const state = item.enabled === false ? 'ВЫКЛ' : 'вкл'
 					const version = item.version?.version_number ?? ''
 					const mark = item.has_update ? ' [есть обновление]' : ''
-					return `- ${kind} «${item.project?.title ?? item.file_name}» ${version} — ${state}${mark}`
+					return `- ${kind} «${item.project?.title ?? item.file_name}» ${version} — ${state}${mark}${looksLikeLibrary(item) ? ' [библиотека]' : ''}`
 				})
 				const tail =
 					filtered.length > 200
 						? `\n…и ещё ${filtered.length - 200} — сузь фильтр: <<instance_mods|${build.name}::часть имени>>`
 						: ''
-				return `Контент «${build.name}»${filter ? ` (фильтр: «${filterRaw}»)` : ''} — ${filtered.length} из ${items.length}:\n${lines.join('\n')}${tail}\nОбновить названные: <<mod_update|сборка::мод1;;мод2>>. Выключить/включить — <<mod_toggle|…>>, удалить — <<mod_delete|…>>.`
+				return `Контент «${build.name}»${filter ? ` (фильтр: «${filterRaw}»)` : ''} — ${filtered.length} из ${items.length}:\n${lines.join('\n')}${tail}\nОбновить названные: <<mod_update|сборка::мод1;;мод2>>. Выключить/включить — <<mod_toggle|…>>, удалить — <<mod_delete|…>>. Зависимости мода — <<mod_deps|сборка::мод>>.`
 			} catch (error) {
 				return `Список контента не получился: ${String(error).slice(0, 300)}`
 			}
@@ -747,17 +919,25 @@ registerAiToolHandler(async (tool, args) => {
 				: /выкл|off|disable/i.test(stateRaw)
 					? false
 					: item.enabled === false
-			// Библиотека с зависимыми: первый вызов предупреждает и ничего
+			// Зависимость других модов: первый вызов предупреждает и ничего
 			// не делает, повторный с теми же аргументами выполняет —
-			// решение взвешено дважды, а зависимости не пострадали молча.
+			// решение взвешено дважды, а зависимые не пострадали молча.
 			const targetTitle = item.project?.title ?? item.file_name
-			if (!wantOn && looksLikeLibrary(item)) {
-				const key = `${build.id}::${item.file_path ?? item.file_name}`
-				if (!libWarned.has(key)) {
-					libWarned.add(key)
-					return `СТОП: «${targetTitle}» похоже на библиотеку — на таких модах держатся другие, и выключишь её — сломаешь их. Краш указывает на библиотеку? Значит, настоящий виновник — зависимый мод, который использует её не той версией: посмотри <<instance_mods|${build.name}>> и чини только его. Если игрок сам попросил выключить именно эту библиотеку — вызови ту же команду ещё раз, и я выполню.`
+			if (!wantOn) {
+				const items = await get_content_items(build.id).catch(() => [])
+				const dependents =
+					items.length > 1 && item.project?.id ? await requiredDependents(items, item) : []
+				if (dependents.length > 0 || looksLikeLibrary(item)) {
+					const key = `${build.id}::${item.file_path ?? item.file_name}`
+					if (!libWarned.has(key)) {
+						libWarned.add(key)
+						const holders = dependents.length
+							? ` На нём держатся (${dependents.length}): ${dependents.slice(0, 12).join(', ')} — выключишь его, сломаются ОНИ, и сборка станет хуже, чем была до проблемы.`
+							: ' По имени похоже на библиотеку: на таких модах обычно держатся другие.'
+						return `СТОП: выключение «${targetTitle}» сломает зависимые моды.${holders} Краш указывает на библиотеку или зависимость? Настоящий виновник — мод, который использует её не той версией: проверь <<mod_deps|${build.name}::${targetTitle}>> и чини только виновника (обнови, выключи или замени ЕГО). Если игрок сам прямо попросил выключить именно этот мод — вызови ту же команду ещё раз, и я выполню.`
+					}
+					libWarned.delete(key)
 				}
-				libWarned.delete(key)
 			}
 			try {
 				await toggle_disable_project(build.id, item.file_path ?? item.file_name, wantOn)
@@ -831,6 +1011,117 @@ registerAiToolHandler(async (tool, args) => {
 				return `Удаление необратимо, но сначала проверь, нельзя ли обойтись выключением: ${toggles} — это обратимо, файл остаётся в сборке и мод можно вернуть. Удаляй только когда это крайне необходимо: битый файл, дубль, ломающий загрузку, или игрок сам прямо велел стереть. Если удалять действительно нужно — спроси игрока: <<ask_user|Удалить из «${build.name}»: ${names.join(', ')}? Файлы модов будут стёрты.::Да, удалить;;Отмена>> — по клику «Да, удалить» лаунчер сам выполнит удаление и покажет итог, повторно вызывать mod_delete не нужно.${libNote}`
 			}
 			return await deleteNow()
+		}
+		case 'mod_deps': {
+			const [buildRaw = '', modRaw = ''] = args.split('::').map((part) => part.trim())
+			const build = await resolveBuild(buildRaw)
+			if (typeof build === 'string') return build
+			if (!modRaw) return 'Формат: <<mod_deps|сборка::мод>>'
+			const items = await get_content_items(build.id).catch(() => [])
+			if (items.length === 0) return `В «${build.name}» контента нет — зависимости смотреть не у чего.`
+			const lower = modRaw.toLowerCase()
+			const target =
+				items.find((item) => (item.project?.title ?? '').toLowerCase() === lower) ??
+				items.find((item) => (item.project?.title ?? '').toLowerCase().includes(lower)) ??
+				items.find((item) => item.file_name.toLowerCase() === lower) ??
+				items.find((item) => item.file_name.toLowerCase().includes(lower))
+			if (!target) {
+				return `Не нашёл «${modRaw}» в «${build.name}». Контент: ${items
+					.slice(0, 30)
+					.map((item) => item.project?.title ?? item.file_name)
+					.join(', ')}`
+			}
+			const targetTitle = target.project?.title ?? target.file_name
+			const projectTitleOf = new Map<string, string>()
+			for (const item of items) {
+				if (item.project?.id && item.project?.title) projectTitleOf.set(item.project.id, item.project.title)
+			}
+			const versionDeps = new Map<string, ModrinthDep[]>()
+			const versionIds = [...new Set(items.map((item) => item.version?.id).filter(Boolean) as string[])]
+			if (versionIds.length > 0) {
+				const versions = await fetchModrinthVersions(versionIds).catch(() => [])
+				for (const version of versions) versionDeps.set(version.id, version.dependencies ?? [])
+			}
+			const unknownProjectIds = new Set<string>()
+			for (const deps of versionDeps.values()) {
+				for (const dep of deps) {
+					if (dep.project_id && !projectTitleOf.has(dep.project_id)) unknownProjectIds.add(dep.project_id)
+				}
+			}
+			if (unknownProjectIds.size > 0) {
+				for (const [key, title] of await fetchModrinthTitles([...unknownProjectIds])) {
+					projectTitleOf.set(key, title)
+				}
+			}
+			const requires: string[] = []
+			const seenDeps = new Set<string>()
+			const targetVersionId = target.version?.id
+			if (targetVersionId && versionDeps.has(targetVersionId)) {
+				for (const dep of versionDeps.get(targetVersionId) ?? []) {
+					const name = dep.project_id ? (projectTitleOf.get(dep.project_id) ?? dep.project_id) : null
+					if (!name || seenDeps.has(name)) continue
+					seenDeps.add(name)
+					const label = DEP_LABELS[dep.dependency_type ?? 'required'] ?? dep.dependency_type ?? 'зависимость'
+					requires.push(`${name} (${label})`)
+				}
+			}
+			let metaNote = ''
+			if (requires.length === 0) {
+				// Данных Modrinth нет (версия не привязана или сеть молчит) —
+				// спросим сам jar: fabric.mod.json / mods.toml знают точно.
+				const base = (await get_full_path(build.id).catch(() => '')).replace(/[\\/]+$/, '')
+				const rel = (target.file_path ?? target.file_name).replace(/\\/g, '/').replace(/^\//, '')
+				if (base && rel && /\.jar$/i.test(rel)) {
+					const meta = await jarDependencies(`${base}/${rel}`)
+					if (typeof meta === 'string') {
+						metaNote = ` (метаданные jar: ${meta})`
+					} else {
+						for (const dep of meta.deps) {
+							if (dep.kind === 'алиас' || seenDeps.has(dep.id)) continue
+							seenDeps.add(dep.id)
+							const hits = matchDepToItems(dep.id, items)
+							const name = hits.length > 0 ? (hits[0].project?.title ?? hits[0].file_name) : dep.id
+							if (seenDeps.has(name)) continue
+							seenDeps.add(name)
+							const where = hits.length > 0 ? '' : ' — в сборке НЕ НАЙДЕН, скорее всего не хватает мода'
+							requires.push(`${name} (${dep.kind}${where})`)
+						}
+						if (meta.id) metaNote = ` (по метаданным jar это мод «${meta.id}»)`
+					}
+				}
+			}
+			const requiredBy: string[] = []
+			const targetProjectId = target.project?.id
+			if (targetProjectId) {
+				for (const item of items) {
+					if ((item.file_path ?? item.file_name) === (target.file_path ?? target.file_name)) continue
+					const deps = item.version?.id ? versionDeps.get(item.version.id) : undefined
+					if (!deps) continue
+					const dep = deps.find((entry) => entry.project_id === targetProjectId)
+					if (!dep) continue
+					const label =
+						dep.dependency_type && dep.dependency_type !== 'required'
+							? ` (${DEP_LABELS[dep.dependency_type] ?? dep.dependency_type})`
+							: ''
+					requiredBy.push(`${item.project?.title ?? item.file_name}${label}`)
+				}
+			}
+			const parts = [`Зависимости «${targetTitle}» в «${build.name}»${metaNote}:`]
+			parts.push(
+				requires.length
+					? `Требует: ${requires.join(', ')}`
+					: 'Требует: ничего обязательного по доступным данным (Modrinth или манифест jar).',
+			)
+			parts.push(
+				requiredBy.length
+					? `На нём держатся (${requiredBy.length}): ${requiredBy.join(', ')} — выключишь или удалишь его, сломаются ОНИ.`
+					: 'На нём никто в сборке не держится (по данным Modrinth) — выключение или удаление другим модам не навредит.',
+			)
+			if (looksLikeLibrary(target)) {
+				parts.push('Похоже на библиотеку — такие моды обычно нужны многим; сверяйся со списком «на нём держатся».')
+			}
+			parts.push('Правило: требуемая зависимость чужого мода — не трогай её; находи и чини зависимого виновника.')
+			return parts.join('\n')
 		}
 		case 'fandom':
 		case 'wiki':

@@ -7,6 +7,7 @@
  * Registered after ai-assistant's own handlers, so the persistent versions
  * of launcher_set_accent and launcher_set_theme here win.
  */
+import { invoke } from '@tauri-apps/api/core'
 import * as fs from '@tauri-apps/plugin-fs'
 
 import {
@@ -783,13 +784,58 @@ async function buildFiles(raw: string): Promise<string> {
 		.join('\n')
 }
 
+/** Распаковывает архив, живущий ВНУТРИ сборки (ресурс-пак, шейдер-пак,
+ * мод .jar), в песочницу — так правятся текстуры и шейдеры уже существующих
+ * паков: распаковал, поправил, собрал, поставил поверх. */
+async function buildUnpack(raw: string): Promise<string> {
+	const [buildRaw = '', relRaw = ''] = raw.split('::').map((part) => part.trim())
+	if (!relRaw) return 'Формат: <<instance_unpack|сборка::путь/к/архиву.zip>>'
+	if (!/\.(zip|jar|7z)$/i.test(relRaw)) return 'Распаковать можно только .zip, .jar или .7z'
+	const build = await pickBuild(buildRaw)
+	if (typeof build === 'string') return build
+	let archive = ''
+	try {
+		archive = insideBuild(await get_full_path(build.id), relRaw)
+	} catch {
+		return 'Путь не может выходить из папки сборки'
+	}
+	try {
+		await fs.stat(archive)
+	} catch {
+		return `Нет файла ${relRaw} в сборке ${buildLink(build)} — посмотри папки: <<instance_files|${build.name}>>`
+	}
+	const fileName = relRaw.replace(/\\/g, '/').split('/').pop() ?? 'archive'
+	const folder = fileName.replace(/\.(zip|jar|7z)$/i, '').replace(/[^a-zA-Z0-9_-]+/g, '_') || 'archive'
+	const destRel = `unpacked/${folder}`
+	const dest = await sandboxAbsolutePath(destRel)
+	await fs.remove(dest, { recursive: true }).catch(() => {})
+	try {
+		await invoke('plugin:portalrinth-archiver|archiver_unpack', { archive, destDir: dest })
+	} catch (error) {
+		return `Распаковка не удалась: ${String(error).slice(0, 200)}`
+	}
+	const entries = await fs.readDir(dest).catch(() => [])
+	return [
+		`Распаковал ${fileName} из ${buildLink(build)} в песочницу: ${destRel} (верхний уровень: ${entries
+			.slice(0, 15)
+			.map((entry) => entry.name)
+			.join(', ')})`,
+		`Дальше: правь файлы (<<sandbox_read|...>>, <<sandbox_write|файл::текст>>, картинки — gen_image), собери обратно (<<sandbox_pack|${folder}.zip::${destRel}>>) и поставь в сборку (<<install_to_instance|${folder}.zip::тип::${build.name}>>).`,
+		'Живой клиент: ресурс-пак перечитается по F3+T без перезапуска игры, шейдер — когда игрок заново выберет пак в настройках шейдеров, конфиги и моды — после перезапуска игры.',
+	].join('\n')
+}
+
 async function buildRead(raw: string): Promise<string> {
 	const [buildRaw = '', relRaw = ''] = raw.split('::').map((part) => part.trim())
 	if (!relRaw) return 'Формат: <<instance_read|сборка::путь (например config/sodium-options.json)>>'
 	const build = await pickBuild(buildRaw)
 	if (typeof build === 'string') return build
 	const path = insideBuild(await get_full_path(build.id), relRaw)
-	if (/\.(jar|zip|png|jpe?g|dat|mca|7z|exe)$/i.test(relRaw)) {
+	if (/\.(jar|zip|7z)$/i.test(relRaw)) {
+		const info = await fs.stat(path)
+		return `${relRaw} — архив, ${Math.round((info.size ?? 0) / 1024)} КБ. Внутрь смотреть так: <<instance_unpack|${buildRaw || build.name}::${relRaw}>>`
+	}
+	if (/\.(png|jpe?g|dat|mca|exe)$/i.test(relRaw)) {
 		const info = await fs.stat(path)
 		return `${relRaw} — двоичный файл, ${Math.round((info.size ?? 0) / 1024)} КБ; читать его как текст бессмысленно`
 	}
@@ -854,6 +900,8 @@ registerAiToolHandler(async (tool, args) => {
 				return await buildWorlds(args)
 			case 'instance_write':
 				return await buildWrite(args)
+			case 'instance_unpack':
+				return await buildUnpack(args)
 		}
 	} catch (error) {
 		return `Не получилось: ${String(error).slice(0, 240)}`
