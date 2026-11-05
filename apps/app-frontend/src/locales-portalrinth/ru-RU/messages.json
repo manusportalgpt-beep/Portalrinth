@@ -2187,10 +2187,10 @@
 		"message": "Использовать {color}"
 	},
 	"app.features.browse.scroll-pages.title": {
-		"message": "Продлённые страницы"
+		"message": "Без страниц"
 	},
 	"app.features.browse.scroll-pages.description": {
-		"message": "Список результатов - это одна длинная прокрутка, которая подгружается по мере прокрутки, а не страницы с номерами внизу."
+		"message": "Список результатов вовсе без страниц: одна длинная лента, которая сама подгружается, когда прокручиваешь вниз."
 	},
 	"app.features.browse.scroll-pages.scope.off": {
 		"message": "Выключено"
@@ -4124,5 +4124,35 @@
 	},
 	"console.actions.copy": {
 		"message": "Скопировать"
+	},
+	"app.project.install-context.back-to-browse": {
+		"message": "Назад в Discover"
+	},
+	"noctrinth.settings.java-provider.title": {
+		"message": "Откуда скачивать Java"
+	},
+	"noctrinth.settings.java-provider.description": {
+		"message": "Откуда лаунчер берёт Java, когда сборке нужна версия, которой нет на компьютере. Каждая загрузка сверяется с контрольной суммой, которую публикует источник."
+	},
+	"noctrinth.settings.java-provider.auto": {
+		"message": "Автоматически"
+	},
+	"noctrinth.settings.java-provider.auto-hint": {
+		"message": "Пробует по очереди Azul, затем Temurin, затем Temurin с GitHub, затем Mojang, затем Mojang через зеркало BMCLAPI — и останавливается на первом источнике, который отвечает. GitHub обычно доступен даже там, где другие источники заблокированы."
+	},
+	"noctrinth.settings.java-provider.azul": {
+		"message": "Azul Zulu"
+	},
+	"noctrinth.settings.java-provider.temurin": {
+		"message": "Eclipse Temurin"
+	},
+	"noctrinth.settings.java-provider.temurin-github": {
+		"message": "Eclipse Temurin с GitHub"
+	},
+	"noctrinth.settings.java-provider.mojang": {
+		"message": "Mojang"
+	},
+	"noctrinth.settings.java-provider.mojang-mirror": {
+		"message": "Mojang через BMCLAPI (стороннее зеркало)"
 	}
 }

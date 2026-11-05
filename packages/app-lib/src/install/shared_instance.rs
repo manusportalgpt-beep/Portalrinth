@@ -1050,7 +1050,9 @@ async fn install_shared_instance_external_file(
         )));
     }
 
-    let response = REQWEST_CLIENT.get(&file.url).send().await?;
+    let response =
+        crate::install::control::download_step(REQWEST_CLIENT.get(&file.url).send())
+            .await??;
 
     if !response.status().is_success() {
         bail!(
@@ -1161,7 +1163,9 @@ async fn install_shared_instance_file(
         return Ok(());
     }
 
-    let response = REQWEST_CLIENT.get(&file.url).send().await?;
+    let response =
+        crate::install::control::download_step(REQWEST_CLIENT.get(&file.url).send())
+            .await??;
     if !response.status().is_success() {
         bail!(
             "shared instance file download failed with status {}",

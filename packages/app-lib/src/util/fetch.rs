@@ -1069,7 +1069,8 @@ async fn fetch_advanced_with_target(
 
     for attempt in 1..=(FETCH_ATTEMPTS + 1) {
         if is_api_url {
-            GLOBAL_API_RATE_LIMIT.wait_turn().await?;
+            crate::install::control::download_step(GLOBAL_API_RATE_LIMIT.wait_turn())
+                .await??;
         }
 
         if let Some(fence_key) = fence_key

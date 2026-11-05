@@ -51,12 +51,12 @@ const queryClient = useQueryClient()
 const messages = defineMessages({
 	scrollPagesTitle: {
 		id: 'app.features.browse.scroll-pages.title',
-		defaultMessage: 'Long pages',
+		defaultMessage: 'Pageless',
 	},
 	scrollPagesDescription: {
 		id: 'app.features.browse.scroll-pages.description',
 		defaultMessage:
-			'The list of results is one long scroll that loads as you go down, instead of pages with a number under them.',
+			'The result list has no pages at all: one long scroll that keeps loading as you go down. Turned off, the usual numbered pages are back.',
 	},
 	scrollScopeOff: {
 		id: 'app.features.browse.scroll-pages.scope.off',

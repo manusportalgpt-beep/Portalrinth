@@ -191,6 +191,23 @@ fn canceled() -> crate::Error {
     crate::ErrorKind::InputError("install was canceled".to_string()).into()
 }
 
+/// Waits for a shared resource - a lock, a semaphore, a rate-limit slot -
+/// without ignoring a cancel: a job stuck behind somebody else's permit ends
+/// the moment cancel is asked for, instead of hanging on «Canceling…» until
+/// the holder lets go on its own.
+pub(crate) async fn wait_resource<F: std::future::Future>(
+    future: F,
+) -> crate::Result<F::Output> {
+    let Ok(control) = CURRENT_INSTALL.try_with(Clone::clone) else {
+        return Ok(future.await);
+    };
+    tokio::select! {
+        biased;
+        () = control.canceled() => Err(canceled()),
+        output = future => Ok(output),
+    }
+}
+
 pub(crate) async fn download_step<F: std::future::Future>(
     future: F,
 ) -> crate::Result<F::Output> {

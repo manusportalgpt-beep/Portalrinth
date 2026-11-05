@@ -29,7 +29,8 @@ impl ContentStore {
             )
         })?;
         validate_digest(sha512, 128)?;
-        let _acquisition = self.download_lock(sha512).lock().await;
+        let _acquisition =
+            crate::install::control::wait_resource(self.download_lock(sha512).lock()).await?;
         if let Some(stored_file) = self.lookup(Some(sha512), size).await? {
             return Ok(GetFileResult {
                 stored_file,
@@ -113,8 +114,9 @@ impl ContentStore {
             size,
             sha512: hash,
         } = staged;
-        let guard = self.lease().await;
-        let _publication = self.publish_lock(&hash).lock().await;
+        let guard = crate::install::control::wait_resource(self.lease()).await?;
+        let _publication =
+            crate::install::control::wait_resource(self.publish_lock(&hash).lock()).await?;
         if let Some(existing) = self
             .lookup_with_guard(Some(&hash), Some(size), guard.clone())
             .await?

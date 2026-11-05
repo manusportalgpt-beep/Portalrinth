@@ -22,14 +22,14 @@ function read(): { scope: BrowseScrollScope; pageSize: number } {
 		const scope =
 			cached?.scope === 'off' || cached?.scope === 'discover' || cached?.scope === 'both'
 				? cached.scope
-				: 'discover'
+				: 'off'
 		const pageSize =
 			typeof cached?.pageSize === 'number' && BROWSE_PAGE_SIZES.includes(cached.pageSize)
 				? cached.pageSize
 				: 20
 		return { scope, pageSize }
 	} catch {
-		return { scope: 'discover', pageSize: 20 }
+		return { scope: 'off', pageSize: 20 }
 	}
 }
 

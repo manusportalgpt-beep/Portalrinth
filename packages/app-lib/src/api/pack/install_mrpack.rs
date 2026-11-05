@@ -377,9 +377,9 @@ pub(crate) async fn get_external_files_from_mrpack(
     };
 
     for (index, file_name, _) in override_entries {
-        let (_, hash) = zip_reader
-            .hash_entry(index, Some(&mut report_progress))
-            .await?;
+        let (_, hash) = crate::install::control::download_step(zip_reader
+            .hash_entry(index, Some(&mut report_progress)))
+            .await??;
         candidates.push((file_name, hash));
     }
 
@@ -701,7 +701,12 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
             .collect();
 
         for index in override_entries {
-            let (_, hash) = zip_reader.hash_entry(index, None).await?;
+            // Cancelable: hashing a multi-gigabyte override tree takes
+            // minutes, and «Canceling installation…» must not outlive the
+            // ask by that much.
+            let (_, hash) =
+                crate::install::control::download_step(zip_reader.hash_entry(index, None))
+                    .await??;
             file_hashes.push(hash);
         }
 
@@ -1212,7 +1217,14 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
     for (index, file) in override_file_entries {
         let relative_override_file_path =
             SafeRelativeUtf8UnixPathBuf::try_from(
-                file.filename().as_str().unwrap().to_string(),
+                file.filename()
+                    .as_str()
+                    .ok_or_else(|| {
+                        crate::ErrorKind::InputError(format!(
+                            "modpack override entry {index} has a non-UTF-8 name"
+                        ))
+                    })?
+                    .to_string(),
             )?;
         let relative_override_file_path = relative_override_file_path
 			.strip_prefix("overrides")
@@ -1275,7 +1287,10 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
             crate::state::file_modified_at_ns(&io::metadata(&path).await?)?;
 
         {
-            let _permit = state.installs.db_semaphore.acquire().await?;
+            let _permit = crate::install::control::wait_resource(
+                state.installs.db_semaphore.acquire(),
+            )
+            .await??;
             let record_context =
                 InstallErrorContext::new("record modpack override")
                     .maybe_project_id(project_id.clone())
@@ -1545,10 +1560,17 @@ pub async fn remove_all_related_files(
                 && !filename.ends_with('/')
         });
 
-    for file in override_file_entries {
+    for (entry_index, file) in override_file_entries.enumerate() {
         let relative_override_file_path =
             SafeRelativeUtf8UnixPathBuf::try_from(
-                file.filename().as_str().unwrap().to_string(),
+                file.filename()
+                    .as_str()
+                    .ok_or_else(|| {
+                        crate::ErrorKind::InputError(format!(
+                            "modpack override entry {entry_index} has a non-UTF-8 name"
+                        ))
+                    })?
+                    .to_string(),
             )?;
         let relative_override_file_path = relative_override_file_path
             .strip_prefix("overrides")

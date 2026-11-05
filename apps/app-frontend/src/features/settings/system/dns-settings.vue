@@ -1,6 +1,7 @@
 <script setup lang="ts">/**
- * Settings → Resources → DNS: a shelf of public resolvers that often reach
- * what an internet provider hides, with a live check against each one.
+ * Settings → Resources → DNS: the player's own resolvers with a live check
+ * against each one. The launcher ships no presets - every server on the
+ * shelf is one the player added by hand.
  *
  * The launcher only ever *asks* the servers here (a plain DNS query, the way
  * any computer resolves names); it never edits the system's network settings.
@@ -21,43 +22,6 @@ interface DnsServer {
         alternate: string
         about: string
 }
-
-const SERVERS: DnsServer[] = [
-        {
-                name: 'Quad9',
-                preferred: '9.9.9.9',
-                alternate: '149.112.112.112',
-                about:
-                        'Крупный международный резолвер с фильтрацией вредоносных доменов и политикой «не логировать IP». Часто открывает то, что провайдер прячет, и просто быстрый.',
-        },
-        {
-                name: 'GeoHide',
-                preferred: '159.194.200.33',
-                alternate: '193.233.112.67',
-                about:
-                        'Резолвер, заточенный под обход геоблокировок: отвечает адресами, которые работают там, где обычные ответы «поплыли» по региону.',
-        },
-        {
-                name: 'Zapret DNS',
-                preferred: '83.217.211.149',
-                alternate: '',
-                about:
-                        'Резолвер проекта zapret — обходит DNS-блокировки и подмены ответов на уровне провайдера. Альтернативного адреса нет: работает одним сервером.',
-        },
-        {
-                name: 'DNS-AI',
-                preferred: '194.87.196.13',
-                alternate: '45.151.102.219',
-                about:
-                        'Настроен на доступ к ИИ-сервисам (OpenRouter, API моделей), которые из России отвечают неохотно. Помогает, когда чат ИИ «не дозванивается».',
-        },
-        {
-                name: 'MagicDNS',
-                preferred: '109.120.132.43',
-                alternate: '94.249.177.102',
-                about: 'Публичный резолвер с обходом блокировок, быстрый из России.',
-        },
-]
 
 const messages = defineMessages({
         title: { id: 'app.settings.dns.title', defaultMessage: 'DNS servers' },
@@ -214,7 +178,7 @@ async function copyIp(ip: string) {
 
                 <div class="mt-1 flex flex-col gap-2">
                         <div
-                                v-for="server in [...SERVERS, ...customServers]"
+                                v-for="server in customServers"
                                 :key="server.name"
                                 class="flex flex-col gap-2 rounded-2xl border-2 border-solid p-4"
                                 :class="

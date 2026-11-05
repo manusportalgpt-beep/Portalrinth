@@ -92,6 +92,10 @@ const messages = defineMessages({
 		defaultMessage: 'Open on CurseForge',
 	},
 	moreOptions: { id: 'app.project.more-options', defaultMessage: 'More options' },
+	backToBrowse: {
+		id: 'app.project.install-context.back-to-browse',
+		defaultMessage: 'Back to discover',
+	},
 	backToInstance: {
 		id: 'app.instance.navigation.back-to-instance',
 		defaultMessage: 'Back to instance',
@@ -198,13 +202,22 @@ function handleInstallClick() {
  */
 const projectInstallContext = computed(() => {
 	if (!instance.value) return null
+	const browsePath = route.query.b
+	const cameFromBrowse =
+		typeof browsePath === 'string' && browsePath.startsWith('/browse/')
 	return {
 		name: instance.value.name,
 		loader: instance.value.loader,
 		gameVersion: instance.value.game_version,
 		iconSrc: getInstanceIconUrl(instance.value.icon_path),
-		backUrl: `/instance/${encodeURIComponent(instance.value.id)}`,
-		backLabel: formatMessage(messages.backToInstance),
+		// Same back target as a Modrinth project: the browse page the player
+		// came from (query `b`) wins over the instance itself.
+		backUrl: cameFromBrowse
+			? browsePath
+			: `/instance/${encodeURIComponent(instance.value.id)}`,
+		backLabel: cameFromBrowse
+			? formatMessage(messages.backToBrowse)
+			: formatMessage(messages.backToInstance),
 		heading: formatMessage(commonMessages.installingContentLabel),
 	}
 })

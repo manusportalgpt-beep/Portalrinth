@@ -1416,10 +1416,10 @@
 		"message": "Use {color}"
 	},
 	"app.features.browse.scroll-pages.title": {
-		"message": "Long pages"
+		"message": "Pageless"
 	},
 	"app.features.browse.scroll-pages.description": {
-		"message": "The list of results is one long scroll that loads as you go down, instead of pages with a number under them."
+		"message": "The result list has no pages at all: one long scroll that keeps loading as you go down. Turned off, the usual numbered pages are back."
 	},
 	"app.features.browse.scroll-pages.scope.off": {
 		"message": "Off"

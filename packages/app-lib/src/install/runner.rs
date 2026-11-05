@@ -809,8 +809,27 @@ fn spawn_job(
 ) {
     tokio::spawn(async move {
         let _target_guard = target_guard;
-        if let Err(error) = run_job(job_id, &registration.control, &state).await
-        {
+        // A panic must not strand the job as Running forever with a stuck
+        // «Canceling…»: the row is terminalized like any other failure.
+        let result = futures::FutureExt::catch_unwind(
+            std::panic::AssertUnwindSafe(run_job(job_id, &registration.control, &state)),
+        )
+        .await;
+        if let Err(error) = match result {
+            Ok(outcome) => outcome,
+            Err(panic) => {
+                let detail = panic
+                    .downcast_ref::<&str>()
+                    .copied()
+                    .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
+                    .unwrap_or("no panic message");
+                tracing::error!("Install job {job_id} worker panicked: {detail}");
+                Err(crate::ErrorKind::InputError(format!(
+                    "install worker panicked: {detail}"
+                ))
+                .into())
+            }
+        } {
             let failure = error.to_string();
             tracing::error!("Install job {job_id} terminated: {failure}");
             if let Err(error) =
