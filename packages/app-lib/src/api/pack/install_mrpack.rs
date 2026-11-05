@@ -1219,7 +1219,7 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
             SafeRelativeUtf8UnixPathBuf::try_from(
                 file.filename()
                     .as_str()
-                    .ok_or_else(|| {
+                    .map_err(|_| {
                         crate::ErrorKind::InputError(format!(
                             "modpack override entry {index} has a non-UTF-8 name"
                         ))
@@ -1565,7 +1565,7 @@ pub async fn remove_all_related_files(
             SafeRelativeUtf8UnixPathBuf::try_from(
                 file.filename()
                     .as_str()
-                    .ok_or_else(|| {
+                    .map_err(|_| {
                         crate::ErrorKind::InputError(format!(
                             "modpack override entry {entry_index} has a non-UTF-8 name"
                         ))
