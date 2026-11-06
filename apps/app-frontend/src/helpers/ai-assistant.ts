@@ -287,7 +287,14 @@ export interface AiSettings {
 }
 
 export type AiMode = 'ask' | 'build'
-export const AI_FOCUSES = ['any', 'mods', 'shaders', 'resourcepacks', 'datapacks', 'modpacks'] as const
+export const AI_FOCUSES = [
+	'any',
+	'mods',
+	'shaders',
+	'resourcepacks',
+	'datapacks',
+	'modpacks',
+] as const
 export type AiFocus = (typeof AI_FOCUSES)[number]
 
 const SETTINGS_KEY = 'portalrinth-ai-settings'
@@ -414,10 +421,16 @@ export function chosenModel(settings: AiSettings, providerId: string): string {
 	// The allowlist: only ids from the catalogue ever reach the wire. A stored
 	// choice that left the list (a removed paid model) quietly falls back to
 	// the provider's default - the player never sends a paid id by accident.
-	if (stored && provider?.models.some((model) => model.id === stored) && isModelEnabled(settings, providerId, stored)) {
+	if (
+		stored &&
+		provider?.models.some((model) => model.id === stored) &&
+		isModelEnabled(settings, providerId, stored)
+	) {
 		return stored
 	}
-	const firstEnabled = provider?.models.find((model) => isModelEnabled(settings, providerId, model.id))
+	const firstEnabled = provider?.models.find((model) =>
+		isModelEnabled(settings, providerId, model.id),
+	)
 	if (firstEnabled) return firstEnabled.id
 	return provider?.models[0]?.id ?? 'default'
 }
@@ -592,7 +605,9 @@ function taskFromArgs(args: string): AiTask {
 			? 'datapack'
 			: /ресурс|resource|текстур/i.test(typeRaw)
 				? 'resourcepack'
-				: 'mod'
+				: /мод|mod/i.test(typeRaw)
+					? 'mod'
+					: 'plan'
 	return { kind, title: title.slice(0, 60) || TASK_KIND_LABELS[kind], stages: taskPipeline(kind) }
 }
 
@@ -1187,7 +1202,7 @@ export const AI_SLANG_HINT = [
 
 export const AI_SKILLS_HINT = [
 	'ЛЮБУЮ постройку (мод, шейдер, ресурс-пак, датапак) начинай с объявления задачи: <<task_start|тип::Название>> (тип: mod, shader, resourcepack, datapack), например <<task_start|mod::Лесоповал>> — игрок увидит живую карточку этапов; без неё карточка не появится.',
-	'План-задачи (как todos): если просьба игрока — БОЛЬШЕ одной задачи или работа с этапами, сразу объяви план: <<plan_start|Название::шаг 1;;шаг 2;;шаг 3>> (2-8 коротких шагов) — игрок увидит живой чек-лист с галочками. В план включай и подводные шаги, которые игрок не называл словами: поиск в интернете, изучение референсов, текстуры, написание кода, компиляция/упаковка, установка в сборку, проверка. Выполнил шаг — тут же <<plan_done|номер>> (нумерация с 1); взялся за шаг — скажи строкой, что делаешь. Когда все шаги закрыты — короткий итог игроку. Крафтовую задачу (мод/шейдер/ресурс-пак/датапак) объявляй как раньше <<task_start|тип::название>> — для неё свой вид карточки; plan_start — для всего остального из нескольких шагов.',
+	'План-задачи (как todos): если просьба игрока — БОЛЬШЕ одной задачи или работа с этапами, сразу объяви план: <<plan_start|Название::шаг 1;;шаг 2;;шаг 3>> (2-8 коротких шагов) — игрок увидит живой чек-лист с галочками. В план включай и подводные шаги, которые игрок не называл словами: поиск в интернете, изучение референсов, текстуры, написание кода, компиляция/упаковка, установка в сборку, проверка. Выполнил шаг — тут же <<plan_done|номер>> (нумерация с 1); взялся за шаг — скажи строкой, что делаешь. Когда все шаги закрыты — короткий итог игроку. Крафтовую задачу (мод/шейдер/ресурс-пак/датапак) объявляй как раньше <<task_start|тип::название>> — для неё свой вид карточки; plan_start — для всего остального из нескольких шагов. Задача НЕ про крафт (сайт, скрипт, программа, текст, картинка, анализ — что угодно вне четырёх крафтов): task_start НЕ вызывай вообще — сразу plan_start с планом, который ты сам понял из просьбы, своими словами и по делу этой задачи, без шаблонных этапов.',
 	'Ты умеешь создавать контент для Minecraft, сайты, картинки и код на любых языках — всё делаешь файлами в песочнице, а готовый результат сразу ставишь в сборку через <<install_to_instance|файл::тип>>:',
 	'- Ресурс-пак: pack.mcmeta (поле pack_format зависит от версии — если не уверен, уточни через web_search), assets/minecraft/textures/..., модели, звуки (sounds.json). Собери файлы и упакуй в .zip.',
 	'- Шейдеры (OptiFine/Iris): папка shaders/ с вершинными и фрагментными программами (*.vsh, *.fsh, GLSL), composite/final проходы, shaders.properties. Собери и упакуй в .zip.',
@@ -1593,7 +1608,10 @@ export function isQuestionOnly(text: string): boolean {
 		.filter(Boolean)
 		.some((part) => !QUESTION_START.test(part) && !part.endsWith('?') && ACTION_WORDS.test(part))
 	if (imperative) return false
-	if (/^(можешь|сможешь|а можешь|could you|can you|would you)/i.test(trimmed) && ACTION_WORDS.test(trimmed))
+	if (
+		/^(можешь|сможешь|а можешь|could you|can you|would you)/i.test(trimmed) &&
+		ACTION_WORDS.test(trimmed)
+	)
 		return false
 	return !/^(сделай|создай|установи|поставь|собери|напиши|почини|исправь)/i.test(trimmed)
 }
@@ -2739,14 +2757,14 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						const notes: string[] = []
 						const seenImages: string[] = []
 						const batch = parsed.actions.slice(0, 8)
-					if (parsed.actions.length > batch.length) {
-						notes.push(
-							`НЕ ВЫПОЛНЕНЫ — лимит ${batch.length} команд за раунд; вызови их прямо сейчас следующими командами: ${parsed.actions
-								.slice(batch.length)
-								.map((action) => `<<${action.tool}|${action.args.slice(0, 120)}>>`)
-								.join(' ')}`,
-						)
-					}
+						if (parsed.actions.length > batch.length) {
+							notes.push(
+								`НЕ ВЫПОЛНЕНЫ — лимит ${batch.length} команд за раунд; вызови их прямо сейчас следующими командами: ${parsed.actions
+									.slice(batch.length)
+									.map((action) => `<<${action.tool}|${action.args.slice(0, 120)}>>`)
+									.join(' ')}`,
+							)
+						}
 						for (let cursor = 0; cursor < batch.length; ) {
 							if (playerTookOver()) {
 								notes.push(
@@ -2789,9 +2807,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 								// action; the failure still goes back to the model
 								// in the notes, and the step card paints it red.
 								if (FAILED_RESULT.test(result.trim())) {
-									noteAgentThought(
-										`✗ ${action.tool}: ${result.trim().slice(0, 140)}`,
-									)
+									noteAgentThought(`✗ ${action.tool}: ${result.trim().slice(0, 140)}`)
 								} else {
 									doneActions.push(action.tool)
 								}
@@ -3510,11 +3526,13 @@ registerAiToolHandler(async (tool, args) => {
 		const plan = planFromArgs(args)
 		if (!plan) return 'Формат: <<plan_start|Название::шаг 1;;шаг 2;;шаг 3>> — 2-8 коротких шагов'
 		agentTurn.value = { ...agentTurn.value, task: plan }
-		return 'План объявлен: «'
-			+ plan.title
-			+ '». Игрок видит чек-лист: '
-			+ plan.stages.map((stage, i) => `${i + 1}. ${stage.label}`).join('; ')
-			+ '. Веди работу по шагам и закрывай каждый: <<plan_done|номер>>.'
+		return (
+			'План объявлен: «' +
+			plan.title +
+			'». Игрок видит чек-лист: ' +
+			plan.stages.map((stage, i) => `${i + 1}. ${stage.label}`).join('; ') +
+			'. Веди работу по шагам и закрывай каждый: <<plan_done|номер>>.'
+		)
 	}
 	if (tool === 'plan_done') {
 		const updated = markPlanStep(args)
@@ -3526,14 +3544,21 @@ registerAiToolHandler(async (tool, args) => {
 		agentTurn.value = { ...agentTurn.value, task: updated }
 		const doneCount = updated.stages.filter((stage) => stage.done).length
 		const num = Number.parseInt(args.trim(), 10)
-		return 'Шаг закрыт: «'
-			+ (updated.stages[num - 1]?.label ?? '')
-			+ `» (${doneCount}/${updated.stages.length}).`
-			+ (doneCount === updated.stages.length ? ' План выполнен целиком — отчитайся игроку.' : ' Продолжай по плану.')
+		return (
+			'Шаг закрыт: «' +
+			(updated.stages[num - 1]?.label ?? '') +
+			`» (${doneCount}/${updated.stages.length}).` +
+			(doneCount === updated.stages.length
+				? ' План выполнен целиком — отчитайся игроку.'
+				: ' Продолжай по плану.')
+		)
 	}
 
 	if (tool === 'task_start') {
 		const task = taskFromArgs(args)
+		if (task.kind === 'plan') {
+			return `«${task.title}» — не крафт (мод/шейдер/ресурс-пак/датапак), шаблонной карточки крафта для неё нет. Объяви план сам, который ты понял из просьбы: <<plan_start|${task.title}::твой шаг 1;;твой шаг 2;;твой шаг 3>> (2-8 коротких шагов своими словами — поиск, создание файлов, проверка, что угодно по делу), и веди его через <<plan_done|номер>>.`
+		}
 		return `Задача объявлена: ${TASK_KIND_LABELS[task.kind]} «${task.title}». Игрок видит карточку этапов: ${task.stages
 			.map((stage) => stage.label)
 			.join(
@@ -4181,45 +4206,45 @@ registerAiToolHandler(async (tool, args) => {
 		if (lines.length === 0) return 'Ничего не нашлось'
 		return lines.join('\n') + cards.map((card) => `\n@@MOD@@${JSON.stringify(card)}`).join('')
 	}
-		if (tool === 'skin_nick') {
-			const nick = args.trim()
-			if (!nick) return 'Формат: <<skin_nick|ник игрока>>'
-			try {
-				const lookup = await proxiedFetch(
-					`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(nick)}`,
-					{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) },
-				)
-				if (!lookup.ok)
-					return `Ник «${nick}» Mojang не знает (опечатка или нелицензионный аккаунт). Могу подобрать похожие скины: <<skin_recommend|${nick}>>.`
-				const profile = (await lookup.json()) as { id: string; name: string }
-				const sessionResponse = await proxiedFetch(
-					`https://sessionserver.mojang.com/session/minecraft/profile/${profile.id}`,
-					{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) },
-				)
-				if (!sessionResponse.ok)
-					return `Профиль «${profile.name}» нашёлся, но скин не отдался (HTTP ${sessionResponse.status})`
-				const session = (await sessionResponse.json()) as {
-					properties?: { value?: string }[]
-				}
-				const decoded = JSON.parse(atob(session.properties?.[0]?.value ?? '')) as {
-					textures?: { SKIN?: { url?: string; metadata?: { model?: string } } }
-				}
-				const url = decoded.textures?.SKIN?.url ?? ''
-				if (!url)
-					return `У «${profile.name}» стоит стандартный скин (Steve/Alex) — качать нечего. Предложи игроку подобрать свой: <<skin_recommend|${nick}>>.`
-				const hash = url.split('/texture/')[1] ?? ''
-				const card = {
-					hash,
-					url,
-					render: vzgeBodyUrl(hash || profile.id, 512),
-					tags: `Скин игрока ${profile.name}`,
-					variant: decoded.textures?.SKIN?.metadata?.model === 'slim' ? 'SLIM' : 'CLASSIC',
-				}
-				return `Скин игрока «${profile.name}» найден. В чате карточка с 3D-превью — кнопка «Поставить» наденет скин на аккаунт.\n@@SKIN@@${JSON.stringify(card)}`
-			} catch (error) {
-				return `Скин по нику не получился: ${String(error).slice(0, 150)}`
+	if (tool === 'skin_nick') {
+		const nick = args.trim()
+		if (!nick) return 'Формат: <<skin_nick|ник игрока>>'
+		try {
+			const lookup = await proxiedFetch(
+				`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(nick)}`,
+				{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) },
+			)
+			if (!lookup.ok)
+				return `Ник «${nick}» Mojang не знает (опечатка или нелицензионный аккаунт). Могу подобрать похожие скины: <<skin_recommend|${nick}>>.`
+			const profile = (await lookup.json()) as { id: string; name: string }
+			const sessionResponse = await proxiedFetch(
+				`https://sessionserver.mojang.com/session/minecraft/profile/${profile.id}`,
+				{ headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) },
+			)
+			if (!sessionResponse.ok)
+				return `Профиль «${profile.name}» нашёлся, но скин не отдался (HTTP ${sessionResponse.status})`
+			const session = (await sessionResponse.json()) as {
+				properties?: { value?: string }[]
 			}
+			const decoded = JSON.parse(atob(session.properties?.[0]?.value ?? '')) as {
+				textures?: { SKIN?: { url?: string; metadata?: { model?: string } } }
+			}
+			const url = decoded.textures?.SKIN?.url ?? ''
+			if (!url)
+				return `У «${profile.name}» стоит стандартный скин (Steve/Alex) — качать нечего. Предложи игроку подобрать свой: <<skin_recommend|${nick}>>.`
+			const hash = url.split('/texture/')[1] ?? ''
+			const card = {
+				hash,
+				url,
+				render: vzgeBodyUrl(hash || profile.id, 512),
+				tags: `Скин игрока ${profile.name}`,
+				variant: decoded.textures?.SKIN?.metadata?.model === 'slim' ? 'SLIM' : 'CLASSIC',
+			}
+			return `Скин игрока «${profile.name}» найден. В чате карточка с 3D-превью — кнопка «Поставить» наденет скин на аккаунт.\n@@SKIN@@${JSON.stringify(card)}`
+		} catch (error) {
+			return `Скин по нику не получился: ${String(error).slice(0, 150)}`
 		}
+	}
 	if (tool === 'skin_recommend') {
 		// The skin library lives on laby.net; an empty query returns whatever
 		// is hot right now, so the agent always sees fresh additions.
@@ -4268,7 +4293,9 @@ registerAiToolHandler(async (tool, args) => {
 			const totalGb = Math.round((Number(totalKib) / 1024 / 1024) * 10) / 10
 			lines.push(`Память всего: ${totalGb} ГБ`)
 		} catch {
-			lines.push(`Память: ${nav.deviceMemory ? `около ${nav.deviceMemory} ГБ (приблизительно)` : 'неизвестно'}`)
+			lines.push(
+				`Память: ${nav.deviceMemory ? `около ${nav.deviceMemory} ГБ (приблизительно)` : 'неизвестно'}`,
+			)
 		}
 		try {
 			const gpu = await invoke<{ adapters?: { name?: string }[] }>('plugin:jre|jre_get_gpu_status')
@@ -4420,10 +4447,7 @@ function stepThoughtLive(text: string): void {
 	const steps = agentTurn.value.steps
 	const last = steps[steps.length - 1]
 	if (last && last.kind === 'thought' && last.status === 'running') {
-		updateSteps((current) => [
-			...current.slice(0, -1),
-			{ ...last, text: trimmed.slice(0, 1200) },
-		])
+		updateSteps((current) => [...current.slice(0, -1), { ...last, text: trimmed.slice(0, 1200) }])
 		return
 	}
 	updateSteps((current) => [
@@ -4691,7 +4715,12 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 					if (plan) agentTurn.value = { ...agentTurn.value, task: plan }
 				}
 				if (tool === 'task_start') {
-					agentTurn.value = { ...agentTurn.value, task: taskFromArgs(args) }
+					const task = taskFromArgs(args)
+					// Не-крафт не получает шаблонную карточку: его план модель
+					// объявит сама через plan_start.
+					if (task.kind !== 'plan') {
+						agentTurn.value = { ...agentTurn.value, task }
+					}
 				}
 			},
 			onActionDone: (tool, args, result2) => {
