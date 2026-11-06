@@ -6,6 +6,7 @@ import {
 	type LocalFile,
 	type UploadHandle,
 	type UploadMetadata,
+	type FileUploadMetadata,
 	type UploadProgress,
 	type UploadRequestOptions,
 } from '../types/upload'
@@ -56,7 +57,7 @@ export abstract class XHRUploadClient extends AbstractModrinthClient {
 			promise: (async () => {
 				const isFormData =
 					('formData' in options && options.formData instanceof FormData) ||
-					!!options.multipartField
+					('multipartField' in options && !!options.multipartField)
 				const baseHeaders = await this.buildDefaultHeaders()
 				if (isFormData) {
 					delete baseHeaders['Content-Type']
@@ -203,7 +204,7 @@ export abstract class XHRUploadClient extends AbstractModrinthClient {
 			url: appendRequestParams(context.url, context.options.params),
 			headers: context.options.headers ?? {},
 			file,
-			multipartField: (context.metadata as UploadMetadata).multipartField,
+			multipartField: (context.metadata as FileUploadMetadata | undefined)?.multipartField,
 			signal: abortController.signal,
 			onProgress: (progress) => progressCallbacks.forEach((cb) => cb(progress)),
 		})

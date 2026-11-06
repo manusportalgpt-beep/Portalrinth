@@ -280,7 +280,8 @@ function applySliderPosition(newPosition: {
 	sliderLeft.value = newPosition.left
 	sliderTop.value = newPosition.top
 	sliderRight.value = newPosition.right
-	sliderBottom.value = newPosition.bottom	if (isDiscoverBar.value) {
+	sliderBottom.value = newPosition.bottom
+	if (isDiscoverBar.value) {
 		// Keep the travel memory current: whichever Discover bar unmounts
 		// last leaves the pill's geometry here for its sibling to pick up.
 		navTabsSliderMemory.snapshot = newPosition
