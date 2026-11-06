@@ -93,6 +93,7 @@
 import type { Component } from 'vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { navTabsSliderMemory } from './navtabs-slider-memory'
 
 const route = useRoute()
 
@@ -154,6 +155,13 @@ const colorChangeDelayed = ref(false)
 const sliderDelays = ref({ left: '0ms', top: '0ms', right: '0ms', bottom: '0ms' })
 
 const filteredLinks = computed(() => props.links.filter((link) => link.shown ?? true))
+
+/** The Discover tab bars (Browse and Skin Browse) share one pill that is
+    supposed to travel between pages; those are the bars that record and
+    replay the pill's geometry across remounts. */
+const isDiscoverBar = computed(() =>
+	filteredLinks.value.some((link) => link.href.startsWith('/browse')),
+)
 
 const sliderStyle = computed(() => ({
 	left: `${sliderLeft.value}px`,
@@ -272,7 +280,11 @@ function applySliderPosition(newPosition: {
 	sliderLeft.value = newPosition.left
 	sliderTop.value = newPosition.top
 	sliderRight.value = newPosition.right
-	sliderBottom.value = newPosition.bottom
+	sliderBottom.value = newPosition.bottom	if (isDiscoverBar.value) {
+		// Keep the travel memory current: whichever Discover bar unmounts
+		// last leaves the pill's geometry here for its sibling to pick up.
+		navTabsSliderMemory.snapshot = newPosition
+	}
 }
 
 function animateSliderTo(newPosition: {
@@ -300,19 +312,35 @@ function positionSlider(animate = true) {
 	}
 
 	if (!sliderReady.value) {
-		applySliderPosition(newPosition)
-		sliderReady.value = true
-		sliderMountAnim.value = true
-		nextTick(() => {
-			requestAnimationFrame(() => {
-				transitionsEnabled.value = true
-				// The pill has faded in by now; hand transitions over to the
-				// live slider so the next tab change slides as before.
-				window.setTimeout(() => {
-					sliderMountAnim.value = false
-				}, 220)
+		const remembered = isDiscoverBar.value ? navTabsSliderMemory.snapshot : null
+		if (remembered) {
+			// A sibling Discover bar just unmounted: begin where the pill
+			// stood there, then travel to the active tab, so a page swap
+			// reads as one sliding pill instead of one fading in.
+			applySliderPosition(remembered)
+			navTabsSliderMemory.snapshot = null
+			sliderReady.value = true
+			nextTick(() => {
+				requestAnimationFrame(() => {
+					transitionsEnabled.value = true
+					animateSliderTo(newPosition)
+				})
 			})
-		})
+		} else {
+			applySliderPosition(newPosition)
+			sliderReady.value = true
+			sliderMountAnim.value = true
+			nextTick(() => {
+				requestAnimationFrame(() => {
+					transitionsEnabled.value = true
+					// The pill has faded in by now; hand transitions over to the
+					// live slider so the next tab change slides as before.
+					window.setTimeout(() => {
+						sliderMountAnim.value = false
+					}, 220)
+				})
+			})
+		}
 		return
 	}
 
