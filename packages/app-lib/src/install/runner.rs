@@ -1,3 +1,4 @@
+use chrono::Utc;
 use super::events::{InstallProgressReporter, emit_install_job};
 use super::model::{
     InstallCleanup, InstallErrorContext, InstallErrorView, InstallJobDisplay,
@@ -395,6 +396,15 @@ async fn set_job_paused(
     let state = State::get().await?;
     let job = store::get_required(job_id, &state.pool).await?;
     if !job.snapshot().can_pause {
+        // A still-active job whose worker cannot be controlled is stuck: it
+        // will never be pausable, so heal it instead of leaving the row
+        // hanging with an error toast on every press.
+        if is_stuck_job(&job) {
+            heal_stuck_job(job_id, &state).await?;
+            return store::get_required(job_id, &state.pool)
+                .await?
+                .snapshot();
+        }
         bail!(ErrorKind::InputError(
             "install job cannot be paused or resumed".to_string(),
         ));
@@ -414,18 +424,76 @@ pub async fn cancel_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
     if job.snapshot().canceling {
         return Ok(job.snapshot());
     }
-    if !job.snapshot().can_cancel {
-        bail!(ErrorKind::InputError(
-            "install job cannot be canceled".to_string(),
-        ));
+    if job.snapshot().can_cancel {
+        let control = super::control::get(job_id).ok_or(ErrorKind::InputError(
+            "install worker is unavailable".to_string(),
+        ))?;
+        control.cancel()?;
+        let snapshot = store::get_required(job_id, &state.pool).await?.snapshot();
+        emit_install_job(&snapshot).await?;
+        return Ok(snapshot);
     }
-    let control = super::control::get(job_id).ok_or(ErrorKind::InputError(
-        "install worker is unavailable".to_string(),
-    ))?;
-    control.cancel()?;
-    let snapshot = store::get_required(job_id, &state.pool).await?.snapshot();
-    emit_install_job(&snapshot).await?;
-    Ok(snapshot)
+    // A still-active job that refuses cancellation has a worker stuck in the
+    // finishing stretch (or gone entirely): heal it instead of toasting
+    // «install job cannot be canceled» forever while the window never clears.
+    if is_stuck_job(&job) {
+        heal_stuck_job(job_id, &state).await?;
+        let snapshot = store::get_required(job_id, &state.pool).await?.snapshot();
+        emit_install_job(&snapshot).await?;
+        return Ok(snapshot);
+    }
+    bail!(ErrorKind::InputError(
+        "install job cannot be canceled".to_string(),
+    ));
+}
+
+/// How long a job's row may sit unchanged while its worker cannot be
+/// controlled before the job is treated as stuck. A healthy finishing
+/// stretch between the last progress write and the terminal status takes
+/// milliseconds, so ten seconds is generous.
+fn stuck_job_staleness() -> chrono::Duration {
+    chrono::Duration::seconds(10)
+}
+
+/// An active job whose controls are gone or refuse to respond, and whose row
+/// has not changed for a while: nobody will ever terminalize it.
+fn is_stuck_job(job: &store::InstallJobRecord) -> bool {
+    matches!(
+        job.status,
+        InstallJobStatus::Queued | InstallJobStatus::Running
+    ) && Utc::now() - job.modified >= stuck_job_staleness()
+}
+
+/// Terminalizes a stuck job as canceled **without any rollback**: by the time
+/// a job wedges in the finishing stretch its work is already published, so
+/// running the cleanup would delete a finished, playable install. Leftover
+/// staging files are still cleared, and the dismissed row stops weighing on
+/// the download manager.
+async fn heal_stuck_job(job_id: Uuid, state: &State) -> crate::Result<()> {
+    let job = store::get_required(job_id, &state.pool).await?;
+    if !matches!(
+        job.status,
+        InstallJobStatus::Queued | InstallJobStatus::Running
+    ) {
+        return Ok(());
+    }
+    let mut job_state = job.state.clone();
+    tracing::warn!("Healing stuck install job {job_id}: terminalizing as canceled without rollback");
+    let phase = job_state.progress.phase;
+    job_state.record_event(InstallJobEventKind::JobCanceled { phase });
+    // Neutralize the cleanup: the instance the install may have published
+    // must survive, whatever the original cleanup plan was.
+    job_state.cleanup = InstallCleanup::DeleteNewInstance { instance_id: None };
+    let error_view = InstallErrorView::from_message(
+        "canceled",
+        phase,
+        "install was canceled",
+    );
+    terminalize_failed_job(job_id, job_state, error_view, state).await?;
+    if let Err(error) = store::dismiss(job_id, &state.pool).await {
+        tracing::warn!("Failed to dismiss healed install job {job_id}: {error}");
+    }
+    Ok(())
 }
 
 /// The caller must retain both guards until the instance has been removed.
@@ -956,8 +1024,8 @@ async fn run_job_inner(
                 }
                 if matches!(request, InstallRequest::BulkUpdateContent { .. }) {
                     Box::pin(crate::api::instance::synced_packs::reconcile_after_content_change(
-						&instance_id,
-					)).await;
+                                                &instance_id,
+                                        )).await;
                 }
                 recovery::clear_staging_dir(&job_state, &state.content_store)
                     .await;
@@ -1701,53 +1769,53 @@ async fn install_pack_inner(
                         .build(),
                 )
                 .await?;
-			generate_pack_from_version_id_with_reporter(
-				project_id,
-				version_id,
-				title,
+                        generate_pack_from_version_id_with_reporter(
+                                project_id,
+                                version_id,
+                                title,
                 icon_url,
                 instance_id.clone(),
                 reason,
                 reporter.clone(),
-			)
-			.await?
-		}
-		CreatePackLocation::FromCurseforge {
-			project_id,
-			file_id,
-			..
-		} => {
-			reporter
-				.set_context(
-					InstallErrorContext::new("download CurseForge modpack")
-						.project_id(project_id.clone())
-						.build(),
-				)
-				.await?;
-			let api_key = crate::api::curseforge_metadata::api_key()
-				.ok_or_else(|| {
-					crate::ErrorKind::InputError(
-						"No CurseForge API key is available. Add one in settings first."
-							.to_string(),
-					)
-				})?;
-			let bytes = crate::api::curseforge_browse::download_modpack_bytes(
-				&project_id,
-				file_id,
-			)
-			.await?;
-			install_curseforge_pack_files_with_reporter(
-				bytes,
-				&api_key,
-				&instance_id,
-				reason,
-				reporter,
-				keep_entries.as_deref(),
-			)
-			.await?;
-			return Ok(());
-		}
-	CreatePackLocation::FromFile {
+                        )
+                        .await?
+                }
+                CreatePackLocation::FromCurseforge {
+                        project_id,
+                        file_id,
+                        ..
+                } => {
+                        reporter
+                                .set_context(
+                                        InstallErrorContext::new("download CurseForge modpack")
+                                                .project_id(project_id.clone())
+                                                .build(),
+                                )
+                                .await?;
+                        let api_key = crate::api::curseforge_metadata::api_key()
+                                .ok_or_else(|| {
+                                        crate::ErrorKind::InputError(
+                                                "No CurseForge API key is available. Add one in settings first."
+                                                        .to_string(),
+                                        )
+                                })?;
+                        let bytes = crate::api::curseforge_browse::download_modpack_bytes(
+                                &project_id,
+                                file_id,
+                        )
+                        .await?;
+                        install_curseforge_pack_files_with_reporter(
+                                bytes,
+                                &api_key,
+                                &instance_id,
+                                reason,
+                                reporter,
+                                keep_entries.as_deref(),
+                        )
+                        .await?;
+                        return Ok(());
+                }
+        CreatePackLocation::FromFile {
             path,
             curseforge_api_key,
             keep,
@@ -1961,13 +2029,13 @@ async fn update_backup_scope(
                 .await?
             }
 CreatePackLocation::FromFile { path, .. } => {
-				// A CurseForge zip is not an mrpack and lists its overrides
-				// differently; backing up the whole instance is the safe answer.
-				if is_curseforge_zip(&path).await? {
-					return Ok(None);
-				}
-				generate_pack_from_file(path, instance_id.clone()).await?
-			}
+                                // A CurseForge zip is not an mrpack and lists its overrides
+                                // differently; backing up the whole instance is the safe answer.
+                                if is_curseforge_zip(&path).await? {
+                                        return Ok(None);
+                                }
+                                generate_pack_from_file(path, instance_id.clone()).await?
+                        }
             // A CurseForge pack is not an mrpack either; back up everything.
             CreatePackLocation::FromCurseforge { .. } => return Ok(None),
         };
@@ -2159,13 +2227,13 @@ fn set_initial_display(
     let display = match request {
         InstallRequest::CreateModpackInstance { location, .. } => {
             match location {
-				CreatePackLocation::FromVersionId {
-					title, icon_url, ..
-				} => Some((title.clone(), icon_url.clone())),
-				CreatePackLocation::FromCurseforge {
-					title, icon_url, ..
-				} => Some((title.clone(), icon_url.clone())),
-				CreatePackLocation::FromFile { path, .. } => {
+                                CreatePackLocation::FromVersionId {
+                                        title, icon_url, ..
+                                } => Some((title.clone(), icon_url.clone())),
+                                CreatePackLocation::FromCurseforge {
+                                        title, icon_url, ..
+                                } => Some((title.clone(), icon_url.clone())),
+                                CreatePackLocation::FromFile { path, .. } => {
                     Some((get_local_pack_instance(path).name, None))
                 }
             }
@@ -2251,17 +2319,17 @@ pub(super) fn modpack_details(
             version_id: Some(version_id.clone()),
             title: Some(title.clone()),
         },
-		CreatePackLocation::FromFile { .. } => InstallPhaseDetails::Modpack {
-			project_id: None,
-			version_id: None,
-			title: None,
-		},
-		CreatePackLocation::FromCurseforge { title, .. } => {
-			InstallPhaseDetails::Modpack {
-				project_id: None,
-				version_id: None,
-				title: Some(title.clone()),
-			}
-		}
-	}
+                CreatePackLocation::FromFile { .. } => InstallPhaseDetails::Modpack {
+                        project_id: None,
+                        version_id: None,
+                        title: None,
+                },
+                CreatePackLocation::FromCurseforge { title, .. } => {
+                        InstallPhaseDetails::Modpack {
+                                project_id: None,
+                                version_id: None,
+                                title: Some(title.clone()),
+                        }
+                }
+        }
 }
