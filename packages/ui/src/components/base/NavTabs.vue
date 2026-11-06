@@ -77,7 +77,10 @@
 				class="pointer-events-none absolute rounded-full"
 				:class="[
 					subpageSelected ? 'bg-button-bg' : 'bg-button-bgSelected',
-					{ 'navtabs-transition': transitionsEnabled },
+					{
+						'navtabs-transition': transitionsEnabled,
+						'navtabs-slider-in': sliderMountAnim,
+					},
 				]"
 				:style="sliderStyle"
 				aria-hidden="true"
@@ -144,6 +147,8 @@ const subpageSelected = ref(false)
 
 const sliderReady = ref(false)
 const transitionsEnabled = ref(false)
+/** True while the pill plays its mount animation, cleared shortly after. */
+const sliderMountAnim = ref(false)
 const colorChangeDelayed = ref(false)
 
 const sliderDelays = ref({ left: '0ms', top: '0ms', right: '0ms', bottom: '0ms' })
@@ -297,9 +302,15 @@ function positionSlider(animate = true) {
 	if (!sliderReady.value) {
 		applySliderPosition(newPosition)
 		sliderReady.value = true
+		sliderMountAnim.value = true
 		nextTick(() => {
 			requestAnimationFrame(() => {
 				transitionsEnabled.value = true
+				// The pill has faded in by now; hand transitions over to the
+				// live slider so the next tab change slides as before.
+				window.setTimeout(() => {
+					sliderMountAnim.value = false
+				}, 220)
 			})
 		})
 		return
@@ -398,6 +409,21 @@ nav {
 		right 80ms cubic-bezier(0.4, 0, 0.2, 1) v-bind(rightDelay),
 		top 80ms cubic-bezier(0.4, 0, 0.2, 1) v-bind(topDelay),
 		bottom 80ms cubic-bezier(0.4, 0, 0.2, 1) v-bind(bottomDelay);
+}
+
+.navtabs-slider-in {
+	animation: navtabs-slider-in 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes navtabs-slider-in {
+	from {
+		opacity: 0;
+		transform: scale(0.85);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
 }
 
 .tab-color {

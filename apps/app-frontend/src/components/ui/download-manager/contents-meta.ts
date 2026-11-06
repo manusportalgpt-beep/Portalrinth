@@ -139,10 +139,14 @@ function flushModrinth(): void {
 	})()
 }
 
-/** CurseForge is asked one project at a time, a few at once. */
+/** CurseForge is asked one project at a time, a few at once.
+ *
+ * Two, not more: the same client and the same rate limit serve the install
+ * itself, and a peek at what is downloading must not be able to starve the
+ * install - or its canceling - of the API's attention. */
 let cfRunning = 0
 const cfWaiting: (() => void)[] = []
-const CF_CONCURRENCY = 4
+const CF_CONCURRENCY = 2
 
 async function withCfSlot<T>(task: () => Promise<T>): Promise<T> {
 	while (cfRunning >= CF_CONCURRENCY) {

@@ -4160,5 +4160,11 @@
 	},
 	"noctrinth.settings.java-provider.mojang-mirror": {
 		"message": "Mojang через BMCLAPI (стороннее зеркало)"
+	},
+	"app.widgets.download-eye.title": {
+		"message": "Что скачивается (глаз)"
+	},
+	"app.widgets.download-eye.description": {
+		"message": "Глаз на задаче установки открывает подробный список файлов. Просмотр спрашивает Modrinth и CurseForge о каждом моде и может мешать отмене установки, поэтому выключен по умолчанию."
 	}
 }

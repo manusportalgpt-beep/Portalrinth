@@ -13,6 +13,11 @@ export interface PortalrinthFeatures {
         weather: boolean
         /** Build notes pop up when the game launches. */
         notesPopup: boolean
+        /** The eye on an install task: a detailed look at what is being
+         * downloaded. Off by default, because the open view asks Modrinth
+         * and CurseForge about every file and can get in the way of
+         * canceling the very install it is watching. */
+        downloadEye: boolean
 }
 
 const FEATURES_KEY = 'portalrinth-features'
@@ -21,6 +26,7 @@ const DEFAULT_FEATURES: PortalrinthFeatures = {
         clock: true,
         weather: true,
         notesPopup: true,
+        downloadEye: false,
 }
 
 function readFeatures(): PortalrinthFeatures {

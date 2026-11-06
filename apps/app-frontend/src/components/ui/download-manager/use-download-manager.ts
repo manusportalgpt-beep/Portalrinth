@@ -22,6 +22,8 @@ import {
 	type InstallJobSnapshot,
 } from '@/helpers/install'
 import { get_many as getInstances } from '@/helpers/instance'
+import { portalrinthFeatures } from '@/helpers/portalrinth-features'
+import { portalrinthFeatures } from '@/helpers/portalrinth-features'
 import { injectAppEvents } from '@/providers/app-events'
 
 import { debugInfoExports, type DebugInfoExportTask } from './debug-info-export'
@@ -202,7 +204,7 @@ export function useDownloadManager() {
 					appSettings.alwaysShowCopyDetails,
 				copied: copiedJobs.value.has(job.job_id),
 				busy: busyJobs.value.has(job.job_id),
-				inspectable: true,
+				inspectable: portalrinthFeatures.value.downloadEye,
 				contents: job.content_entries
 					? {
 							entries: job.content_entries,

@@ -1376,14 +1376,37 @@ pub async fn install_project(
             }
         }
 
-        match &file.download_url {
-            Some(url) => {
-                install_file(instance_id, &file, url, &state).await?;
-                installed_ids.insert(file.mod_id.to_string());
-                outcome
-                    .installed
-                    .push(format!("{ID_PREFIX}{}", file.mod_id));
-            }
+        let candidates = file_download_candidates(&file);
+        match candidates.first() {
+            Some(_) => match install_file(instance_id, &file, &candidates, &state)
+                .await
+            {
+                Ok(()) => {
+                    installed_ids.insert(file.mod_id.to_string());
+                    outcome
+                        .installed
+                        .push(format!("{ID_PREFIX}{}", file.mod_id));
+                }
+                // The public CDN did not have it either: keep the old
+                // behaviour of parking the file until the player drops it
+                // into Downloads by hand.
+                Err(_error) if file.download_url.is_none() => {
+                    let pending = curseforge_blocked::settle(
+                        instance_id,
+                        vec![file.as_blocked()],
+                        &state,
+                    )
+                    .await;
+                    if pending.is_empty() {
+                        installed_ids.insert(file.mod_id.to_string());
+                        outcome
+                            .installed
+                            .push(format!("{ID_PREFIX}{}", file.mod_id));
+                    }
+                    outcome.pending.extend(pending);
+                }
+                Err(error) => return Err(error),
+            },
             None => {
                 let pending = curseforge_blocked::settle(
                     instance_id,
@@ -1472,14 +1495,46 @@ async fn remove_installed(
     Ok(())
 }
 
+/// The addresses a CurseForge file can be fetched from, the API's own URL
+/// first when it has one and the id-built public CDN path behind it.
+///
+/// A file whose author turned third-party downloads off comes back from the
+/// API with a `download_url` of `None`, yet the public CDN still serves it —
+/// the same workaround MultiMC and Prism use. It was already in place for
+/// the contents of an imported pack; this covers the pack zip itself and
+/// directly-installed files too.
+fn file_download_candidates(file: &ApiFile) -> Vec<String> {
+    let mut urls = Vec::with_capacity(4);
+    if let Some(url) = &file.download_url {
+        let encoded = crate::api::curseforge_search::encode_url_path(url);
+        if !urls.contains(&encoded) {
+            urls.push(encoded);
+        }
+    }
+    if file.id >= 1000 && !file.file_name.is_empty() {
+        for url in crate::api::curseforge_search::download_url_candidates(
+            &crate::api::curseforge_search::cdn_path(
+                file.id.max(0) as u64,
+                &file.file_name,
+            ),
+        ) {
+            if !urls.contains(&url) {
+                urls.push(url);
+            }
+        }
+    }
+    urls
+}
+
 async fn install_file(
     instance_id: &str,
     file: &ApiFile,
-    url: &str,
+    urls: &[String],
     state: &State,
 ) -> crate::Result<()> {
+    let mirrors = urls.iter().map(String::as_str).collect::<Vec<_>>();
     let bytes = fetch_mirrors(
-        &[url],
+        &mirrors,
         file.sha1(),
         None,
         None,
@@ -1526,23 +1581,39 @@ pub async fn download_modpack_bytes(
         None => pick_file(list_files(project_id, None, None, &state).await?)
             .ok_or_else(|| input("This modpack has no files"))?,
     };
-    let Some(url) = file.download_url.as_deref() else {
+    let urls = file_download_candidates(&file);
+    if urls.is_empty() {
         return Err(input(format!(
             "The author of {} does not allow launchers to download it; \
              download the zip from CurseForge and drop it on the launcher",
             file.file_name
         )));
-    };
+    }
 
-    let bytes = fetch_mirrors(
-        &[url],
+    let mirrors = urls.iter().map(String::as_str).collect::<Vec<_>>();
+    let bytes = match fetch_mirrors(
+        &mirrors,
         file.sha1(),
         None,
         None,
         &state.fetch_semaphore,
         &state.pool,
     )
-    .await?;
+    .await
+    {
+        Ok(bytes) => bytes,
+        // The public CDN did not serve it either: explain the way out the
+        // player still has, instead of a bare fetch error.
+        Err(error) if file.download_url.is_none() => {
+            return Err(input(format!(
+                "The author of {} does not allow launchers to download it, \
+                 and the public CDN did not have it either ({}); download \
+                 the zip from CurseForge and drop it on the launcher",
+                file.file_name, error
+            )));
+        }
+        Err(error) => return Err(error),
+    };
     Ok(bytes)
 }
 
