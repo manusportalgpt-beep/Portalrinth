@@ -64,4 +64,4 @@ pub(crate) use self::shared_instance::{
     quarantine_shared_instance, set_shared_instance_sync_status,
 };
 
-mod managed_instance_defaults;
+pub(crate) mod managed_instance_defaults;

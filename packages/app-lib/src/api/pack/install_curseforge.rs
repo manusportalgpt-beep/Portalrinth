@@ -535,6 +535,25 @@ async fn apply_manifest_to_instance(
         },
     )
     .await?;
+
+    // The pack arrives with its own options.txt, servers.dat and hotbars, and
+    // the instance was first built as unmanaged, so its sync switches were
+    // seeded from the global defaults and would write the launcher's settings
+    // over the pack's files on every launch. The link above makes this a
+    // managed pack instance; from here on it keeps its own settings, exactly
+    // like every other managed instance gets at creation.
+    if let Ok(state) = crate::State::get().await {
+        if let Err(error) = crate::state::instances::commands::managed_instance_defaults::keep_shared_settings_out(
+            instance_id, &state,
+        )
+        .await
+        {
+            tracing::warn!(
+                "The pack was installed, but its own settings could not be kept out of shared-settings sync: {error}"
+            );
+        }
+    }
+
     Ok(())
 }
 
@@ -631,6 +650,43 @@ async fn download_cf_file(
         &state.pool,
     )
     .await?;
+
+    // When the API gave no SHA-1, a mirror or CDN candidate answering 200
+    // with an error page or a truncated payload used to go straight into
+    // mods/ and crash the game at launch. Catch the shapes that are never a
+    // real mod file.
+    if bytes.is_empty() {
+        return Err(crate::ErrorKind::InputError(format!(
+            "downloaded an empty file (file id {})",
+            cf_file.id
+        ))
+        .into());
+    }
+    let head = &bytes[..bytes.len().min(64)];
+    if head.starts_with(b"<!DOCTYPE")
+        || head.starts_with(b"<!doctype")
+        || head.starts_with(b"<html")
+        || head.starts_with(b"<HTML")
+    {
+        return Err(crate::ErrorKind::InputError(format!(
+            "the download returned an error page instead of the file (file id {})",
+            cf_file.id
+        ))
+        .into());
+    }
+    let lower_name = cf_file.file_name.to_ascii_lowercase();
+    if cf_file.sha1().is_none()
+        && (lower_name.ends_with(".jar")
+            || lower_name.ends_with(".zip")
+            || lower_name.ends_with(".litemod"))
+        && !bytes.starts_with(b"PK")
+    {
+        return Err(crate::ErrorKind::InputError(format!(
+            "the download is not a valid archive (file id {})",
+            cf_file.id
+        ))
+        .into());
+    }
 
     let safe_file_name = sanitize_filename(&cf_file.file_name);
     let cf_project_id = cf_file.mod_id.to_string();
@@ -1098,17 +1154,35 @@ async fn extract_overrides(
                 .unwrap_or_default()
                 .to_string()
         };
-        let raw_path = SafeRelativeUtf8UnixPathBuf::try_from(entry_name)?;
-        let relative_path = override_prefixes
+        // An entry whose name cannot become a safe path (a zip with
+        // non-UTF-8 names, or one outside every overrides folder) skips that
+        // one file instead of failing the whole install; other launchers
+        // extract the same packs by skipping what they cannot name.
+        let Ok(raw_path) =
+            SafeRelativeUtf8UnixPathBuf::try_from(entry_name.clone())
+        else {
+            tracing::warn!(
+                "Skipping a pack override with an unusable name: {entry_name:?}"
+            );
+            continue;
+        };
+        let Some(relative_path) = override_prefixes
             .iter()
             .find_map(|p| raw_path.strip_prefix(p).ok())
-            .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Failed to strip override prefix".to_string(),
-                )
-            })?;
+        else {
+            tracing::warn!(
+                "Skipping a pack override outside every overrides folder: {entry_name:?}"
+            );
+            continue;
+        };
         let safe_relative_path =
             crate::util::io::sanitize_relative_path(relative_path.as_str());
+        if safe_relative_path.is_empty() {
+            tracing::warn!(
+                "Skipping a pack override that sanitizes to an empty path: {entry_name:?}"
+            );
+            continue;
+        }
 
         let mut file_bytes = vec![];
         {
@@ -1116,18 +1190,38 @@ async fn extract_overrides(
             reader.read_to_end_checked(&mut file_bytes).await?;
         }
 
+        // Write to a temporary file first and only replace the target after
+        // the bytes are fully on disk: an interrupted or cancelled install
+        // used to leave a truncated or empty file in the instance, which is
+        // exactly the corrupted mod or config that crashes the game later.
         let dest = instance_dir.join(&safe_relative_path);
         if let Some(parent) = dest.parent() {
             tokio::fs::create_dir_all(parent)
                 .await
                 .map_err(|e| crate::util::io::IOError::with_path(e, parent))?;
         }
-        let mut out = tokio::fs::File::create(&dest)
+        let parent = dest.parent().ok_or_else(|| {
+            anyhow::anyhow!(
+                "could not get parent directory for the override file"
+            )
+        })?;
+        let temp_path = tempfile::NamedTempFile::new_in(parent)
+            .map_err(|e| crate::util::io::IOError::with_path(e, parent))?
+            .into_temp_path();
+        let mut out = tokio::fs::File::create(&temp_path)
             .await
-            .map_err(|e| crate::util::io::IOError::with_path(e, &dest))?;
+            .map_err(|e| crate::util::io::IOError::with_path(e, &temp_path))?;
         out.write_all(&file_bytes)
             .await
-            .map_err(|e| crate::util::io::IOError::with_path(e, &dest))?;
+            .map_err(|e| crate::util::io::IOError::with_path(e, &temp_path))?;
+        out.flush()
+            .await
+            .map_err(|e| crate::util::io::IOError::with_path(e, &temp_path))?;
+        drop(out);
+        temp_path.persist(&dest).map_err(|e| {
+            let tempfile::PathPersistError { error, .. } = e;
+            crate::util::io::IOError::with_path(error, &dest)
+        })?;
 
         reporter
             .update(
