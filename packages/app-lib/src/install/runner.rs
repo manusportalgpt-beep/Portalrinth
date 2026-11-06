@@ -401,9 +401,11 @@ async fn set_job_paused(
         // hanging with an error toast on every press.
         if is_stuck_job(&job) {
             heal_stuck_job(job_id, &state).await?;
-            return store::get_required(job_id, &state.pool)
-                .await?
-                .snapshot();
+            return Ok(
+                store::get_required(job_id, &state.pool)
+                    .await?
+                    .snapshot(),
+            );
         }
         bail!(ErrorKind::InputError(
             "install job cannot be paused or resumed".to_string(),
