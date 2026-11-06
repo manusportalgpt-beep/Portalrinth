@@ -267,6 +267,14 @@ function buildReady(stage: string | undefined): boolean {
 	return stage === 'installed' || stage === 'pack_installed'
 }
 
+/** A build whose files are already in place: fully installed, a modpack
+ * with its pack in place, or a recovered/imported one ('not_installed' -
+ * the game downloads itself at first launch, and content can be added
+ * right away). Waiting on any of these is wasted time. */
+function buildUsable(stage: string | undefined): boolean {
+	return buildReady(stage) || stage === 'not_installed'
+}
+
 /**
  * Waits until the install job settles, thinking out loud every so often.
  * Returns 'готова', 'остановлено', 'время ожидания вышло' or a failure text.
@@ -307,16 +315,24 @@ async function reuseExistingBuild(
 	instance: { id: string; name: string; install_stage: string },
 	timeoutMs: number,
 ): Promise<string> {
-	if (buildReady(instance.install_stage)) {
+	if (buildUsable(instance.install_stage)) {
 		return `Сборка «${instance.name}» уже есть (id: ${instance.id}) — не создаю дубль, работаем с ней.`
 	}
-	noteAgentThought(`Сборка «${instance.name}» уже ставится — жду её, а не создаю новую`)
-	const outcome = await waitInstallDone('', instance.id, `«${instance.name}»`, timeoutMs)
+	// The build is mid-download: a short grace only, never minutes - the
+	// player watches the very same download in the manager and a hung
+	// "Работаю..." helps nobody.
+	noteAgentThought(`Сборка «${instance.name}» уже скачивается — коротко проверяю, подолгу не жду`)
+	const outcome = await waitInstallDone(
+		'',
+		instance.id,
+		`«${instance.name}»`,
+		Math.min(timeoutMs, 20000),
+	)
 	if (outcome === 'готова') {
 		return `Сборка «${instance.name}» уже была и теперь готова (id: ${instance.id}) — работаем с ней.`
 	}
 	if (outcome === 'остановлено') return outcome
-	return `Сборка «${instance.name}» (id: ${instance.id}) ещё ставится (${outcome}) — подожди и проверь <<instance_info|${instance.id}>>, новую не создавай.`
+	return `Сборка «${instance.name}» (id: ${instance.id}) ещё скачивается (${outcome}) — ждать не стал: прогресс виден в загрузках. Когда загрузка кончится, проверь <<instance_info|${instance.id}>> и продолжай работу с ней; новую сборку не создавай.`
 }
 
 const LOADERS: Record<string, InstanceLoader> = {

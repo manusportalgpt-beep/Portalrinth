@@ -643,8 +643,9 @@ async function install(fileId: string | null = null) {
 /* «Установлено» тихое, пока курсор не нашёл его: полупрозрачный чип,
  * при наведении — плотная фирменная кнопка. */
 .installed-quiet:not(:hover) {
-	background: color-mix(in srgb, var(--color-brand) 26%, transparent) !important;
-	box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-brand) 40%, transparent) !important;
+	background: color-mix(in srgb, var(--color-brand) 12%, transparent) !important;
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-brand) 24%, transparent) !important;
+	color: color-mix(in srgb, var(--color-brand) 62%, var(--color-secondary)) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

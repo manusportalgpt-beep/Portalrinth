@@ -2471,6 +2471,7 @@ defineExpose({ send })
 				<Button
 					v-if="sending"
 					v-tooltip="formatMessage(messages.stop)"
+					color="brand"
 					class="ai-send !rounded-full"
 					:label="formatMessage(messages.stop)"
 					@click="stopAgentRun"

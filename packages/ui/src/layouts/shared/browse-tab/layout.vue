@@ -107,6 +107,18 @@ const messages = defineMessages({
 	},
 })
 
+/**
+ * The install progress a card should draw under its button, if any: a
+ * number (0-1) when an install job reports one, null while the card is
+ * installing but no percent is known yet, undefined when nothing runs.
+ */
+function cardInstallProgress(result: Labrinth.Search.v3.ResultSearchProject) {
+	const actions = ctx.getCardActions?.(result, ctx.projectType.value)
+	if (!actions) return undefined
+	const action = actions.find((candidate) => candidate.installProgress !== undefined)
+	return action ? (action.installProgress ?? null) : undefined
+}
+
 function cardActionType(action: CardAction) {
 	if (action.type === 'transparent') return 'quiet'
 	if (action.type === 'outlined') return 'outlined'
@@ -366,7 +378,8 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 					@mouseleave="ctx.onProjectHoverEnd?.()"
 				>
 					<template v-if="ctx.getCardActions?.(result, ctx.projectType.value)?.length" #actions>
-						<div class="flex gap-2">
+						<div class="flex flex-col gap-1">
+							<div class="flex gap-2">
 							<template
 								v-for="action in ctx.getCardActions(result, ctx.projectType.value)"
 								:key="action.key"
@@ -396,6 +409,24 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 									{{ action.label }}
 								</Button>
 							</template>
+							</div>
+							<div
+								v-if="cardInstallProgress(result) !== undefined"
+								class="browse-card-progress"
+								role="progressbar"
+							>
+								<div
+									class="browse-card-progress-fill"
+									:class="{
+										'browse-card-progress-fill--wait': cardInstallProgress(result) === null,
+									}"
+									:style="
+										cardInstallProgress(result) == null
+											? undefined
+											: { width: `${Math.round(cardInstallProgress(result)! * 100)}%` }
+									"
+								/>
+							</div>
 						</div>
 					</template>
 				</ProjectCard>
@@ -443,7 +474,8 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 					@mouseleave="ctx.onProjectHoverEnd?.()"
 				>
 					<template v-if="ctx.getCardActions?.(result, ctx.projectType.value)?.length" #actions>
-						<div class="flex gap-2">
+						<div class="flex flex-col gap-1">
+							<div class="flex gap-2">
 							<CardSourcePicker
 								v-if="ctx.getCardSources?.(result)"
 								:sources="ctx.getCardSources(result)!"
@@ -477,6 +509,24 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 									{{ action.label }}
 								</Button>
 							</template>
+							</div>
+							<div
+								v-if="cardInstallProgress(result) !== undefined"
+								class="browse-card-progress"
+								role="progressbar"
+							>
+								<div
+									class="browse-card-progress-fill"
+									:class="{
+										'browse-card-progress-fill--wait': cardInstallProgress(result) === null,
+									}"
+									:style="
+										cardInstallProgress(result) == null
+											? undefined
+											: { width: `${Math.round(cardInstallProgress(result)! * 100)}%` }
+									"
+								/>
+							</div>
 						</div>
 					</template>
 				</ProjectCard>
@@ -506,3 +556,40 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 
 	<slot name="after" />
 </template>
+<style scoped>
+.browse-card-progress {
+	flex: none;
+	height: 0.25rem;
+	border-radius: 999px;
+	overflow: hidden;
+	background: var(--color-button-bg);
+}
+
+.browse-card-progress-fill {
+	height: 100%;
+	border-radius: inherit;
+	background: var(--portalrinth-accent-gradient, var(--color-brand));
+	transition: width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.browse-card-progress-fill--wait {
+	width: 35%;
+	animation: browse-card-progress-slide 1.3s ease-in-out infinite;
+}
+
+@keyframes browse-card-progress-slide {
+	from {
+		margin-left: -35%;
+	}
+	to {
+		margin-left: 100%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.browse-card-progress-fill {
+		animation: none;
+		transition: none;
+	}
+}
+</style>

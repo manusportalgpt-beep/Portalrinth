@@ -1,4 +1,10 @@
 {
+	"app.sidebar.collapse": {
+		"message": "Свернуть боковую панель"
+	},
+	"app.sidebar.expand": {
+		"message": "Развернуть боковую панель"
+	},
 	"app.library.group.pinned": {
 		"message": "Закреплённые"
 	},

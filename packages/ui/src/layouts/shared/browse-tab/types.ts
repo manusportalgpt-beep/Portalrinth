@@ -56,6 +56,13 @@ export interface CardAction {
 	type?: 'standard' | 'outlined' | 'transparent'
 	circular?: boolean
 	tooltip?: string
+	/**
+	 * Install progress for the card's own bar: a number (0-1) once an install
+	 * job reports one, null while installing with no percent known yet,
+	 * undefined when the card has nothing to show. Only the install action
+	 * ever sets it.
+	 */
+	installProgress?: number | null
 	onClick: () => void | Promise<void>
 }
 

@@ -3,18 +3,13 @@
                 <slot />
                 <Transition name="install-progress-pop">
                         <div v-if="hover && panelShown" class="install-progress-pop" role="status">
-                                <div class="install-progress-head">
-                                        <span class="install-progress-title">{{ title }}</span>
-                                        <span class="install-progress-percent">{{ percentLabel }}</span>
+                                <div
+                                        class="install-progress-track"
+                                        :class="{ 'install-progress-track--wait': waiting }"
+                                >
+                                        <div class="install-progress-fill" :style="{ width: fillWidth }" />
                                 </div>
-                                <div class="install-progress-track">
-                                        <div
-                                                class="install-progress-fill"
-                                                :class="{ 'install-progress-fill--wait': waiting }"
-                                                :style="{ width: fillWidth }"
-                                        />
-                                </div>
-                                <p class="install-progress-phase">{{ phaseText }}</p>
+                                <span v-if="!waiting" class="install-progress-percent">{{ percentLabel }}</span>
                         </div>
                 </Transition>
         </span>
@@ -22,39 +17,25 @@
 
 <script setup lang="ts">
 /**
- * A little panel that appears above the install button on hover while an
- * install runs: the whole-job progress bar in the accent gradient and the
- * percent done (0-100), plus the live phase text. The button itself is tiny
- * and often just says "Installing" - this tells the player how far along
- * the job actually is, without opening the download manager.
+ * A quiet strip that appears above the install button on hover while an
+ * install runs: one thin bar in the accent gradient and a small percent.
+ * No headline, no phase captions - the button next to it already says
+ * "Installing", so the panel only answers "how far along".
  */
-import { defineMessages, useVIntl } from '@modrinth/ui'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { createInstallJobProgressTracker } from '@/components/ui/download-manager/install-job-progress'
-import { useInstallJobDisplay } from '@/components/ui/download-manager/use-install-job-display'
 import {
         install_job_list,
         type InstallJobSnapshot,
 } from '@/helpers/install'
 import { injectAppEvents } from '@/providers/app-events'
 
-const { formatMessage } = useVIntl()
-
-const messages = defineMessages({
-        waiting: {
-                id: 'portalrinth.install.progress.waiting',
-                defaultMessage: 'Preparing…',
-        },
-        installing: {
-                id: 'portalrinth.install.progress.installing',
-                defaultMessage: 'Installing content…',
-        },
-})
-
 const props = defineProps<{
-        /** The button's own installing state: shows the panel even before the job reports in. */
+        /** The button's own installing state: shows the bar even before the job reports in. */
         active?: boolean
+        /** Count only jobs for this project (a search card), not every install in the app. */
+        projectId?: string
 }>()
 
 const hover = ref(false)
@@ -62,9 +43,12 @@ const events = injectAppEvents()
 
 const jobs = ref(new Map<string, InstallJobSnapshot>())
 const tracker = createInstallJobProgressTracker()
-const display = useInstallJobDisplay()
 
 function track(job: InstallJobSnapshot) {
+        if (props.projectId) {
+                const details = job.details
+                if (details.type !== 'modpack' || details.project_id !== props.projectId) return
+        }
         tracker.update(job)
         if (
                 job.status === 'succeeded' ||
@@ -98,12 +82,6 @@ const percent = computed(() => {
 
 const percentLabel = computed(() => `${percent.value}%`)
 const fillWidth = computed(() => (waiting.value ? '100%' : `${percent.value}%`))
-const title = computed(() =>
-        job.value ? display.getTitle(job.value) : formatMessage(messages.installing),
-)
-const phaseText = computed(() =>
-        job.value ? display.getText(job.value) : formatMessage(messages.waiting),
-)
 
 let unlisten: (() => void) | undefined
 
@@ -113,7 +91,7 @@ onMounted(async () => {
                 const list = await install_job_list(false)
                 for (const item of list) track(item)
         } catch {
-                /* the panel is cosmetic - a failed listing just means no progress shown */
+                /* the strip is cosmetic - a failed listing just means no progress shown */
         }
 })
 
@@ -132,54 +110,27 @@ onBeforeUnmount(() => {
         position: absolute;
         /* Opens downward: the button sits right under the title bar, and a
            panel opening upward is clipped away by the viewport's top edge. */
-        top: calc(100% + 0.6rem);
+        top: calc(100% + 0.5rem);
         left: 50%;
         transform: translateX(-50%);
         z-index: 60;
-        width: max-content;
-        max-width: min(20rem, calc(100vw - 3rem));
         display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-        padding: 0.65rem 0.8rem 0.6rem;
-        border-radius: 1rem;
-        border: 1px solid color-mix(in srgb, var(--color-contrast) 14%, transparent);
-        background: color-mix(in srgb, var(--color-raised-bg) 88%, transparent);
-        backdrop-filter: blur(14px) saturate(1.2);
-        -webkit-backdrop-filter: blur(14px) saturate(1.2);
-        box-shadow:
-                0 10px 28px rgb(0 0 0 / 30%),
-                inset 0 1px 0 rgb(255 255 255 / 6%);
+        align-items: center;
+        gap: 0.5rem;
+        width: 11rem;
+        padding: 0.5rem 0.65rem;
+        border-radius: 0.8rem;
+        border: 1px solid color-mix(in srgb, var(--color-contrast) 10%, transparent);
+        background: color-mix(in srgb, var(--color-raised-bg) 90%, transparent);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 6px 18px rgb(0 0 0 / 22%);
         pointer-events: none;
 }
 
-.install-progress-head {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 1rem;
-        min-width: 0;
-}
-
-.install-progress-title {
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        font-size: 0.78rem;
-        font-weight: 700;
-        color: var(--color-contrast);
-}
-
-.install-progress-percent {
-        flex-shrink: 0;
-        font-size: 0.78rem;
-        font-weight: 700;
-        font-variant-numeric: tabular-nums;
-        color: var(--color-brand);
-}
-
 .install-progress-track {
-        height: 0.45rem;
+        flex: 1;
+        height: 0.35rem;
         border-radius: 999px;
         overflow: hidden;
         background: var(--color-button-bg);
@@ -189,48 +140,47 @@ onBeforeUnmount(() => {
         height: 100%;
         border-radius: inherit;
         background: var(--portalrinth-accent-gradient, var(--color-brand));
-        transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+        transition: width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.install-progress-fill--wait {
-        width: 30% !important;
-        animation: install-progress-slide 1.1s ease-in-out infinite;
+.install-progress-track--wait .install-progress-fill {
+        width: 35% !important;
+        animation: install-progress-slide 1.3s ease-in-out infinite;
 }
 
 @keyframes install-progress-slide {
         0% {
-                margin-left: -30%;
+                margin-left: -35%;
         }
         100% {
                 margin-left: 100%;
         }
 }
 
-.install-progress-phase {
-        margin: 0;
-        font-size: 0.7rem;
+.install-progress-percent {
+        flex-shrink: 0;
+        font-size: 0.72rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
         color: var(--color-secondary);
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
 }
 
 .install-progress-pop-enter-active,
 .install-progress-pop-leave-active {
         transition:
-                opacity 0.18s ease,
-                transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+                opacity 0.15s ease,
+                transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .install-progress-pop-enter-from,
 .install-progress-pop-leave-to {
         opacity: 0;
-        transform: translateX(-50%) translateY(-6px) scale(0.96);
+        transform: translateX(-50%) translateY(-4px) scale(0.98);
 }
 
 @media (prefers-reduced-motion: reduce) {
         .install-progress-fill,
-        .install-progress-fill--wait {
+        .install-progress-track--wait .install-progress-fill {
                 animation: none;
                 transition: none;
         }

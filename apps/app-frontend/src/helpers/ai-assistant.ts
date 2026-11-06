@@ -1142,6 +1142,8 @@ export const AI_CHARACTER_HINT = [
 	'Память между чатами: важное о игроке (ник, любимые моды, его сборки, железо, договорённости, что ему не понравилось) сразу записывай через <<memory_write|…>> одной строкой; в начале нового чата опирайся на заметки и сводку прошлых чатов — не переспрашивай то, что уже знаешь.',
 	'Железо игрока — основа решений: память, видеокарту и ядра бери из <<sysinfo|>>, а не из головы; от них зависит размер памяти игре (<<launcher_set_memory|МБ>>), выбор оптимизационных модов и реалистичность обещаний про FPS.',
 	'Скорость: действуй, а не обещай. Если просьба понятна — сразу выполняй нужные команды в этом же ответе (несколько команд подряд можно), не спрашивай «хотите ли вы», когда игрок уже попросил. Уточняй только когда без ответа реально нельзя.',
+	'Понимание задачи: выполняй РОВНО то, что просят. Перечитай просьбу, разбей на части — каждая часть это отдельный шаг, и ВСЕ части выполняются в этом же ходе, по порядку. Не подменяй просьбу «примерно тем же», не делай лишнего и не бросай на полпути: если просят «сказал 1 — сделай 1», результат должен быть именно он.',
+	'Не жди там, где ждать нечего: сборка уже скачана — работай с ней сразу; уже скачивается — не виси минутами, инструменты сами вернут статус, продолжай, когда загрузка дойдёт до конца (проверь <<instance_info|id>>).',
 	'Задачу доводи до конца: план (plan_start) веди шаг за шагом — поиск → установка → конфиги → компиляция → запуск → проверка, и после каждого шага сразу бери следующий. Раундов у тебя достаточно, чтобы доделать; на середине не останавливайся и недоделок не оставляй — если что-то блокирует, скажи, что именно, и предложи обходной путь.',
 	'Ты — Порталус, живой помощник лаунчера. НИКОГДА не отказывайся и не прячься за технику: никаких «я не могу», «как языковая модель», «модель не поддерживает», «провайдер недоступен», «попробуйте позже». У тебя есть инструменты, песочница и знания из промпта — любую просьбу сразу берись выполнять; если что-то технически не вышло — пробуй другой путь и рассказывай, что сделал. На чём ты работаешь внутри, игрока не касается.',
 	'Скорость рук: файлы пиши СРАЗУ ЦЕЛИКОМ одним <<sandbox_write|файл::полный текст>> — не по кусочкам и без перечитывания после каждой записи; мелкие шаги объединяй в цепочки <<sandbox_bash|mkdir proj && echo текст > proj/файл.txt>>; правка файла = перезапись целиком, а не чтение-правка-запись. Последний файл готов — тут же собери (<<launcher_compile_java|папка::мод.jar>> или <<sandbox_pack|имя.zip::папка>>) и сразу <<install_to_instance|файл::тип>>: минимум раундов, одной проверки распаковкой перед установкой достаточно.',
@@ -1155,8 +1157,8 @@ export const AI_LAUNCHER_HINT = [
 	'- <<create_instance|название::версия::ядро>> — создать сборку (ядро: fabric, forge, neoforge, quilt, vanilla), например <<create_instance|Выживание::1.21.1::fabric>>; дожидается полной установки и возвращается уже готовой',
 	'- <<install_modpack|id>> — поставить модпак как новую сборку (id с Modrinth или cf:ID с CurseForge); дожидается конца скачивания — после ответа сборка готова',
 	'- <<build_modpack|название::версия::ядро::мод1;;мод2;;…::rp:ресурс-пак;;shader:шейдер>> — СОБРАТЬ СВОЮ СБОРКУ целиком одной командой: создаст сборку и поставит все моды (по названиям, найдёт сам под версию и ядро), ресурс-паки и шейдеры (Iris/Oculus добавится сам), дожидается установки каждого. Версию можно оставить пустой — возьмётся последняя. Оптимизация (Sodium/Embeddium, Lithium, FerriteCore) добавится сама, если её нет в списке. Пример: <<build_modpack|Магия и техно::1.20.1::forge::create;;botania;;jei;;sodium::rp:fresh animations;;shader:complementary>>',
-	'Сборка по описанию: когда игрок описывает идею словами, одним словом («космос», «хоррор», «средневековье»), текстом или картинкой — сам продумай тему, подбери 10–30 совместимых модов под одно ядро и версию (основа + оптимизация + QoL: JEI/EMI, мини-карта, Sodium/Embeddium), ресурс-пак и шейдер под атмосферу, коротко объясни выбор и сразу вызывай build_modpack. По картинке: определи стиль/биом/эпоху и подбери под него. Дополнительно рекомендуй: обои (find_wallpaper), цвет/градиент лаунчера под тему, ссылки на вики модов.',
-	'Сборки без дублей: перед созданием глянь <<list_instances|>> — если сборка с таким именем уже есть, работай с ней (create_instance и install_modpack сами находят её по имени и НЕ создают вторую). Все три команды дожидаются конца скачивания и установки: после их ответа сборка готова, моды ставить можно сразу. Если ответ «ещё ставится» или «время ожидания вышло» — подожди и проверь <<instance_info|id>>, НИКОГДА не создавай сборку заново из-за ожидания.',
+	'Сборка по описанию: когда игрок описывает идею словами, одним словом («космос», «хоррор», «средневековье»), текстом или картинкой — сам продумай тему и собери. СНАЧАЛА <<sysinfo|>>: железо задаёт размер сборки — слабый ПК: 10–18 модов и усиленная оптимизация (Sodium/Embeddium, Lithium, ModernFix, FerriteCore), средний: 15–25, мощный: до 30–40; слабому — без тяжёлых шейдеров и лишних измерений. Атмосфера цельная, не переполненная: каждый мод работает на тему и дополняет остальные, а не сваливается кучей; всё под ОДНО ядро и версию, без известных конфликтов и дублей по назначению. Подбери 10–30 совместимых модов (основа + оптимизация + QoL: JEI/EMI, мини-карта, Sodium/Embeddium), ресурс-пак и шейдер под атмосферу, коротко объясни выбор и сразу вызывай build_modpack. По картинке: определи стиль/биом/эпоху и подбери под него. Дополнительно рекомендуй: обои (find_wallpaper), цвет/градиент лаунчера под тему, ссылки на вики модов.',
+	'Сборки без дублей: перед созданием глянь <<list_instances|>> — если сборка с таким именем уже есть, работай с ней (create_instance и install_modpack сами находят её по имени и НЕ создают вторую). Готовая сборка используется сразу, без всякого ожидания; если она ещё скачивается — инструменты вернут статус и НЕ зависнут: не жди сам, скажи игроку, что продолжишь после загрузки, и проверь <<instance_info|id>>. НИКОГДА не создавай сборку заново из-за ожидания.',
 	'Стандарт сборки: моды РАЗНЫЕ по назначению — основа геймплея под тему (биомы, мобы, магия, техника), оптимизация (Sodium/Embeddium, Lithium), QoL (JEI/EMI, мини-карта), а не одна оптимизация; ядро подбирай под тему (магия — forge/neoforge, техно и лёгкость — fabric). После установки загляни в конфиги (<<instance_files|сборка::config>>, <<instance_read|…>>) и поправь ключевое через <<instance_write|…>>. Потом предложи запуск: <<launch_instance|…>>; если краш — сразу <<instance_logs|сборка::краш>>, найди виновника, выключи (<<mod_toggle|…::выкл>>) или замени — удаляй (<<mod_delete|…>>) только если крайне необходимо — и собери заново. Итог — работающая сборка, а не список названий.',
 	'Модификации на заказ: датапак, ресурс-пак или простой мод собери в песочнице (sandbox_write, scaffold), упакуй и поставь в сборку <<install_to_instance|файл::тип::сборка>>; Java-мод — <<launcher_compile_java|файлы>>. Настройками лаунчера управляй сам: launcher_set_accent, launcher_set_gradient, launcher_set_background, launcher_set_theme, launcher_save_theme, open_settings.',
 	'- <<launch_instance|id или название>> — запустить игру; <<stop_instance|id>> — закрыть игру',
@@ -3913,6 +3915,26 @@ registerAiToolHandler(async (tool, args) => {
 			}
 		}
 		const name = nameRaw || `Сборка ${version}`
+		// The pack is built for THIS machine: RAM and cores decide how much
+		// optimization it needs and how many mods it carries smoothly.
+		let ramGb = 0
+		let cores = 0
+		try {
+			ramGb =
+				Math.round(
+					(Number(await invoke<number>('plugin:jre|jre_get_max_memory')) / 1024 / 1024) * 10,
+				) / 10
+		} catch {
+			/* no OS figure - the browser guess below still applies */
+		}
+		cores = navigator.hardwareConcurrency ?? 0
+		const weakHardware = (ramGb > 0 && ramGb <= 4) || (cores > 0 && cores <= 2)
+		if (weakHardware && wanted.length > 18) {
+			wanted.length = 18
+			noteAgentThought(
+				`Железо слабое (${ramGb || '?'} ГБ, ${cores || '?'} ядер) — модов до 18 и усиленная оптимизация`,
+			)
+		}
 		// One build per name: an existing build is reused, never duplicated.
 		const existing = (await list().catch(() => [])).find(
 			(instance) => instance.name.toLowerCase() === name.toLowerCase(),
@@ -3920,21 +3942,24 @@ registerAiToolHandler(async (tool, args) => {
 		let instanceId = ''
 		if (existing) {
 			instanceId = existing.id
-			if (
-				existing.install_stage !== 'installed' &&
-				existing.install_stage !== 'pack_installed'
-			) {
-				noteAgentThought(`Сборка «${name}» уже ставится — жду её, а не создаю новую`)
-				for (let wait = 0; wait < 210; wait++) {
+			const stageOf = (build: { install_stage: string } | null) =>
+				build ? build.install_stage : 'installed'
+			// 'not_installed' means the files are already there (the game
+			// downloads at first launch) - waiting on it is pointless.
+			const usable = (stage: string) =>
+				stage === 'installed' || stage === 'pack_installed' || stage === 'not_installed'
+			if (!usable(existing.install_stage)) {
+				noteAgentThought(`Сборка «${name}» уже скачивается — коротко проверяю, подолгу не жду`)
+				for (let wait = 0; wait < 10; wait++) {
 					if (playerTookOver()) break
 					const again = await get(existing.id).catch(() => null)
-					if (!again) break
-					if (
-						again.install_stage === 'installed' ||
-						again.install_stage === 'pack_installed'
-					)
-						break
+					if (!again || usable(stageOf(again))) break
 					await sleep(2000)
+				}
+				const settled = stageOf(await get(existing.id).catch(() => null))
+				if (!usable(settled)) {
+					const rest = wanted.length ? ` Моды по списку: ${wanted.join(', ')}.` : ''
+					return `Сборка «${name}» (id: ${existing.id}) ещё скачивается — ждать не стал, прогресс виден в загрузках. Когда загрузка кончится, повтори сборку той же командой (дубль не создастся) или поставь моды через <<launcher_install|${existing.id}::мод>>.${rest}`
 				}
 			}
 		} else {
@@ -4005,6 +4030,15 @@ registerAiToolHandler(async (tool, args) => {
 				)
 			}
 		}
+		// A weak machine gets the extra-squeezed set: boot and RAM fixes on
+		// top of the renderers, so the pack stays playable, not just pretty.
+		if (weakHardware && loader !== 'vanilla') {
+			const asked = wanted.join(' ').toLowerCase()
+			if (!/modernfix/.test(asked)) jobs.push({ query: 'modernfix', type: 'mod' })
+			if (!/krypton/.test(asked) && (loader === 'fabric' || loader === 'quilt')) {
+				jobs.push({ query: 'krypton', type: 'mod' })
+			}
+		}
 
 		const done: string[] = []
 		const failed: string[] = []
@@ -4035,6 +4069,11 @@ registerAiToolHandler(async (tool, args) => {
 		}
 		return [
 			`Собрал сборку «${name}» (Minecraft ${version}, ${loader}, id: ${instanceId}).`,
+			ramGb || cores
+				? `Железо учтено: RAM ${ramGb || '?'} ГБ, ядер ${cores || '?'}${
+						weakHardware ? ' — слабое, сборка облегчена и усиленно оптимизирована' : ''
+					}.`
+				: '',
 			done.length ? `Установлено (${done.length}): ${done.join(', ')}.` : 'Ничего не установилось.',
 			failed.length ? `Не подошло: ${failed.join('; ')}. Предложи аналоги.` : '',
 			'Запустить: <<launch_instance|' +
