@@ -3885,10 +3885,10 @@
 		"message": "Slim"
 	},
 	"app.nav.hosting-paid": {
-		"message": "Modrinth Hosting (платно)"
+		"message": "Modrinth Hosting"
 	},
 	"app.nav.lan-free": {
-		"message": "LAN (бесплатно)"
+		"message": "LAN"
 	},
 	"app.ai.effort": {
 		"message": "Раздумье"

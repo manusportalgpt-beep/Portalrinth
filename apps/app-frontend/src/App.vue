@@ -783,11 +783,11 @@ const messages = defineMessages({
         },
         lanFree: {
                 id: 'app.nav.lan-free',
-                defaultMessage: 'LAN (free)',
+                defaultMessage: 'LAN',
         },
         hostingPaid: {
                 id: 'app.nav.hosting-paid',
-                defaultMessage: 'Modrinth Hosting (paid)',
+                defaultMessage: 'Modrinth Hosting',
         },
         hostingTab: {
                 id: 'app.nav.modrinth-hosting',

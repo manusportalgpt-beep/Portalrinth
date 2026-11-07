@@ -543,13 +543,13 @@ async fn apply_manifest_to_instance(
     // managed pack instance; from here on it keeps its own settings, exactly
     // like every other managed instance gets at creation.
     if let Ok(state) = crate::State::get().await {
-        if let Err(error) = crate::state::instances::commands::managed_instance_defaults::keep_shared_settings_out(
+        if let Err(error) = crate::state::instances::commands::managed_instance_defaults::keep_pack_owned_files_out_of_sync(
             instance_id, &state,
         )
         .await
         {
             tracing::warn!(
-                "The pack was installed, but its own settings could not be kept out of shared-settings sync: {error}"
+                "The pack was installed, but its server list and packs could not be kept out of shared-settings sync: {error}"
             );
         }
     }

@@ -126,10 +126,12 @@ pub(crate) async fn create_instance(
         .await?;
         tx.commit().await?;
 
-        // A modpack brings its own options, server list and hotbars, and the
-        // shared settings would write over them on the first launch.
+        // A modpack brings its own server list, resource packs and data
+        // packs; those shared features would write over the pack's own files
+        // on the first launch, so they start switched off. The player's own
+        // shared settings stay on and never overwrite what the pack sets.
         if managed_instance_defaults::is_managed(&input.link) {
-            managed_instance_defaults::keep_shared_settings_out(
+            managed_instance_defaults::keep_pack_owned_files_out_of_sync(
                 &instance_id,
                 state,
             )

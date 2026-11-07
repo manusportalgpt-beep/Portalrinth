@@ -17,6 +17,7 @@ use crate::state::{
     game_options_sync_is_enabled, load_game_option_preferences,
     load_game_options_sync_state, load_shared_game_options,
 };
+use crate::state::instances::commands::managed_instance_defaults::is_managed;
 use crate::util::io;
 
 struct AppliedSettings {
@@ -120,6 +121,14 @@ async fn apply_shared_settings_to_document(
         let Some(key) = key else {
             continue;
         };
+
+        // A pack owns the settings it shipped: a shared value only fills in a
+        // key the pack does not already set, it never overwrites one. The
+        // pack's own options.txt stays exactly as its author wrote it, and the
+        // shared settings are applied to the rest when the game is launched.
+        if is_managed(&metadata.link) && document.value(&key).is_some() {
+            continue;
+        }
 
         let migrated = definition.is_some_and(|definition| {
             alias_migration_needed(definition, document, &key)
