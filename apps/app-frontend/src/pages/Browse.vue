@@ -56,12 +56,10 @@ import type { LocationQuery } from 'vue-router'
 import { useRoute, useRouter } from 'vue-router'
 
 import BrowseSourcePicker from '@/components/ui/curseforge/BrowseSourcePicker.vue'
-import { createInstallJobProgressTracker } from '@/components/ui/download-manager/install-job-progress'
 import { useAppServerBrowse } from '@/composables/browse/use-app-server-browse'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { injectSettingsActions } from '@/features/settings/settings-actions'
-import type { InstallJobSnapshot } from '@/generated/app-events/InstallJobSnapshot'
 import {
 	get_organization_many,
 	get_project,
@@ -83,7 +81,6 @@ import {
 } from '@/helpers/curseforge'
 import { curseforgeCategoryIcon, curseforgeCategoryMessage } from '@/helpers/curseforge-categories'
 import { curseforgeKeyAvailable, curseforgeSettings } from '@/helpers/curseforge-settings'
-import { install_job_list } from '@/helpers/install'
 import {
 	get as getInstance,
 	get_content_items,
@@ -445,7 +442,10 @@ function toggleCardRemove(projectId: string) {
 }
 
 /** The file of this project inside the selected instance, for removal. */
-async function findInstalledCardPath(instanceId: string, projectId: string): Promise<string | null> {
+async function findInstalledCardPath(
+	instanceId: string,
+	projectId: string,
+): Promise<string | null> {
 	const items = await get_content_items(instanceId)
 	const matches = (candidate?: string | null) =>
 		!!candidate &&
@@ -957,7 +957,12 @@ const selectableProjectTypes = computed(() => {
 			shown: modpacks,
 			icon: PackageIcon,
 		},
-		{ label: formatMessage(messages.modsProjectType), href: `/browse/mod${suffix}`, shown: mods, icon: WrenchIcon },
+		{
+			label: formatMessage(messages.modsProjectType),
+			href: `/browse/mod${suffix}`,
+			shown: mods,
+			icon: WrenchIcon,
+		},
 		{
 			label: formatMessage(messages.resourcePacksProjectType),
 			href: `/browse/resourcepack${suffix}`,
@@ -969,7 +974,11 @@ const selectableProjectTypes = computed(() => {
 			shown: dataPacks,
 			icon: BlocksIcon,
 		},
-		{ label: formatMessage(messages.shadersProjectType), href: `/browse/shader${suffix}`, icon: LayersIcon },
+		{
+			label: formatMessage(messages.shadersProjectType),
+			href: `/browse/shader${suffix}`,
+			icon: LayersIcon,
+		},
 		{
 			label: formatMessage(messages.serversProjectType),
 			href: `/browse/server${suffix}`,
@@ -1031,39 +1040,6 @@ const installContext = computed(() => {
 })
 
 const installingProjectIds = ref<Set<string>>(new Set())
-
-/**
- * Whole-job percent per project id, straight from install jobs: a search
- * card draws the same bar the project page does while its pack installs.
- * Plain content installs report no percent - the card then shows a quiet
- * indeterminate strip instead of a number.
- */
-const projectProgress = ref(new Map<string, number>())
-const progressTracker = createInstallJobProgressTracker()
-
-function trackProgressJob(job: InstallJobSnapshot) {
-	progressTracker.update(job)
-	const details = job.details
-	const projectId = details.type === 'modpack' ? details.project_id : null
-	if (!projectId) return
-	if (
-		job.status === 'succeeded' ||
-		job.status === 'failed' ||
-		job.status === 'interrupted' ||
-		job.status === 'canceled'
-	) {
-		projectProgress.value.delete(projectId)
-	} else {
-		projectProgress.value.set(projectId, progressTracker.get(job.job_id))
-	}
-}
-
-useAppEvent('install_job', trackProgressJob)
-void install_job_list(false)
-	.then((items) => {
-		for (const item of items) trackProgressJob(item)
-	})
-	.catch(() => {})
 
 function setProjectInstalling(projectId: string, installing: boolean) {
 	const next = new Set(installingProjectIds.value)
@@ -1289,17 +1265,17 @@ function getCardActions(
 	return [
 		...(showAsInstalled && revealedRemoveIds.value.includes(projectResult.project_id)
 			? [
-				{
-					key: 'remove',
-					label: formatMessage(messages.removeFromInstance),
-					tooltip: formatMessage(messages.removeFromInstance),
-					icon: TrashIcon,
-					disabled: removingCardIds.value.includes(projectResult.project_id) || isInstalling,
-					color: 'red',
-					type: 'outlined',
-					onClick: () => void removeCardProject(projectResult.project_id),
-				},
-			]
+					{
+						key: 'remove',
+						label: formatMessage(messages.removeFromInstance),
+						tooltip: formatMessage(messages.removeFromInstance),
+						icon: TrashIcon,
+						disabled: removingCardIds.value.includes(projectResult.project_id) || isInstalling,
+						color: 'red',
+						type: 'outlined',
+						onClick: () => void removeCardProject(projectResult.project_id),
+					},
+				]
 			: []),
 		{
 			key: 'install',
@@ -1316,11 +1292,9 @@ function getCardActions(
 			iconClass: isInstalling ? 'animate-spin' : undefined,
 			tooltip: showAsInstalled ? formatMessage(messages.installedHint) : undefined,
 			disabled: isInstalling,
-			installProgress: isInstalling
-				? (projectProgress.value.get(projectResult.project_id) ?? null)
-				: undefined,
 			color: 'brand',
-			type: 'outlined',
+			// Installed sits quiet and dim: it is a fact, not a call to action.
+			type: showAsInstalled ? 'transparent' : 'outlined',
 			onClick: async () => {
 				if (showAsInstalled) {
 					toggleCardRemove(projectResult.project_id)
@@ -1389,17 +1363,17 @@ function getCurseforgeCardActions(
 	return [
 		...(isInstalled && revealedRemoveIds.value.includes(projectResult.project_id)
 			? [
-				{
-					key: 'remove',
-					label: formatMessage(messages.removeFromInstance),
-					tooltip: formatMessage(messages.removeFromInstance),
-					icon: TrashIcon,
-					disabled: removingCardIds.value.includes(projectResult.project_id) || isInstalling,
-					color: 'red',
-					type: 'outlined',
-					onClick: () => void removeCardProject(projectResult.project_id),
-				},
-			]
+					{
+						key: 'remove',
+						label: formatMessage(messages.removeFromInstance),
+						tooltip: formatMessage(messages.removeFromInstance),
+						icon: TrashIcon,
+						disabled: removingCardIds.value.includes(projectResult.project_id) || isInstalling,
+						color: 'red',
+						type: 'outlined',
+						onClick: () => void removeCardProject(projectResult.project_id),
+					},
+				]
 			: []),
 		{
 			key: 'install',
@@ -1416,11 +1390,9 @@ function getCurseforgeCardActions(
 			iconClass: isInstalling ? 'animate-spin' : undefined,
 			tooltip: isInstalled ? formatMessage(messages.installedHint) : undefined,
 			disabled: isInstalling,
-			installProgress: isInstalling
-				? (projectProgress.value.get(projectResult.project_id) ?? null)
-				: undefined,
 			color: 'brand',
-			type: 'outlined',
+			// Installed sits quiet and dim: it is a fact, not a call to action.
+			type: isInstalled ? 'transparent' : 'outlined',
 			onClick: async () => {
 				if (isInstalled) {
 					toggleCardRemove(projectResult.project_id)

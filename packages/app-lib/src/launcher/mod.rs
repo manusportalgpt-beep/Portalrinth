@@ -1148,7 +1148,7 @@ pub async fn launch_minecraft(
     // state fans it out to the interface.
     let fps_instance_id = instance.id.clone();
     let rpc_server = RpcServerBuilder::new()
-        .handler("fps_report", move |args| {
+        .handler("fps_report", move |args: Vec<serde_json::Value>| {
             let instance_id = fps_instance_id.clone();
             Box::pin(async move {
                 let report = args.into_iter().next().unwrap_or(serde_json::Value::Null);

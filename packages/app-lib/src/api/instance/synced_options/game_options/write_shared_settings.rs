@@ -122,11 +122,13 @@ async fn apply_shared_settings_to_document(
             continue;
         };
 
-        // A pack owns the settings it shipped: a shared value only fills in a
-        // key the pack does not already set, it never overwrites one. The
-        // pack's own options.txt stays exactly as its author wrote it, and the
-        // shared settings are applied to the rest when the game is launched.
-        if is_managed(&metadata.link) && document.value(&key).is_some() {
+        // A pack owns its settings: a shared value only fills in a vanilla
+        // key the pack does not already set. Whatever the pack (or its mods)
+        // wrote - keys it set itself and the ones mods added on top - is
+        // never overwritten, so a mod's own records survive sync untouched.
+        if is_managed(&metadata.link)
+            && (document.value(&key).is_some() || definition.is_none())
+        {
             continue;
         }
 
@@ -229,6 +231,16 @@ pub(super) async fn apply_shared_settings_to_instance(
     let output_sha1 = sha1_bytes(&output_bytes);
     let changed = file_was_missing || output_bytes != input_bytes;
     if changed {
+        // The pre-write version goes to the backup shelf first: whatever the
+        // shared settings write, the file as it stood stays recoverable.
+        if let Err(error) =
+            super::super::orchestration::backup_bytes(&metadata.instance.id, "options.txt", &input_bytes, state)
+                .await
+        {
+            tracing::warn!(
+                "Could not back up options.txt before applying shared settings: {error}"
+            );
+        }
         io::write(&path, output_bytes).await?;
     }
     remember_processed_sha(&metadata.instance.id, &output_sha1, state).await?;
