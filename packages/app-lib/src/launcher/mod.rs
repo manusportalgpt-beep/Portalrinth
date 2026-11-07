@@ -1168,11 +1168,16 @@ pub async fn launch_minecraft(
                         min: read_u32("min"),
                         max: read_u32("max"),
                     };
+                    // The event channel exists only in the Tauri build; the
+                    // plain check builds reach here without one.
+                    #[cfg(feature = "tauri")]
                     if let Err(error) =
                         crate::event::EventState::get().send(crate::event::AppEvent::FpsReport(payload))
                     {
                         tracing::warn!("Failed to emit an fps report: {error}");
                     }
+                    #[cfg(not(feature = "tauri"))]
+                    tracing::debug!("fps report without an event channel: {payload:?}");
                     Ok(serde_json::Value::Null)
                 };
                 Box::pin(future)
