@@ -5,6 +5,13 @@
  * session, a minute-tick moves the elapsed time into today's bucket while the
  * game runs, and the "finished" event closes the session. Interface data, not
  * game files - hence localStorage, like the build notes.
+ *
+ * Alongside the time, each session remembers its slowest and its fastest
+ * second of frames. The game's agent counts every rendered frame and reports
+ * a five-second summary; those reports arrive as fps_report events and are
+ * folded into the running session here. While no report has come (an older
+ * game, a launcher without the probe) the FPS side of a session is simply
+ * unknown, not zero.
  */
 
 export interface PlaytimeDay {
@@ -15,9 +22,20 @@ export interface PlaytimeDay {
 	pct: number
 }
 
+/** One closed game session: when it ran, and the frames it managed. */
+export interface PlaytimeSession {
+	start: number
+	end: number
+	/** The slowest one-second frame rate of the session, when known. */
+	minFps?: number
+	/** The fastest one-second frame rate of the session, when known. */
+	maxFps?: number
+}
+
 interface PlaytimeStore {
 	days: Record<string, number>
 	session?: { start: number; flushed: number }
+	sessions?: PlaytimeSession[]
 }
 
 const PREFIX = 'portalrinth-instance-playtime:'
@@ -26,6 +44,15 @@ const DAY_MS = 86_400_000
 const MAX_CHUNK_SECONDS = 24 * 60 * 60
 /** Days kept in the ledger; the graph shows a fortnight. */
 const KEEP_DAYS = 30
+/** Closed sessions kept per build; the info page shows a handful of the latest. */
+const KEEP_SESSIONS = 20
+
+/**
+ * The frame reports of the session that is running right now, per build. In
+ * memory only: a session that is still running has nothing to store yet, and
+ * the launcher restarting simply forgets it.
+ */
+const liveFps = new Map<string, { min: number; max: number }>()
 
 function keyOf(instanceId: string): string {
 	return `${PREFIX}${instanceId}`
@@ -43,12 +70,21 @@ function readStore(instanceId: string): PlaytimeStore {
 		const raw = localStorage.getItem(keyOf(instanceId))
 		if (raw) {
 			const parsed = JSON.parse(raw) as Partial<PlaytimeStore>
+			const sessions = Array.isArray(parsed.sessions) ? (parsed.sessions as PlaytimeSession[]) : []
 			return {
-				days: parsed.days && typeof parsed.days === 'object' ? (parsed.days as Record<string, number>) : {},
+				days:
+					parsed.days && typeof parsed.days === 'object'
+						? (parsed.days as Record<string, number>)
+						: {},
 				session:
-					parsed.session && typeof parsed.session.start === 'number' && typeof parsed.session.flushed === 'number'
+					parsed.session &&
+					typeof parsed.session.start === 'number' &&
+					typeof parsed.session.flushed === 'number'
 						? { start: parsed.session.start, flushed: parsed.session.flushed }
 						: undefined,
+				sessions: sessions
+					.filter((item) => typeof item?.start === 'number' && typeof item?.end === 'number')
+					.slice(-KEEP_SESSIONS),
 			}
 		}
 	} catch {
@@ -60,9 +96,7 @@ function readStore(instanceId: string): PlaytimeStore {
 function writeStore(instanceId: string, store: PlaytimeStore): void {
 	// The ledger only needs the recent past; older buckets go overboard.
 	const cutoff = dayKeyOf(Date.now() - KEEP_DAYS * DAY_MS)
-	store.days = Object.fromEntries(
-		Object.entries(store.days).filter(([key]) => key >= cutoff),
-	)
+	store.days = Object.fromEntries(Object.entries(store.days).filter(([key]) => key >= cutoff))
 	try {
 		localStorage.setItem(keyOf(instanceId), JSON.stringify(store))
 	} catch {
@@ -104,12 +138,32 @@ export function cleanup_stale_playtime_sessions(): void {
 	}
 }
 
-/** The game launched: open a session for this build. */
+/** The game launched: open a session for this build, frames reset. */
 export function note_playtime_launched(instanceId: string): void {
 	if (!instanceId) return
+	liveFps.delete(instanceId)
 	const store = readStore(instanceId)
 	store.session = { start: Date.now(), flushed: Date.now() }
 	writeStore(instanceId, store)
+}
+
+/**
+ * A five-second frame report from the game's agent, folded into the running
+ * session: the launcher keeps the extremes, the report's own minimum only
+ * ever deepens them.
+ */
+export function note_fps_report(instanceId: string, min: number, max: number): void {
+	if (!instanceId) return
+	const current = liveFps.get(instanceId)
+	liveFps.set(instanceId, {
+		min: current ? Math.min(current.min, min) : min,
+		max: current ? Math.max(current.max, max) : max,
+	})
+}
+
+/** The frame extremes of the session that is running right now, when known. */
+export function read_live_fps(instanceId: string): { min: number; max: number } | null {
+	return liveFps.get(instanceId) ?? null
 }
 
 /** A minute tick while the game runs: bank the elapsed minute. */
@@ -121,14 +175,32 @@ export function note_playtime_tick(instanceId: string): void {
 	writeStore(instanceId, store)
 }
 
-/** The game finished: bank the rest and close the session. */
+/** The game finished: bank the rest, remember the frames, close the session. */
 export function note_playtime_finished(instanceId: string): void {
 	if (!instanceId) return
 	const store = readStore(instanceId)
 	if (!store.session) return
 	flushChunk(instanceId, store)
+	const fps = liveFps.get(instanceId)
+	liveFps.delete(instanceId)
+	const session: PlaytimeSession = { start: store.session.start, end: Date.now() }
+	if (fps && fps.min >= 0) {
+		session.minFps = fps.min
+		session.maxFps = fps.max
+	}
+	store.sessions = [...(store.sessions ?? []), session].slice(-KEEP_SESSIONS)
 	store.session = undefined
 	writeStore(instanceId, store)
+}
+
+/** The latest closed sessions of a build, newest first. */
+export function read_playtime_sessions(instanceId: string, limit = 5, tick = 0): PlaytimeSession[] {
+	void tick
+	try {
+		return [...(readStore(instanceId).sessions ?? [])].reverse().slice(0, limit)
+	} catch {
+		return []
+	}
 }
 
 /** The last two weeks of the ledger, oldest first, shaped for the graph. */

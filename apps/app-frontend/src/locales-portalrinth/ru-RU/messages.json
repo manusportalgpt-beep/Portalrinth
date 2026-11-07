@@ -4107,6 +4107,15 @@
 	"app.project.removed-from-instance": {
 		"message": "Удалено из сборки"
 	},
+	"app.instance.info.sessions": {
+		"message": "Последние игры"
+	},
+	"app.instance.info.fps.live": {
+		"message": "Сейчас"
+	},
+	"app.instance.info.fps.range": {
+		"message": "{min}–{max} FPS"
+	},
 	"app.instance.info.playtime": {
 		"message": "Время игры"
 	},

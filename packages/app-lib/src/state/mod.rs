@@ -159,6 +159,7 @@ impl State {
         }
         state.content_store.recover(None).await?;
         crate::install::recovery::recover_interrupted_jobs(state).await?;
+        crate::install::spawn_stuck_job_sweeper();
         content_store::migrate(state).await?;
         state
             .startup_complete

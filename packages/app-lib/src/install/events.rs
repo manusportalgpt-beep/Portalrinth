@@ -11,6 +11,11 @@ use uuid::Uuid;
 
 const PROGRESS_EMIT_INTERVAL: Duration = Duration::from_millis(750);
 const CONTENT_PROGRESS_EMIT_STEPS: u64 = 25;
+/// How often a phase that is quietly running (steady progress, no events)
+/// writes the job's row to the database. The row's `modified` timestamp is
+/// what the stuck-job detector reads, so without this a long healthy phase
+/// would look exactly like a dead worker.
+const PROGRESS_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
 
 #[derive(Clone, Debug)]
 pub struct InstallProgressReporter {
@@ -23,6 +28,7 @@ pub struct InstallProgressReporter {
 struct InstallProgressReporterState {
     job: InstallJobState,
     last_emitted_at: Instant,
+    last_persisted_at: Instant,
     last_emitted_progress: Option<(InstallPhaseId, u64)>,
 }
 
@@ -40,6 +46,7 @@ impl InstallProgressReporter {
             state: Arc::new(Mutex::new(InstallProgressReporterState {
                 job: state,
                 last_emitted_at: Instant::now(),
+                last_persisted_at: Instant::now(),
                 last_emitted_progress: None,
             })),
         }
@@ -148,7 +155,12 @@ impl InstallProgressReporter {
             state.job.record_event(event);
         }
 
-        if !persist {
+        // A quiet phase still heartbeats the stored row every so often: the
+        // interface and the stuck-job detector read the row's `modified` as
+        // the worker's pulse, so it must not go stale while the worker lives.
+        let heartbeat_due =
+            state.last_persisted_at.elapsed() >= PROGRESS_HEARTBEAT_INTERVAL;
+        if !persist && !heartbeat_due {
             if !state.should_emit() {
                 return Ok(());
             }
@@ -163,6 +175,7 @@ impl InstallProgressReporter {
         let record =
             store::update_state(self.job_id, &state.job, &self.pool).await?;
         state.mark_emitted();
+        state.last_persisted_at = Instant::now();
         emit_install_job(&record.snapshot()).await
     }
 }

@@ -29,3 +29,4 @@ pub use runner::{
     install_pack_to_existing_instance, job_support_details, list_jobs,
     pause_job, resume_job, retry_job, update_shared_instance,
 };
+pub(crate) use runner::spawn_stuck_job_sweeper;

@@ -2,6 +2,7 @@ package com.modrinth.theseus.agent;
 
 import com.modrinth.theseus.agent.skins.SkinSource;
 import com.modrinth.theseus.agent.transformers.ClassTransformer;
+import com.modrinth.theseus.agent.transformers.GlfwTransformer;
 import com.modrinth.theseus.agent.transformers.MinecraftTransformer;
 import com.modrinth.theseus.agent.transformers.SessionServiceTransformer;
 import java.io.IOException;
@@ -51,6 +52,10 @@ public final class TheseusAgent {
 
         final Map<String, ClassTransformer> transformers = new HashMap<>();
         transformers.put("net/minecraft/client/Minecraft", new MinecraftTransformer());
+        // The frame probe: counts rendered frames so the launcher can show
+        // each session's slowest and fastest second. The hook bails on its own
+        // when the method it needs is not there.
+        transformers.put("org/lwjgl/glfw/GLFW", new GlfwTransformer());
         // Only when the launcher asked for it: this one reaches out to a skin
         // system for players the server said nothing about.
         if (SkinSource.isEnabled()) {

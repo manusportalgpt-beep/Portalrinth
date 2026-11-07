@@ -2565,6 +2565,15 @@
 	"app.project.removed-from-instance": {
 		"message": "Removed from the instance"
 	},
+	"app.instance.info.sessions": {
+		"message": "Recent sessions"
+	},
+	"app.instance.info.fps.live": {
+		"message": "Now"
+	},
+	"app.instance.info.fps.range": {
+		"message": "{min}–{max} FPS"
+	},
 	"app.instance.info.playtime": {
 		"message": "Playtime"
 	},

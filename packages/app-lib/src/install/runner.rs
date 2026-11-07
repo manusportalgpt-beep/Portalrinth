@@ -426,6 +426,15 @@ pub async fn cancel_job(job_id: Uuid) -> crate::Result<InstallJobSnapshot> {
     if job.snapshot().canceling {
         return Ok(job.snapshot());
     }
+    // A job that already finished has nothing to cancel. Its snapshot is the
+    // answer, not an error toast: a stale interface row can still show it as
+    // running, and pressing cancel must not scare anyone with a red banner.
+    if !matches!(
+        job.status,
+        InstallJobStatus::Queued | InstallJobStatus::Running
+    ) {
+        return Ok(job.snapshot());
+    }
     if job.snapshot().can_cancel {
         let control = super::control::get(job_id).ok_or(ErrorKind::InputError(
             "install worker is unavailable".to_string(),
@@ -464,6 +473,58 @@ fn is_stuck_job(job: &store::InstallJobRecord) -> bool {
         job.status,
         InstallJobStatus::Queued | InstallJobStatus::Running
     ) && Utc::now() - job.modified >= stuck_job_staleness()
+}
+
+/// A background safety net so no install row can hang forever, even when the
+/// player never presses cancel: an active job whose worker is gone (or one
+/// whose cancellation was accepted but never acted on) can never terminalize
+/// itself, so the sweep terminalizes it as canceled without rollback.
+pub(crate) fn spawn_stuck_job_sweeper() {
+    tokio::spawn(async {
+        let mut interval =
+            tokio::time::interval(std::time::Duration::from_secs(60));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            if let Err(error) = sweep_stuck_jobs().await {
+                tracing::warn!("The stuck install-job sweep failed: {error}");
+            }
+        }
+    });
+}
+
+async fn sweep_stuck_jobs() -> crate::Result<()> {
+    let state = State::get().await?;
+    let candidates = store::list_interrupted_candidates(&state.pool).await?;
+    for job in candidates {
+        if Utc::now() - job.modified < stuck_job_staleness() {
+            continue;
+        }
+        match super::control::get(job.id) {
+            // A worker that is still reachable owns its fate: cancel and pause
+            // work on it, and its heartbeats keep the row fresh. Only one
+            // whose cancellation was accepted but never acted on is swept.
+            Some(control) => {
+                if control.is_canceling() {
+                    tracing::warn!(
+                        "Sweeping install job {}: its cancellation was accepted long ago but the worker never finished it",
+                        job.id
+                    );
+                    heal_stuck_job(job.id, &state).await?;
+                }
+            }
+            // No worker at all behind an active row: nobody will ever
+            // terminalize it, so the sweep does it instead.
+            None => {
+                tracing::warn!(
+                    "Sweeping install job {}: its worker is gone but the row is still active",
+                    job.id
+                );
+                heal_stuck_job(job.id, &state).await?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Terminalizes a stuck job as canceled **without any rollback**: by the time

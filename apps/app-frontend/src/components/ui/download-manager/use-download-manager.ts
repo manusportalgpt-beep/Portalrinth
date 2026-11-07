@@ -151,6 +151,7 @@ export function useDownloadManager() {
 	let revision = 0
 	let refreshRequest = 0
 	let metadataRequest = 0
+	let pollTicks = 0
 	let disposed = false
 	let clock: ReturnType<typeof setInterval> | undefined
 
@@ -643,24 +644,34 @@ export function useDownloadManager() {
 			clock = active
 				? setInterval(() => {
 						now.value = performance.now()
+						// A missed terminal event would leave a row «downloading»
+						// forever, so while anything is active the panel also
+						// re-reads the real state every few seconds.
+						pollTicks++
+						if (pollTicks % 5 === 0) void refresh()
 					}, 1000)
 				: undefined
 		},
 		{ immediate: true },
 	)
 
+	let slowClock: ReturnType<typeof setInterval> | undefined
 	const unlisten = events.on('install_job', applyJobUpdate)
 	const unlistenInstance = events.on('instance', () => {
 		void refreshMetadata()
 	})
 	onMounted(() => {
 		void refresh()
+		// Even with nothing active, a quiet re-sync keeps terminal rows
+		// honest after any missed event.
+		slowClock = setInterval(() => void refresh(), 30_000)
 	})
 	onScopeDispose(() => {
 		disposed = true
 		unlisten()
 		unlistenInstance()
 		if (clock) clearInterval(clock)
+		if (slowClock) clearInterval(slowClock)
 		for (const timeout of copiedTimeouts.values()) clearTimeout(timeout)
 	})
 

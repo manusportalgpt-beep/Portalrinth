@@ -1143,7 +1143,38 @@ pub async fn launch_minecraft(
     let (main_class_keep_alive, main_class_path) =
         get_resource_file!(env "JAVA_JARS_DIR" / "theseus.jar")?;
 
-    let rpc_server = RpcServerBuilder::new().launch().await?;
+    // The game's agent reports frame statistics every few seconds. The launch
+    // knows which instance is running, so the report carries its id; the event
+    // state fans it out to the interface.
+    let fps_instance_id = instance.id.clone();
+    let rpc_server = RpcServerBuilder::new()
+        .handler("fps_report", move |args| {
+            let instance_id = fps_instance_id.clone();
+            Box::pin(async move {
+                let report = args.into_iter().next().unwrap_or(serde_json::Value::Null);
+                let read_u32 = |key: &str| {
+                    report
+                        .get(key)
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(0)
+                        .clamp(0, u32::MAX as u64) as u32
+                };
+                let payload = crate::event::FpsReportPayload {
+                    instance_id,
+                    fps: read_u32("fps"),
+                    min: read_u32("min"),
+                    max: read_u32("max"),
+                };
+                if let Err(error) =
+                    crate::event::EventState::get().send(crate::event::AppEvent::FpsReport(payload))
+                {
+                    tracing::warn!("Failed to emit an fps report: {error}");
+                }
+                Ok(serde_json::Value::Null)
+            })
+        })
+        .launch()
+        .await?;
 
     // Off leaves the game exactly as vanilla has it: whatever textures the
     // server sent, and Steve for everyone it sent none for.

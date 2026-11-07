@@ -168,6 +168,7 @@ pub enum AppEvent {
         #[cfg_attr(feature = "export-ts", ts(type = "unknown"))] String,
     ),
     Log(LogPayload),
+    FpsReport(FpsReportPayload),
     AdsConsentRequired(bool),
 }
 
@@ -308,6 +309,21 @@ impl Drop for LoadingBarId {
             event_state.loading_bars.remove(&loader_uuid);
         });
     }
+}
+
+/// Frame statistics the game's agent reports while it runs: the current
+/// five-second average and the slowest/fastest second of the whole session.
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "export-ts",
+    derive(ts_rs::TS, postcard_bindgen::PostcardBindings)
+)]
+#[serde_binhum::serde_binhum]
+pub struct FpsReportPayload {
+    pub instance_id: String,
+    pub fps: u32,
+    pub min: u32,
+    pub max: u32,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
