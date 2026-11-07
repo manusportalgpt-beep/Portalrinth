@@ -72,13 +72,6 @@ useAppEvent('process', async (payload) => {
 		if (payload.instance_id) note_playtime_finished(payload.instance_id)
 		if (payload.instance_id === runningInstanceId) stopPlaytimeTimer()
 	}
-})
-
-useAppEvent('fps_report', (payload) => {
-	// The game's frame probe: fold the five-second summary into the running
-	// session's slowest and fastest second.
-	note_fps_report(payload.instance_id, payload.min, payload.max)
-})
 	if (payload.event !== 'launched') return
 	const instanceId = payload.instance_id
 	if (!instanceId || !should_show_instance_notes(instanceId)) return
@@ -92,6 +85,12 @@ useAppEvent('fps_report', (payload) => {
 		instanceName.value = instanceId
 	}
 	popup.value?.show()
+})
+
+useAppEvent('fps_report', (payload) => {
+	// The game's frame probe: fold the five-second summary into the running
+	// session's slowest and fastest second.
+	note_fps_report(payload.instance_id, payload.min, payload.max)
 })
 
 function hide() {

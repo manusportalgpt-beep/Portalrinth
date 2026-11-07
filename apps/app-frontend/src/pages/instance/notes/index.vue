@@ -227,7 +227,7 @@ function sessionDurationLabel(session: PlaytimeSession): string {
 const liveFps = computed(() => {
 	// The tick keeps this reactive: every couple of seconds the live counters
 	// are read again while the tab is open.
-	historyTick.value
+	void historyTick.value
 	const id = instance.value?.id
 	if (!id) return null
 	return read_live_fps(id)

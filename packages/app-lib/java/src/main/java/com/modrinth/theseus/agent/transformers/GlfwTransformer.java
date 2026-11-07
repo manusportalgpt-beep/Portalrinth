@@ -20,15 +20,13 @@ import org.objectweb.asm.tree.MethodNode;
 public final class GlfwTransformer extends ClassNodeTransformer {
     private static final String SWAP_BUFFERS_NAME = "glfwSwapBuffers";
     private static final String SWAP_BUFFERS_DESC = "(J)V";
-    private static final String FRAME_HOOK =
-            "com/modrinth/theseus/agent/FpsProbe";
+    private static final String FRAME_HOOK = "com/modrinth/theseus/agent/FpsProbe";
 
     @Override
     protected boolean transform(ClassNode classNode) {
         MethodNode swapBuffers = null;
         for (final MethodNode method : classNode.methods) {
-            if (method.name.equals(SWAP_BUFFERS_NAME)
-                    && method.desc.equals(SWAP_BUFFERS_DESC)) {
+            if (method.name.equals(SWAP_BUFFERS_NAME) && method.desc.equals(SWAP_BUFFERS_DESC)) {
                 if (swapBuffers != null) {
                     // Two methods by the same name and descriptor: do not
                     // guess which one draws frames.
@@ -44,8 +42,7 @@ public final class GlfwTransformer extends ClassNodeTransformer {
         // At a static method's entry the stack is empty and this call leaves
         // it empty, so no frames or maxima need recomputing beyond what the
         // writer already does.
-        swapBuffers.instructions.insert(new MethodInsnNode(
-                Opcodes.INVOKESTATIC, FRAME_HOOK, "frame", "()V", false));
+        swapBuffers.instructions.insert(new MethodInsnNode(Opcodes.INVOKESTATIC, FRAME_HOOK, "frame", "()V", false));
         return true;
     }
 }

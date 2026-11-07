@@ -89,8 +89,7 @@ public final class FpsProbe {
         }
         try {
             // Fire and forget: the launcher answers, but nobody here waits.
-            TheseusRpc.getRpc()
-                    .callMethod(new TypeToken<Void>() {}, "fps_report", payload);
+            TheseusRpc.getRpc().callMethod(new TypeToken<Void>() {}, "fps_report", payload);
         } catch (Throwable ignored) {
             // No RPC connection (or a launcher that predates the probe): keep
             // counting, tell nobody.
