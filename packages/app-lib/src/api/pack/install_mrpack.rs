@@ -83,7 +83,7 @@ struct ModpackContentInstallContext {
 impl ModpackContentInstallContext {
     async fn mark_downloaded(
         &self,
-        path: &str,
+        _path: &str,
         file_size: u64,
         event: InstallJobEventKind,
     ) -> crate::Result<()> {
