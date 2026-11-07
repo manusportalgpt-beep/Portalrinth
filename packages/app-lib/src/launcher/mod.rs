@@ -29,6 +29,7 @@ use daedalus::modded::{LoaderVersion, Manifest};
 use serde::Deserialize;
 use sqlx::SqlitePool;
 use std::future::Future;
+use std::pin::Pin;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::process::Command;
@@ -1148,31 +1149,36 @@ pub async fn launch_minecraft(
     // state fans it out to the interface.
     let fps_instance_id = instance.id.clone();
     let rpc_server = RpcServerBuilder::new()
-        .handler("fps_report", move |args: Vec<serde_json::Value>| {
-            let instance_id = fps_instance_id.clone();
-            Box::pin(async move {
-                let report = args.into_iter().next().unwrap_or(serde_json::Value::Null);
-                let read_u32 = |key: &str| {
-                    report
-                        .get(key)
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0)
-                        .clamp(0, u32::MAX as u64) as u32
+        .handler(
+            "fps_report",
+            Box::new(move |args: Vec<serde_json::Value>| {
+                let instance_id = fps_instance_id.clone();
+                let future = async move {
+                    let report = args.into_iter().next().unwrap_or(serde_json::Value::Null);
+                    let read_u32 = |key: &str| {
+                        report
+                            .get(key)
+                            .and_then(serde_json::Value::as_u64)
+                            .unwrap_or(0)
+                            .clamp(0, u32::MAX as u64) as u32
+                    };
+                    let payload = crate::event::FpsReportPayload {
+                        instance_id,
+                        fps: read_u32("fps"),
+                        min: read_u32("min"),
+                        max: read_u32("max"),
+                    };
+                    if let Err(error) =
+                        crate::event::EventState::get().send(crate::event::AppEvent::FpsReport(payload))
+                    {
+                        tracing::warn!("Failed to emit an fps report: {error}");
+                    }
+                    Ok(serde_json::Value::Null)
                 };
-                let payload = crate::event::FpsReportPayload {
-                    instance_id,
-                    fps: read_u32("fps"),
-                    min: read_u32("min"),
-                    max: read_u32("max"),
-                };
-                if let Err(error) =
-                    crate::event::EventState::get().send(crate::event::AppEvent::FpsReport(payload))
-                {
-                    tracing::warn!("Failed to emit an fps report: {error}");
-                }
-                Ok(serde_json::Value::Null)
-            })
-        })
+                Box::pin(future)
+                    as Pin<Box<dyn Send + Future<Output = crate::Result<serde_json::Value>>>>
+            }),
+        )
         .launch()
         .await?;
 
