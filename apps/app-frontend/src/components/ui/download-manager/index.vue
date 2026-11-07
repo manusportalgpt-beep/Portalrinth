@@ -4,9 +4,7 @@ import { computed, nextTick, onScopeDispose, ref, useId, useTemplateRef, watch }
 
 import DownloadManagerBar from './download-manager-bar.vue'
 import DownloadManagerPanel from './download-manager-panel.vue'
-import DownloadContentsModal from './DownloadContentsModal.vue'
 import { useDownloadBarState } from './use-download-bar-state'
-import type { DownloadManagerJob } from './use-download-manager'
 import { useDownloadManager } from './use-download-manager'
 
 const {
@@ -29,33 +27,10 @@ const { selectedJob, completing } = useDownloadBarState({
 	initialized,
 })
 const shown = ref(false)
-const inspectJob = ref<DownloadManagerJob | null>(null)
-const emptyJob: DownloadManagerJob = {
-	id: '',
-	instanceId: null,
-	status: 'queued',
-	paused: false,
-	canceling: false,
-	canPause: false,
-	canCancel: false,
-	title: '',
-	iconUrl: null,
-	text: '',
-	progress: 0,
-	overallProgress: 0,
-	progressLabel: '',
-	waiting: true,
-	eta: '',
-	canRetry: false,
-	canCopyDetails: false,
-	copied: false,
-	busy: false,
-}
 const animationsEnabled = ref(false)
 const menu = useTemplateRef('menu')
 const bar = useTemplateRef('bar')
 const panel = useTemplateRef('panel')
-const contentsModal = useTemplateRef('contents-modal')
 const panelId = useId()
 const progress = computed(() =>
 	activeJobs.value.length
@@ -90,12 +65,6 @@ onScopeDispose(() => cancelAnimationFrame(animationFrame))
 function onOpen() {
 	shown.value = true
 	nextTick(() => panel.value?.focus())
-}
-
-function inspect(id: string) {
-	const job = activeJobs.value.find((candidate) => candidate.id === id)
-	if (job) inspectJob.value = job
-	contentsModal.value?.show()
 }
 
 function close() {
@@ -143,16 +112,11 @@ function close() {
 				@dismiss="dismiss"
 				@clear-completed="clearCompleted"
 				@copy-details="copyDetails"
-				@inspect="inspect"
 				@open="hide"
 				@keydown.esc.stop.prevent="close"
 			/>
 		</template>
 	</FloatingMenu>
-	<DownloadContentsModal
-		ref="contents-modal"
-		:job="inspectJob ?? emptyJob"
-	/>
 </template>
 
 <style>

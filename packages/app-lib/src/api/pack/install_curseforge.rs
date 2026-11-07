@@ -352,31 +352,6 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
         )
         .await?;
 
-    // The eye view of a running install reads this: one row per file the
-    // manifest resolved, named the way the downloads below report them.
-    let content_cell = crate::install::content_live::register(reporter.job_id());
-    crate::install::content_live::set_entries(
-        &content_cell,
-        resolved
-            .iter()
-            .map(|cf_file| crate::api::pack::manifest_preview::PackManifestEntry {
-                source: "curseforge".to_string(),
-                key: cf_file.id.to_string(),
-                sha1: cf_file.hashes.first().map(|hash| hash.value.clone()),
-                id: cf_file.mod_id.to_string(),
-                file_id: Some(cf_file.id.to_string()),
-                path: cf_file.file_name.clone(),
-                kind: crate::api::pack::manifest_preview::kind_from_path(&cf_file.file_name),
-                title: crate::api::pack::manifest_preview::file_name_of(&cf_file.file_name),
-                version: None,
-                author: None,
-                icon_url: None,
-                description: None,
-                download_count: None,
-                website_url: None,
-            })
-            .collect(),
-    );
 
     let download_meta = DownloadMeta {
         reason,
@@ -396,14 +371,8 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
             let completed = completed.clone();
             let failures = failures.clone();
             let download_meta = download_meta.clone();
-            let content_cell = content_cell.clone();
             let instance_id = instance_id.to_string();
             async move {
-                crate::install::content_live::mark_active(
-                    &content_cell,
-                    &cf_file.file_name,
-                    true,
-                );
                 if let Err(err) = download_cf_file(
                     &state,
                     &cf_file,
@@ -416,15 +385,6 @@ pub(crate) async fn install_curseforge_pack_files_with_reporter(
                         .lock()
                         .await
                         .push(format!("{}: {}", cf_file.file_name, err));
-                    crate::install::content_live::mark_failed(
-                        &content_cell,
-                        &cf_file.file_name,
-                    );
-                } else {
-                    crate::install::content_live::mark_done(
-                        &content_cell,
-                        &cf_file.file_name,
-                    );
                 }
                 let done = completed.fetch_add(1, Ordering::Relaxed) + 1;
                 reporter
@@ -543,7 +503,7 @@ async fn apply_manifest_to_instance(
     // managed pack instance; from here on it keeps its own settings, exactly
     // like every other managed instance gets at creation.
     if let Ok(state) = crate::State::get().await {
-        if let Err(error) = crate::state::instances::commands::managed_instance_defaults::keep_pack_owned_files_out_of_sync(
+        if let Err(error) = crate::state::instances::commands::managed_instance_defaults::keep_shared_settings_out(
             instance_id, &state,
         )
         .await

@@ -718,23 +718,6 @@ impl InstallErrorView {
 )]
 pub struct InstallJobSnapshot {
     pub content_count: Option<u32>,
-    /// The files a running content download will fetch, with what the pack
-    /// itself says about each; filled only while the job downloads content.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "export-ts", ts(optional))]
-    pub content_entries: Option<Vec<crate::api::pack::manifest_preview::PackManifestEntry>>,
-    /// Files of that list already handled, by the same path the pack used.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "export-ts", ts(optional))]
-    pub content_done: Option<Vec<String>>,
-    /// Files of that list that came back with an error.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "export-ts", ts(optional))]
-    pub content_failed: Option<Vec<String>>,
-    /// Files of that list currently being downloaded.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "export-ts", ts(optional))]
-    pub content_active: Option<Vec<String>>,
     pub job_id: String,
     pub instance_id: Option<String>,
     pub kind: InstallJobKind,

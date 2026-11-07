@@ -7,26 +7,8 @@ import type { InstallPhaseDetails } from "./InstallPhaseDetails";
 import type { InstallPhaseId } from "./InstallPhaseId";
 import type { InstallProgress } from "./InstallProgress";
 import type { InstallTarget } from "./InstallTarget";
-import type { PackManifestEntry } from "./PackManifestEntry";
 
-export type InstallJobSnapshot = { content_count: number | null,
-/**
- * The files a running content download will fetch, with what the pack
- * itself says about each; filled only while the job downloads content.
- */
-content_entries?: PackManifestEntry[],
-/**
- * Files of that list already handled, by the same path the pack used.
- */
-content_done?: string[],
-/**
- * Files of that list that came back with an error.
- */
-content_failed?: string[],
-/**
- * Files of that list currently being downloaded.
- */
-content_active?: string[], job_id: string, instance_id: string | null, kind: InstallJobKind, status: InstallJobStatus, paused: boolean, canceling: boolean,
+export type InstallJobSnapshot = { content_count: number | null, job_id: string, instance_id: string | null, kind: InstallJobKind, status: InstallJobStatus, paused: boolean, canceling: boolean,
 /**
  * Seconds left while the job sits out a Modrinth API rate limit.
  */

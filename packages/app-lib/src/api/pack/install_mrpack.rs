@@ -8,7 +8,6 @@ use crate::install::{
     InstallPhaseId, InstallProgress, InstallProgressReporter,
     InstallProgressSecondary,
 };
-use crate::install::content_live;
 use crate::pack::install_from::{
     EnvType, PackFile, PackFileHash, set_instance_information,
 };
@@ -79,8 +78,6 @@ struct ModpackContentInstallContext {
     file_infos_by_hash: Arc<HashMap<String, CachedFile>>,
     num_files: usize,
     content_total_bytes: u64,
-    /// Live per-file detail the eye view of a running install reads.
-    content_live: Arc<std::sync::Mutex<content_live::InstallContentLive>>,
 }
 
 impl ModpackContentInstallContext {
@@ -90,7 +87,6 @@ impl ModpackContentInstallContext {
         file_size: u64,
         event: InstallJobEventKind,
     ) -> crate::Result<()> {
-        content_live::mark_done(&self.content_live, path);
         let current = self.content_progress.fetch_add(1, Ordering::Relaxed) + 1;
         let current_bytes = self
             .content_bytes_progress
@@ -118,7 +114,6 @@ impl ModpackContentInstallContext {
     }
 
     async fn remove_active_download(&self, path: &str) {
-        content_live::mark_active(&self.content_live, path, false);
         let mut active_download_bytes = self.active_download_bytes.lock().await;
         active_download_bytes.remove(path);
     }
@@ -128,7 +123,6 @@ impl ModpackContentInstallContext {
         path: String,
         downloaded: u64,
     ) -> u64 {
-        content_live::mark_active(&self.content_live, &path, true);
         let mut active_download_bytes = self.active_download_bytes.lock().await;
         active_download_bytes.insert(path, downloaded);
         active_download_bytes.values().sum::<u64>()
@@ -814,45 +808,6 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
         .map(|file| (file.hash.clone(), file))
         .collect::<HashMap<_, _>>(),
     );
-    // The eye view of a running install reads this: every file the pack will
-    // fetch, in the order the pack lists them. Files the client would not use
-    // are left out - the job still counts them, but they are never downloaded.
-    let content_cell = content_live::register(reporter.job_id());
-    content_live::set_entries(
-        &content_cell,
-        pack.files
-            .iter()
-            .filter(|file| {
-                file.env.as_ref().and_then(|env| env.get(&EnvType::Client))
-                    != Some(&SideType::Unsupported)
-            })
-            .map(|file| crate::api::pack::manifest_preview::PackManifestEntry {
-                source: "modrinth".to_string(),
-                key: file
-                    .hashes
-                    .get(&PackFileHash::Sha1)
-                    .cloned()
-                    .unwrap_or_default(),
-                sha1: file.hashes.get(&PackFileHash::Sha1).cloned(),
-                id: file
-                    .hashes
-                    .get(&PackFileHash::Sha512)
-                    .cloned()
-                    .unwrap_or_default(),
-                file_id: None,
-                path: file.path.as_str().to_string(),
-                kind: crate::api::pack::manifest_preview::kind_from_path(file.path.as_str()),
-                title: crate::api::pack::manifest_preview::file_name_of(file.path.as_str()),
-                version: None,
-                author: None,
-                icon_url: None,
-                description: None,
-                download_count: None,
-                website_url: None,
-            })
-            .collect(),
-    );
-
     let content_context = ModpackContentInstallContext {
         instance_id: instance_id.clone(),
         instance_path: instance_path.clone(),
@@ -868,7 +823,6 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
         file_infos_by_hash,
         num_files,
         content_total_bytes,
-        content_live: content_cell,
     };
     loading_try_for_each_concurrent(
         futures::stream::iter(pack.files).map(Ok::<PackFile, crate::Error>),

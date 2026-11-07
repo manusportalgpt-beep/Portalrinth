@@ -77,10 +77,6 @@ impl InstallJobRecord {
         let active = is_active(self.status);
         let mut snapshot = InstallJobSnapshot {
             content_count: self.state.content_count,
-            content_entries: None,
-            content_done: None,
-            content_failed: None,
-            content_active: None,
             job_id: self.id.to_string(),
             instance_id: self.instance_id.clone(),
             kind: self.kind,
@@ -105,12 +101,6 @@ impl InstallJobRecord {
         if active && let Some(job) = live_jobs().get_mut(&self.id) {
             job.apply_progress(&mut snapshot);
             job.snapshot = Some(snapshot.clone());
-        }
-        if active && let Some(live) = super::content_live::snapshot(self.id) {
-            snapshot.content_entries = Some(live.entries);
-            snapshot.content_done = Some(live.done);
-            snapshot.content_failed = Some(live.failed);
-            snapshot.content_active = Some(live.active);
         }
         snapshot
     }
@@ -216,11 +206,11 @@ pub async fn insert(
     let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
     sqlx::query!(
         "
-		INSERT INTO install_jobs (
-			id, instance_id, kind, status, state, created, modified, finished, dismissed
-		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 0)
-		",
+                INSERT INTO install_jobs (
+                        id, instance_id, kind, status, state, created, modified, finished, dismissed
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 0)
+                ",
         id_value,
         instance_id,
         kind_value,
@@ -233,9 +223,9 @@ pub async fn insert(
     .await?;
     sqlx::query!(
         "
-		INSERT INTO install_job_requests (job_id, request)
-		VALUES (?, ?)
-		",
+                INSERT INTO install_job_requests (job_id, request)
+                VALUES (?, ?)
+                ",
         id_value,
         request_json,
     )
@@ -257,10 +247,10 @@ pub async fn get_request(
     let id = id.to_string();
     let request = sqlx::query_scalar!(
         "
-		SELECT json(request) AS \"request!: String\"
-		FROM install_job_requests
-		WHERE job_id = ?
-		",
+                SELECT json(request) AS \"request!: String\"
+                FROM install_job_requests
+                WHERE job_id = ?
+                ",
         id,
     )
     .fetch_optional(pool)
@@ -299,9 +289,9 @@ async fn release_request(
     let id = id.to_string();
     sqlx::query!(
         "
-		DELETE FROM install_job_requests
-		WHERE job_id = ?
-		",
+                DELETE FROM install_job_requests
+                WHERE job_id = ?
+                ",
         id,
     )
     .execute(pool)
@@ -317,19 +307,19 @@ pub async fn get(
     let row = sqlx::query_as!(
         InstallJobRow,
         "
-		SELECT
-			id AS \"id!: String\",
-			instance_id,
-			kind AS \"kind!: String\",
-			status AS \"status!: String\",
-			json(state) AS \"state!: String\",
-			created AS \"created!: i64\",
-			modified AS \"modified!: i64\",
-			finished,
-			dismissed AS \"dismissed!: i64\"
-		FROM install_jobs
-		WHERE id = ?
-		",
+                SELECT
+                        id AS \"id!: String\",
+                        instance_id,
+                        kind AS \"kind!: String\",
+                        status AS \"status!: String\",
+                        json(state) AS \"state!: String\",
+                        created AS \"created!: i64\",
+                        modified AS \"modified!: i64\",
+                        finished,
+                        dismissed AS \"dismissed!: i64\"
+                FROM install_jobs
+                WHERE id = ?
+                ",
         id,
     )
     .fetch_optional(pool)
@@ -372,19 +362,19 @@ async fn list_rows(pool: &SqlitePool) -> crate::Result<Vec<InstallJobRow>> {
     let rows = sqlx::query_as!(
         InstallJobRow,
         "
-		SELECT
-			id AS \"id!: String\",
-			instance_id,
-			kind AS \"kind!: String\",
-			status AS \"status!: String\",
-			json(state) AS \"state!: String\",
-			created AS \"created!: i64\",
-			modified AS \"modified!: i64\",
-			finished,
-			dismissed AS \"dismissed!: i64\"
-		FROM install_jobs
-		ORDER BY created ASC
-		"
+                SELECT
+                        id AS \"id!: String\",
+                        instance_id,
+                        kind AS \"kind!: String\",
+                        status AS \"status!: String\",
+                        json(state) AS \"state!: String\",
+                        created AS \"created!: i64\",
+                        modified AS \"modified!: i64\",
+                        finished,
+                        dismissed AS \"dismissed!: i64\"
+                FROM install_jobs
+                ORDER BY created ASC
+                "
     )
     .fetch_all(pool)
     .await?;
@@ -416,20 +406,20 @@ pub async fn list_interrupted_candidates(
     let rows = sqlx::query_as!(
         InstallJobRow,
         "
-		SELECT
-			id AS \"id!: String\",
-			instance_id,
-			kind AS \"kind!: String\",
-			status AS \"status!: String\",
-			json(state) AS \"state!: String\",
-			created AS \"created!: i64\",
-			modified AS \"modified!: i64\",
-			finished,
-			dismissed AS \"dismissed!: i64\"
-		FROM install_jobs
-		WHERE status IN ('queued', 'running')
-		ORDER BY created ASC
-		",
+                SELECT
+                        id AS \"id!: String\",
+                        instance_id,
+                        kind AS \"kind!: String\",
+                        status AS \"status!: String\",
+                        json(state) AS \"state!: String\",
+                        created AS \"created!: i64\",
+                        modified AS \"modified!: i64\",
+                        finished,
+                        dismissed AS \"dismissed!: i64\"
+                FROM install_jobs
+                WHERE status IN ('queued', 'running')
+                ORDER BY created ASC
+                ",
     )
     .fetch_all(pool)
     .await?;
@@ -461,13 +451,13 @@ pub async fn update_state(
 
     let result = sqlx::query(
         "
-		UPDATE install_jobs
-		SET
-			instance_id = (SELECT id FROM instances WHERE id = ?),
-			state = ?,
-			modified = ?
-		WHERE id = ? AND status IN ('queued', 'running')
-		",
+                UPDATE install_jobs
+                SET
+                        instance_id = (SELECT id FROM instances WHERE id = ?),
+                        state = ?,
+                        modified = ?
+                WHERE id = ? AND status IN ('queued', 'running')
+                ",
     )
     .bind(instance_id)
     .bind(json)
@@ -501,10 +491,10 @@ pub async fn update_status(
 
     sqlx::query!(
         "
-		UPDATE install_jobs
-		SET instance_id = ?, status = ?, state = ?, modified = ?, finished = ?
-		WHERE id = ?
-		",
+                UPDATE install_jobs
+                SET instance_id = ?, status = ?, state = ?, modified = ?, finished = ?
+                WHERE id = ?
+                ",
         instance_id,
         status_value,
         json,
@@ -541,10 +531,10 @@ pub async fn update_status_if(
 
     let result = sqlx::query(
         "
-		UPDATE install_jobs
-		SET instance_id = ?, status = ?, state = ?, modified = ?, finished = ?
-		WHERE id = ? AND status = ?
-		",
+                UPDATE install_jobs
+                SET instance_id = ?, status = ?, state = ?, modified = ?, finished = ?
+                WHERE id = ? AND status = ?
+                ",
     )
     .bind(instance_id)
     .bind(status_value)
@@ -584,15 +574,15 @@ pub async fn finish_active(
 
     let result = sqlx::query(
         "
-		UPDATE install_jobs
-		SET
-			instance_id = (SELECT id FROM instances WHERE id = ?),
-			status = ?,
-			state = ?,
-			modified = ?,
-			finished = ?
-		WHERE id = ? AND status IN ('queued', 'running')
-		",
+                UPDATE install_jobs
+                SET
+                        instance_id = (SELECT id FROM instances WHERE id = ?),
+                        status = ?,
+                        state = ?,
+                        modified = ?,
+                        finished = ?
+                WHERE id = ? AND status IN ('queued', 'running')
+                ",
     )
     .bind(instance_id)
     .bind(status_value)
@@ -632,15 +622,15 @@ pub async fn complete_success(
 
     let job_result = sqlx::query(
         "
-		UPDATE install_jobs
-		SET
-			instance_id = (SELECT id FROM instances WHERE id = ?),
-			status = 'succeeded',
-			state = ?,
-			modified = ?,
-			finished = ?
-		WHERE id = ? AND status = 'running'
-		",
+                UPDATE install_jobs
+                SET
+                        instance_id = (SELECT id FROM instances WHERE id = ?),
+                        status = 'succeeded',
+                        state = ?,
+                        modified = ?,
+                        finished = ?
+                WHERE id = ? AND status = 'running'
+                ",
     )
     .bind(&instance_id)
     .bind(json)
@@ -657,10 +647,10 @@ pub async fn complete_success(
 
     let instance_result = sqlx::query(
         "
-		UPDATE instances
-		SET install_stage = 'installed', modified = ?
-		WHERE id = ?
-		",
+                UPDATE instances
+                SET install_stage = 'installed', modified = ?
+                WHERE id = ?
+                ",
     )
     .bind(now)
     .bind(&instance_id)
@@ -693,10 +683,10 @@ pub async fn dismiss(id: Uuid, pool: &SqlitePool) -> crate::Result<()> {
     let modified = Utc::now().timestamp();
     sqlx::query!(
         "
-		UPDATE install_jobs
-		SET dismissed = 1, modified = ?
-		WHERE id = ?
-		",
+                UPDATE install_jobs
+                SET dismissed = 1, modified = ?
+                WHERE id = ?
+                ",
         modified,
         id,
     )

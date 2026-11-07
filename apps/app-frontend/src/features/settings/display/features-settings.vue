@@ -185,15 +185,6 @@ const messages = defineMessages({
 		defaultMessage:
 			'Облачко у иконок сверху: регион игрока и погода. Можно добавить несколько городов и переключаться между ними (Open-Meteo, без ключа).',
 	},
-	downloadEyeTitle: {
-		id: 'app.widgets.download-eye.title',
-		defaultMessage: 'Что скачивается (глаз)',
-	},
-	downloadEyeDescription: {
-		id: 'app.widgets.download-eye.description',
-		defaultMessage:
-			'Глаз на задаче установки открывает подробный список файлов. Просмотр спрашивает Modrinth и CurseForge о каждом моде и может мешать отмене установки, поэтому выключен по умолчанию.',
-	},
 })
 
 /**
@@ -621,19 +612,6 @@ watch(
 				</div>
 			</div>
 
-			<div class="flex items-center justify-between gap-4">
-				<div>
-					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.downloadEyeTitle) }}
-					</h3>
-					<p class="m-0 mt-1">{{ formatMessage(messages.downloadEyeDescription) }}</p>
-				</div>
-				<Toggle
-					id="portalrinth-download-eye"
-					v-model="portalrinthFeatures.downloadEye"
-					:aria-label="formatMessage(messages.downloadEyeTitle)"
-				/>
-			</div>
 		</div>
 	</section>
 </template>

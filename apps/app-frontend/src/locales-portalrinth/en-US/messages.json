@@ -2520,9 +2520,6 @@
 	"app.download-manager.contents.failure": {
 		"message": "Failed"
 	},
-	"app.download-manager.contents.inspect": {
-		"message": "What is being downloaded"
-	},
 	"app.download-manager.contents.kind.all": {
 		"message": "All"
 	},
@@ -2597,11 +2594,5 @@
 	},
 	"console.actions.copy": {
 		"message": "Copy"
-	},
-	"app.widgets.download-eye.title": {
-		"message": "What is being downloaded (eye)"
-	},
-	"app.widgets.download-eye.description": {
-		"message": "The eye on an install task opens a detailed list of the files. The view asks Modrinth and CurseForge about every mod and can get in the way of canceling the install, so it is off by default."
 	}
 }
