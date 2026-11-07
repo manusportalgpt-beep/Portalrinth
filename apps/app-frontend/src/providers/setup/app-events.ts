@@ -7,6 +7,7 @@ import {
 	type AppEventType,
 	provideAppEvents,
 } from '@/providers/app-events'
+import type { AppEvent } from '@/generated/app-events/AppEvent'
 import { decodeAppEvent } from '@/providers/setup/app-event-codec'
 
 type UntypedAppEventHandler = (payload: unknown) => void | Promise<void>
@@ -40,7 +41,13 @@ export function setupAppEventsProvider() {
 
 	const events: AppEvents = { on, once }
 	const channel = new Channel<ArrayBuffer>((payload) => {
-		const event = decodeAppEvent(payload)
+		let event: AppEvent
+		try {
+			event = decodeAppEvent(payload)
+		} catch (error) {
+			console.error('Failed to decode app event', error)
+			return
+		}
 		const eventHandlers = handlers.get(event.type)
 		if (!eventHandlers) return
 

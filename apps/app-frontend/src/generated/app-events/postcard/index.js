@@ -23,6 +23,15 @@ class Deserializer {
     release_bytes = () => { return new Uint8Array(this.bytes); }
 }
 
+function deserialize_FPS_REPORT_PAYLOAD(d) {
+    return {
+        instance_id: d.deserialize_string(),
+        fps: d.deserialize_number(U32_BYTES, false),
+        min: d.deserialize_number(U32_BYTES, false),
+        max: d.deserialize_number(U32_BYTES, false)
+    }
+}
+
 function deserialize_APP_EVENT(d) {
     switch (d.deserialize_number(U32_BYTES, false)) {
     case 0:
@@ -81,6 +90,11 @@ function deserialize_APP_EVENT(d) {
             value: deserialize_LOG_PAYLOAD(d)
         };
     case 11:
+        return {
+            tag: "fps_report",
+            value: deserialize_FPS_REPORT_PAYLOAD(d)
+        };
+    case 12:
         return {
             tag: "ads_consent_required",
             value: d.deserialize_bool()
