@@ -91,6 +91,34 @@ jobs:
         shell: bash
         run: node scripts/sync-version.mjs
 
+      # The Gradle wrapper fetches its distribution from GitHub's release
+      # CDN, which sometimes answers 504 for a long while. Caching the
+      # unpacked distributions keeps most runs from downloading at all.
+      - name: Cache the Gradle distribution
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/wrapper/dists
+          key: gradle-dists-${{ runner.os }}-${{ hashFiles('packages/app-lib/java/gradle/wrapper/gradle-wrapper.properties') }}
+      # The one cargo invocation in this job is a single shot: when the
+      # Gradle build script inside build.rs hits a 504 from the release CDN
+      # the whole run fails before the compiler even starts. Warming the
+      # wrapper up here — with retries — puts the distribution into
+      # GRADLE_USER_HOME once, so that shot never depends on the CDN
+      # cooperating on the first try.
+      - name: Warm up the Gradle distribution
+        shell: bash
+        run: |
+          cd packages/app-lib/java
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if sh ./gradlew --version > /dev/null 2>&1; then
+              echo "Gradle distribution ready (attempt $attempt)"
+              exit 0
+            fi
+            echo "attempt $attempt failed, retrying in 30s"
+            sleep 30
+          done
+          echo "Gradle distribution could not be fetched after 8 attempts"
+          exit 1
       - name: Install dependencies
         run: pnpm install
 
