@@ -108,11 +108,9 @@ jobs:
       - name: Warm up the Gradle distribution
         shell: bash
         run: |
-          echo "JAVA_HOME=$JAVA_HOME"
-          java -version 2>&1 | head -2 || true
           cd packages/app-lib/java
           log="$RUNNER_TEMP/gradle-warmup.log"
-          for attempt in 1 2 3 4 5 6 7 8; do
+          for attempt in 1 2 3; do
             ok=0
             if [ "$RUNNER_OS" = "Windows" ]; then
               cmd //c "gradlew.bat --version" > "$log" 2>&1 && ok=1
@@ -121,15 +119,47 @@ jobs:
             fi
             if [ "$ok" = "1" ]; then
               echo "Gradle distribution ready (attempt $attempt)"
-              tail -5 "$log"
               exit 0
             fi
             echo "attempt $attempt failed:"
-            tail -15 "$log"
+            tail -8 "$log"
             sleep 30
           done
-          echo "Gradle distribution could not be fetched after 8 attempts"
-          exit 1
+          # The wrapper does not retry on 5xx, and the GitHub release CDN
+          # serving the distribution has been answering 504 for hours.
+          # Fetch the zip the hard way (curl retries 5xx; fall back to the
+          # Tencent mirror of the same official artifact) and seed the
+          # wrapper cache with it, so the wrapper finds the distribution
+          # already installed and never talks to the CDN at all.
+          GRADLE_DIST_URL="https://services.gradle.org/distributions/gradle-9.1.0-bin.zip"
+          MIRROR_URL="https://mirrors.cloud.tencent.com/gradle/gradle-9.1.0-bin.zip"
+          # $HOME is a bash-style path on both OSes, unlike $RUNNER_TEMP on
+          # Windows, which curl inside git-bash cannot write to.
+          zip="$HOME/gradle-9.1.0-bin.zip"
+          curl -fsSL --retry 10 --retry-delay 5 --retry-all-errors -o "$zip" "$GRADLE_DIST_URL" \
+            || curl -fsSL --retry 10 --retry-delay 5 --retry-all-errors -o "$zip" "$MIRROR_URL" \
+            || { echo "could not download the Gradle distribution"; exit 1; }
+          HASH="$(node -e "console.log(BigInt('0x'+require('crypto').createHash('md5').update(process.argv[1]).digest('hex')).toString(36))" "$GRADLE_DIST_URL")"
+          seed="$HOME/.gradle/wrapper/dists/gradle-9.1.0-bin/$HASH"
+          mkdir -p "$seed"
+          cp "$zip" "$seed/gradle-9.1.0-bin.zip"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            zip_win="$(cygpath -w "$zip")"
+            seed_win="$(cygpath -w "$seed")"
+            powershell -NoProfile -Command "Expand-Archive -Force '$zip_win' '$seed_win'"
+          else
+            unzip -qo "$zip" -d "$seed"
+          fi
+          # Layout per gradle wrapper PathAssembler/Install (v9.1.0):
+          # dists/gradle-9.1.0-bin/<MD5-base36 of url>/  contains the zip,
+          # the unpacked dist and the reuse marker <zipname>.ok.
+          touch "$seed/gradle-9.1.0-bin.zip.ok"
+          echo "seeded $seed (hash $HASH)"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cmd //c "gradlew.bat --version" || { echo "seeding did not satisfy the wrapper"; exit 1; }
+          else
+            sh ./gradlew --version || { echo "seeding did not satisfy the wrapper"; exit 1; }
+          fi
       - name: Install dependencies
         run: pnpm install
 
