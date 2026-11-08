@@ -8,6 +8,9 @@
 	"app.library.instance.action.unpin": {
 		"message": "Unpin"
 	},
+	"app.news.view-all": {
+		"message": "Changelog"
+	},
 	"app.settings.search": {
 		"message": "Search settings"
 	},

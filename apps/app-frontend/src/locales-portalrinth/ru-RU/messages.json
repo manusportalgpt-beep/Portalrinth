@@ -1,4 +1,7 @@
 {
+	"app.news.view-all": {
+		"message": "Список изменений"
+	},
 	"app.sidebar.collapse": {
 		"message": "Свернуть боковую панель"
 	},
