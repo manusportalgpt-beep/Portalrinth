@@ -26,20 +26,16 @@
 		</slot>
 	</button>
 
-	<Teleport v-if="isClient" :to="teleportTarget" :disabled="inline">
+	<Teleport v-if="isClient" :to="teleportTarget">
 		<Transition name="floating-expand">
 			<div
 				v-if="isOpen"
 				:id="panelId"
 				ref="panelRef"
-				:popover="inline ? undefined : 'manual'"
-				class="isolate m-0 rounded-[14px] border-0 bg-surface-3 p-3 text-primary ring-1 ring-surface-5"
-				:class="
-					inline
-						? 'relative mt-1 w-full max-w-64 shadow-md'
-						: ['fixed z-[9999] shadow-lg', allowGradient ? 'w-64' : 'w-56']
-				"
-				:style="inline ? undefined : panelStyle"
+				popover="manual"
+				class="fixed isolate z-[9999] m-0 rounded-[14px] border-0 bg-surface-3 p-3 text-primary shadow-lg ring-1 ring-surface-5"
+				:class="allowGradient ? 'w-64' : 'w-56'"
+				:style="panelStyle"
 				role="dialog"
 				:aria-label="label"
 				tabindex="-1"
@@ -118,12 +114,9 @@
 
 					<!--
 						Which way it runs, as arrows around a picture of it: the
-						arrow is the direction, so nothing has to be read. An inline
-						panel leaves it out: the panel sits in the page there, where
-						the room the grid takes is worth more than the choice, and a
-						gradient keeps the angle it was parsed with either way.
+						arrow is the direction, so nothing has to be read.
 					-->
-					<div v-if="!inline" class="flex items-center gap-3">
+					<div class="flex items-center gap-3">
 						<span class="text-xs text-secondary">{{ directionLabel }}</span>
 						<div
 							class="ml-auto grid grid-cols-3 gap-1"
@@ -160,8 +153,7 @@
 
 				<div
 					ref="svRef"
-					class="relative w-full touch-none select-none rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-brand-shadow"
-					:class="inline ? 'h-24' : 'h-36'"
+					class="relative h-36 w-full touch-none select-none rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-brand-shadow"
 					role="group"
 					:aria-label="formatMessage(messages.saturationAndBrightness, { label })"
 					tabindex="0"
@@ -304,13 +296,6 @@ const props = withDefaults(
 		size?: 'sm' | 'md'
 		placement?: AnchoredTeleportPlacement
 		/**
-		 * The panel opens in the page itself, under the trigger, rather than
-		 * floating over it: for a picker that lives in a column of settings,
-		 * a panel that pushes the page down is easier to use than one that
-		 * covers it. The direction grid is left out there.
-		 */
-		inline?: boolean
-		/**
 		 * Colours the person has kept, shown under the picker.
 		 *
 		 * Left undefined the section is not drawn at all, so a caller that has
@@ -342,7 +327,6 @@ const props = withDefaults(
 		disabled: false,
 		size: 'md',
 		placement: 'bottom-start',
-		inline: false,
 		customColorsLabel: 'My colours',
 		customColorsAddLabel: 'Keep this colour',
 		customColorsRemoveLabel: 'Remove this colour',
@@ -675,15 +659,11 @@ function handlePanelKeydown(event: KeyboardEvent) {
 
 async function openPicker() {
 	if (props.disabled || isOpen.value) return
-	if (!props.inline) {
-		teleportTarget.value =
-			triggerRef.value?.closest('[role="dialog"]') ?? triggerRef.value?.ownerDocument.body ?? 'body'
-	}
+	teleportTarget.value =
+		triggerRef.value?.closest('[role="dialog"]') ?? triggerRef.value?.ownerDocument.body ?? 'body'
 	await open()
-	if (!props.inline) {
-		panelRef.value?.showPopover()
-		updatePosition()
-	}
+	panelRef.value?.showPopover()
+	updatePosition()
 	emit('focus')
 }
 

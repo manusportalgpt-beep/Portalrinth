@@ -1,9 +1,13 @@
 /**
  * The typeface the interface is set in.
  *
- * Every component reaches for `--font-standard`, which the shared stylesheet
- * declares on `body`, so the choice is written there as an inline property and
- * beats it without editing a stylesheet. Inter, the theme's own, always follows
+ * The shared stylesheet sets `font-family: var(--font-standard, ...)` on
+ * `:root` (html), so the choice is written there as an inline property - on
+ * the root element itself. Writing it on the body left the root's rule blind
+ * to it (a custom property inherits downward, never upward), and the font
+ * then reached only the few elements that resolve the variable directly.
+ * Inter, the theme's own, always follows the chosen font, so a font missing
+ * a glyph falls back to Inter rather than to a default serif. Inter, the theme's own, always follows
  * the chosen font, so a font missing a glyph falls back to Inter rather than to
  * a default serif.
  *
@@ -45,12 +49,12 @@ export function fontFamilyCss(name: string): string {
 watch(
 	font,
 	(name) => {
-		const body = document.body
+		const root = document.documentElement
 		const trimmed = name.trim()
 		if (trimmed) {
-			body.style.setProperty('--font-standard', `${fontFamilyCss(trimmed)}, Inter, sans-serif`)
+			root.style.setProperty('--font-standard', `${fontFamilyCss(trimmed)}, Inter, sans-serif`)
 		} else {
-			body.style.removeProperty('--font-standard')
+			root.style.removeProperty('--font-standard')
 		}
 
 		try {

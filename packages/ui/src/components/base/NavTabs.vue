@@ -148,6 +148,17 @@ const subpageSelected = ref(false)
 
 const sliderReady = ref(false)
 const transitionsEnabled = ref(false)
+/** True while the mount sequence (remembered spot -> slide, or the fade-in)
+    is still playing: any positionSlider() call inside that window must not
+    start a second one, or the pill snaps instead of travelling. */
+let mountSequence = false
+/** The freshest geometry seen while the mount sequence runs. */
+let pendingPosition: {
+	left: number
+	top: number
+	right: number
+	bottom: number
+} | null = null
 /** True while the pill plays its mount animation, cleared shortly after. */
 const sliderMountAnim = ref(false)
 const colorChangeDelayed = ref(false)
@@ -313,11 +324,21 @@ function positionSlider(animate = true) {
 	}
 
 	if (!sliderReady.value) {
+		// A call while the mount sequence is still playing only refreshes the
+		// target the sequence will land on - starting another sequence here
+		// used to snap the pill straight to the tab (the remounted Серверы and
+		// Скины bars lost their slide exactly this way).
+		if (mountSequence) {
+			pendingPosition = newPosition
+			return
+		}
 		const remembered = isDiscoverBar.value ? navTabsSliderMemory.snapshot : null
 		if (remembered) {
 			// A sibling Discover bar just unmounted: begin where the pill
 			// stood there, then travel to the active tab, so a page swap
 			// reads as one sliding pill instead of one fading in.
+			mountSequence = true
+			pendingPosition = newPosition
 			applySliderPosition(remembered)
 			navTabsSliderMemory.snapshot = null
 			// sliderReady waits for the first frame: while it is down, a resize
@@ -332,11 +353,15 @@ function positionSlider(animate = true) {
 					// apply class and coordinates in one flush and arrive sooner than
 					// every other tab.
 					requestAnimationFrame(() => {
-						animateSliderTo(newPosition)
+						if (pendingPosition) animateSliderTo(pendingPosition)
+						pendingPosition = null
+						mountSequence = false
 					})
 				})
 			})
 		} else {
+			mountSequence = true
+			pendingPosition = newPosition
 			applySliderPosition(newPosition)
 			sliderReady.value = true
 			sliderMountAnim.value = true
@@ -347,6 +372,8 @@ function positionSlider(animate = true) {
 					// live slider so the next tab change slides as before.
 					window.setTimeout(() => {
 						sliderMountAnim.value = false
+						pendingPosition = null
+						mountSequence = false
 					}, 220)
 				})
 			})

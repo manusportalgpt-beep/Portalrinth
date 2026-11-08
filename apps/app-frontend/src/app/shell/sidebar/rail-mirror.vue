@@ -47,11 +47,16 @@ const MAX_ITEMS = 120
 const groups = shallowRef<MirrorGroup[]>([])
 /** The panel's toggles ("Hide installed" and the like): they have no icon of their own. */
 const switches = shallowRef<MirrorSwitch[]>([])
+/** The page has a side panel with anything clickable at all, even if none of
+    its buttons carries an icon worth mirroring (the skin filters are chips
+    without icons): the rail still swaps its own buttons for the panel's
+    "open the panel" one. */
+const hasContent = shallowRef(false)
 const anyActive = computed(() =>
 	groups.value.some((group) => group.items.some((item) => item.active)),
 )
 watch(
-	() => groups.value.length > 0 || switches.value.length > 0,
+	() => groups.value.length > 0 || switches.value.length > 0 || hasContent.value,
 	(value) => emit('present', value),
 	{ immediate: true },
 )
@@ -122,8 +127,10 @@ function collect() {
 	if (!root) {
 		groups.value = []
 		switches.value = []
+		hasContent.value = false
 		return
 	}
+	hasContent.value = root.querySelector(CANDIDATES) !== null
 	const toggles: MirrorSwitch[] = []
 	for (const el of root.querySelectorAll<HTMLElement>('[role="switch"]')) {
 		if ((el as HTMLButtonElement).disabled || hiddenWithin(el, root)) continue
@@ -149,6 +156,9 @@ function collect() {
 	let count = 0
 	for (const el of root.querySelectorAll<HTMLElement>(CANDIDATES)) {
 		if (count >= MAX_ITEMS) break
+		// The page can mark a button as not-for-the-rail (a chip that only
+		// makes sense inside the unfolded panel): the rail leaves it out.
+		if (el.closest('[data-rail-mirror-ignore]')) continue
 		// The outer of two nested ones is the one a person presses.
 		if (
 			el.parentElement?.closest(CANDIDATES) &&
@@ -219,6 +229,7 @@ watch(
 			stop()
 			groups.value = []
 			switches.value = []
+			hasContent.value = false
 		}
 	},
 	{ immediate: true },

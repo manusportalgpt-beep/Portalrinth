@@ -176,15 +176,6 @@ const messages = defineMessages({
 		id: 'app.features.notes-popup.restore',
 		defaultMessage: 'Вернуть скрытые ({count})',
 	},
-	weatherTitle: {
-		id: 'app.widgets.weather.title',
-		defaultMessage: 'Погода',
-	},
-	weatherDescription: {
-		id: 'app.widgets.weather.description',
-		defaultMessage:
-			'Облачко у иконок сверху: регион игрока и погода. Можно добавить несколько городов и переключаться между ними (Open-Meteo, без ключа).',
-	},
 })
 
 /**
@@ -577,19 +568,6 @@ watch(
 				/>
 			</div>
 
-			<div class="flex items-center justify-between gap-4">
-				<div>
-					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.weatherTitle) }}
-					</h3>
-					<p class="m-0 mt-1">{{ formatMessage(messages.weatherDescription) }}</p>
-				</div>
-				<Toggle
-					id="portalrinth-weather"
-					v-model="portalrinthFeatures.weather"
-					:aria-label="formatMessage(messages.weatherTitle)"
-				/>
-			</div>
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">

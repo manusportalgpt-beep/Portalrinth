@@ -4,7 +4,6 @@ import { defineMessages, IconButton, useVIntl } from '@modrinth/ui'
 import { useRouter } from 'vue-router'
 
 import ClockWidget from '@/components/ui/portalrinth-widgets/ClockWidget.vue'
-import CloudWidget from '@/components/ui/portalrinth-widgets/CloudWidget.vue'
 import PortalrinthLogo from '@/components/ui/PortalrinthLogo.vue'
 import { portalrinthFeatures } from '@/helpers/portalrinth-features'
 import { titlebarClockShift } from '@/helpers/titlebar-clock'
@@ -78,8 +77,6 @@ const messages = defineMessages({
 			<Breadcrumbs />
 		</div>
 		<section data-tauri-drag-region class="flex shrink-0 ml-auto items-center">
-			<!-- The weather loads on mount, not on a click. -->
-			<CloudWidget v-if="portalrinthFeatures.weather" class="pointer-events-auto" />
 			<IconButton
 				v-if="showSidebarToggle"
 				:type="sidebarToggled ? 'base' : 'quiet'"

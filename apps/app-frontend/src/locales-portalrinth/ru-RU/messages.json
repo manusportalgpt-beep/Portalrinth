@@ -2414,6 +2414,9 @@
 	"app.appearance-settings.accent.gradient": {
 		"message": "Градиент"
 	},
+	"app.appearance-settings.accent.direction": {
+		"message": "Направление"
+	},
 	"app.appearance-settings.accent.add-stop": {
 		"message": "Добавить цвет в градиент"
 	},
@@ -3658,45 +3661,6 @@
 	},
 	"app.widgets.clock.description": {
 		"message": "Время по системному региону в центре титл-бара: солнце днём, луна ночью, рассвет и закат."
-	},
-	"app.widgets.weather.title": {
-		"message": "Погода"
-	},
-	"app.widgets.weather.description": {
-		"message": "Облачко у иконок сверху: регион игрока и погода. Можно добавить несколько городов и переключаться между ними. Ключ Meteum от Яндекса делает станцию точнее (без ключа — Open-Meteo)."
-	},
-	"app.cloud.my-place": {
-		"message": "Моё место"
-	},
-	"app.cloud.placeholder": {
-		"message": "Добавить город…"
-	},
-	"app.cloud.remove": {
-		"message": "Убрать город"
-	},
-	"app.cloud.added": {
-		"message": "Город добавлен"
-	},
-	"app.cloud.not-found": {
-		"message": "Город не нашёлся"
-	},
-	"app.cloud.meteum-key": {
-		"message": "Ключ Meteum от Яндекса…"
-	},
-	"app.cloud.meteum-saved": {
-		"message": "Ключ Meteum сохранён"
-	},
-	"app.cloud.meteum-save": {
-		"message": "Сохранить ключ"
-	},
-	"app.cloud.meteum-hint": {
-		"message": "Без ключа — Open-Meteo. Тестовый ключ бесплатный:"
-	},
-	"app.cloud.meteum-on": {
-		"message": "Станция: Meteum от Яндекса — ключ работает."
-	},
-	"app.cloud.meteum-get": {
-		"message": "получить ключ"
 	},
 	"app.settings.tabs.hotkeys": {
 		"message": "Горячие клавиши"

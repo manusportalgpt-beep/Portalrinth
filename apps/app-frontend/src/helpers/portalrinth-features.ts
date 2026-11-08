@@ -1,6 +1,6 @@
 /**
  * Portalrinth's own toggleable desktop features: the built-in search
- * window, the title-bar clock and the weather button. Everything the
+ * window and the title-bar clock. Everything the
  * player can switch off lives in one localStorage blob behind one
  * reactive ref, so the title bar and the settings read the same truth.
  */
@@ -9,8 +9,6 @@ import { ref, watch } from 'vue'
 export interface PortalrinthFeatures {
         /** The clock at the top center of the title bar. */
         clock: boolean
-        /** The weather button next to the sound button. */
-        weather: boolean
         /** Build notes pop up when the game launches. */
         notesPopup: boolean
 }
@@ -19,7 +17,6 @@ const FEATURES_KEY = 'portalrinth-features'
 
 const DEFAULT_FEATURES: PortalrinthFeatures = {
         clock: true,
-        weather: true,
         notesPopup: true,
 }
 

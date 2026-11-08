@@ -1143,6 +1143,7 @@ async function copyProfile(text: string) {
 					hide-checkmark-icon
 					:aria-label="formatMessage(messages.filters)"
 					class="skin-browse-filters"
+					data-rail-mirror-ignore
 				/>
 				<!-- Grouped like the other Discover tabs: a folded group is just its
 					header row, unfolding it animates the tag chips into view. -->

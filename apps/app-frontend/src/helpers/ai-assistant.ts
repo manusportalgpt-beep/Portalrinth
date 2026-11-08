@@ -54,7 +54,6 @@ import {
 import { labySkinTags, labySkinVariant, searchLabySkins, vzgeBodyUrl } from './laby-skins'
 import { addMusicFromUrl } from './portalrinth-audio'
 import { setBackgroundFromPath } from './portalrinth-background'
-import { fetchWeather } from './portalrinth-widgets'
 import { proxiedFetch } from './proxy-fetch'
 
 export interface AiModelOption {
@@ -316,7 +315,7 @@ const DEFAULT_SETTINGS: AiSettings = {
 	webSearch: true,
 	deepThink: false,
 	enabled: true,
-	effort: 'high',
+	effort: 'medium',
 	disabledModels: {},
 	mode: 'build',
 	focus: 'any',
@@ -1119,7 +1118,6 @@ export const AI_TOOLS_HINT = [
 	'- Картинки — качество прежде всего: в описании всегда задавай стиль (pixel art, изометрия, концепт-арт), объект целиком (форма, цвета, материал), фон и свет («чистый белый фон», «мягкая тень»). Для текстур и иконок — ровная сетка пикселей, чистые ровные линии, никаких случайных точек, шума и артефактов; предмет — по центру и целиком в кадре. Вышло криво — перегенерируй с более подробным описанием, а не отдавай испорченное.',
 	'Музыка: <<music_add_url|прямая ссылка на .mp3/.ogg>> — скачать трек по ссылке и положить его в плейлист игрока (играет через кнопку звука в титл-баре).',
 	'Компьютер: <<sysinfo|>> — узнать железо и систему игрока (реальная память всего в ГБ, видеокарта, ОС, ядра CPU, экран, язык, время) — отвечай точными фактами, а не догадками. Перед подбором оптимизации, памяти под игру или сборки СНАЧАЛА глянь sysinfo, потом решай: 4 ГБ ПК → 2 ГБ игре, 8 ГБ → 3–4 ГБ, 16 ГБ → 4–6 ГБ, 32 ГБ+ → 6–8 ГБ; слабый ПК или встройка — сразу лёгкие оптимизационные моды (Sodium/Embeddium, Lithium, FerriteCore, ModernFix) и меньше шейдеров.',
-	'Погода: <<weather_get|город или пусто>> — настоящая погода прямо сейчас (температура, явление, ветер); пусто — по месту игрока, можно назвать город (например <<weather_get|Санкт-Петербург>>).',
 	'Скины: <<skin_recommend|запрос или пусто>> — подобрать скины с laby.net (пусто — популярные прямо сейчас, то есть самые свежие добавления); игрок увидит карточки скинов прямо в чате, поставить скин можно кликом по карточке. Советуй скины, когда просят «посоветуй скин», «найди скин», «что новенького из скинов».',
 	'- <<skin_nick|ник>> — скин игрока по нику через Mojang: карточка с 3D-превью в чате, кнопка «Поставить» наденет скин на аккаунт. Для «надень скин как у X», «найди скин игрока X» — этот инструмент; ника нет в Mojang — предложи похожие через skin_recommend.',
 	'Таймер: <<timer_set|минуты::название>> — завести таймер, когда время выйдет — придёт плашка сверху и сообщение в чат (например <<timer_set|25::достать чай>>).',
@@ -1887,7 +1885,7 @@ async function callProvider(
 	const model = fastPath
 		? turnModel({ ...settings, deepThink: false }, providerId, vision)
 		: turnModel(settings, providerId, vision)
-	const effort = fastPath ? 'low' : (settings.effort ?? 'high')
+	const effort = fastPath ? 'low' : (settings.effort ?? 'medium')
 	const body: Record<string, unknown> = {
 		model,
 		messages: payload,
@@ -1921,7 +1919,7 @@ async function callProvider(
 	const attemptCeiling = fastPath
 		? 15000
 		: Math.max(ceilingMs ?? 0, providerId === 'zai' && zaiPeakHoursNow() ? 22000 : 20000)
-	const idleCeiling = fastPath ? 15000 : settings.deepThink ? 60000 : 40000
+	const idleCeiling = fastPath ? 15000 : settings.deepThink ? 45000 : 30000
 	const watchdog = createWatchdog(signal, attemptCeiling)
 	const attemptSignal = watchdog.signal
 	let response: Response
@@ -2431,7 +2429,6 @@ const PARALLEL_TOOLS = new Set([
 	'session_list',
 	'sysinfo',
 	'launcher_get_settings',
-	'weather_get',
 	'lan_status',
 ])
 
@@ -2466,7 +2463,7 @@ async function presearchFor(request: AiRequest): Promise<string> {
 	try {
 		result = await Promise.race([
 			webSearch(query),
-			new Promise<string>((resolve) => setTimeout(() => resolve(''), 7000)),
+			new Promise<string>((resolve) => setTimeout(() => resolve(''), 4000)),
 		])
 	} catch {
 		result = ''
@@ -4314,20 +4311,6 @@ registerAiToolHandler(async (tool, args) => {
 		lines.push(`Язык: ${navigator.language}`)
 		lines.push(`Время системы: ${new Date().toLocaleString()}`)
 		return lines.join('\n')
-	}
-	if (tool === 'weather_get') {
-		const place = args.trim()
-		try {
-			const weather = await fetchWeather(place || undefined)
-			return [
-				`Место: ${weather.place}`,
-				`Погода: ${weather.label}, ${weather.temp}°C`,
-				`Ветер: ${weather.wind} км/ч`,
-				`Сейчас ${weather.isDay ? 'день' : 'ночь'}`,
-			].join('\n')
-		} catch (error) {
-			return `Погоду не узнать: ${String(error).slice(0, 200)}`
-		}
 	}
 	if (tool === 'timer_set') {
 		const [minutesRaw, ...rest] = args.split('::')

@@ -64,7 +64,7 @@ watchEffect(() => {
 			that can play it.
 		-->
 		<video
-			v-if="backgroundUrl && backgroundIsVideo"
+			v-else-if="backgroundUrl && backgroundIsVideo"
 			:key="backgroundUrl"
 			ref="video"
 			class="portalrinth-backdrop"
