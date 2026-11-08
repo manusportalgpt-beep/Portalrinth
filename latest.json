@@ -1,43 +1,43 @@
 {
-  "version": "0.22.1",
+  "version": "0.23.1",
   "notes": "portalrinth-patch:0",
-  "pub_date": "2026-11-01T20:47:30.501Z",
+  "pub_date": "2026-11-08T19:56:01.785Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cnYyYWpDTzZpNG9Eems4bklEeWcxRm8rMERRRFlnWHZxOXoxNXIrSXJ6blNDb3gwUHdaYVp4K2RKK2VEcXZnTUlDL0pQK1ZXckUvY3FhR1BHazlhdkFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTY1MDA4CWZpbGU6UG9ydGFscmludGhfMC4yMi4xX2FtZDY0LkFwcEltYWdlCjJ0ODB3eGVDQTJ2djdRMFVJSW5OVWdMb3hjUWJIa2V5QzZjNXIwemdyZFUrd01ST3BYVFphbmVSeDZDWm9qcXprMjc4eVJYSXQwSGJRUXVqR3gyN0JBPT0K",
-      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.22.1/Portalrinth_0.22.1_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cmh5SFdJamtwS3RmWG1zd2JCR29kalpMQmdjUlpacFVFbndsSkxsWmVKeGc4N2toUVhWQnZ0WnFROU9kRmRPaTN6TnhIMzFIb2xheU1UZDM1anpDUHdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MTY2NTg0CWZpbGU6UG9ydGFscmludGhfMC4yMy4xX2FtZDY0LkFwcEltYWdlClBTdjd0Mm56blhYV3N5OXVtSHV3NGhLZVNNYWMwMExIZ3FncEwyL1hQLzJwTFdBNGtWS3BmTEZjaUFlbytCbUJnNitzQVhSZUdPblZQNmVUaGNuMUNRPT0K",
+      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.23.1%2B18/Portalrinth_0.23.1_amd64.AppImage"
     },
     "linux-x86_64-appimage": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cnYyYWpDTzZpNG9Eems4bklEeWcxRm8rMERRRFlnWHZxOXoxNXIrSXJ6blNDb3gwUHdaYVp4K2RKK2VEcXZnTUlDL0pQK1ZXckUvY3FhR1BHazlhdkFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTY1MDA4CWZpbGU6UG9ydGFscmludGhfMC4yMi4xX2FtZDY0LkFwcEltYWdlCjJ0ODB3eGVDQTJ2djdRMFVJSW5OVWdMb3hjUWJIa2V5QzZjNXIwemdyZFUrd01ST3BYVFphbmVSeDZDWm9qcXprMjc4eVJYSXQwSGJRUXVqR3gyN0JBPT0K",
-      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.22.1/Portalrinth_0.22.1_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cmh5SFdJamtwS3RmWG1zd2JCR29kalpMQmdjUlpacFVFbndsSkxsWmVKeGc4N2toUVhWQnZ0WnFROU9kRmRPaTN6TnhIMzFIb2xheU1UZDM1anpDUHdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MTY2NTg0CWZpbGU6UG9ydGFscmludGhfMC4yMy4xX2FtZDY0LkFwcEltYWdlClBTdjd0Mm56blhYV3N5OXVtSHV3NGhLZVNNYWMwMExIZ3FncEwyL1hQLzJwTFdBNGtWS3BmTEZjaUFlbytCbUJnNitzQVhSZUdPblZQNmVUaGNuMUNRPT0K",
+      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.23.1%2B18/Portalrinth_0.23.1_amd64.AppImage"
     },
     "linux-x86_64-deb": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cmhxQXlOUEhOV0ZsbFdvK0NpL2Q3TWF5TUt4V25Ec1RUNVl5M1ExM2RFVERZeUc3bTFBY1lOcDZ0c0dKTmNSZGV6Q2VQMG8zd0s5VUtQT1MrcFRxQ2dBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTY1MDA4CWZpbGU6UG9ydGFscmludGhfMC4yMi4xX2FtZDY0LmRlYgpjenN2bFZlMVdrakZGd3ZVQ1RvMUg1L1k3MGtyOTkvR0NYNjF5eFRnZUtuczBaejVFWnNQcmlwRitUSGUvZzBjZG9tM1B1TCs5dk9lblVTek9Kd3BBZz09Cg==",
-      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.22.1/Portalrinth_0.22.1_amd64.deb"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cmhJUnFUZEFKMWlzMXdLSVlVMUZyOHNla1dFREMvcGpTTEIvcndiV2RWR25MWjluaUVlQUNaWkVYQmF4Zk9iekpJd1hvaUFJWGR4UzRmODdzT04xNHcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MTY2NTg0CWZpbGU6UG9ydGFscmludGhfMC4yMy4xX2FtZDY0LmRlYgpRSWw1ZDF3SjZYZ0lBdEY4SHN6RWhnZlJjdWIzb3BQNjdsWEJMUkY1TTd2UldvU2xRMEEySlQxNDRPL0Q5V2l4MEI1aDNrWmVrNXlRaThjWmdIMzVBZz09Cg==",
+      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.23.1%2B18/Portalrinth_0.23.1_amd64.deb"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cnN5a1lJL0FKdGRWY2ovSmRWdkt4dkdaMWR2NnM4ZWVwZVVqNTdHdWNnK3piWXpJSUI0L2RuM3ZPbTVGZ1FKL2pvbXpCOXNxcW93VUNzeWlEdmxTTmdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTY1NTI4CWZpbGU6UG9ydGFscmludGhfMC4yMi4xX3g2NC1zZXR1cC5leGUKRmNtSFcvQ2dlcU0vUTBsd2hMNFltTlhOUGhlN3ZrYi9ZYmZVUjNWSnhxV0p2L2ZiQm5OT1daR3daTVJBN3FrNVA2MXplbkI4ZUxtVzd2Wm1EZ2xVREE9PQo=",
-      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.22.1/Portalrinth_0.22.1_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cnFoWjJ6S3hCd2tKMG0wU1ZqMEJ2ZzM1YitLU3lSUUNjOHJneG9aaUxYcCtPbjYvVmNoKzhrYkM2aEZYb09sdHRCclJqd1UzZVZEd3RiSHhNUnYvUkFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MTY3MDUzCWZpbGU6UG9ydGFscmludGhfMC4yMy4xX3g2NC1zZXR1cC5leGUKWWNYeFNoanpDWXI0QmtLOVFxSHdUdmFKZktxdlBUR0xmbWZtZEpPYW9BK3RvRjU4ZFRGMzR2M3hKeUFvbEo3UjFSOUNBSnZpd0llTXpud21IeUNiQmc9PQo=",
+      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.23.1%2B18/Portalrinth_0.23.1_x64-setup.exe"
     },
     "windows-x86_64-nsis": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cnN5a1lJL0FKdGRWY2ovSmRWdkt4dkdaMWR2NnM4ZWVwZVVqNTdHdWNnK3piWXpJSUI0L2RuM3ZPbTVGZ1FKL2pvbXpCOXNxcW93VUNzeWlEdmxTTmdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTY1NTI4CWZpbGU6UG9ydGFscmludGhfMC4yMi4xX3g2NC1zZXR1cC5leGUKRmNtSFcvQ2dlcU0vUTBsd2hMNFltTlhOUGhlN3ZrYi9ZYmZVUjNWSnhxV0p2L2ZiQm5OT1daR3daTVJBN3FrNVA2MXplbkI4ZUxtVzd2Wm1EZ2xVREE9PQo=",
-      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.22.1/Portalrinth_0.22.1_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cnFoWjJ6S3hCd2tKMG0wU1ZqMEJ2ZzM1YitLU3lSUUNjOHJneG9aaUxYcCtPbjYvVmNoKzhrYkM2aEZYb09sdHRCclJqd1UzZVZEd3RiSHhNUnYvUkFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MTY3MDUzCWZpbGU6UG9ydGFscmludGhfMC4yMy4xX3g2NC1zZXR1cC5leGUKWWNYeFNoanpDWXI0QmtLOVFxSHdUdmFKZktxdlBUR0xmbWZtZEpPYW9BK3RvRjU4ZFRGMzR2M3hKeUFvbEo3UjFSOUNBSnZpd0llTXpud21IeUNiQmc9PQo=",
+      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.23.1%2B18/Portalrinth_0.23.1_x64-setup.exe"
     },
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cm5rUW5CRzcvRzNSUnlmaFR2aENTTzl3TTBWS2hSbVFTQVNFcGFoQW1UQmM3U2dBbHFpRXJiSGVWTTJjWWZ5ZzZPYWFRWk9ISU5lQk94YlpMVHlyZUEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTY2MDQxCWZpbGU6UG9ydGFscmludGguYXBwLnRhci5negpnNEJDeTNaUlRjMVk5NWx4R21nNUdsdmcrZHBaRkZGV1Y1bUduNkdEMElYRVdUUWgwZW5xVTYybnhRNUE0MFk5Z0dSdVRmbEdsSDlCQWVYcnZOUHJCdz09Cg==",
-      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.22.1/Portalrinth_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cnA4TGs3Q3dEZHJoZ3lPWWh2aDJ0K2RQZ2piUXF0d3YzcGFnNUlGbHZvSldqVktxeTc4OTg5cmt0NlZiU3VxeUJ2MUFmYjZIZ1BtS3JPUnhwa2pnelE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MTY3NzUyCWZpbGU6UG9ydGFscmludGguYXBwLnRhci5negpmc3Fld3l1dmlOV2lSNjBNN1RreXVFN1hBWEd4SG1EM1I0VngvZXluNDcvTUVneVRqMVZwTVRHeXQ5MlBuVDFFUXlURWVxNEJaZVNtaGhsMVc1WnVCQT09Cg==",
+      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.23.1%2B18/Portalrinth_universal.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cm5rUW5CRzcvRzNSUnlmaFR2aENTTzl3TTBWS2hSbVFTQVNFcGFoQW1UQmM3U2dBbHFpRXJiSGVWTTJjWWZ5ZzZPYWFRWk9ISU5lQk94YlpMVHlyZUEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTY2MDQxCWZpbGU6UG9ydGFscmludGguYXBwLnRhci5negpnNEJDeTNaUlRjMVk5NWx4R21nNUdsdmcrZHBaRkZGV1Y1bUduNkdEMElYRVdUUWgwZW5xVTYybnhRNUE0MFk5Z0dSdVRmbEdsSDlCQWVYcnZOUHJCdz09Cg==",
-      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.22.1/Portalrinth_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cnA4TGs3Q3dEZHJoZ3lPWWh2aDJ0K2RQZ2piUXF0d3YzcGFnNUlGbHZvSldqVktxeTc4OTg5cmt0NlZiU3VxeUJ2MUFmYjZIZ1BtS3JPUnhwa2pnelE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MTY3NzUyCWZpbGU6UG9ydGFscmludGguYXBwLnRhci5negpmc3Fld3l1dmlOV2lSNjBNN1RreXVFN1hBWEd4SG1EM1I0VngvZXluNDcvTUVneVRqMVZwTVRHeXQ5MlBuVDFFUXlURWVxNEJaZVNtaGhsMVc1WnVCQT09Cg==",
+      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.23.1%2B18/Portalrinth_universal.app.tar.gz"
     },
     "darwin-aarch64-app": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cm5rUW5CRzcvRzNSUnlmaFR2aENTTzl3TTBWS2hSbVFTQVNFcGFoQW1UQmM3U2dBbHFpRXJiSGVWTTJjWWZ5ZzZPYWFRWk9ISU5lQk94YlpMVHlyZUEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTY2MDQxCWZpbGU6UG9ydGFscmludGguYXBwLnRhci5negpnNEJDeTNaUlRjMVk5NWx4R21nNUdsdmcrZHBaRkZGV1Y1bUduNkdEMElYRVdUUWgwZW5xVTYybnhRNUE0MFk5Z0dSdVRmbEdsSDlCQWVYcnZOUHJCdz09Cg==",
-      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.22.1/Portalrinth_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cnA4TGs3Q3dEZHJoZ3lPWWh2aDJ0K2RQZ2piUXF0d3YzcGFnNUlGbHZvSldqVktxeTc4OTg5cmt0NlZiU3VxeUJ2MUFmYjZIZ1BtS3JPUnhwa2pnelE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MTY3NzUyCWZpbGU6UG9ydGFscmludGguYXBwLnRhci5negpmc3Fld3l1dmlOV2lSNjBNN1RreXVFN1hBWEd4SG1EM1I0VngvZXluNDcvTUVneVRqMVZwTVRHeXQ5MlBuVDFFUXlURWVxNEJaZVNtaGhsMVc1WnVCQT09Cg==",
+      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.23.1%2B18/Portalrinth_universal.app.tar.gz"
     },
     "darwin-x86_64-app": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cm5rUW5CRzcvRzNSUnlmaFR2aENTTzl3TTBWS2hSbVFTQVNFcGFoQW1UQmM3U2dBbHFpRXJiSGVWTTJjWWZ5ZzZPYWFRWk9ISU5lQk94YlpMVHlyZUEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTY2MDQxCWZpbGU6UG9ydGFscmludGguYXBwLnRhci5negpnNEJDeTNaUlRjMVk5NWx4R21nNUdsdmcrZHBaRkZGV1Y1bUduNkdEMElYRVdUUWgwZW5xVTYybnhRNUE0MFk5Z0dSdVRmbEdsSDlCQWVYcnZOUHJCdz09Cg==",
-      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.22.1/Portalrinth_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkhxUFk5enI0cnA4TGs3Q3dEZHJoZ3lPWWh2aDJ0K2RQZ2piUXF0d3YzcGFnNUlGbHZvSldqVktxeTc4OTg5cmt0NlZiU3VxeUJ2MUFmYjZIZ1BtS3JPUnhwa2pnelE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0MTY3NzUyCWZpbGU6UG9ydGFscmludGguYXBwLnRhci5negpmc3Fld3l1dmlOV2lSNjBNN1RreXVFN1hBWEd4SG1EM1I0VngvZXluNDcvTUVneVRqMVZwTVRHeXQ5MlBuVDFFUXlURWVxNEJaZVNtaGhsMVc1WnVCQT09Cg==",
+      "url": "https://github.com/manusportalgpt-beep/Portalrinth/releases/download/v0.23.1%2B18/Portalrinth_universal.app.tar.gz"
     }
   }
 }
