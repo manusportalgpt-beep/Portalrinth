@@ -33,7 +33,7 @@ import { page, t } from './lib/site-style.mjs'
 
 const OUT_DIR = process.argv[2] ?? 'site'
 const MODRINTH_SRC = 'packages/blog/changelog.ts'
-const LOGO_SRC = 'apps/app/icons/portalrinth.svg'
+const LOGO_SRC = 'apps/app/icons/Portalrinth.svg'
 /** Screenshots, referenced from entries as `/changelog/screenshots/<file>`. */
 const SCREENSHOT_DIR = 'apps/app-frontend/src/changelog/screenshots'
 /** Where those land on the site, and the prefix an entry has to use. */

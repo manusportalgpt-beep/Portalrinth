@@ -11,7 +11,7 @@ on:
       - 'apps/app-frontend/src/helpers/portalrinth-changelog.ts'
       - 'apps/app-frontend/src/changelog/screenshots/**'
       - 'packages/blog/changelog.ts'
-      - 'apps/app/icons/portalrinth.svg'
+      - 'apps/app/icons/Portalrinth.svg'
       - 'scripts/build-changelog-site.mjs'
       - 'scripts/lib/**'
       - 'news/**'
