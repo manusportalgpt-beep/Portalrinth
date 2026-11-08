@@ -108,13 +108,24 @@ jobs:
       - name: Warm up the Gradle distribution
         shell: bash
         run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version 2>&1 | head -2 || true
           cd packages/app-lib/java
+          log="$RUNNER_TEMP/gradle-warmup.log"
           for attempt in 1 2 3 4 5 6 7 8; do
-            if sh ./gradlew --version > /dev/null 2>&1; then
+            ok=0
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              cmd //c "gradlew.bat --version" > "$log" 2>&1 && ok=1
+            else
+              sh ./gradlew --version > "$log" 2>&1 && ok=1
+            fi
+            if [ "$ok" = "1" ]; then
               echo "Gradle distribution ready (attempt $attempt)"
+              tail -5 "$log"
               exit 0
             fi
-            echo "attempt $attempt failed, retrying in 30s"
+            echo "attempt $attempt failed:"
+            tail -15 "$log"
             sleep 30
           done
           echo "Gradle distribution could not be fetched after 8 attempts"
