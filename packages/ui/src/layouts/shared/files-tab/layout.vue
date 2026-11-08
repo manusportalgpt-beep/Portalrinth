@@ -20,7 +20,14 @@
 		ref="moveItemModal"
 		:item="selectedItem"
 		:current-path="ctx.currentPath.value"
+		:item-count="moveBarItems?.length ?? 1"
 		@move="handleMoveItem"
+	/>
+	<FileMoveToInstanceModal
+		ref="moveInstanceModal"
+		:instances="ctx.transferInstances?.value ?? []"
+		:item-count="moveBarItems?.length ?? 0"
+		@move="handleMoveToInstance"
 	/>
 	<FileDeleteItemModal ref="deleteItemModal" :item="selectedItem" @delete="handleDeleteItem" />
 	<ContextMenu ref="contextMenuRef" :label="formatMessage(commonMessages.actionsLabel)" />
@@ -51,6 +58,27 @@
 					@refresh="ctx.refresh"
 					@share="() => fileEditorRef?.shareToMclogs()"
 					@find="() => fileEditorRef?.toggleFind()"
+				/>
+
+				<FileTransferBar
+					v-if="isReplacing"
+					mode="replace"
+					:items="replaceSources"
+					@renumber="renumberFileReplaceSource"
+					@cancel="cancelFileReplace"
+				/>
+				<FileTransferBar
+					v-else-if="moveBarItems"
+					mode="move"
+					:items="moveBarItems"
+					:can-move-to-instance="canMoveToInstance"
+					:can-replace="!!ctx.replaceFiles"
+					:disabled="isBusy"
+					:disabled-tooltip="busyTooltip"
+					@move-folder="handleMoveBarToFolder"
+					@move-instance="moveInstanceModal?.show()"
+					@replace="handleArmReplace"
+					@cancel="hideMoveBar"
 				/>
 
 				<div v-if="!isEditing">
@@ -95,12 +123,16 @@
 									:write-disabled-tooltip="
 										ctx.isReadOnly?.(item.path) ? ctx.readOnlyReason?.value : busyTooltip
 									"
+									:replace-mode="isReplacing"
+									:replace-mark-number="replaceTargetNumber(item.path) ?? null"
+									:replace-executable="isReplaceTargetExecutable(item.path)"
+									@replace-toggle="() => handleReplaceToggle(item.path)"
 									@extract="() => handleExtractItem(item)"
 									@delete="() => showDeleteModal(item)"
 									@rename="() => showRenameModal(item)"
 									@download="() => handleDownload(item)"
 									@zip="() => handleZip(item)"
-									@move="() => showMoveModal(item)"
+									@move="() => showMoveBar([item])"
 									@move-direct-to="handleDirectMove"
 									@edit="() => handleEditFile(item)"
 									@navigate="() => handleNavigateToFolder(item)"
@@ -177,6 +209,16 @@
 			</div>
 			<div class="ml-auto flex items-center gap-0.5">
 				<Button
+					v-tooltip="busyTooltip"
+					type="quiet"
+					:disabled="isBusy || selectionReadOnly"
+					@click="showMoveBar(selectedItemsAsItems)"
+				>
+					<RightArrowIcon />
+					<span class="bar-label">{{ formatMessage(commonMessages.moveButton) }}</span>
+				</Button>
+				<div class="mx-1 h-6 w-px bg-surface-5" />
+				<Button
 					v-if="ctx.zipPaths"
 					v-tooltip="busyTooltip"
 					type="quiet"
@@ -208,6 +250,7 @@ import {
 	FolderArchiveIcon,
 	FolderOpenIcon,
 	HistoryIcon,
+	RightArrowIcon,
 	SaveIcon,
 	TrashIcon,
 } from '@modrinth/assets'
@@ -229,15 +272,25 @@ import FileManagerError from './components/FileManagerError.vue'
 import FileNavbar from './components/FileNavbar.vue'
 import FileTableHeader from './components/FileTableHeader.vue'
 import FileTableRow from './components/FileTableRow.vue'
+import FileTransferBar from './components/FileTransferBar.vue'
 import FileCreateItemModal from './components/modals/FileCreateItemModal.vue'
 import FileCreateZipModal from './components/modals/FileCreateZipModal.vue'
 import FileDeleteItemModal from './components/modals/FileDeleteItemModal.vue'
 import FileMoveItemModal from './components/modals/FileMoveItemModal.vue'
+import FileMoveToInstanceModal from './components/modals/FileMoveToInstanceModal.vue'
 import FileRenameItemModal from './components/modals/FileRenameItemModal.vue'
 import FileUnsavedChangesModal from './components/modals/FileUnsavedChangesModal.vue'
 import FileUploadConflictModal from './components/modals/FileUploadConflictModal.vue'
 import FileUploadZipUrlModal from './components/modals/FileUploadZipUrlModal.vue'
 import FileUploadDragAndDrop from './components/upload/FileUploadDragAndDrop.vue'
+import {
+	armFileReplace,
+	cancelFileReplace,
+	markFileReplaceTarget,
+	renumberFileReplaceSource,
+	unmarkFileReplaceTarget,
+	useFileReplaceState,
+} from './composables/file-replace-state'
 import { useFileSearch } from './composables/file-search'
 import { useFileSelection } from './composables/file-selection'
 import { useFileSorting } from './composables/file-sorting'
@@ -287,6 +340,26 @@ const messages = defineMessages({
 	createZip: {
 		id: 'files.layout.create-zip',
 		defaultMessage: 'Create ZIP',
+	},
+	replacedTitle: {
+		id: 'files.layout.replaced-title',
+		defaultMessage: 'Replacement done',
+	},
+	replacedText: {
+		id: 'files.layout.replaced-text',
+		defaultMessage: '"{name}" was replaced with "{source}".',
+	},
+	replaceFailedTitle: {
+		id: 'files.layout.replace-failed-title',
+		defaultMessage: 'Replacement failed',
+	},
+	replaceMissingTitle: {
+		id: 'files.layout.replace-missing-title',
+		defaultMessage: 'Nothing to replace with',
+	},
+	replaceMissingText: {
+		id: 'files.layout.replace-missing-text',
+		defaultMessage: 'No selected file is numbered #{number}. Renumber the files on the bar above.',
 	},
 })
 
@@ -385,6 +458,127 @@ const contextMenuRef = ref<InstanceType<typeof ContextMenu>>()
 const newItemType = ref<'file' | 'directory'>('file')
 const selectedItem = ref<FileItem | null>(null)
 
+// «Переместить» opens a small bar above the list with where things can go:
+// another folder (as before), another instance, or the replace mode.
+const moveBarItems = ref<FileItem[] | null>(null)
+const moveInstanceModal = ref<InstanceType<typeof FileMoveToInstanceModal>>()
+const replaceState = useFileReplaceState()
+const isReplacing = computed(() => replaceState.active.value)
+const replaceSources = computed(() => replaceState.sources.value)
+const canMoveToInstance = computed(
+	() =>
+		!!ctx.moveItemsToInstance && !!ctx.instanceId && (ctx.transferInstances?.value.length ?? 0) > 0,
+)
+const selectedItemsAsItems = computed(() =>
+	items.value.filter((item) => selectedItems.value.has(item.path)),
+)
+
+function showMoveBar(requested: FileItem[]) {
+	if (isBusy.value || isReplacing.value) return
+	const eligible = requested.filter((item) => !ctx.isReadOnly?.(item.path))
+	if (eligible.length === 0) return
+	moveBarItems.value = eligible
+}
+
+function hideMoveBar() {
+	moveBarItems.value = null
+}
+
+function handleMoveBarToFolder() {
+	const batch = moveBarItems.value
+	if (!batch?.length) return
+	selectedItem.value = batch.length === 1 ? batch[0] : null
+	moveItemModal.value?.show()
+}
+
+async function handleMoveToInstance(instanceId: string) {
+	const batch = moveBarItems.value ?? []
+	moveInstanceModal.value?.hide()
+	hideMoveBar()
+	if (batch.length === 0 || !ctx.moveItemsToInstance) return
+	const current = ctx.currentPath.value
+	await ctx.moveItemsToInstance(
+		batch.map((item) => ({
+			name: item.name,
+			path: `${current}/${item.name}`.replace('//', '/'),
+		})),
+		instanceId,
+	)
+}
+
+function handleArmReplace() {
+	const batch = moveBarItems.value
+	const instanceId = ctx.instanceId?.value
+	if (!batch?.length || !instanceId || !ctx.replaceFiles) return
+	const current = ctx.currentPath.value
+	armFileReplace(
+		batch.map((item) => ({
+			name: item.name,
+			type: item.type,
+			path: `${current}/${item.name}`.replace('//', '/'),
+		})),
+		instanceId,
+	)
+	hideMoveBar()
+}
+
+function replaceTargetNumber(path: string) {
+	return replaceState.targetNumber(path)
+}
+
+function isReplaceTargetExecutable(path: string) {
+	const number = replaceState.targetNumber(path)
+	return number !== undefined && number <= replaceState.sources.value.length
+}
+
+async function handleReplaceToggle(targetPath: string) {
+	if (!isReplacing.value) return
+	const number = replaceState.targetNumber(targetPath)
+	if (number === undefined) {
+		markFileReplaceTarget(targetPath)
+		return
+	}
+	// Second press: source #N replaces this target.
+	const source = replaceState.sources.value[number - 1]
+	const sourceInstanceId = replaceState.sourceInstanceId.value
+	const targetInstanceId = ctx.instanceId?.value
+	if (!source || !sourceInstanceId || !targetInstanceId || !ctx.replaceFiles) {
+		addNotification({
+			title: formatMessage(messages.replaceMissingTitle),
+			text: formatMessage(messages.replaceMissingText, { number }),
+			type: 'error',
+		})
+		return
+	}
+	if (sourceInstanceId === targetInstanceId && source.path === targetPath) return
+	const targetName = targetPath.split('/').pop() ?? targetPath
+	try {
+		await ctx.replaceFiles([
+			{
+				sourceInstanceId,
+				sourcePath: source.path,
+				targetInstanceId,
+				targetPath,
+			},
+		])
+		unmarkFileReplaceTarget(targetPath)
+		addNotification({
+			title: formatMessage(messages.replacedTitle),
+			text: formatMessage(messages.replacedText, {
+				name: targetName,
+				source: source.name,
+			}),
+			type: 'success',
+		})
+	} catch (error) {
+		addNotification({
+			title: formatMessage(messages.replaceFailedTitle),
+			text: error instanceof Error ? error.message : undefined,
+			type: 'error',
+		})
+	}
+}
+
 const unsavedChangesModal = ref<InstanceType<typeof FileUnsavedChangesModal>>()
 
 const hasUnsavedChanges = computed(() => fileEditorRef.value?.hasUnsavedChanges ?? false)
@@ -459,21 +653,43 @@ async function handleRenameItem(newName: string) {
 
 async function handleMoveItem(destination: string) {
 	if (isBusy.value) return
-	const item = selectedItem.value
-	if (!item) return
+	const batch = moveBarItems.value?.length
+		? [...moveBarItems.value]
+		: selectedItem.value
+			? [selectedItem.value]
+			: []
+	if (batch.length === 0) return
+	hideMoveBar()
 
 	const sourcePath = ctx.currentPath.value
-	const source = `${sourcePath}/${item.name}`.replace('//', '/')
-	const dest = `${destination}/${item.name}`.replace('//', '/')
+	if (batch.length === 1) {
+		const item = batch[0]
+		const source = `${sourcePath}/${item.name}`.replace('//', '/')
+		const dest = `${destination}/${item.name}`.replace('//', '/')
+		await ctx.moveItem(source, dest)
+		recordOperation({
+			type: 'move',
+			sourcePath,
+			destinationPath: destination,
+			fileName: item.name,
+			itemType: item.type,
+		})
+		return
+	}
 
-	await ctx.moveItem(source, dest)
-	recordOperation({
-		type: 'move',
-		sourcePath,
-		destinationPath: destination,
-		fileName: item.name,
-		itemType: item.type,
-	})
+	// Many items at once: folders and files both go, names kept.
+	const sources = batch.map((item) => ({
+		name: item.name,
+		path: `${sourcePath}/${item.name}`.replace('//', '/'),
+		type: item.type,
+	}))
+	if (ctx.moveItems) {
+		await ctx.moveItems(sources, destination)
+	} else {
+		for (const source of sources) {
+			await ctx.moveItem(source.path, `${destination}/${source.name}`.replace('//', '/'))
+		}
+	}
 }
 
 function handleDeleteItem() {
@@ -587,12 +803,6 @@ function showRenameModal(item: FileItem) {
 	renameItemModal.value?.show(item)
 }
 
-function showMoveModal(item: FileItem) {
-	if (isBusy.value || ctx.isReadOnly?.(item.path)) return
-	selectedItem.value = item
-	moveItemModal.value?.show()
-}
-
 function showDeleteModal(item: FileItem) {
 	if (isBusy.value || ctx.isReadOnly?.(item.path)) return
 	selectedItem.value = item
@@ -698,6 +908,7 @@ watch(
 		searchQuery.value = ''
 		resetSort()
 		deselectAll()
+		hideMoveBar()
 	},
 )
 

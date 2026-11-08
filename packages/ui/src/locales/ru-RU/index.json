@@ -7339,5 +7339,62 @@
   },
   "version.supplementary-resources.type": {
     "defaultMessage": "Тип"
+  },
+  "files.transfer.move-title": {
+    "defaultMessage": "Переместить {count, plural, one {# элемент} few {# элемента} other {# элементов}}"
+  },
+  "files.transfer.move-to-folder": {
+    "defaultMessage": "Переместить в другую папку"
+  },
+  "files.transfer.move-to-instance": {
+    "defaultMessage": "Переместить в другую сборку"
+  },
+  "files.transfer.replace-file": {
+    "defaultMessage": "Заменить файл"
+  },
+  "files.transfer.replace-title": {
+    "defaultMessage": "Замена файлов"
+  },
+  "files.transfer.replace-hint": {
+    "defaultMessage": "ПКМ по квадратику нужного файла — отметить замену, повторное нажатие — заменить. №1 заменяет №1."
+  },
+  "files.transfer.move-up": {
+    "defaultMessage": "Выше"
+  },
+  "files.transfer.move-down": {
+    "defaultMessage": "Ниже"
+  },
+  "files.transfer-instance-modal.header": {
+    "defaultMessage": "Переместить в другую сборку"
+  },
+  "files.transfer-instance-modal.description": {
+    "defaultMessage": "Куда переместить {count, plural, one {# элемент} few {# элемента} other {# элементов}}"
+  },
+  "files.transfer-instance-modal.no-instances": {
+    "defaultMessage": "Других сборок нет."
+  },
+  "files.move-modal.bulk-header": {
+    "defaultMessage": "Переместить {count, plural, one {# элемент} few {# элемента} other {# элементов}}"
+  },
+  "files.row.replace-marked": {
+    "defaultMessage": "Отмечено для замены — нажмите ещё раз, чтобы заменить"
+  },
+  "files.row.replace-no-source": {
+    "defaultMessage": "Файла с этим номером нет среди выбранных"
+  },
+  "files.layout.replaced-title": {
+    "defaultMessage": "Замена выполнена"
+  },
+  "files.layout.replaced-text": {
+    "defaultMessage": "«{name}» заменён на «{source}»."
+  },
+  "files.layout.replace-failed-title": {
+    "defaultMessage": "Не удалось заменить"
+  },
+  "files.layout.replace-missing-title": {
+    "defaultMessage": "Нечем заменять"
+  },
+  "files.layout.replace-missing-text": {
+    "defaultMessage": "Среди выбранных нет файла с номером #{number}. Перенумеруйте файлы на плашке выше."
   }
 }

@@ -472,6 +472,7 @@ fn main() {
                         "file_write",
                         "file_create_directory",
                         "file_rename",
+                        "file_move_cross",
                         "file_delete",
                         "file_save_as",
                         "files_select_external",

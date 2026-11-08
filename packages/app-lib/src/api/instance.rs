@@ -6,8 +6,9 @@ mod files;
 pub(crate) use files::InstanceFileWriter;
 pub use files::{
     InstanceFileItem, create_instance_directory, delete_instance_file,
-    list_instance_files, read_instance_file, rename_instance_file,
-    save_instance_file_as, validate_instance_file_write, write_instance_file,
+    list_instance_files, move_instance_file_cross, read_instance_file,
+    rename_instance_file, save_instance_file_as,
+    validate_instance_file_write, write_instance_file,
 };
 mod get;
 mod groups;

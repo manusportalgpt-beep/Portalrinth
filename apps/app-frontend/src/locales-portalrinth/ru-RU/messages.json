@@ -3513,7 +3513,10 @@
 		"message": "Подключения"
 	},
 	"instance.action.clean-launch": {
-		"message": "Чистый запуск (без модов)"
+		"message": "Чистый запуск"
+	},
+	"instance.files.move-bulk-failed": {
+		"message": "Не удалось переместить некоторые файлы"
 	},
 	"instance.settings.tabs.mods-sync": {
 		"message": "Синхронизация модов"

@@ -859,6 +859,33 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
                     return Ok(());
                 }
 
+                // Frozen content keeps its version: if the file is locked in
+                // the instance and still on disk, the update neither takes it
+                // again nor overwrites it.
+                if tokio::fs::symlink_metadata(&target_path)
+                    .await
+                    .is_ok()
+                    && crate::state::instances::commands::is_project_locked(
+                        &content_context.instance_id,
+                        &project_path,
+                        state,
+                    )
+                    .await
+                    .unwrap_or(false)
+                {
+                    content_context
+                        .mark_downloaded(
+                            &project_path.clone(),
+                            project_size,
+                            InstallJobEventKind::ContentFileSkipped {
+                                path: project_path,
+                                reason: "version frozen".to_string(),
+                            },
+                        )
+                        .await?;
+                    return Ok(());
+                }
+
                 let context =
                     InstallErrorContext::new("download modpack content file")
                         .maybe_project_id(
@@ -1181,8 +1208,8 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
                     .to_string(),
             )?;
         let relative_override_file_path = relative_override_file_path
-			.strip_prefix("overrides")
-			.or_else(|_| relative_override_file_path.strip_prefix("client-overrides"))
+                        .strip_prefix("overrides")
+                        .or_else(|_| relative_override_file_path.strip_prefix("client-overrides"))
             .context(format!("failed to strip override prefix from override file path {relative_override_file_path}"))?;
 
         let managed = crate::state::content_store::is_managed_content_path(
@@ -1474,6 +1501,19 @@ pub async fn remove_all_related_files(
         if let Some(project_id) = &file.project_id
             && to_remove.contains(project_id)
         {
+            // Frozen content keeps its version: a pack update must not take
+            // it again, so the locked file stays untouched on disk and in
+            // the content set.
+            if crate::state::instances::commands::is_project_locked(
+                &metadata.instance.id,
+                &file.relative_path,
+                &state,
+            )
+            .await
+            .unwrap_or(false)
+            {
+                continue;
+            }
             crate::state::instances::commands::remove_project(
                 &metadata.instance.id,
                 &file.relative_path,
@@ -1489,6 +1529,21 @@ pub async fn remove_all_related_files(
         if crate::state::content_store::is_managed_content_path(
             file.path.as_str(),
         ) {
+            if crate::state::instances::commands::is_project_locked(
+                &instance_id,
+                file.path.as_str(),
+                &state,
+            )
+            .await
+            .unwrap_or(false)
+                && tokio::fs::symlink_metadata(
+                    instance_full_path.join(file.path.as_str()),
+                )
+                .await
+                .is_ok()
+            {
+                continue;
+            }
             crate::state::instances::commands::remove_project(
                 &instance_id,
                 file.path.as_str(),

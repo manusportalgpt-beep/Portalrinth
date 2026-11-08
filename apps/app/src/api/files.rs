@@ -61,6 +61,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             file_write,
             file_create_directory,
             file_rename,
+            file_move_cross,
             file_delete,
         ])
         .build()
@@ -330,6 +331,24 @@ pub async fn file_rename(
         instance_id,
         source,
         destination,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn file_move_cross(
+    source_instance_id: &str,
+    source: &str,
+    destination_instance_id: &str,
+    destination: &str,
+    replace: bool,
+) -> Result<()> {
+    Ok(theseus::instance::move_instance_file_cross(
+        source_instance_id,
+        source,
+        destination_instance_id,
+        destination,
+        replace,
     )
     .await?)
 }

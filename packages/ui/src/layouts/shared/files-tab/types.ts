@@ -29,6 +29,14 @@ export interface EditingFile {
 	path: string
 }
 
+/** Another instance a file can be moved to, or replaced in. */
+export interface TransferInstance {
+	id: string
+	name: string
+	iconUrl?: string | null
+	subtitle?: string
+}
+
 export type FileSortField = 'name' | 'size' | 'created' | 'modified'
 
 export type FileViewFilter = 'all' | 'filesOnly' | 'foldersOnly'

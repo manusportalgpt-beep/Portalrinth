@@ -2,9 +2,11 @@
 	<NewModal
 		ref="modal"
 		:header="
-			formatMessage(messages.header, {
-				type: formatFileItemType(formatMessage, item?.type),
-			})
+			itemCount && itemCount > 1
+				? formatMessage(messages.bulkHeader, { count: itemCount })
+				: formatMessage(messages.header, {
+						type: formatFileItemType(formatMessage, item?.type),
+					})
 		"
 		max-width="500px"
 	>
@@ -13,7 +15,7 @@
 				<span class="font-semibold text-contrast">{{
 					formatMessage(messages.currentLocation)
 				}}</span>
-				<span class="text-secondary">{{ `${currentPath}/${item?.name}`.replace('//', '/') }}</span>
+				<span class="text-secondary">{{ locationLine }}</span>
 			</div>
 			<label class="flex flex-col gap-2">
 				<span class="font-semibold text-contrast">{{
@@ -44,7 +46,7 @@
 
 <script setup lang="ts">
 import { RightArrowIcon, XIcon } from '@modrinth/assets'
-import { nextTick, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 
 import { Button } from '#ui/components/base/buttons'
 import Input from '#ui/components/base/inputs/Input.vue'
@@ -60,6 +62,10 @@ const messages = defineMessages({
 	header: {
 		id: 'files.move-modal.header',
 		defaultMessage: 'Move {type}',
+	},
+	bulkHeader: {
+		id: 'files.move-modal.bulk-header',
+		defaultMessage: 'Move {count, plural, one {# item} other {# items}}',
 	},
 	currentLocation: {
 		id: 'files.move-modal.current-location',
@@ -77,10 +83,15 @@ const messages = defineMessages({
 
 const destinationInput = ref<HTMLInputElement | null>(null)
 
-defineProps<{
+const props = defineProps<{
 	item: Pick<FileItem, 'name' | 'type'> | null
 	currentPath: string
+	itemCount?: number
 }>()
+
+const locationLine = computed(() =>
+	props.item ? `${props.currentPath}/${props.item.name}`.replace('//', '/') : props.currentPath,
+)
 
 const emit = defineEmits<{
 	move: [destination: string]

@@ -1881,7 +1881,10 @@
 		"message": "Connections"
 	},
 	"instance.action.clean-launch": {
-		"message": "Clean launch (no mods)"
+		"message": "Clean launch"
+	},
+	"instance.files.move-bulk-failed": {
+		"message": "Could not move some items"
 	},
 	"instance.settings.tabs.mods-sync": {
 		"message": "Mod sync"

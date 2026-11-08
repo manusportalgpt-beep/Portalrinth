@@ -416,6 +416,127 @@ pub async fn rename_instance_file(
     Ok(())
 }
 
+/// Moves a file or folder from one instance to another, optionally replacing
+/// whatever already sits at the destination. Both instances are locked, in a
+/// stable order, so two opposite transfers cannot deadlock.
+pub async fn move_instance_file_cross(
+    source_instance_id: &str,
+    source: &str,
+    destination_instance_id: &str,
+    destination: &str,
+    replace: bool,
+) -> crate::Result<()> {
+    let state = State::get().await?;
+    let source = normalized(source);
+    let destination = normalized(destination);
+    if source.is_empty() || destination.is_empty() {
+        bail!(ErrorKind::InputError(
+            "the instance directory cannot be changed in the Files tab"
+                .to_string(),
+        ));
+    }
+    validate_relative(source)?;
+    validate_relative(destination)?;
+
+    if source_instance_id == destination_instance_id && source == destination {
+        bail!(ErrorKind::InputError(
+            "a file cannot be replaced with itself".to_string()
+        ));
+    }
+
+    // Lock both instances, always in the same order, so two opposite
+    // transfers cannot deadlock. A same-instance replacement takes one lock
+    // — the guard must never be taken twice for one instance.
+    let first_lock;
+    let second_lock;
+    if source_instance_id == destination_instance_id {
+        first_lock = Some(state.instance_locks.lock_content(source_instance_id).await);
+        second_lock = None;
+    } else if source_instance_id <= destination_instance_id {
+        first_lock = Some(state.instance_locks.lock_content(source_instance_id).await);
+        second_lock = Some(
+            state
+                .instance_locks
+                .lock_content(destination_instance_id)
+                .await,
+        );
+    } else {
+        second_lock = Some(
+            state
+                .instance_locks
+                .lock_content(destination_instance_id)
+                .await,
+        );
+        first_lock = Some(state.instance_locks.lock_content(source_instance_id).await);
+    }
+    let _first = first_lock;
+    let _second = second_lock;
+    let _files = state.content_store.files_lock.lock().await;
+
+    let source_content =
+        resolve(&state, source_instance_id, source, true).await?;
+    let destination_content =
+        resolve(&state, destination_instance_id, destination, true).await?;
+
+    if let Ok(existing) = fs::symlink_metadata(destination_content.path()).await
+    {
+        if !replace {
+            bail!(ErrorKind::InputError(
+                "the destination already exists".to_string()
+            ));
+        }
+        if existing.is_dir() {
+            fs::remove_dir_all(destination_content.path()).await?;
+        } else {
+            fs::remove_file(destination_content.path()).await?;
+        }
+    }
+
+    if let Some(parent) = destination_content.path().parent() {
+        fs::create_dir_all(parent).await?;
+    }
+
+    match fs::rename(source_content.path(), destination_content.path()).await {
+        Ok(()) => Ok(()),
+        // A rename cannot cross filesystems; fall back to a recursive copy.
+        Err(error) => {
+            let is_dir = fs::metadata(source_content.path())
+                .await
+                .map(|metadata| metadata.is_dir())
+                .unwrap_or(false);
+            copy_path_recursive(source_content.path(), destination_content.path()).await?;
+            if is_dir {
+                fs::remove_dir_all(source_content.path()).await?;
+            } else {
+                fs::remove_file(source_content.path()).await?;
+            }
+            let _ = error;
+            Ok(())
+        }
+    }
+}
+
+async fn copy_path_recursive(from: &Path, to: &Path) -> crate::Result<()> {
+    let metadata = fs::symlink_metadata(from).await?;
+    if metadata.is_dir() {
+        fs::create_dir_all(to).await?;
+        let mut entries = fs::read_dir(from).await?;
+        while let Some(entry) = entries.next_entry().await? {
+            let child_to = to.join(entry.file_name());
+            copy_path_recursive(&entry.path(), &child_to).await?;
+        }
+        Ok(())
+    } else if metadata.is_file() {
+        fs::copy(from, to).await?;
+        Ok(())
+    } else {
+        // Symbolic links are refused elsewhere in the Files tab; keep that rule.
+        bail!(ErrorKind::InputError(
+            "Files cannot move a symbolic link".to_string()
+        ));
+    }
+}
+
 pub async fn delete_instance_file(
     instance_id: &str,
     path: &str,

@@ -10,6 +10,7 @@ import {
 	commonMessages,
 	defineMessages,
 	FilePageLayout,
+	formatLoader,
 	injectNotificationManager,
 	provideFileManager,
 	ReadyTransition,
@@ -28,7 +29,11 @@ import { get_full_path, get_linked_modpack_content } from '@/helpers/instance'
 import { highlightInFolder } from '@/helpers/utils'
 
 import { injectInstancePage } from '../instance-context'
-import { instanceContentQueryOptions, instanceKeys } from '../query-options'
+import {
+	instanceContentQueryOptions,
+	instanceKeys,
+	instanceListQueryOptions,
+} from '../query-options'
 
 const instancePage = injectInstancePage()
 const instanceId = instancePage.instanceId
@@ -49,6 +54,10 @@ const messages = defineMessages({
 	addingFiles: {
 		id: 'instance.files.adding-files',
 		defaultMessage: 'Adding files ({completed}/{total})',
+	},
+	moveFailedTitle: {
+		id: 'instance.files.move-bulk-failed',
+		defaultMessage: 'Could not move some items',
 	},
 })
 
@@ -290,6 +299,105 @@ async function handleMoveItem(source: string, destination: string) {
 	}
 }
 
+// Many items — files and folders alike — go into one folder of this instance;
+// a failure on one item does not stop the rest.
+async function handleMoveItems(
+	sources: { name: string; path: string; type: string }[],
+	destinationFolder: string,
+) {
+	const failures: string[] = []
+	for (const source of sources) {
+		const destination = `${destinationFolder}/${source.name}`.replace('//', '/')
+		try {
+			await invoke('plugin:files|file_rename', {
+				instanceId: instanceId.value,
+				source: source.path,
+				destination,
+			})
+		} catch (e) {
+			failures.push(`${source.name}: ${e instanceof Error ? e.message : ''}`)
+		}
+	}
+	await refresh()
+	if (failures.length > 0) {
+		addNotification({
+			title: formatMessage(messages.moveFailedTitle),
+			text: failures.join('\n'),
+			type: 'error',
+		})
+	}
+}
+
+// Other instances, for «Переместить в другую сборку» and «Заменить файл».
+const instancesQuery = useQuery(instanceListQueryOptions())
+const transferInstances = computed(() =>
+	(instancesQuery.data.value ?? [])
+		.filter((candidate) => candidate.id !== instanceId.value)
+		.map((candidate) => ({
+			id: candidate.id,
+			name: candidate.name,
+			subtitle: `${formatLoader(formatMessage, candidate.loader)} ${candidate.game_version}`,
+		})),
+)
+
+async function handleMoveItemsToInstance(
+	sources: { name: string; path: string }[],
+	targetInstanceId: string,
+) {
+	const failures: string[] = []
+	for (const source of sources) {
+		const parentDirectory = source.path.includes('/')
+			? source.path.slice(0, source.path.lastIndexOf('/'))
+			: ''
+		const destination = parentDirectory ? `${parentDirectory}/${source.name}` : source.name
+		try {
+			await invoke('plugin:files|file_move_cross', {
+				sourceInstanceId: instanceId.value,
+				source: source.path,
+				destinationInstanceId: targetInstanceId,
+				destination,
+				replace: false,
+			})
+		} catch (e) {
+			failures.push(`${source.name}: ${e instanceof Error ? e.message : ''}`)
+		}
+	}
+	await refresh()
+	if (failures.length > 0) {
+		addNotification({
+			title: formatMessage(messages.moveFailedTitle),
+			text: failures.join('\n'),
+			type: 'error',
+		})
+	}
+}
+
+async function handleReplaceFiles(
+	replacements: {
+		sourceInstanceId: string
+		sourcePath: string
+		targetInstanceId: string
+		targetPath: string
+	}[],
+) {
+	let lastError: unknown = null
+	for (const replacement of replacements) {
+		try {
+			await invoke('plugin:files|file_move_cross', {
+				sourceInstanceId: replacement.sourceInstanceId,
+				source: replacement.sourcePath,
+				destinationInstanceId: replacement.targetInstanceId,
+				destination: replacement.targetPath,
+				replace: true,
+			})
+		} catch (e) {
+			lastError = e
+		}
+	}
+	await refresh()
+	if (lastError) throw lastError
+}
+
 async function handleDeleteItem(path: string, recursive: boolean) {
 	try {
 		await invoke('plugin:files|file_delete', { instanceId: instanceId.value, path, recursive })
@@ -422,6 +530,11 @@ provideFileManager({
 	createItem: handleCreateItem,
 	renameItem: handleRenameItem,
 	moveItem: handleMoveItem,
+	moveItems: handleMoveItems,
+	instanceId,
+	transferInstances,
+	moveItemsToInstance: handleMoveItemsToInstance,
+	replaceFiles: handleReplaceFiles,
 	deleteItem: handleDeleteItem,
 	readFile: handleReadFile,
 	readFileAsBlob: handleReadFileAsBlob,

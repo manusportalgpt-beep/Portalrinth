@@ -12,7 +12,33 @@
 		@pointerdown="handlePointerDown"
 	>
 		<div class="pointer-events-none flex flex-1 items-center gap-3 truncate">
+			<div v-if="replaceMode" class="relative flex items-center">
+				<button
+					v-if="replaceMarkNumber"
+					v-tooltip="replaceExecutable ? undefined : formatMessage(messages.replaceNoSource)"
+					class="pointer-events-auto grid size-4.5 cursor-pointer place-items-center rounded-[4px] bg-red text-[var(--color-accent-contrast)]"
+					:aria-label="formatMessage(messages.replaceMarkedLabel)"
+					@click.stop="emit('replace-toggle')"
+					@contextmenu.prevent.stop="emit('replace-toggle')"
+				>
+					<XIcon class="size-3.5" />
+					<span
+						class="absolute -top-1.5 -right-2 grid size-4 place-items-center rounded-full bg-brand text-[10px] font-bold text-[var(--color-accent-contrast)] tabular-nums"
+					>
+						{{ replaceMarkNumber }}
+					</span>
+				</button>
+				<Checkbox
+					v-else
+					class="pointer-events-auto"
+					:model-value="false"
+					@click.stop
+					@contextmenu.prevent.stop="emit('replace-toggle')"
+					@update:model-value="emit('toggle-select')"
+				/>
+			</div>
 			<Checkbox
+				v-else
 				class="pointer-events-auto"
 				:model-value="selected"
 				@click.stop
@@ -122,6 +148,7 @@ import {
 	PaintbrushIcon,
 	RightArrowIcon,
 	TrashIcon,
+	XIcon,
 } from '@modrinth/assets'
 import { computed, ref } from 'vue'
 
@@ -161,6 +188,14 @@ const messages = defineMessages({
 		id: 'files.row.create-zip',
 		defaultMessage: 'Create ZIP',
 	},
+	replaceMarkedLabel: {
+		id: 'files.row.replace-marked',
+		defaultMessage: 'Marked for replacement — press again to replace',
+	},
+	replaceNoSource: {
+		id: 'files.row.replace-no-source',
+		defaultMessage: 'No file with this number is selected for the replacement',
+	},
 })
 
 const props = defineProps<
@@ -171,21 +206,16 @@ const props = defineProps<
 		selected: boolean
 		writeDisabled?: boolean
 		writeDisabledTooltip?: string
+		replaceMode?: boolean
+		replaceMarkNumber?: number | null
+		replaceExecutable?: boolean
 	}
 >()
 
 const emit = defineEmits<{
 	(
 		e:
-			| 'rename'
-			| 'move'
-			| 'download'
-			| 'zip'
-			| 'delete'
-			| 'edit'
-			| 'extract'
-			| 'hover'
-			| 'navigate',
+			'rename' | 'move' | 'download' | 'zip' | 'delete' | 'edit' | 'extract' | 'hover' | 'navigate',
 		item: Pick<FileItem, 'name' | 'type' | 'path'>,
 	): void
 	(
@@ -193,7 +223,7 @@ const emit = defineEmits<{
 		item: Pick<FileItem, 'name' | 'type' | 'path'> & { destination: string },
 	): void
 	(e: 'contextmenu', event: MouseEvent, options: ButtonMenuOption[]): void
-	(e: 'toggle-select'): void
+	(e: 'toggle-select' | 'replace-toggle'): void
 }>()
 
 const isDropTarget = computed(

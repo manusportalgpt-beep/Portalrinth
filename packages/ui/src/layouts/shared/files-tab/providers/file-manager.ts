@@ -9,6 +9,7 @@ import type {
 	FileItem,
 	FileItemDescription,
 	FileOperation,
+	TransferInstance,
 	UploadState,
 } from '../types'
 
@@ -28,6 +29,30 @@ export interface FileManagerContext {
 	renameItem: (path: string, newName: string) => Promise<void>
 	moveItem: (source: string, destination: string) => Promise<void>
 	deleteItem: (path: string, recursive: boolean) => Promise<void>
+
+	/** The instance these files belong to, for transfers between instances. */
+	instanceId?: Ref<string> | ComputedRef<string>
+	/** Other instances a file can be moved to, or replaced in. */
+	transferInstances?: Ref<TransferInstance[]> | ComputedRef<TransferInstance[]>
+	/** Moves many items into one folder of this instance. */
+	moveItems?: (
+		sources: { name: string; path: string; type: string }[],
+		destinationFolder: string,
+	) => Promise<void>
+	/** Moves items into another instance, keeping their relative folder. */
+	moveItemsToInstance?: (
+		sources: { name: string; path: string }[],
+		targetInstanceId: string,
+	) => Promise<void>
+	/** Replaces the file at each target with the one from the source instance. */
+	replaceFiles?: (
+		replacements: {
+			sourceInstanceId: string
+			sourcePath: string
+			targetInstanceId: string
+			targetPath: string
+		}[],
+	) => Promise<void>
 
 	readFile: (path: string) => Promise<string>
 	readFileAsBlob: (path: string) => Promise<Blob>
