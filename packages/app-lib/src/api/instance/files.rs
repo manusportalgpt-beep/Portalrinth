@@ -7,7 +7,9 @@ use crate::{ErrorKind, State};
 use anyhow::bail;
 use serde::Serialize;
 use std::collections::HashSet;
+use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::time::UNIX_EPOCH;
 use tokio::fs;
 
@@ -516,25 +518,31 @@ pub async fn move_instance_file_cross(
     }
 }
 
-async fn copy_path_recursive(from: &Path, to: &Path) -> crate::Result<()> {
-    let metadata = fs::symlink_metadata(from).await?;
-    if metadata.is_dir() {
-        fs::create_dir_all(to).await?;
-        let mut entries = fs::read_dir(from).await?;
-        while let Some(entry) = entries.next_entry().await? {
-            let child_to = to.join(entry.file_name());
-            copy_path_recursive(&entry.path(), &child_to).await?;
+/// Recursion in an async fn needs boxing, so this returns a pinned future.
+fn copy_path_recursive<'a>(
+    from: &'a Path,
+    to: &'a Path,
+) -> Pin<Box<dyn Future<Output = crate::Result<()>> + Send + 'a>> {
+    Box::pin(async move {
+        let metadata = fs::symlink_metadata(from).await?;
+        if metadata.is_dir() {
+            fs::create_dir_all(to).await?;
+            let mut entries = fs::read_dir(from).await?;
+            while let Some(entry) = entries.next_entry().await? {
+                let child_to = to.join(entry.file_name());
+                copy_path_recursive(&entry.path(), &child_to).await?;
+            }
+            Ok(())
+        } else if metadata.is_file() {
+            fs::copy(from, to).await?;
+            Ok(())
+        } else {
+            // Symbolic links are refused elsewhere in the Files tab; keep that rule.
+            bail!(ErrorKind::InputError(
+                "Files cannot move a symbolic link".to_string()
+            ));
         }
-        Ok(())
-    } else if metadata.is_file() {
-        fs::copy(from, to).await?;
-        Ok(())
-    } else {
-        // Symbolic links are refused elsewhere in the Files tab; keep that rule.
-        bail!(ErrorKind::InputError(
-            "Files cannot move a symbolic link".to_string()
-        ));
-    }
+    })
 }
 
 pub async fn delete_instance_file(
