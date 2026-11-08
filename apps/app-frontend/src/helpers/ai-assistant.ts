@@ -1223,6 +1223,7 @@ export const AI_SKILLS_HINT = [
 export const AI_CRAFT_HINT = [
 	'Никогда не отдавай код игроку на самостоятельную вставку: любой файл задачи записываешь сам (<<sandbox_write|файл::текст>> — проект в песочнице, <<instance_write|сборка::файл::текст>> — конфиг в сборке), правка — перезаписью целиком, дальше сборка и установка. В чате код — только короткий фрагмент-объяснение (до 15 строк). Ответ «вот код, вставь сам» — провал работы, а не результат.',
 	'Крафт — твой главный талант. Учись работать в песочнице как мастер: сначала осмотрись (<<sandbox_bash|tree>> или ls), план на 3-4 шага скажи игроку одной строкой, потом делай файл за файлом, каждый длинный файл — <<sandbox_write|файл::текст>> целиком (помни: внутри аргумента команды двойных >> не бывает — дописывать в файл можно только прочитав его и записав заново). Перед правкой всегда cat файл. JSON после записи перечитай и проверь запятые. Имена файлов и папок — латиницей без пробелов.',
+	'МОД ИЛИ ШЕЙДЕР — сначала пойми, О ЧЁМ речь: назови себе версию Minecraft сборки, загрузчик и что именно просят, и проверь это поиском/доками под ЭТУ версию (примеры: «fabric example mod <версия>», «neoforge mods.toml <версия>», «Iris shaderpack docs shaders.properties», «pack_format <версия>»), открой файлы живого образца из своего списка образцов и строй по ним, а не по памяти о «каком-то гайде». Промахнулся с версией или форматом — весь мод/шейдер мимо: переделывать дольше, чем искать.',
 	'МОД (Fabric): корень проекта — fabric.mod.json рядом с папкой src/main/java. fabric.mod.json: {"schemaVersion":1, "id":"латиница_низкий_регистр", "version":"1.0.0", "name":"Имя", "entrypoints":{"main":["пакет.Класс"]}, "depends":{"fabricloader":">=0.15", "minecraft":"~1.21.1"}}. Класс implements ModInitializer, метод onInitialize — точка входа. Хуки в чужой код — Mixins (mixins.<id>.json + поле "mixins"). Forge — mods.toml в src/main/resources/META-INF, NeoForge — neoforge.mods.toml. Java 17 для MC 1.17-1.20.4, Java 21 для 1.20.5+. Скомпилируй: <<launcher_compile_java|папка-проекта::мод.jar::1.21.1>> — третьим аргументом ВСЕГДА версия Minecraft сборки; если javac в системе нет — собери .jar как zip через sandbox_pack и честно скажи, что для скомпилированного мода нужен JDK.',
 	'ШЕЙДЕР (Iris/OptiFine): в корне архива папка shaders/ с программами: gbuffers_terrain.vsh/.fsh (мир), gbuffers_textured (частицы), composite.fsh и final.fsh (пост-обработка: туман, тон, блум). shaders.properties — настройки и профили. Юниформы бери готовые: gbufferModelView, worldTime, cameraPosition, texcoord. GLSL #version 120-330: каждую скобку и точку с запятой проверяй — от опечатки шейдер не загрузится. pack.mcmeta в корне добавь.',
 	'ШЕЙДЕР-ПАК — это .zip, в КОРНЕ которого папка shaders/ (самая частая ошибка — двойная вложенность shaders/shaders/ — всегда проверяй распаковкой). Внутри shaders/: программы *.vsh (вершинные) и *.fsh (фрагментные) — gbuffers_terrain (мир), gbuffers_textured (частицы), gbuffers_basic (линии), composite и final (пост-обработка); каждый fsh в конце обязан писать gl_FragData[0] или out-переменную — без этого экран чёрный. shaders.properties даёт настройки в меню шейдера (profile., screen., sliders) — минимальному паку не обязателен. Готовые юниформы и сэмплеры: gbufferModelView, gbufferProjectionInverse, worldTime, cameraPosition, texcoord, colortex0 — цвет мира до пост-обработки. GLSL не прощает опечаток: шейдер с опечаткой просто не загрузится. Идея первого шейдера: final.fsh — тёплый тон, лёгкая виньетка и дистанционный туман.',
@@ -1299,9 +1300,10 @@ export const AI_REFERENCES_HINT = [
  * other way — fast, no ceremony.
  */
 export const AI_LEARN_FIRST_HINT = [
-	'ПРАВИЛО «СНАЧАЛА УЧИСЬ»: прежде чем СОЗДАВАТЬ что-то новое — шейдер, мод, ресурс-пак, датапак, сайт, скрипт, бота, карту, да что угодно, — сначала изучи тему в интернете: 1) <<web_search|>> по теме и свежим примерам; 2) <<web_fetch|>> 1–3 лучших источников — официальная документация (для шейдеров — Iris Shader Docs /ShaderDoc и вики Minecraft-Shaders-Wiki, для модов — доки Fabric/Forge/NeoForge, для сайтов — доки фреймворка), рабочие образцы на GitHub (файлы читай через raw.githubusercontent.com), свежие гайды; 3) одной строкой скажи игроку, что почерпнул; 4) пиши СВОЙ код по образцу структуры и уровня качества, не копируя чужой целиком. Это правило — для любой творческой задачи без исключений: сначала понял, как такие вещи делаются, потом делаешь.',
+	'ПРАВИЛО «СНАЧАЛА УЧИСЬ»: прежде чем СОЗДАВАТЬ что-то новое — шейдер, мод, ресурс-пак, датапак, сайт, скрипт, бота, карту, да что угодно, — сначала изучи тему в интернете: 1) <<web_search|>> по теме и свежим примерам; 2) <<web_fetch|>> 1–3 лучших источников — официальная документация (для шейдеров — Iris Shader Docs /ShaderDoc и вики Minecraft-Shaders-Wiki, для модов — доки Fabric/Forge/NeoForge, для сайтов — доки фреймворка), рабочие образцы на GitHub (файлы читай через raw.githubusercontent.com), свежие гайды; 3) одной строкой скажи игроку, что почерпнул; 4) пиши СВОЙ код по образцу структуры и уровня качества, не копируя чужой целиком. И это правило — для ЛЮБОЙ задачи без исключений, и даже если ты уверен, что знаешь, как это делается, — всё равно сделай хотя бы один поиск «на всякий случай»: версии, форматы и API меняются, а память врёт уверенно.',
 	'Лёгкие задачи — наоборот, БЕЗ церемоний: спросить, найти, прочитать, пересказать, проверить факт — сразу <<web_search|>> → при нужде один-два <<web_fetch|>> → ответ. Никаких планов, этапов и лишних инструментов: уложился в 2–3 вызова — молодец. Браузить умеешь быстро: короткие запросы, выбор лучших ссылок из выдачи, чтение только нужных страниц.',
-	'Исключение для скорости: скрипты и обычный код (Python, JS, боты, парсеры, утилиты, мелкие сайты) — пиши СРАЗУ, без «СНАЧАЛА УЧИСЬ»: стандартную библиотеку и базовые паттерны ты знаешь холодно; web_search — только под незнакомую библиотеку или непонятную ошибку. Правило «СНАЧАЛА УЧИСЬ» остаётся для шейдеров, модов, ресурс-паков, датапаков и крупных проектов — там качество важнее скорости.',
+	'Без «исключений для скорости»: ЛЮБАЯ задача — от мода до скрипта — начинается с короткого web_search по теме (два-три запроса, не двадцать), даже если решение кажется тебе очевидным: поиск — не сомнение в тебе, а страховка игрока. Без поиска ходит только светская болтовня, где задачи нет.',
+	'Логи и краши: если причина видна сразу (знакомая ошибка) — разбирай без поиска. Но незнакомый exception, странный класс в трейсе или непонятная причина — сначала web_search точного текста ошибки (коротко, в кавычках, лучше на английском), прочитай 1–2 результата и только потом делай выводы и чини. Не понимаешь лог — поиск обязателен.',
 ].join('\n')
 
 /**
@@ -1766,7 +1768,7 @@ async function buildLiveContext(): Promise<string> {
 	const settings = aiSettings.value
 	lines.push(
 		settings.webSearch
-			? 'Режим «Веб-поиск» ВКЛЮЧЁН: свежие факты, версии, новости и всё, в чём не уверен, проверяй web_search/web_fetch/fandom перед ответом и ссылайся на источник.'
+			? 'Режим «Веб-поиск» ВКЛЮЧЁН: ЛЮБАЯ задача начинается с короткого web_search по теме — даже знакомая (это «на всякий случай»); свежие факты, версии, новости и всё, в чём не уверен, проверяй web_search/web_fetch/fandom перед ответом и ссылайся на источник.'
 			: 'Режим «Веб-поиск» выключен игроком: не ищи в интернете, если игрок прямо не попросил; отвечай из знаний и честно помечай, если что-то может быть устаревшим.',
 	)
 	if (settings.deepThink) {
@@ -2444,19 +2446,19 @@ const pendingVisionImages: string[] = []
  * then answer), and falls across providers when a free limit gets in the way.
  */
 /**
- * With «Веб-поиск» on, a factual question is searched before the model even
- * starts: the results land in the prompt and in the chat as a real step, so
- * the player sees what was found and the model cannot claim it is offline.
+ * With «Веб-поиск» on, EVERY task is searched before the model even starts:
+ * the results land in the prompt and in the chat as a real step, so the
+ * player sees what was found and the model cannot claim it is offline. Not
+ * just factual questions - any task, even a familiar one: the search is the
+ * model's "just in case" (versions, formats and APIs move), which is how the
+ * player asked for it. Long pastes (logs) stay out of the mechanical search -
+ * there the model searches itself, and only when the log is not clear to it.
  */
-const PRESEARCH_HINT =
-	/(найди|поищи|загугли|погугли|что такое|кто так|когда|сколько|новост|актуальн|последн|свеж|вышел|выйдет|релиз|где скачать|ссылк|почему|как сделать|как работает|гайд|what|who|when|latest|news)/i
-
 async function presearchFor(request: AiRequest): Promise<string> {
 	if (!aiSettings.value.webSearch) return ''
 	const last = [...(request.messages ?? [])].reverse().find((message) => message.role === 'user')
 	const text = typeof last?.content === 'string' ? last.content.trim() : ''
-	if (text.length < 8 || text.length > 400 || text.includes('<<') || !PRESEARCH_HINT.test(text))
-		return ''
+	if (text.length < 8 || text.length > 400 || text.includes('<<')) return ''
 	const query = text.replace(/\s+/g, ' ').slice(0, 160)
 	request.onActionStart?.('web_search', query)
 	let result = ''
@@ -2762,7 +2764,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 									.join(' ')}`,
 							)
 						}
-						for (let cursor = 0; cursor < batch.length; ) {
+						for (let cursor = 0; cursor < batch.length;) {
 							if (playerTookOver()) {
 								notes.push(
 									'Игрок сам перешёл на другой экран - он передумал. Немедленно прекрати действия по этому запросу и попрощайся.',

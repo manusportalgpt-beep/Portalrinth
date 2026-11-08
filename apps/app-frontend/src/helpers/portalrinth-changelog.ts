@@ -6,14 +6,16 @@
  * Portalrinth-specific and intentionally lives outside `packages/blog` so it is
  * never overwritten when the repo is synced with upstream Modrinth.
  *
- * Add a new entry on top for each Portalrinth release. The `body` is markdown:
- * use `### Added`, `### Changed`, `### Deprecated`, `### Removed`,
- * `### Fixed`, `### Security` section headings (matching the Modrinth PR
- * changelog template / Keep a Changelog convention) and `- item` bullets.
+ * The live list is NOT this file: the tab reads the repository's own commits
+ * from the GitHub API (see `portalrinth-news.ts`), so a change appears the
+ * moment it lands on main, with nobody writing it in. This static array is
+ * only the offline fallback for when that fetch fails, and nothing new gets
+ * added here.
  *
- * Keep every bullet to one line, in the plain style Modrinth's own changelog
- * uses: what changed, not why or how it was done. Links work, and so do
- * screenshots:
+ * The `body` is markdown: `###` section headings (Keep a Changelog style)
+ * and `- item` bullets. Keep every bullet to one line, in the plain style
+ * Modrinth's own changelog uses: what changed, not why or how it was done.
+ * Links work, and so do screenshots:
  *
  * ```markdown
  * ![Modern Java](/changelog/screenshots/modern-java.png)
@@ -27,7 +29,8 @@
  */
 
 export interface PortalrinthVersionEntry {
-	version: string
+	/** A release version, when the commit is tagged; commits without one just date the entry. */
+	version?: string
 	/** ISO date string. */
 	date: string
 	body: string

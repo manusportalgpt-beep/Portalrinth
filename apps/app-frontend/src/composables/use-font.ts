@@ -7,9 +7,14 @@
  * to it (a custom property inherits downward, never upward), and the font
  * then reached only the few elements that resolve the variable directly.
  * Inter, the theme's own, always follows the chosen font, so a font missing
- * a glyph falls back to Inter rather than to a default serif. Inter, the theme's own, always follows
- * the chosen font, so a font missing a glyph falls back to Inter rather than to
- * a default serif.
+ * a glyph falls back to Inter rather than to a default serif.
+ *
+ * The choice is written in three places at once, each covering a way the
+ * others can miss: the variable on the root (what the stylesheet's `:root`
+ * rule reads), the variable on the body (what anything resolving the variable
+ * at body level - or reading it off body's computed style - sees), and the
+ * `font-family` itself inline on the root, which holds the choice even where
+ * a stylesheet rule or an engine quirk would out-compete the variable.
  *
  * Like the accent, the choice is mirrored into local storage so the window
  * opens in it, rather than changing font once settings arrive from the database.
@@ -50,11 +55,23 @@ watch(
 	font,
 	(name) => {
 		const root = document.documentElement
+		const body = document.body
 		const trimmed = name.trim()
+
+		// The variable feeds the stylesheet's `:root` rule; the root is where
+		// that rule looks, the body where anything resolving the variable one
+		// step down (or reading body's computed style) looks.
 		if (trimmed) {
-			root.style.setProperty('--font-standard', `${fontFamilyCss(trimmed)}, Inter, sans-serif`)
+			const value = `${fontFamilyCss(trimmed)}, Inter, sans-serif`
+			root.style.setProperty('--font-standard', value)
+			body?.style.setProperty('--font-standard', value)
+			// The family itself, inline on the root: holds the choice even
+			// where a stylesheet rule would out-compete the variable.
+			root.style.fontFamily = value
 		} else {
 			root.style.removeProperty('--font-standard')
+			body?.style.removeProperty('--font-standard')
+			root.style.removeProperty('font-family')
 		}
 
 		try {
