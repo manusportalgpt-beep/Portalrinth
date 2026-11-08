@@ -2414,9 +2414,6 @@
 	"app.appearance-settings.accent.gradient": {
 		"message": "Градиент"
 	},
-	"app.appearance-settings.accent.direction": {
-		"message": "Направление"
-	},
 	"app.appearance-settings.accent.add-stop": {
 		"message": "Добавить цвет в градиент"
 	},

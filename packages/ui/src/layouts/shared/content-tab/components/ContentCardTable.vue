@@ -92,9 +92,12 @@ const hasAnyActions = computed(() => {
 // Virtualization
 //
 // Below this many rows the whole list is rendered, as Celestial-Launcher does:
-// virtualizing a list that fits in a few screens buys nothing and shows a hole
-// whenever a scroll outruns the buffer, and most modded instances are under it.
-const VIRTUALIZE_THRESHOLD = 150
+// virtualizing a list that fits in a couple of screens buys nothing and shows
+// a hole whenever a scroll outruns the buffer. Above it, only the rows on
+// screen - plus a buffer either side - are mounted, so a heavy instance, a
+// hundred mods and more, scrolls instead of dragging thousands of row nodes
+// through every frame.
+const VIRTUALIZE_THRESHOLD = 60
 
 const isVirtualized = computed(() => props.virtualized && props.items.length > VIRTUALIZE_THRESHOLD)
 

@@ -177,10 +177,6 @@ const messages = defineMessages({
 	},
 	accentSolid: { id: 'app.appearance-settings.accent.solid', defaultMessage: 'Colour' },
 	accentGradient: { id: 'app.appearance-settings.accent.gradient', defaultMessage: 'Gradient' },
-	accentDirection: {
-		id: 'app.appearance-settings.accent.direction',
-		defaultMessage: 'Direction',
-	},
 	accentAddStop: {
 		id: 'app.appearance-settings.accent.add-stop',
 		defaultMessage: 'Add a colour to the gradient',
@@ -546,37 +542,6 @@ provideAppearanceSettings({
 			without being looked for again.
 		-->
 		<div class="mt-3 flex flex-wrap items-center gap-2">
-			<ColorPicker
-				v-model="pickedColor"
-				:label="formatMessage(messages.accentPickTitle)"
-				:custom-colors="accent.customColors.value"
-				:custom-colors-label="formatMessage(messages.accentMyColoursTitle)"
-				:custom-colors-add-label="formatMessage(messages.accentKeepColour)"
-				:custom-colors-remove-label="formatMessage(messages.accentRemoveColour)"
-				:custom-colors-full-label="formatMessage(messages.accentTooManyColours)"
-				:custom-colors-limit="MAX_CUSTOM_ACCENT_COLORS"
-				allow-gradient
-				:max-stops="MAX_ACCENT_GRADIENT_STOPS"
-				:solid-label="formatMessage(messages.accentSolid)"
-				:gradient-label="formatMessage(messages.accentGradient)"
-				:direction-label="formatMessage(messages.accentDirection)"
-				:add-stop-label="formatMessage(messages.accentAddStop)"
-				:remove-stop-label="formatMessage(messages.accentRemoveStop)"
-				:apply-label="formatMessage(messages.accentApply)"
-				class="!h-8 !w-8 !rounded-full"
-				@update:model-value="onColourPicked"
-				@preview="onPickerPreview"
-				@update:custom-colors="onCustomColoursChanged"
-			>
-				<template #trigger>
-					<span
-						class="grid size-full place-items-center rounded-full border-2 border-dashed border-surface-5 text-secondary transition-colors hover:text-contrast"
-						aria-hidden="true"
-					>
-						<PlusIcon class="size-4" />
-					</span>
-				</template>
-			</ColorPicker>
 			<div
 				v-for="color in accent.customColors.value"
 				:key="color"
@@ -606,6 +571,37 @@ provideAppearanceSettings({
 					<XIcon class="size-3" />
 				</button>
 			</div>
+			<ColorPicker
+				v-model="pickedColor"
+				inline
+				:label="formatMessage(messages.accentPickTitle)"
+				:custom-colors="accent.customColors.value"
+				:custom-colors-label="formatMessage(messages.accentMyColoursTitle)"
+				:custom-colors-add-label="formatMessage(messages.accentKeepColour)"
+				:custom-colors-remove-label="formatMessage(messages.accentRemoveColour)"
+				:custom-colors-full-label="formatMessage(messages.accentTooManyColours)"
+				:custom-colors-limit="MAX_CUSTOM_ACCENT_COLORS"
+				allow-gradient
+				:max-stops="MAX_ACCENT_GRADIENT_STOPS"
+				:solid-label="formatMessage(messages.accentSolid)"
+				:gradient-label="formatMessage(messages.accentGradient)"
+				:add-stop-label="formatMessage(messages.accentAddStop)"
+				:remove-stop-label="formatMessage(messages.accentRemoveStop)"
+				:apply-label="formatMessage(messages.accentApply)"
+				class="!h-8 !w-8 !rounded-full"
+				@update:model-value="onColourPicked"
+				@preview="onPickerPreview"
+				@update:custom-colors="onCustomColoursChanged"
+			>
+				<template #trigger>
+					<span
+						class="grid size-full place-items-center rounded-full border-2 border-dashed border-surface-5 text-secondary transition-colors hover:text-contrast"
+						aria-hidden="true"
+					>
+						<PlusIcon class="size-4" />
+					</span>
+				</template>
+			</ColorPicker>
 		</div>
 
 		<div class="mt-3 flex items-center justify-between gap-4">

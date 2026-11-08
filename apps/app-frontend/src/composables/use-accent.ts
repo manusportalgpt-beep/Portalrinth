@@ -739,6 +739,17 @@ function overridesFor(id: string, tint: boolean): Map<string, string> {
 	for (const [variable, value] of Object.entries(brandGradients(accent, borderAlpha))) {
 		next.set(variable, value)
 	}
+
+	// A very light accent - white above all - swallows the white text the theme
+	// draws on top of the brand colour: a checked switch, a selected row, the
+	// tick of the picker all turn into one blank rectangle. Where the accent is
+	// light, the text on it goes dark instead. Only near-white does this - the
+	// bright but coloured presets (Lantern, Moss) keep the theme's own choice,
+	// which their colours still read under - and it is written only then, so
+	// every other accent leaves the theme's value standing.
+	if (lightnessOf(rgb) > 0.9) {
+		next.set('--color-accent-contrast', 'rgb(0 0 0)')
+	}
 	const gradient = id === CUSTOM_ACCENT_ID ? parseAccentGradient(customColor.value) : null
 	next.set(
 		'--loading-bar-gradient',
