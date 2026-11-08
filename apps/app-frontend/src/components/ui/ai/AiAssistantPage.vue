@@ -594,6 +594,17 @@ async function purgeTrashed(meta: SessionMeta) {
 	await refreshSessionLists()
 }
 
+/**
+ * One word of the chat and an ellipsis: a list of conversations reads at a
+ * glance — the trash especially — while the date-and-count label carries
+ * the rest.
+ */
+function shortPreview(meta: SessionMeta): string {
+	const first = (meta.preview || '').split(/\s+/)[0]?.trim() ?? ''
+	if (!first) return meta.id
+	return first.length > 16 ? `${first.slice(0, 16)}…` : `${first}…`
+}
+
 function sessionLabel(meta: SessionMeta): string {
 	const date = new Date(meta.updated || Date.now())
 	const stamp = Number.isNaN(date.getTime())
@@ -1480,7 +1491,7 @@ defineExpose({ send })
 						>
 							<button class="ai-history-item grow" @click="() => openSession(meta)">
 								<span class="ai-history-meta">{{ sessionLabel(meta) }}</span>
-								<span class="ai-history-preview">{{ meta.preview || meta.id }}</span>
+								<span class="ai-history-preview">{{ shortPreview(meta) }}</span>
 							</button>
 							<template v-if="trashOpen">
 								<IconButton

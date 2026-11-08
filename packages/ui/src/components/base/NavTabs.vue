@@ -320,11 +320,20 @@ function positionSlider(animate = true) {
 			// reads as one sliding pill instead of one fading in.
 			applySliderPosition(remembered)
 			navTabsSliderMemory.snapshot = null
-			sliderReady.value = true
+			// sliderReady waits for the first frame: while it is down, a resize
+			// observer's first call cannot snap the pill into place mid-setup.
 			nextTick(() => {
 				requestAnimationFrame(() => {
+					sliderReady.value = true
 					transitionsEnabled.value = true
-					animateSliderTo(newPosition)
+					// One full frame with the transitions on and the pill standing at
+					// its remembered spot, so the slide below always runs at the pace
+					// of a live tab change — a remounted bar (Серверы, Скины) used to
+					// apply class and coordinates in one flush and arrive sooner than
+					// every other tab.
+					requestAnimationFrame(() => {
+						animateSliderTo(newPosition)
+					})
 				})
 			})
 		} else {

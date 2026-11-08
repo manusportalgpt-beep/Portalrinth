@@ -140,6 +140,11 @@ pub struct Settings {
     /// Where Java is downloaded from: `auto`, or one provider pinned.
     pub java_provider: String,
 
+    /// The typeface the interface is set in: empty for the theme's own,
+    /// `system` or `minecraft`, or the family name of an installed font. The
+    /// interface owns the list and caches the choice, as it does the accent.
+    pub interface_font: String,
+
     pub version: usize,
 }
 
@@ -224,6 +229,11 @@ let accent_preset: Option<String> =
 
         let java_provider: String =
             sqlx::query_scalar("SELECT java_provider FROM settings")
+                .fetch_one(exec)
+                .await?;
+
+        let interface_font: String =
+            sqlx::query_scalar("SELECT interface_font FROM settings")
                 .fetch_one(exec)
                 .await?;
 
@@ -337,6 +347,7 @@ let accent_preset: Option<String> =
             curseforge_api_key,
             browse_infinite_scroll: browse_infinite_scroll == 1,
             java_provider,
+            interface_font,
             sync_theme_across_devices: res.sync_theme_across_devices == 1,
             sync_behavior_across_devices: res.sync_behavior_across_devices == 1,
             sync_features_across_devices: res.sync_features_across_devices == 1,
@@ -541,6 +552,11 @@ let accent_preset: Option<String> =
 
         sqlx::query("UPDATE settings SET java_provider = $1")
             .bind(&self.java_provider)
+            .execute(exec)
+            .await?;
+
+        sqlx::query("UPDATE settings SET interface_font = $1")
+            .bind(&self.interface_font)
             .execute(exec)
             .await?;
 

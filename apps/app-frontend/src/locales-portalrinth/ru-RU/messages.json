@@ -3608,60 +3608,6 @@
 	"app.settings.sound.online.url-fail": {
 		"message": "Не добавилось"
 	},
-	"app.settings.dns.title": {
-		"message": "DNS-серверы"
-	},
-	"app.settings.dns.description": {
-		"message": "Публичные резолверы, которые видят то, что провайдер прячет, — включая игровые серверы вроде Hypixel. Лаунчер только опрашивает их для проверки и никогда не меняет системные настройки, так что пробовать их полностью безопасно."
-	},
-	"app.settings.dns.how-to": {
-		"message": "Чтобы пользоваться: Windows → настройки сетевого адаптера → DNS → впишите адреса вручную, или задайте их в роутере. Только поля IPv4 — больше ничего не затрагивается."
-	},
-	"app.settings.dns.preferred": {
-		"message": "Предпоч."
-	},
-	"app.settings.dns.alternate": {
-		"message": "Альтерн."
-	},
-	"app.settings.dns.no-alternate": {
-		"message": "Отсутст."
-	},
-	"app.settings.dns.check": {
-		"message": "Проверить"
-	},
-	"app.settings.dns.checking": {
-		"message": "Проверяю…"
-	},
-	"app.settings.dns.ok": {
-		"message": "отвечает за {ms} мс"
-	},
-	"app.settings.dns.fail": {
-		"message": "не отвечает: {detail}"
-	},
-	"app.settings.dns.custom.title": {
-		"message": "Свой DNS-сервер"
-	},
-	"app.settings.dns.custom.name": {
-		"message": "Название"
-	},
-	"app.settings.dns.custom.ip": {
-		"message": "IP-адрес"
-	},
-	"app.settings.dns.custom.add": {
-		"message": "Добавить сервер"
-	},
-	"app.settings.dns.custom.bad": {
-		"message": "Адрес должен быть IP, например 9.9.9.9"
-	},
-	"app.settings.dns.copied": {
-		"message": "Скопировано"
-	},
-	"app.settings.dns.copy": {
-		"message": "Копировать"
-	},
-	"app.settings.dns.remove": {
-		"message": "Удалить"
-	},
 	"app.bedrock.not-found.title": {
 		"message": "Сборка не найдена"
 	},
@@ -3877,6 +3823,36 @@
 	},
 	"app.appearance-settings.accent-icons.description": {
 		"message": "Иконки Modrinth, CurseForge и наш логотип - сверху и на рабочем столе - берут цвет акцента. Градиент отдаёт им свой первый цвет. Иконки аккаунта остаются своими."
+	},
+	"app.appearance-settings.font.title": {
+		"message": "Шрифт интерфейса"
+	},
+	"app.appearance-settings.font.description": {
+		"message": "Шрифт, которым написан весь лаунчер. Буквы, которых в выбранном шрифте нет, рисуются шрифтом Inter."
+	},
+	"app.appearance-settings.font.default": {
+		"message": "Inter"
+	},
+	"app.appearance-settings.font.system": {
+		"message": "Системный"
+	},
+	"app.appearance-settings.font.minecraft": {
+		"message": "Minecraft"
+	},
+	"app.appearance-settings.font.custom": {
+		"message": "Свой"
+	},
+	"app.appearance-settings.font.default.badge": {
+		"message": "По умолчанию"
+	},
+	"app.appearance-settings.font.custom.placeholder": {
+		"message": "Выберите шрифт, установленный на компьютере"
+	},
+	"app.appearance-settings.font.custom.search": {
+		"message": "Поиск шрифтов"
+	},
+	"app.appearance-settings.font.custom.none": {
+		"message": "Такого шрифта не установлено"
 	},
 	"app.settings.ai-assistant.enabled": {
 		"message": "Включить ИИ-Помощника"

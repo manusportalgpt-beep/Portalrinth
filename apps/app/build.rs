@@ -727,9 +727,9 @@ fn main() {
                     ),
             )
             .plugin(
-                "portalrinth-dns",
+                "portalrinth-fonts",
                 InlinedPlugin::new()
-                    .commands(&["dns_check"])
+                    .commands(&["fonts_installed_families"])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),

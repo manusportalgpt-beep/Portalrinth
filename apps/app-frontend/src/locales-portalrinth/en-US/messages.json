@@ -1976,60 +1976,6 @@
 	"app.settings.sound.online.url-fail": {
 		"message": "Could not add"
 	},
-	"app.settings.dns.title": {
-		"message": "DNS servers"
-	},
-	"app.settings.dns.description": {
-		"message": "Public resolvers that can reach what an internet provider hides - game servers like Hypixel included. The launcher only queries them to check; it never changes your system settings, so trying them is completely safe."
-	},
-	"app.settings.dns.how-to": {
-		"message": "To actually use one: Windows → network adapter settings → DNS → enter the addresses below manually, or put them into your router. IPv4 fields only - nothing else is affected."
-	},
-	"app.settings.dns.preferred": {
-		"message": "Preferred"
-	},
-	"app.settings.dns.alternate": {
-		"message": "Alternate"
-	},
-	"app.settings.dns.no-alternate": {
-		"message": "None"
-	},
-	"app.settings.dns.check": {
-		"message": "Check"
-	},
-	"app.settings.dns.checking": {
-		"message": "Checking…"
-	},
-	"app.settings.dns.ok": {
-		"message": "answers in {ms} ms"
-	},
-	"app.settings.dns.fail": {
-		"message": "no answer: {detail}"
-	},
-	"app.settings.dns.custom.title": {
-		"message": "Your own DNS server"
-	},
-	"app.settings.dns.custom.name": {
-		"message": "Name"
-	},
-	"app.settings.dns.custom.ip": {
-		"message": "IP address"
-	},
-	"app.settings.dns.custom.add": {
-		"message": "Add server"
-	},
-	"app.settings.dns.custom.bad": {
-		"message": "The address must be an IP, like 9.9.9.9"
-	},
-	"app.settings.dns.copied": {
-		"message": "Copied"
-	},
-	"app.settings.dns.copy": {
-		"message": "Copy"
-	},
-	"app.settings.dns.remove": {
-		"message": "Remove"
-	},
 	"app.bedrock.not-found.title": {
 		"message": "Build not found"
 	},
@@ -2314,6 +2260,36 @@
 	},
 	"app.appearance-settings.accent-icons.description": {
 		"message": "The Modrinth and CurseForge icons and our mark - in the title bar and on the desktop - take the accent’s colour. A gradient gives them its first colour. Account icons keep their own."
+	},
+	"app.appearance-settings.font.title": {
+		"message": "Interface font"
+	},
+	"app.appearance-settings.font.description": {
+		"message": "The typeface the app is set in. A letter the chosen font does not have is drawn in Inter."
+	},
+	"app.appearance-settings.font.default": {
+		"message": "Inter"
+	},
+	"app.appearance-settings.font.system": {
+		"message": "System"
+	},
+	"app.appearance-settings.font.minecraft": {
+		"message": "Minecraft"
+	},
+	"app.appearance-settings.font.custom": {
+		"message": "Custom"
+	},
+	"app.appearance-settings.font.default.badge": {
+		"message": "Default"
+	},
+	"app.appearance-settings.font.custom.placeholder": {
+		"message": "Choose a font installed on this computer"
+	},
+	"app.appearance-settings.font.custom.search": {
+		"message": "Search fonts"
+	},
+	"app.appearance-settings.font.custom.none": {
+		"message": "No installed font is called that"
 	},
 	"app.settings.ai-assistant.enabled": {
 		"message": "Enable AI assistant"

@@ -232,6 +232,6 @@
 		"portalrinth-archiver:default",
 		"portalrinth-gradle:default",
 		"portalrinth-bridge:default",
-		"portalrinth-dns:default"
+		"portalrinth-fonts:default"
 	]
 }

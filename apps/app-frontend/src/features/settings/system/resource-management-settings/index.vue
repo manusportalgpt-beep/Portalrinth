@@ -8,7 +8,6 @@ import { get, set } from '@/helpers/settings.ts'
 import { setSkinRenderService, useSkinRenderService } from '@/helpers/skin-render-service'
 
 import ContentStorageSettings from './content-storage.vue'
-import DnsSettings from '../dns-settings.vue'
 
 const { formatMessage } = useVIntl()
 const settings = ref(await get())
@@ -142,7 +141,6 @@ async function findLauncherDir() {
 <template>
 	<div class="flex flex-col gap-6">
 		<ContentStorageSettings />
-		<DnsSettings />
 		<div class="flex flex-col gap-2.5">
 			<h2 class="m-0 text-lg font-semibold text-contrast">
 				{{ formatMessage(messages.appDirectoryTitle) }}

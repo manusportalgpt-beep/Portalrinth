@@ -1895,7 +1895,7 @@ async function callProvider(
 		// Small talk never needs a lecture back; real work keeps the headroom.
 		// Free reasoning models spend part of the budget thinking before the
 		// first visible word, so even a greeting gets room for that.
-		max_tokens: fastPath ? 1200 : settings.deepThink ? 8192 : 4096,
+		max_tokens: fastPath ? 1200 : settings.deepThink ? 12288 : 6144,
 		stream: Boolean(onDelta),
 	}
 	if (providerId === 'openrouter') {
@@ -2466,7 +2466,7 @@ async function presearchFor(request: AiRequest): Promise<string> {
 	try {
 		result = await Promise.race([
 			webSearch(query),
-			new Promise<string>((resolve) => setTimeout(() => resolve(''), 9000)),
+			new Promise<string>((resolve) => setTimeout(() => resolve(''), 7000)),
 		])
 	} catch {
 		result = ''
@@ -2602,11 +2602,11 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						...fullChain.filter((id) => !providerById(id)?.visionModel),
 					]
 				: fullChain
-			// Инструментальных раундов за ход: 40 (60 в «Глубоких размышлениях»).
+			// Инструментальных раундов за ход: 64 (96 в «Глубоких размышлениях»).
 			// Прежних 14 не хватало даже на один обход выдачи с чтением страниц;
 			// потолок всё же оставлен — он честно останавливает зацикливание,
 			// а не обрывает живую работу.
-			const maxRounds = settings.deepThink ? 60 : 40
+			const maxRounds = settings.deepThink ? 96 : 64
 			for (const providerId of chain) {
 				if (turnAborted())
 					throw new Error('Быстрый ответ не уложился в 25 секунд — провайдеры молчат')
@@ -2711,7 +2711,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 											: '[служебное] Ты написал, что сейчас что-то сделаешь, но не вызвал ни одной команды — для игрока это пустое обещание. Продолжай работать: вызови нужную команду <<инструмент|аргумент>> прямо сейчас (список инструментов — в системном промпте), не задавай вопросов и не жди разрешения. Когда работа сделана — дай игроку короткий итог. Если командам здесь действительно нечего делать — ответь по существу, без обещаний.',
 									},
 								]
-								await sleep(120, request.signal)
+								await sleep(60, request.signal)
 								continue
 							}
 							// Код в чате вместо работы: длинный фенс и ни одной команды.
@@ -2735,7 +2735,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 											'[служебное] Ты вставил большой код прямо в чат, но не выполнил ни одной команды — игрок не должен ничего вставлять руками. Запиши файлы сам: <<sandbox_write|файл::текст>> (проект в песочнице) или <<instance_write|сборка::файл::текст>> (конфиг в сборке), потом собери (<<sandbox_pack|...>>, <<launcher_compile_java|...>>) и установи в сборку. В чате оставляй только короткий фрагмент-объяснение (до 15 строк). Продолжай: выполни установку сейчас.',
 									},
 								]
-								await sleep(120, request.signal)
+								await sleep(60, request.signal)
 								continue
 							}
 							// A model that only shouted commands and never spoke still owes
@@ -2756,7 +2756,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						}
 						const notes: string[] = []
 						const seenImages: string[] = []
-						const batch = parsed.actions.slice(0, 8)
+						const batch = parsed.actions.slice(0, 10)
 						if (parsed.actions.length > batch.length) {
 							notes.push(
 								`НЕ ВЫПОЛНЕНЫ — лимит ${batch.length} команд за раунд; вызови их прямо сейчас следующими командами: ${parsed.actions
@@ -2850,7 +2850,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						// A breath between tool rounds keeps anonymous free tiers
 						// from answering 429 in the middle of a task - kept short,
 						// the player is waiting.
-						await sleep(120, request.signal)
+						await sleep(60, request.signal)
 						// The last round's actions did run - the player gets an honest
 						// "limit reached" instead of a silent drop or a fifth model
 						// call the round loop was never meant to make.
@@ -4650,7 +4650,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 
 	const payload = aiHistory.value
 		.filter((message) => message.role !== 'note')
-		.slice(-20)
+		.slice(-30)
 		.map((message) => ({
 			role: message.role === 'assistant' ? ('assistant' as const) : ('user' as const),
 			content: message.content,
