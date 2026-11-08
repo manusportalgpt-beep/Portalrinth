@@ -3824,6 +3824,27 @@
 	"app.skin-browse.filters": {
 		"message": "Фильтры скинов"
 	},
+	"app.skin-browse.group-people": {
+		"message": "Люди"
+	},
+	"app.skin-browse.group-styles": {
+		"message": "Стили"
+	},
+	"app.skin-browse.group-fantasy": {
+		"message": "Фэнтези"
+	},
+	"app.skin-browse.group-roles": {
+		"message": "Роли и профессии"
+	},
+	"app.skin-browse.group-creatures": {
+		"message": "Существа"
+	},
+	"app.skin-browse.group-holidays": {
+		"message": "Праздники"
+	},
+	"app.skin-browse.group-media": {
+		"message": "Медиа и спорт"
+	},
 	"app.skin-browse.filter-nick": {
 		"message": "По нику"
 	},

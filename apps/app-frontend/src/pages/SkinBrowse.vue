@@ -20,14 +20,10 @@ import {
 	ShirtIcon,
 	SparklesIcon,
 	SpinnerIcon,
-	TagCategoryCartoonIcon,
-	TagCategoryCrownIcon,
 	TagCategoryFantasyIcon,
 	TagCategoryGamepad2Icon,
 	TagCategoryMobsIcon,
-	TagCategorySkullIcon,
 	TagCategorySwordIcon,
-	TagCategoryThemedIcon,
 	TagCategoryTreePineIcon,
 	UserIcon,
 	UserRoundIcon,
@@ -36,6 +32,7 @@ import {
 	XIcon,
 } from '@modrinth/assets'
 import {
+	Accordion,
 	Button,
 	CapeButton,
 	CapeLikeTextButton,
@@ -152,6 +149,13 @@ const messages = defineMessages({
 		defaultMessage: 'Category: {tags}',
 	},
 	filters: { id: 'app.skin-browse.filters', defaultMessage: 'Skin filters' },
+	groupPeople: { id: 'app.skin-browse.group-people', defaultMessage: 'People' },
+	groupStyles: { id: 'app.skin-browse.group-styles', defaultMessage: 'Styles' },
+	groupFantasy: { id: 'app.skin-browse.group-fantasy', defaultMessage: 'Fantasy' },
+	groupRoles: { id: 'app.skin-browse.group-roles', defaultMessage: 'Roles & professions' },
+	groupCreatures: { id: 'app.skin-browse.group-creatures', defaultMessage: 'Creatures' },
+	groupHolidays: { id: 'app.skin-browse.group-holidays', defaultMessage: 'Holidays' },
+	groupMedia: { id: 'app.skin-browse.group-media', defaultMessage: 'Media & sports' },
 	byNick: { id: 'app.skin-browse.filter-nick', defaultMessage: 'By nickname' },
 	nickPlaceholder: {
 		id: 'app.skin-browse.nick-placeholder',
@@ -192,25 +196,157 @@ const messages = defineMessages({
 interface SkinFilter {
 	id: string
 	label: string
-	icon: Component
 	/** The laby.net tag the filter searches by; none for the nickname mode. */
 	tag?: string
 }
 
+interface SkinFilterGroup {
+	id: string
+	message: { id: string; defaultMessage: string }
+	icon: Component
+	filters: SkinFilter[]
+}
+
 const NICK_FILTER = 'nick'
+
+// Every tag is a free-text term laby.net's skin search understands; each one
+// was checked against the live API to return skins tagged with that word.
+const SKIN_FILTER_GROUPS: SkinFilterGroup[] = [
+	{
+		id: 'people',
+		message: messages.groupPeople,
+		icon: UserRoundIcon,
+		filters: [
+			{ id: 'boy', label: 'Boy', tag: 'boy' },
+			{ id: 'girl', label: 'Girl', tag: 'girl' },
+			{ id: 'elegant', label: 'Elegant', tag: 'elegant' },
+			{ id: 'suit', label: 'Suit', tag: 'suit' },
+			{ id: 'glasses', label: 'Glasses', tag: 'glasses' },
+			{ id: 'smile', label: 'Smile', tag: 'smile' },
+			{ id: 'cool', label: 'Cool', tag: 'cool' },
+		],
+	},
+	{
+		id: 'styles',
+		message: messages.groupStyles,
+		icon: SparklesIcon,
+		filters: [
+			{ id: 'anime', label: 'Anime', tag: 'anime' },
+			{ id: 'cute', label: 'Cute', tag: 'cute' },
+			{ id: 'eboy', label: 'Eboy', tag: 'eboy' },
+			{ id: 'emo', label: 'Emo', tag: 'emo' },
+			{ id: 'gothic', label: 'Gothic', tag: 'gothic' },
+			{ id: 'punk', label: 'Punk', tag: 'punk' },
+			{ id: 'streetwear', label: 'Streetwear', tag: 'streetwear' },
+			{ id: 'hoodie', label: 'Hoodie', tag: 'hoodie' },
+			{ id: 'mask', label: 'Mask', tag: 'mask' },
+			{ id: 'rainbow', label: 'Rainbow', tag: 'rainbow' },
+			{ id: 'dark', label: 'Dark', tag: 'dark' },
+		],
+	},
+	{
+		id: 'fantasy',
+		message: messages.groupFantasy,
+		icon: TagCategoryFantasyIcon,
+		filters: [
+			{ id: 'knight', label: 'Knight', tag: 'knight' },
+			{ id: 'royal', label: 'King', tag: 'king' },
+			{ id: 'queen', label: 'Queen', tag: 'queen' },
+			{ id: 'princess', label: 'Princess', tag: 'princess' },
+			{ id: 'elf', label: 'Elf', tag: 'elf' },
+			{ id: 'dwarf', label: 'Dwarf', tag: 'dwarf' },
+			{ id: 'orc', label: 'Orc', tag: 'orc' },
+			{ id: 'magic', label: 'Wizard', tag: 'wizard' },
+			{ id: 'witch', label: 'Witch', tag: 'witch' },
+			{ id: 'fairy', label: 'Fairy', tag: 'fairy' },
+			{ id: 'angel', label: 'Angel', tag: 'angel' },
+			{ id: 'demon', label: 'Demon', tag: 'demon' },
+			{ id: 'dragon', label: 'Dragon', tag: 'dragon' },
+			{ id: 'superhero', label: 'Superhero', tag: 'superhero' },
+		],
+	},
+	{
+		id: 'roles',
+		message: messages.groupRoles,
+		icon: TagCategorySwordIcon,
+		filters: [
+			{ id: 'pirate', label: 'Pirate', tag: 'pirate' },
+			{ id: 'viking', label: 'Viking', tag: 'viking' },
+			{ id: 'ninja', label: 'Ninja', tag: 'ninja' },
+			{ id: 'samurai', label: 'Samurai', tag: 'samurai' },
+			{ id: 'soldier', label: 'Soldier', tag: 'soldier' },
+			{ id: 'astronaut', label: 'Astronaut', tag: 'astronaut' },
+			{ id: 'doctor', label: 'Doctor', tag: 'doctor' },
+			{ id: 'chef', label: 'Chef', tag: 'chef' },
+			{ id: 'firefighter', label: 'Firefighter', tag: 'firefighter' },
+			{ id: 'robot', label: 'Robot', tag: 'robot' },
+			{ id: 'cyborg', label: 'Cyborg', tag: 'cyborg' },
+			{ id: 'hacker', label: 'Hacker', tag: 'hacker' },
+		],
+	},
+	{
+		id: 'creatures',
+		message: messages.groupCreatures,
+		icon: TagCategoryMobsIcon,
+		filters: [
+			{ id: 'animal', label: 'Animal', tag: 'animal' },
+			{ id: 'cat', label: 'Cat', tag: 'cat' },
+			{ id: 'dog', label: 'Dog', tag: 'dog' },
+			{ id: 'wolf', label: 'Wolf', tag: 'wolf' },
+			{ id: 'fox', label: 'Fox', tag: 'fox' },
+			{ id: 'panda', label: 'Panda', tag: 'panda' },
+			{ id: 'bunny', label: 'Bunny', tag: 'bunny' },
+			{ id: 'bear', label: 'Bear', tag: 'bear' },
+			{ id: 'penguin', label: 'Penguin', tag: 'penguin' },
+			{ id: 'bird', label: 'Bird', tag: 'bird' },
+			{ id: 'dinosaur', label: 'Dinosaur', tag: 'dinosaur' },
+			{ id: 'monster', label: 'Monster', tag: 'monster' },
+			{ id: 'slime', label: 'Slime', tag: 'slime' },
+			{ id: 'enderman', label: 'Enderman', tag: 'enderman' },
+			{ id: 'creeper', label: 'Creeper', tag: 'creeper' },
+			{ id: 'zombie', label: 'Zombie', tag: 'zombie' },
+			{ id: 'skeleton', label: 'Skeleton', tag: 'skeleton' },
+			{ id: 'ghost', label: 'Ghost', tag: 'ghost' },
+			{ id: 'herobrine', label: 'Herobrine', tag: 'herobrine' },
+		],
+	},
+	{
+		id: 'holidays',
+		message: messages.groupHolidays,
+		icon: TagCategoryTreePineIcon,
+		filters: [
+			{ id: 'christmas', label: 'Christmas', tag: 'christmas' },
+			{ id: 'halloween', label: 'Halloween', tag: 'halloween' },
+			{ id: 'easter', label: 'Easter', tag: 'easter' },
+			{ id: 'birthday', label: 'Birthday', tag: 'birthday' },
+			{ id: 'wedding', label: 'Wedding', tag: 'wedding' },
+		],
+	},
+	{
+		id: 'media',
+		message: messages.groupMedia,
+		icon: TagCategoryGamepad2Icon,
+		filters: [
+			{ id: 'gamer', label: 'Gamer', tag: 'gamer' },
+			{ id: 'youtuber', label: 'Youtuber', tag: 'youtuber' },
+			{ id: 'streamer', label: 'Streamer', tag: 'streamer' },
+			{ id: 'dream', label: 'Dream', tag: 'dream' },
+			{ id: 'technoblade', label: 'Technoblade', tag: 'technoblade' },
+			{ id: 'batman', label: 'Batman', tag: 'batman' },
+			{ id: 'spiderman', label: 'Spiderman', tag: 'spiderman' },
+			{ id: 'among-us', label: 'Among Us', tag: 'among us' },
+			{ id: 'sonic', label: 'Sonic', tag: 'sonic' },
+			{ id: 'naruto', label: 'Naruto', tag: 'naruto' },
+			{ id: 'football', label: 'Football', tag: 'football' },
+			{ id: 'basketball', label: 'Basketball', tag: 'basketball' },
+			{ id: 'sport', label: 'Sport', tag: 'sport' },
+		],
+	},
+]
+
 const SKIN_FILTERS: SkinFilter[] = [
 	{ id: NICK_FILTER, label: '', icon: UserSearchIcon },
-	{ id: 'boy', label: 'Boy', icon: UserIcon, tag: 'boy' },
-	{ id: 'girl', label: 'Girl', icon: UserRoundIcon, tag: 'girl' },
-	{ id: 'anime', label: 'Anime', icon: TagCategoryCartoonIcon, tag: 'anime' },
-	{ id: 'cute', label: 'Cute', icon: TagCategoryThemedIcon, tag: 'cute' },
-	{ id: 'knight', label: 'Knight', icon: TagCategorySwordIcon, tag: 'knight' },
-	{ id: 'royal', label: 'King', icon: TagCategoryCrownIcon, tag: 'king' },
-	{ id: 'demon', label: 'Demon', icon: TagCategorySkullIcon, tag: 'demon' },
-	{ id: 'magic', label: 'Wizard', icon: TagCategoryFantasyIcon, tag: 'wizard' },
-	{ id: 'animal', label: 'Animal', icon: TagCategoryMobsIcon, tag: 'animal' },
-	{ id: 'gamer', label: 'Gamer', icon: TagCategoryGamepad2Icon, tag: 'gamer' },
-	{ id: 'christmas', label: 'Christmas', icon: TagCategoryTreePineIcon, tag: 'christmas' },
+	...SKIN_FILTER_GROUPS.flatMap((group) => group.filters),
 ]
 
 const filterId = ref<string | null>(
@@ -223,6 +359,10 @@ const activeFilter = computed(() => SKIN_FILTERS.find((filter) => filter.id === 
 const nickMode = computed(() => filterId.value === NICK_FILTER)
 const filterLabel = (filter: SkinFilter) =>
 	filter.id === NICK_FILTER ? formatMessage(messages.byNick) : filter.label
+
+/** Whether any tag chip of a group is in use, to light the header up. */
+const isGroupActive = (group: SkinFilterGroup) =>
+	group.filters.some((filter) => filter.id === filterId.value)
 
 /** What laby.net is asked for: the typed words plus the chosen tag. */
 const effectiveQuery = () => [activeFilter.value?.tag ?? '', query.value.trim()].filter(Boolean).join(' ')
@@ -995,7 +1135,7 @@ async function copyProfile(text: string) {
 				<h3 class="skin-browse-side__title">{{ formatMessage(messages.filters) }}</h3>
 				<Chips
 					v-model="filterId"
-					:items="SKIN_FILTERS.map((filter) => filter.id)"
+					:items="[NICK_FILTER]"
 					:format-label="(id) => filterLabel(SKIN_FILTERS.find((filter) => filter.id === id)!)"
 					:format-icon="(id) => SKIN_FILTERS.find((filter) => filter.id === id)?.icon"
 					:never-empty="false"
@@ -1004,6 +1144,34 @@ async function copyProfile(text: string) {
 					:aria-label="formatMessage(messages.filters)"
 					class="skin-browse-filters"
 				/>
+				<!-- Grouped like the other Discover tabs: a folded group is just its
+					header row, unfolding it animates the tag chips into view. -->
+				<Accordion
+					v-for="group in SKIN_FILTER_GROUPS"
+					:key="group.id"
+					divider
+					class="skin-browse-group"
+				>
+					<template #title>
+						<span
+							class="flex items-center gap-2 text-base font-semibold transition-colors"
+							:class="isGroupActive(group) ? 'text-brand' : 'text-primary'"
+						>
+							<component :is="group.icon" class="size-5 shrink-0" aria-hidden="true" />
+							{{ formatMessage(group.message) }}
+						</span>
+					</template>
+					<Chips
+						v-model="filterId"
+						:items="group.filters.map((filter) => filter.id)"
+						:format-label="(id) => filterLabel(SKIN_FILTERS.find((filter) => filter.id === id)!)"
+						:never-empty="false"
+						:capitalize="false"
+						hide-checkmark-icon
+						:aria-label="formatMessage(group.message)"
+						class="skin-browse-filters"
+					/>
+				</Accordion>
 			</div>
 		</Teleport>
 

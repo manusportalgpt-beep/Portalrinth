@@ -52,7 +52,7 @@ watch(
 <template>
 	<div
 		v-tooltip="tooltip ?? undefined"
-		class="skin-button group relative flex items-end justify-center overflow-hidden border border-solid transition-[border-color,box-shadow] duration-200"
+		class="skin-button group relative flex items-end justify-center overflow-hidden border border-solid transition-[border-color,box-shadow,transform] duration-200 active:scale-[0.98]"
 		:class="[
 			selected ? 'skin-button--selected' : '',
 			active ? 'skin-button--active' : '',
