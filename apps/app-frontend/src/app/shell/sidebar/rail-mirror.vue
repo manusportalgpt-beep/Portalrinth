@@ -250,12 +250,17 @@ function resetFilters() {
 </script>
 
 <template>
-	<div v-if="groups.length || switches.length" class="rail-mirror">
+	<!--
+                A page whose panel is all text chips (the skin filters) mirrors nothing
+                but still owns the rail: it gets the "open the panel" button alone,
+                rather than an empty column.
+        -->
+	<div v-if="groups.length || switches.length || hasContent" class="rail-mirror">
 		<!--
-			The rail's own buttons for a page with a side panel: open the panel,
-			its toggles, and a way to clear what is chosen - instead of the
-			account and the friends, which have nothing to do with filtering.
-		-->
+                        The rail's own buttons for a page with a side panel: open the panel,
+                        its toggles, and a way to clear what is chosen - instead of the
+                        account and the friends, which have nothing to do with filtering.
+                -->
 		<div class="rail-mirror__group">
 			<button
 				v-tooltip.left="'Открыть фильтры'"
