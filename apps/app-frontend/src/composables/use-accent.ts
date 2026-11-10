@@ -451,6 +451,13 @@ function lightnessOf(color: [number, number, number]): number {
 	return toOklab(color)[0]
 }
 
+/** Oklab chroma - how far the colour stands from grey. Off-whites stay near
+    zero however bright they are; the bright but coloured presets do not. */
+function chromaOf(color: [number, number, number]): number {
+	const [, a, b] = toOklab(color)
+	return Math.hypot(a, b)
+}
+
 function round(value: number, places: number): number {
 	const factor = 10 ** places
 	return Math.round(value * factor) / factor
@@ -729,10 +736,7 @@ function overridesFor(id: string, tint: boolean): Map<string, string> {
 	// brand's now.
 	// The one colour the run comes down to: the first stop of a chosen
 	// gradient, or the accent itself. Text selection takes it.
-	next.set(
-		'--portalrinth-accent-first',
-		hex ?? accentColorFor(preset as AccentPreset),
-	)
+	next.set('--portalrinth-accent-first', hex ?? accentColorFor(preset as AccentPreset))
 
 	const accent = `${red} ${green} ${blue}`
 	const borderAlpha = alphaOf(base.get('--brand-gradient-border') ?? '')
@@ -743,11 +747,14 @@ function overridesFor(id: string, tint: boolean): Map<string, string> {
 	// A very light accent - white above all - swallows the white text the theme
 	// draws on top of the brand colour: a checked switch, a selected row, the
 	// tick of the picker all turn into one blank rectangle. Where the accent is
-	// light, the text on it goes dark instead. Only near-white does this - the
-	// bright but coloured presets (Lantern, Moss) keep the theme's own choice,
-	// which their colours still read under - and it is written only then, so
-	// every other accent leaves the theme's value standing.
-	if (lightnessOf(rgb) > 0.9) {
+	// light, the text on it goes dark instead. Near-white counts, not just
+	// pure white: a pick a shade off the top of the wheel («чуть менее белым»)
+	// swallows white text just the same, and the old threshold let it through.
+	// Greyness is part of the test (Oklab chroma) so the bright but coloured
+	// presets (Lantern, Moss) keep the theme's own choice, which their colours
+	// still read under - and it is written only then, so every other accent
+	// leaves the theme's value standing.
+	if (lightnessOf(rgb) > 0.9 || (lightnessOf(rgb) > 0.82 && chromaOf(rgb) < 0.035)) {
 		next.set('--color-accent-contrast', 'rgb(0 0 0)')
 	}
 	const gradient = id === CUSTOM_ACCENT_ID ? parseAccentGradient(customColor.value) : null
