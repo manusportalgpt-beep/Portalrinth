@@ -44,8 +44,8 @@ const DAY_MS = 86_400_000
 const MAX_CHUNK_SECONDS = 24 * 60 * 60
 /** Days kept in the ledger; the graph shows a fortnight. */
 const KEEP_DAYS = 30
-/** Closed sessions kept per build; the info page shows a handful of the latest. */
-const KEEP_SESSIONS = 20
+/** Closed sessions kept per build; the info plate lists them all, scrolling. */
+export const KEEP_SESSIONS = 20
 
 /**
  * The frame reports of the session that is running right now, per build. In

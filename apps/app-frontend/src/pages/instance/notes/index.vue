@@ -10,6 +10,7 @@ import {
 } from '@/helpers/portalrinth-notes'
 import {
 	format_playtime,
+	KEEP_SESSIONS,
 	type PlaytimeDay,
 	type PlaytimeSession,
 	read_live_fps,
@@ -197,11 +198,13 @@ const lastPlayedLabel = computed(() => {
 })
 
 /* The latest closed sessions, shaped for the info plate: when they ran and
- * what their frames did, for as long as the game's probe knew about them. */
+ * what their frames did, for as long as the game's probe knew about them.
+ * Everything the ledger keeps is handed over - the plate itself scrolls,
+ * so old sessions stay reachable instead of vanishing past a fixed cap. */
 const recentSessions = computed<PlaytimeSession[]>(() => {
 	const id = instance.value?.id
 	if (!id) return []
-	return read_playtime_sessions(id, 4, historyTick.value)
+	return read_playtime_sessions(id, KEEP_SESSIONS, historyTick.value)
 })
 
 function sessionTimeLabel(session: PlaytimeSession): string {
@@ -246,7 +249,7 @@ onBeforeUnmount(flush)
 		</div>
 		<div class="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1fr)_20rem]">
 			<!-- The note itself: the only thing that scrolls here is the note,
-			     its scrollbar sits on the black input panel, not on the page. -->
+                             its scrollbar sits on the black input panel, not on the page. -->
 			<section class="flex min-h-0 flex-col gap-2 rounded-2xl bg-surface-3 p-4">
 				<div class="flex items-center justify-between gap-2">
 					<h2 class="m-0 text-base font-bold text-contrast">{{ formatMessage(messages.note) }}</h2>
@@ -435,22 +438,26 @@ onBeforeUnmount(flush)
 					</span>
 				</span>
 			</div>
-			<ul class="m-0 flex list-none flex-col gap-1 p-0">
-				<li
-					v-for="session in recentSessions"
-					:key="session.start"
-					class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-2 py-1.5 text-sm text-secondary hover:bg-surface-4"
-				>
-					<span class="text-contrast">{{ sessionTimeLabel(session) }}</span>
-					<span class="tabular-nums">{{ sessionDurationLabel(session) }}</span>
-					<span
-						v-if="session.minFps !== undefined && session.maxFps !== undefined"
-						class="ml-auto rounded-full bg-surface-5 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-contrast"
+			<!-- The plate scrolls, the page doesn't: about five rows
+                             visible, everything older is a wheel away. -->
+			<div class="min-h-0 max-h-60 overflow-y-auto">
+				<ul class="m-0 flex list-none flex-col gap-1 p-0">
+					<li
+						v-for="session in recentSessions"
+						:key="session.start"
+						class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-2 py-1.5 text-sm text-secondary hover:bg-surface-4"
 					>
-						{{ formatMessage(messages.fpsRange, { min: session.minFps, max: session.maxFps }) }}
-					</span>
-				</li>
-			</ul>
+						<span class="text-contrast">{{ sessionTimeLabel(session) }}</span>
+						<span class="tabular-nums">{{ sessionDurationLabel(session) }}</span>
+						<span
+							v-if="session.minFps !== undefined && session.maxFps !== undefined"
+							class="ml-auto rounded-full bg-surface-5 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-contrast"
+						>
+							{{ formatMessage(messages.fpsRange, { min: session.minFps, max: session.maxFps }) }}
+						</span>
+					</li>
+				</ul>
+			</div>
 		</section>
 	</div>
 </template>
