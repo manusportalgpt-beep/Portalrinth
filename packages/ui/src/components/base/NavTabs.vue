@@ -382,6 +382,17 @@ function positionSlider(animate = true) {
 	}
 
 	if (!animate) {
+		/* Nothing moved (the observer's first callback right after mount,
+		 * most often) - touching the transition here would cancel a slide
+		 * that is only just beginning. */
+		if (
+			newPosition.left === sliderLeft.value &&
+			newPosition.top === sliderTop.value &&
+			newPosition.right === sliderRight.value &&
+			newPosition.bottom === sliderBottom.value
+		) {
+			return
+		}
 		transitionsEnabled.value = false
 		applySliderPosition(newPosition)
 		requestAnimationFrame(() => {
@@ -394,7 +405,12 @@ function positionSlider(animate = true) {
 }
 
 function resetSliderPosition() {
-	if (!sliderReady.value || currentActiveIndex.value === -1) {
+	/* The mount sequence owns the pill until its slide has started: the
+	 * observer's first callback lands between the two frames of that
+	 * sequence (sliderReady is already up by then), and measuring here
+	 * would snap the pill straight to the active tab - the inherited
+	 * travel of the remounted Серверы/Скины bar died exactly this way. */
+	if (!sliderReady.value || currentActiveIndex.value === -1 || mountSequence) {
 		return
 	}
 	positionSlider(false)
