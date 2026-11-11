@@ -2,32 +2,89 @@
 import {
 	ArrowDownIcon,
 	ArrowUpIcon,
+	AxeIcon,
+	BirdIcon,
 	BlocksIcon,
+	BookOpenIcon,
+	BotIcon,
+	CakeIcon,
+	CandyIcon,
+	CatIcon,
 	CheckIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
+	CloudDrizzleIcon,
+	CloudFogIcon,
+	CloudIcon,
 	CompassIcon,
+	CpuIcon,
+	CrownIcon,
+	CupSodaIcon,
+	DogIcon,
+	EggIcon,
 	ExternalIcon,
 	EyeIcon,
 	EyeOffIcon,
+	FlameIcon,
+	GaugeIcon,
+	GhostIcon,
+	GlassesIcon,
 	GlobeIcon,
+	HammerIcon,
+	HeartHandshakeIcon,
+	HeartIcon,
 	LayersIcon,
+	MicrophoneIcon,
+	MoonIcon,
+	MusicIcon,
 	PackageIcon,
 	PaintbrushIcon,
+	PandaIcon,
 	PauseIcon,
 	PlayIcon,
+	RabbitIcon,
+	RainbowIcon,
+	RocketIcon,
+	ScanEyeIcon,
 	SearchIcon,
+	ShieldAlertIcon,
 	ShirtIcon,
+	SkullIcon,
+	SmileIcon,
 	SparklesIcon,
 	SpinnerIcon,
+	StarIcon,
+	TagCategoryBloomIcon,
+	TagCategoryCloudIcon,
+	TagCategoryCrownIcon,
+	TagCategoryCursedIcon,
 	TagCategoryFantasyIcon,
+	TagCategoryFlagIcon,
+	TagCategoryFoodIcon,
+	TagCategoryFootprintsIcon,
 	TagCategoryGamepad2Icon,
+	TagCategoryHeartPulseIcon,
 	TagCategoryMobsIcon,
+	TagCategoryPawPrintIcon,
+	TagCategoryPickaxeIcon,
+	TagCategoryShieldIcon,
 	TagCategorySwordIcon,
 	TagCategoryTreePineIcon,
+	TagCategoryZapIcon,
+	TargetIcon,
+	TerminalSquareIcon,
+	TestIcon,
+	TriangleAlertIcon,
+	TrophyIcon,
 	UserIcon,
 	UserRoundIcon,
 	UserSearchIcon,
+	UserXIcon,
+	VenetianMaskIcon,
+	VideoIcon,
+	VolleyballIcon,
+	WandIcon,
+	WandSparklesIcon,
 	WrenchIcon,
 	XIcon,
 } from '@modrinth/assets'
@@ -200,6 +257,9 @@ interface SkinFilter {
 	ru?: string
 	/** The laby.net tag the filter searches by; none for the nickname mode. */
 	tag?: string
+	/** The chip's own icon: it is what the folded rail mirrors, so every
+            filter carries one, the way the other Discover tabs do. */
+	icon: Component
 }
 
 interface SkinFilterGroup {
@@ -219,13 +279,19 @@ const SKIN_FILTER_GROUPS: SkinFilterGroup[] = [
 		message: messages.groupPeople,
 		icon: UserRoundIcon,
 		filters: [
-			{ id: 'boy', label: 'Boy', tag: 'boy', ru: 'Парень' },
-			{ id: 'girl', label: 'Girl', tag: 'girl', ru: 'Девушка' },
-			{ id: 'elegant', label: 'Elegant', tag: 'elegant', ru: 'Элегантный' },
-			{ id: 'suit', label: 'Suit', tag: 'suit', ru: 'Костюм' },
-			{ id: 'glasses', label: 'Glasses', tag: 'glasses', ru: 'Очки' },
-			{ id: 'smile', label: 'Smile', tag: 'smile', ru: 'Улыбка' },
-			{ id: 'cool', label: 'Cool', tag: 'cool', ru: 'Крутой' },
+			{ id: 'boy', label: 'Boy', tag: 'boy', ru: 'Парень', icon: UserRoundIcon },
+			{ id: 'girl', label: 'Girl', tag: 'girl', ru: 'Девушка', icon: UserIcon },
+			{
+				id: 'elegant',
+				label: 'Elegant',
+				tag: 'elegant',
+				ru: 'Элегантный',
+				icon: TagCategoryCrownIcon,
+			},
+			{ id: 'suit', label: 'Suit', tag: 'suit', ru: 'Костюм', icon: ShirtIcon },
+			{ id: 'glasses', label: 'Glasses', tag: 'glasses', ru: 'Очки', icon: GlassesIcon },
+			{ id: 'smile', label: 'Smile', tag: 'smile', ru: 'Улыбка', icon: SmileIcon },
+			{ id: 'cool', label: 'Cool', tag: 'cool', ru: 'Крутой', icon: TagCategoryZapIcon },
 		],
 	},
 	{
@@ -233,17 +299,23 @@ const SKIN_FILTER_GROUPS: SkinFilterGroup[] = [
 		message: messages.groupStyles,
 		icon: SparklesIcon,
 		filters: [
-			{ id: 'anime', label: 'Anime', tag: 'anime', ru: 'Аниме' },
-			{ id: 'cute', label: 'Cute', tag: 'cute', ru: 'Милый' },
-			{ id: 'eboy', label: 'Eboy', tag: 'eboy', ru: 'Е-бой' },
-			{ id: 'emo', label: 'Emo', tag: 'emo', ru: 'Эмо' },
-			{ id: 'gothic', label: 'Gothic', tag: 'gothic', ru: 'Готика' },
-			{ id: 'punk', label: 'Punk', tag: 'punk', ru: 'Панк' },
-			{ id: 'streetwear', label: 'Streetwear', tag: 'streetwear', ru: 'Стритвир' },
-			{ id: 'hoodie', label: 'Hoodie', tag: 'hoodie', ru: 'Худи' },
-			{ id: 'mask', label: 'Mask', tag: 'mask', ru: 'Маска' },
-			{ id: 'rainbow', label: 'Rainbow', tag: 'rainbow', ru: 'Радуга' },
-			{ id: 'dark', label: 'Dark', tag: 'dark', ru: 'Тёмный' },
+			{ id: 'anime', label: 'Anime', tag: 'anime', ru: 'Аниме', icon: WandSparklesIcon },
+			{ id: 'cute', label: 'Cute', tag: 'cute', ru: 'Милый', icon: HeartIcon },
+			{ id: 'eboy', label: 'Eboy', tag: 'eboy', ru: 'Е-бой', icon: MusicIcon },
+			{ id: 'emo', label: 'Emo', tag: 'emo', ru: 'Эмо', icon: CloudDrizzleIcon },
+			{ id: 'gothic', label: 'Gothic', tag: 'gothic', ru: 'Готика', icon: MoonIcon },
+			{ id: 'punk', label: 'Punk', tag: 'punk', ru: 'Панк', icon: TagCategoryCursedIcon },
+			{
+				id: 'streetwear',
+				label: 'Streetwear',
+				tag: 'streetwear',
+				ru: 'Стритвир',
+				icon: TagCategoryFootprintsIcon,
+			},
+			{ id: 'hoodie', label: 'Hoodie', tag: 'hoodie', ru: 'Худи', icon: ShirtIcon },
+			{ id: 'mask', label: 'Mask', tag: 'mask', ru: 'Маска', icon: VenetianMaskIcon },
+			{ id: 'rainbow', label: 'Rainbow', tag: 'rainbow', ru: 'Радуга', icon: RainbowIcon },
+			{ id: 'dark', label: 'Dark', tag: 'dark', ru: 'Тёмный', icon: CloudFogIcon },
 		],
 	},
 	{
@@ -251,20 +323,26 @@ const SKIN_FILTER_GROUPS: SkinFilterGroup[] = [
 		message: messages.groupFantasy,
 		icon: TagCategoryFantasyIcon,
 		filters: [
-			{ id: 'knight', label: 'Knight', tag: 'knight', ru: 'Рыцарь' },
-			{ id: 'royal', label: 'King', tag: 'king', ru: 'Король' },
-			{ id: 'queen', label: 'Queen', tag: 'queen', ru: 'Королева' },
-			{ id: 'princess', label: 'Princess', tag: 'princess', ru: 'Принцесса' },
-			{ id: 'elf', label: 'Elf', tag: 'elf', ru: 'Эльф' },
-			{ id: 'dwarf', label: 'Dwarf', tag: 'dwarf', ru: 'Гном' },
-			{ id: 'orc', label: 'Orc', tag: 'orc', ru: 'Орк' },
-			{ id: 'magic', label: 'Wizard', tag: 'wizard', ru: 'Волшебник' },
-			{ id: 'witch', label: 'Witch', tag: 'witch', ru: 'Ведьма' },
-			{ id: 'fairy', label: 'Fairy', tag: 'fairy', ru: 'Фея' },
-			{ id: 'angel', label: 'Angel', tag: 'angel', ru: 'Ангел' },
-			{ id: 'demon', label: 'Demon', tag: 'demon', ru: 'Демон' },
-			{ id: 'dragon', label: 'Dragon', tag: 'dragon', ru: 'Дракон' },
-			{ id: 'superhero', label: 'Superhero', tag: 'superhero', ru: 'Супергерой' },
+			{ id: 'knight', label: 'Knight', tag: 'knight', ru: 'Рыцарь', icon: TagCategoryShieldIcon },
+			{ id: 'royal', label: 'King', tag: 'king', ru: 'Король', icon: TagCategoryCrownIcon },
+			{ id: 'queen', label: 'Queen', tag: 'queen', ru: 'Королева', icon: StarIcon },
+			{
+				id: 'princess',
+				label: 'Princess',
+				tag: 'princess',
+				ru: 'Принцесса',
+				icon: TagCategoryBloomIcon,
+			},
+			{ id: 'elf', label: 'Elf', tag: 'elf', ru: 'Эльф', icon: TagCategoryTreePineIcon },
+			{ id: 'dwarf', label: 'Dwarf', tag: 'dwarf', ru: 'Гном', icon: TagCategoryPickaxeIcon },
+			{ id: 'orc', label: 'Orc', tag: 'orc', ru: 'Орк', icon: AxeIcon },
+			{ id: 'magic', label: 'Wizard', tag: 'wizard', ru: 'Волшебник', icon: WandIcon },
+			{ id: 'witch', label: 'Witch', tag: 'witch', ru: 'Ведьма', icon: TestIcon },
+			{ id: 'fairy', label: 'Fairy', tag: 'fairy', ru: 'Фея', icon: SparklesIcon },
+			{ id: 'angel', label: 'Angel', tag: 'angel', ru: 'Ангел', icon: TagCategoryCloudIcon },
+			{ id: 'demon', label: 'Demon', tag: 'demon', ru: 'Демон', icon: FlameIcon },
+			{ id: 'dragon', label: 'Dragon', tag: 'dragon', ru: 'Дракон', icon: BookOpenIcon },
+			{ id: 'superhero', label: 'Superhero', tag: 'superhero', ru: 'Супергерой', icon: RocketIcon },
 		],
 	},
 	{
@@ -272,18 +350,36 @@ const SKIN_FILTER_GROUPS: SkinFilterGroup[] = [
 		message: messages.groupRoles,
 		icon: TagCategorySwordIcon,
 		filters: [
-			{ id: 'pirate', label: 'Pirate', tag: 'pirate', ru: 'Пират' },
-			{ id: 'viking', label: 'Viking', tag: 'viking', ru: 'Викинг' },
-			{ id: 'ninja', label: 'Ninja', tag: 'ninja', ru: 'Ниндзя' },
-			{ id: 'samurai', label: 'Samurai', tag: 'samurai', ru: 'Самурай' },
-			{ id: 'soldier', label: 'Soldier', tag: 'soldier', ru: 'Солдат' },
-			{ id: 'astronaut', label: 'Astronaut', tag: 'astronaut', ru: 'Космонавт' },
-			{ id: 'doctor', label: 'Doctor', tag: 'doctor', ru: 'Доктор' },
-			{ id: 'chef', label: 'Chef', tag: 'chef', ru: 'Повар' },
-			{ id: 'firefighter', label: 'Firefighter', tag: 'firefighter', ru: 'Пожарный' },
-			{ id: 'robot', label: 'Robot', tag: 'robot', ru: 'Робот' },
-			{ id: 'cyborg', label: 'Cyborg', tag: 'cyborg', ru: 'Киборг' },
-			{ id: 'hacker', label: 'Hacker', tag: 'hacker', ru: 'Хакер' },
+			{ id: 'pirate', label: 'Pirate', tag: 'pirate', ru: 'Пират', icon: TagCategoryFlagIcon },
+			{ id: 'viking', label: 'Viking', tag: 'viking', ru: 'Викинг', icon: CompassIcon },
+			{ id: 'ninja', label: 'Ninja', tag: 'ninja', ru: 'Ниндзя', icon: SwordsIcon },
+			{
+				id: 'samurai',
+				label: 'Samurai',
+				tag: 'samurai',
+				ru: 'Самурай',
+				icon: TagCategorySwordIcon,
+			},
+			{ id: 'soldier', label: 'Soldier', tag: 'soldier', ru: 'Солдат', icon: ShieldAlertIcon },
+			{ id: 'astronaut', label: 'Astronaut', tag: 'astronaut', ru: 'Космонавт', icon: GlobeIcon },
+			{
+				id: 'doctor',
+				label: 'Doctor',
+				tag: 'doctor',
+				ru: 'Доктор',
+				icon: TagCategoryHeartPulseIcon,
+			},
+			{ id: 'chef', label: 'Chef', tag: 'chef', ru: 'Повар', icon: TagCategoryFoodIcon },
+			{
+				id: 'firefighter',
+				label: 'Firefighter',
+				tag: 'firefighter',
+				ru: 'Пожарный',
+				icon: FlameIcon,
+			},
+			{ id: 'robot', label: 'Robot', tag: 'robot', ru: 'Робот', icon: BotIcon },
+			{ id: 'cyborg', label: 'Cyborg', tag: 'cyborg', ru: 'Киборг', icon: CpuIcon },
+			{ id: 'hacker', label: 'Hacker', tag: 'hacker', ru: 'Хакер', icon: TerminalSquareIcon },
 		],
 	},
 	{
@@ -291,25 +387,31 @@ const SKIN_FILTER_GROUPS: SkinFilterGroup[] = [
 		message: messages.groupCreatures,
 		icon: TagCategoryMobsIcon,
 		filters: [
-			{ id: 'animal', label: 'Animal', tag: 'animal', ru: 'Животное' },
-			{ id: 'cat', label: 'Cat', tag: 'cat', ru: 'Кот' },
-			{ id: 'dog', label: 'Dog', tag: 'dog', ru: 'Пёс' },
-			{ id: 'wolf', label: 'Wolf', tag: 'wolf', ru: 'Волк' },
-			{ id: 'fox', label: 'Fox', tag: 'fox', ru: 'Лиса' },
-			{ id: 'panda', label: 'Panda', tag: 'panda', ru: 'Панда' },
-			{ id: 'bunny', label: 'Bunny', tag: 'bunny', ru: 'Кролик' },
-			{ id: 'bear', label: 'Bear', tag: 'bear', ru: 'Медведь' },
-			{ id: 'penguin', label: 'Penguin', tag: 'penguin', ru: 'Пингвин' },
-			{ id: 'bird', label: 'Bird', tag: 'bird', ru: 'Птица' },
-			{ id: 'dinosaur', label: 'Dinosaur', tag: 'dinosaur', ru: 'Динозавр' },
-			{ id: 'monster', label: 'Monster', tag: 'monster', ru: 'Монстр' },
-			{ id: 'slime', label: 'Slime', tag: 'slime', ru: 'Слизень' },
-			{ id: 'enderman', label: 'Enderman', tag: 'enderman', ru: 'Эндермен' },
-			{ id: 'creeper', label: 'Creeper', tag: 'creeper', ru: 'Крипер' },
-			{ id: 'zombie', label: 'Zombie', tag: 'zombie', ru: 'Зомби' },
-			{ id: 'skeleton', label: 'Skeleton', tag: 'skeleton', ru: 'Скелет' },
-			{ id: 'ghost', label: 'Ghost', tag: 'ghost', ru: 'Призрак' },
-			{ id: 'herobrine', label: 'Herobrine', tag: 'herobrine', ru: 'Херобрин' },
+			{ id: 'animal', label: 'Animal', tag: 'animal', ru: 'Животное', icon: TagCategoryMobsIcon },
+			{ id: 'cat', label: 'Cat', tag: 'cat', ru: 'Кот', icon: CatIcon },
+			{ id: 'dog', label: 'Dog', tag: 'dog', ru: 'Пёс', icon: DogIcon },
+			{ id: 'wolf', label: 'Wolf', tag: 'wolf', ru: 'Волк', icon: MoonIcon },
+			{ id: 'fox', label: 'Fox', tag: 'fox', ru: 'Лиса', icon: HammerIcon },
+			{ id: 'panda', label: 'Panda', tag: 'panda', ru: 'Панда', icon: PandaIcon },
+			{ id: 'bunny', label: 'Bunny', tag: 'bunny', ru: 'Кролик', icon: RabbitIcon },
+			{ id: 'bear', label: 'Bear', tag: 'bear', ru: 'Медведь', icon: TagCategoryPawPrintIcon },
+			{ id: 'penguin', label: 'Penguin', tag: 'penguin', ru: 'Пингвин', icon: SnowflakeIcon },
+			{ id: 'bird', label: 'Bird', tag: 'bird', ru: 'Птица', icon: BirdIcon },
+			{ id: 'dinosaur', label: 'Dinosaur', tag: 'dinosaur', ru: 'Динозавр', icon: EggIcon },
+			{
+				id: 'monster',
+				label: 'Monster',
+				tag: 'monster',
+				ru: 'Монстр',
+				icon: TagCategoryCursedIcon,
+			},
+			{ id: 'slime', label: 'Slime', tag: 'slime', ru: 'Слизень', icon: CupSodaIcon },
+			{ id: 'enderman', label: 'Enderman', tag: 'enderman', ru: 'Эндермен', icon: EyeIcon },
+			{ id: 'creeper', label: 'Creeper', tag: 'creeper', ru: 'Крипер', icon: TriangleAlertIcon },
+			{ id: 'zombie', label: 'Zombie', tag: 'zombie', ru: 'Зомби', icon: BrainIcon },
+			{ id: 'skeleton', label: 'Skeleton', tag: 'skeleton', ru: 'Скелет', icon: SkullIcon },
+			{ id: 'ghost', label: 'Ghost', tag: 'ghost', ru: 'Призрак', icon: GhostIcon },
+			{ id: 'herobrine', label: 'Herobrine', tag: 'herobrine', ru: 'Херобрин', icon: ScanEyeIcon },
 		],
 	},
 	{
@@ -317,11 +419,17 @@ const SKIN_FILTER_GROUPS: SkinFilterGroup[] = [
 		message: messages.groupHolidays,
 		icon: TagCategoryTreePineIcon,
 		filters: [
-			{ id: 'christmas', label: 'Christmas', tag: 'christmas', ru: 'Рождество' },
-			{ id: 'halloween', label: 'Halloween', tag: 'halloween', ru: 'Хэллоуин' },
-			{ id: 'easter', label: 'Easter', tag: 'easter', ru: 'Пасха' },
-			{ id: 'birthday', label: 'Birthday', tag: 'birthday', ru: 'День рождения' },
-			{ id: 'wedding', label: 'Wedding', tag: 'wedding', ru: 'Свадьба' },
+			{
+				id: 'christmas',
+				label: 'Christmas',
+				tag: 'christmas',
+				ru: 'Рождество',
+				icon: TagCategoryTreePineIcon,
+			},
+			{ id: 'halloween', label: 'Halloween', tag: 'halloween', ru: 'Хэллоуин', icon: CandyIcon },
+			{ id: 'easter', label: 'Easter', tag: 'easter', ru: 'Пасха', icon: EggIcon },
+			{ id: 'birthday', label: 'Birthday', tag: 'birthday', ru: 'День рождения', icon: CakeIcon },
+			{ id: 'wedding', label: 'Wedding', tag: 'wedding', ru: 'Свадьба', icon: HeartHandshakeIcon },
 		],
 	},
 	{
@@ -329,19 +437,25 @@ const SKIN_FILTER_GROUPS: SkinFilterGroup[] = [
 		message: messages.groupMedia,
 		icon: TagCategoryGamepad2Icon,
 		filters: [
-			{ id: 'gamer', label: 'Gamer', tag: 'gamer', ru: 'Геймер' },
-			{ id: 'youtuber', label: 'Youtuber', tag: 'youtuber', ru: 'Ютубер' },
-			{ id: 'streamer', label: 'Streamer', tag: 'streamer', ru: 'Стример' },
-			{ id: 'dream', label: 'Dream', tag: 'dream' },
-			{ id: 'technoblade', label: 'Technoblade', tag: 'technoblade' },
-			{ id: 'batman', label: 'Batman', tag: 'batman', ru: 'Бэтмен' },
-			{ id: 'spiderman', label: 'Spiderman', tag: 'spiderman', ru: 'Человек-паук' },
-			{ id: 'among-us', label: 'Among Us', tag: 'among us', ru: 'Среди нас' },
-			{ id: 'sonic', label: 'Sonic', tag: 'sonic', ru: 'Соник' },
-			{ id: 'naruto', label: 'Naruto', tag: 'naruto', ru: 'Наруто' },
-			{ id: 'football', label: 'Football', tag: 'football', ru: 'Футбол' },
-			{ id: 'basketball', label: 'Basketball', tag: 'basketball', ru: 'Баскетбол' },
-			{ id: 'sport', label: 'Sport', tag: 'sport', ru: 'Спорт' },
+			{ id: 'gamer', label: 'Gamer', tag: 'gamer', ru: 'Геймер', icon: TagCategoryGamepad2Icon },
+			{ id: 'youtuber', label: 'Youtuber', tag: 'youtuber', ru: 'Ютубер', icon: VideoIcon },
+			{ id: 'streamer', label: 'Streamer', tag: 'streamer', ru: 'Стример', icon: MicrophoneIcon },
+			{ id: 'dream', label: 'Dream', tag: 'dream', icon: CloudIcon },
+			{ id: 'technoblade', label: 'Technoblade', tag: 'technoblade', icon: CrownIcon },
+			{ id: 'batman', label: 'Batman', tag: 'batman', ru: 'Бэтмен', icon: VenetianMaskIcon },
+			{ id: 'spiderman', label: 'Spiderman', tag: 'spiderman', ru: 'Человек-паук', icon: BugIcon },
+			{ id: 'among-us', label: 'Among Us', tag: 'among us', ru: 'Среди нас', icon: UserXIcon },
+			{ id: 'sonic', label: 'Sonic', tag: 'sonic', ru: 'Соник', icon: GaugeIcon },
+			{ id: 'naruto', label: 'Naruto', tag: 'naruto', ru: 'Наруто', icon: WandSparklesIcon },
+			{ id: 'football', label: 'Football', tag: 'football', ru: 'Футбол', icon: VolleyballIcon },
+			{
+				id: 'basketball',
+				label: 'Basketball',
+				tag: 'basketball',
+				ru: 'Баскетбол',
+				icon: TargetIcon,
+			},
+			{ id: 'sport', label: 'Sport', tag: 'sport', ru: 'Спорт', icon: TrophyIcon },
 		],
 	},
 ]
@@ -369,7 +483,8 @@ const isGroupActive = (group: SkinFilterGroup) =>
 	group.filters.some((filter) => filter.id === filterId.value)
 
 /** What laby.net is asked for: the typed words plus the chosen tag. */
-const effectiveQuery = () => [activeFilter.value?.tag ?? '', query.value.trim()].filter(Boolean).join(' ')
+const effectiveQuery = () =>
+	[activeFilter.value?.tag ?? '', query.value.trim()].filter(Boolean).join(' ')
 
 const nickResult = ref<NickSkin | null>(null)
 const nickSearched = ref('')
@@ -384,7 +499,11 @@ function syncRoute() {
 const tabs = computed(() => [
 	{ label: formatMessage(messages.modpacks), href: '/browse/modpack', icon: PackageIcon },
 	{ label: formatMessage(messages.mods), href: '/browse/mod', icon: WrenchIcon },
-	{ label: formatMessage(messages.resourcePacks), href: '/browse/resourcepack', icon: PaintbrushIcon },
+	{
+		label: formatMessage(messages.resourcePacks),
+		href: '/browse/resourcepack',
+		icon: PaintbrushIcon,
+	},
 	{ label: formatMessage(messages.dataPacks), href: '/browse/datapack', icon: BlocksIcon },
 	{ label: formatMessage(messages.shaders), href: '/browse/shader', icon: LayersIcon },
 	{ label: formatMessage(messages.servers), href: '/browse/server', icon: GlobeIcon },
@@ -778,9 +897,7 @@ const furthestPage = ref(1)
 watch(page, (value) => {
 	if (value > furthestPage.value) furthestPage.value = value
 })
-const pageCount = computed(() =>
-	Math.max(furthestPage.value, page.value + (hasMore.value ? 1 : 0)),
-)
+const pageCount = computed(() => Math.max(furthestPage.value, page.value + (hasMore.value ? 1 : 0)))
 
 function switchPage(p: number) {
 	goTo(p)
@@ -1101,7 +1218,10 @@ async function loadPlayerProfile() {
 			seen += 1
 		}
 		if (seen === 0) return
-		const hex = (value: number) => Math.round(value / seen).toString(16).padStart(2, '0')
+		const hex = (value: number) =>
+			Math.round(value / seen)
+				.toString(16)
+				.padStart(2, '0')
 		profileColor.value = `#${hex(red)}${hex(green)}${hex(blue)}`
 	} catch {
 		profileHead.value = ''
@@ -1159,10 +1279,9 @@ async function copyProfile(text: string, key = '') {
 					hide-checkmark-icon
 					:aria-label="formatMessage(messages.filters)"
 					class="skin-browse-filters"
-					data-rail-mirror-ignore
 				/>
 				<!-- Grouped like the other Discover tabs: a folded group is just its
-					header row, unfolding it animates the tag chips into view. -->
+                                        header row, unfolding it animates the tag chips into view. -->
 				<Accordion
 					v-for="group in SKIN_FILTER_GROUPS"
 					:key="group.id"
@@ -1182,6 +1301,7 @@ async function copyProfile(text: string, key = '') {
 						v-model="filterId"
 						:items="group.filters.map((filter) => filter.id)"
 						:format-label="(id) => filterLabel(SKIN_FILTERS.find((filter) => filter.id === id)!)"
+						:format-icon="(id) => SKIN_FILTERS.find((filter) => filter.id === id)?.icon"
 						:never-empty="false"
 						:capitalize="false"
 						hide-checkmark-icon
@@ -1288,7 +1408,7 @@ async function copyProfile(text: string, key = '') {
 		<div v-if="current" class="flex flex-col gap-6 md:flex-row">
 			<div class="relative h-[25rem] w-[16rem] min-w-[16rem] flex-shrink-0 md:self-center">
 				<!-- The card's 3D picture holds the place at once; the live model
-				     fades in over it and the picture steps aside. -->
+                                     fades in over it and the picture steps aside. -->
 				<div
 					v-if="currentRender"
 					class="skin-browse-standin pointer-events-none absolute inset-0 flex items-center justify-center"
@@ -1384,7 +1504,11 @@ async function copyProfile(text: string, key = '') {
 									}}
 								</button>
 							</template>
-							<span v-else class="text-xs text-secondary">{{ formatMessage(messages.nickSource, { source: current.source === 'mojang' ? 'Minecraft' : 'Ely.by' }) }}</span>
+							<span v-else class="text-xs text-secondary">{{
+								formatMessage(messages.nickSource, {
+									source: current.source === 'mojang' ? 'Minecraft' : 'Ely.by',
+								})
+							}}</span>
 						</div>
 					</div>
 
@@ -1393,7 +1517,9 @@ async function copyProfile(text: string, key = '') {
 							class="inline-block size-5 rounded-md border border-solid border-surface-5"
 							:style="{ background: profileColor }"
 						/>
-						<span class="text-xs text-secondary">{{ formatMessage(messages.profileColor) }}: {{ profileColor.toUpperCase() }}</span>
+						<span class="text-xs text-secondary"
+							>{{ formatMessage(messages.profileColor) }}: {{ profileColor.toUpperCase() }}</span
+						>
 						<button
 							type="button"
 							class="cursor-pointer border-0 bg-transparent p-0 text-xs text-brand"
@@ -1408,7 +1534,9 @@ async function copyProfile(text: string, key = '') {
 					</div>
 
 					<div class="flex flex-col gap-1.5">
-						<h4 class="m-0 text-sm font-semibold text-contrast">{{ formatMessage(messages.profileHead) }}</h4>
+						<h4 class="m-0 text-sm font-semibold text-contrast">
+							{{ formatMessage(messages.profileHead) }}
+						</h4>
 						<div class="flex flex-wrap items-center gap-2">
 							<select
 								v-model="profileHeadVersion"
@@ -1418,7 +1546,9 @@ async function copyProfile(text: string, key = '') {
 									{{ version.label }}
 								</option>
 							</select>
-							<code class="min-w-0 flex-1 truncate rounded-xl bg-surface-4 px-3 py-1.5 text-xs text-secondary">
+							<code
+								class="min-w-0 flex-1 truncate rounded-xl bg-surface-4 px-3 py-1.5 text-xs text-secondary"
+							>
 								{{ profileCommand }}
 							</code>
 							<Button
@@ -1552,11 +1682,7 @@ async function copyProfile(text: string, key = '') {
 
 		<template #actions>
 			<div class="flex justify-end gap-2">
-				<Button
-					v-if="current"
-					type="outlined"
-					@click="openSkinPage(current)"
-				>
+				<Button v-if="current" type="outlined" @click="openSkinPage(current)">
 					<ExternalIcon />
 					{{
 						formatMessage(

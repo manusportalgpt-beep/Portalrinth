@@ -41,16 +41,15 @@ type MirrorItem = {
 type MirrorGroup = { id: number; items: MirrorItem[] }
 
 const CANDIDATES =
-	'a[href], button, [role="button"], [role="checkbox"], [role="radio"], [role="link"]'
+	'a[href], button, [role="button"], [role="checkbox"], [role="radio"], [role="link"], [role="img"]'
 const MAX_ITEMS = 120
 
 const groups = shallowRef<MirrorGroup[]>([])
 /** The panel's toggles ("Hide installed" and the like): they have no icon of their own. */
 const switches = shallowRef<MirrorSwitch[]>([])
 /** The page has a side panel with anything clickable at all, even if none of
-    its buttons carries an icon worth mirroring (the skin filters are chips
-    without icons): the rail still swaps its own buttons for the panel's
-    "open the panel" one. */
+    its buttons carries an icon worth mirroring: the rail still swaps its own
+    buttons for the panel's "open the panel" one. */
 const hasContent = shallowRef(false)
 const anyActive = computed(() =>
 	groups.value.some((group) => group.items.some((item) => item.active)),
@@ -251,7 +250,7 @@ function resetFilters() {
 
 <template>
 	<!--
-                A page whose panel is all text chips (the skin filters) mirrors nothing
+                A page whose panel has nothing clickable-with-an-icon mirrors nothing
                 but still owns the rail: it gets the "open the panel" button alone,
                 rather than an empty column.
         -->

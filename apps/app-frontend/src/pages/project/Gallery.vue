@@ -1,7 +1,17 @@
 <template>
 	<div class="gallery">
 		<Card v-for="(image, index) in filteredGallery" :key="image.url" class="gallery-item">
-			<a @click="expandImage(image, index)">
+			<!-- Videos play right in the card: the image viewer is built
+                             for pictures, a native player needs no modal. -->
+			<video
+				v-if="isVideo(image)"
+				:src="image.raw_url ?? image.url"
+				controls
+				preload="metadata"
+				playsinline
+				class="gallery-video"
+			/>
+			<a v-else @click="expandImage(image, index)">
 				<img :src="image.url" :alt="image.title" class="gallery-image" />
 			</a>
 			<div class="gallery-body">
@@ -45,46 +55,61 @@ import { trackEvent } from '@/helpers/analytics'
 const MC_SERVER_BANNER_NAME = '__mc_server_banner__'
 
 const formatDate = useFormatDateTime({
-	year: 'numeric',
-	month: 'long',
-	day: 'numeric',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
 })
 
 const props = defineProps({
-	project: {
-		type: Object,
-		default: () => ({}),
-	},
+        project: {
+                type: Object,
+                default: () => ({}),
+        },
 })
 
 const filteredGallery = computed(
-	() => props.project.gallery?.filter((img) => img.title !== MC_SERVER_BANNER_NAME) ?? [],
+        () => props.project.gallery?.filter((img) => img.title !== MC_SERVER_BANNER_NAME) ?? [],
 )
 
+const VIDEO_URL_RE = /\.(mp4|webm|m4v|mov|ogv|mkv)(\?|#|$)/i
+
+/** Gallery entries that are really video files render as players, not as
+    broken images; CurseForge's media can be mp4/webm just as well. */
+const isVideo = (image: { url?: string; raw_url?: string; type?: string }) =>
+        (typeof image.type === 'string' && image.type.startsWith('video')) ||
+        VIDEO_URL_RE.test(image.raw_url ?? image.url ?? '')
+
+// The image viewer only understands pictures: videos keep out of its list.
 const galleryViewer = ref()
 const galleryViewerItems = computed(() =>
-	filteredGallery.value.map((image) => ({
-		id: image.url,
-		src: image.raw_url ?? 'https://cdn.modrinth.com/placeholder-banner.svg',
-		alt: image.title || 'Gallery image',
-		title: image.title,
-		description: image.description,
-	})),
+        filteredGallery.value
+                .map((image, index) => ({ image, index }))
+                .filter(({ image }) => !isVideo(image))
+                .map(({ image, index }) => ({
+                        id: image.url,
+                        src: image.raw_url ?? 'https://cdn.modrinth.com/placeholder-banner.svg',
+                        alt: image.title || 'Gallery image',
+                        title: image.title,
+                        description: image.description,
+                        _galleryIndex: index,
+                })),
 )
 
 const expandImage = (item, index) => {
-	galleryViewer.value?.show(index)
-	trackEvent('GalleryImageExpand', {
-		project_id: props.project.id,
-		url: item.url,
-	})
+        const position = galleryViewerItems.value.findIndex((viewerItem) => viewerItem._galleryIndex === index)
+        if (position === -1) return
+        galleryViewer.value?.show(position)
+        trackEvent('GalleryImageExpand', {
+                project_id: props.project.id,
+                url: item.url,
+        })
 }
 
 function trackGalleryNavigation(item, _index, direction) {
-	trackEvent(direction === 'next' ? 'GalleryImageNext' : 'GalleryImagePrevious', {
-		project_id: props.project.id,
-		url: item.id,
-	})
+        trackEvent(direction === 'next' ? 'GalleryImageNext' : 'GalleryImagePrevious', {
+                project_id: props.project.id,
+                url: item.id,
+        })
 }
 </script>
 
@@ -108,6 +133,13 @@ function trackGalleryNavigation(item, _index, direction) {
 		aspect-ratio: 2/1;
 		object-fit: cover;
 		object-position: center;
+	}
+
+	.gallery-video {
+		width: 100%;
+		aspect-ratio: 2/1;
+		object-fit: contain;
+		background: var(--color-raised-bg);
 	}
 
 	.gallery-body {

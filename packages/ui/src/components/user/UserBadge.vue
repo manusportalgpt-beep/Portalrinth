@@ -30,6 +30,8 @@ defineProps<{
 			}"
 			target="_blank"
 			tabindex="0"
+			role="img"
+			:aria-label="formatMessage(name, values)"
 		>
 			<component :is="icon" class="size-full p-0.5" />
 		</AutoLink>

@@ -63,9 +63,9 @@ import {
 import {
 	get as getInstance,
 	get_content_items,
-	getInstanceIconUrl,
 	get_linked_modpack_content,
 	get_projects as getInstanceProjects,
+	getInstanceIconUrl,
 	remove_project,
 } from '@/helpers/instance'
 import { get_game_versions, get_loaders } from '@/helpers/tags'
@@ -170,9 +170,7 @@ async function removeFromInstance() {
 	removingProject.value = true
 	try {
 		const items = await get_content_items(instanceId.value)
-		const target = items.find(
-			(x) => matchesInstalledId(x.id) || matchesInstalledId(x.project?.id),
-		)
+		const target = items.find((x) => matchesInstalledId(x.id) || matchesInstalledId(x.project?.id))
 		const path = target?.file_path ?? target?.file_name
 		if (!path) throw new Error('Installed file not found')
 		await remove_project(instanceId.value, path)
@@ -203,8 +201,7 @@ function handleInstallClick() {
 const projectInstallContext = computed(() => {
 	if (!instance.value) return null
 	const browsePath = route.query.b
-	const cameFromBrowse =
-		typeof browsePath === 'string' && browsePath.startsWith('/browse/')
+	const cameFromBrowse = typeof browsePath === 'string' && browsePath.startsWith('/browse/')
 	return {
 		name: instance.value.name,
 		loader: instance.value.loader,
@@ -212,9 +209,7 @@ const projectInstallContext = computed(() => {
 		iconSrc: getInstanceIconUrl(instance.value.icon_path),
 		// Same back target as a Modrinth project: the browse page the player
 		// came from (query `b`) wins over the instance itself.
-		backUrl: cameFromBrowse
-			? browsePath
-			: `/instance/${encodeURIComponent(instance.value.id)}`,
+		backUrl: cameFromBrowse ? browsePath : `/instance/${encodeURIComponent(instance.value.id)}`,
 		backLabel: cameFromBrowse
 			? formatMessage(messages.backToBrowse)
 			: formatMessage(messages.backToInstance),
@@ -270,6 +265,16 @@ const websiteUrl = computed(() => project.value?.website_url ?? summary.value?.w
 const categoryTags = computed(() => [
 	...new Set((project.value?.categories ?? []).map((c) => c.name)),
 ])
+
+/** CurseForge categories bring their own pictures from the API: the header's
+    category tags show them instead of guessing by name. */
+const categoryIconUrls = computed(() => {
+	const icons: Record<string, string> = {}
+	for (const category of project.value?.categories ?? []) {
+		if (category.icon_url && !icons[category.name]) icons[category.name] = category.icon_url
+	}
+	return icons
+})
 
 /** The project in the shape the shared header reads. */
 const headerProject = computed(() => {
@@ -550,7 +555,7 @@ async function install(fileId: string | null = null) {
 				<BrowseInstallHeader :install-context="projectInstallContext" />
 			</div>
 			<InstanceIndicator v-else-if="instance" :instance="instance" />
-			<ProjectPageHeader :project="headerProject">
+			<ProjectPageHeader :project="headerProject" :category-icons="categoryIconUrls">
 				<template #actions>
 					<Transition name="install-remove-slide">
 						<Button
@@ -568,26 +573,26 @@ async function install(fileId: string | null = null) {
 						</Button>
 					</Transition>
 					<InstallProgressPopover :active="installing">
-					<Button
-						type="colored"
-						color="brand"
-						size="xl"
-						native-type="button"
-						:disabled="installing"
-						:class="installed ? 'installed-quiet' : ''"
-						@click="handleInstallClick"
-					>
-						<SpinnerIcon v-if="installing" class="animate-spin" />
-						<CheckIcon v-else-if="installed" />
-						<DownloadIcon v-else />
-						{{
-							installed
-								? formatMessage(commonMessages.installedLabel)
-								: installing
-									? formatMessage(commonMessages.installingLabel)
-									: formatMessage(commonMessages.installButton)
-						}}
-					</Button>
+						<Button
+							type="colored"
+							color="brand"
+							size="xl"
+							native-type="button"
+							:disabled="installing"
+							:class="installed ? 'installed-quiet' : ''"
+							@click="handleInstallClick"
+						>
+							<SpinnerIcon v-if="installing" class="animate-spin" />
+							<CheckIcon v-else-if="installed" />
+							<DownloadIcon v-else />
+							{{
+								installed
+									? formatMessage(commonMessages.installedLabel)
+									: installing
+										? formatMessage(commonMessages.installingLabel)
+										: formatMessage(commonMessages.installButton)
+							}}
+						</Button>
 					</InstallProgressPopover>
 					<IconButton
 						v-tooltip="formatMessage(favorite ? messages.removeFavorite : messages.addFavorite)"

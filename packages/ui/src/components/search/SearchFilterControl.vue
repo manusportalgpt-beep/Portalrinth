@@ -30,9 +30,14 @@
 			:key="`remove-filter-${selectedItem.type}-${selectedItem.option}`"
 			:action="() => removeFilter(selectedItem)"
 		>
-			<XIcon />
+			<component
+				:is="selectedItem.icon"
+				v-if="selectedItem.icon && typeof selectedItem.icon !== 'string'"
+				aria-hidden="true"
+			/>
 			<BanIcon v-if="selectedItem.negative" class="text-brand-red" />
 			{{ selectedItem.formatted_name ?? selectedItem.option }}
+			<XIcon />
 		</TagItem>
 		<TagItem
 			v-for="providedItem in items.filter(
@@ -46,6 +51,11 @@
 			"
 			:style="{ '--_bg-color': `var(--color-raised-bg)` }"
 		>
+			<component
+				:is="providedItem.icon"
+				v-if="providedItem.icon && typeof providedItem.icon !== 'string'"
+				aria-hidden="true"
+			/>
 			<LockIcon />
 			{{ providedItem.formatted_name ?? providedItem.option }}
 		</TagItem>
@@ -55,7 +65,7 @@
 <script setup lang="ts">
 import { BanIcon, LockIcon, XCircleIcon, XIcon } from '@modrinth/assets'
 import { useQuery } from '@tanstack/vue-query'
-import { computed, type ComputedRef } from 'vue'
+import { type Component, computed, type ComputedRef } from 'vue'
 
 import { defineMessage, type MessageDescriptor, useVIntl } from '../../composables/i18n'
 import { injectModrinthClient } from '../../providers'
@@ -103,6 +113,9 @@ type Item = {
 	option: string
 	negative?: boolean
 	formatted_name?: string
+	/** The option's own icon, drawn before the label: the chips read like
+            the sidebar entries they stand for. */
+	icon?: string | Component
 	provided: boolean
 }
 
@@ -151,6 +164,7 @@ const items: ComputedRef<Item[]> = computed(() => {
 					?.negative,
 				provided: filterMatches(type, option, props.providedFilters),
 				formatted_name: option.formatted_name,
+				icon: option.icon,
 			}))
 
 		if (type.id !== 'compatible_dependency_project_ids') {

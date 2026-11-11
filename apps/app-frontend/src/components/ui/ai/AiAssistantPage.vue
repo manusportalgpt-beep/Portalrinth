@@ -93,13 +93,10 @@ import {
 	deleteSessionForever,
 	formatSize,
 	listSessions,
-	listTrashedSessions,
 	readLatestSession,
 	readSession,
-	restoreSession,
 	sandboxAbsolutePath,
 	type SessionMeta,
-	trashSession,
 } from '@/helpers/ai-sandbox'
 import { getInstanceIconUrl, list as listInstances } from '@/helpers/instance'
 import { labySkinPreview, labySkinTexture } from '@/helpers/laby-skins'
@@ -237,13 +234,9 @@ const messages = {
 	},
 	historyNewChat: { id: 'app.ai.history.new-chat', defaultMessage: 'Новый чат' },
 	historyMessages: { id: 'app.ai.history.messages', defaultMessage: 'сообщ.' },
-	trashTitle: { id: 'app.ai.trash.title', defaultMessage: 'Корзина чатов' },
-	trashEmpty: { id: 'app.ai.trash.empty', defaultMessage: 'Корзина пуста' },
-	trashMove: { id: 'app.ai.trash.move', defaultMessage: 'В корзину' },
-	trashRestore: { id: 'app.ai.trash.restore', defaultMessage: 'Восстановить' },
-	trashDeleteForever: {
-		id: 'app.ai.trash.delete-forever',
-		defaultMessage: 'Удалить навсегда',
+	chatDelete: {
+		id: 'app.ai.chat.delete',
+		defaultMessage: 'Удалить чат навсегда',
 	},
 	builds: { id: 'app.ai.builds', defaultMessage: 'Сборка для работы' },
 	buildNone: { id: 'app.ai.builds.none', defaultMessage: 'Без сборки' },
@@ -287,8 +280,6 @@ const chosenInstance = ref('')
 const buildsOpen = ref(false)
 const historyOpen = ref(false)
 const sessionsList = ref<SessionMeta[]>([])
-const trashedList = ref<SessionMeta[]>([])
-const trashOpen = ref(false)
 const historyLoading = ref(false)
 const router = useRouter()
 
@@ -496,9 +487,7 @@ async function installSkin(skin: AiSkinCard) {
 	if (skinInstalling.value.includes(skin.hash)) return
 	skinInstalling.value = [...skinInstalling.value, skin.hash]
 	try {
-		const texture = skin.url
-			? await fetchSkinTexture(skin.url)
-			: await labySkinTexture(skin.hash)
+		const texture = skin.url ? await fetchSkinTexture(skin.url) : await labySkinTexture(skin.hash)
 		const equipped = await add_and_equip_custom_skin(texture, skin.variant)
 		await flush_pending_skin_change()
 		await minecraftAccounts.value?.setEquippedSkin(equipped)
@@ -549,10 +538,8 @@ async function toggleHistory() {
 		historyLoading.value = true
 		try {
 			sessionsList.value = await listSessions(30)
-			trashedList.value = await listTrashedSessions(30)
 		} catch {
 			sessionsList.value = []
-			trashedList.value = []
 		} finally {
 			historyLoading.value = false
 		}
@@ -562,21 +549,15 @@ async function toggleHistory() {
 async function refreshSessionLists() {
 	try {
 		sessionsList.value = await listSessions(30)
-		trashedList.value = await listTrashedSessions(30)
 	} catch {
 		/* the list simply stays as it was */
 	}
 }
 
-function toggleTrash() {
-	trashOpen.value = !trashOpen.value
-	if (trashOpen.value) void refreshSessionLists()
-}
-
-/** A chat in the trash is not gone: Portalus can still read it - he just
- * does not bring it up on his own anymore. */
-async function moveToTrash(meta: SessionMeta) {
-	await trashSession(meta.id)
+/** One press of the trash icon and the chat is gone for good: no recycling
+    bin, no second press. Deleting the open chat opens a fresh one. */
+async function deleteChat(meta: SessionMeta) {
+	await deleteSessionForever(meta.id)
 	if (currentSessionId.value === meta.id) {
 		startFreshChat()
 		return
@@ -584,20 +565,9 @@ async function moveToTrash(meta: SessionMeta) {
 	await refreshSessionLists()
 }
 
-async function restoreTrashed(meta: SessionMeta) {
-	await restoreSession(meta.id)
-	await refreshSessionLists()
-}
-
-async function purgeTrashed(meta: SessionMeta) {
-	await deleteSessionForever(meta.id)
-	await refreshSessionLists()
-}
-
 /**
  * One word of the chat and an ellipsis: a list of conversations reads at a
- * glance — the trash especially — while the date-and-count label carries
- * the rest.
+ * glance while the date-and-count label carries the rest.
  */
 function shortPreview(meta: SessionMeta): string {
 	const first = (meta.preview || '').split(/\s+/)[0]?.trim() ?? ''
@@ -1016,7 +986,14 @@ interface AiSegmentPart {
 	url?: string
 }
 type AiSegment =
-	| { kind: 'code'; lang: string; file?: string; diffAdded?: number; diffRemoved?: number; lines: string[] }
+	| {
+			kind: 'code'
+			lang: string
+			file?: string
+			diffAdded?: number
+			diffRemoved?: number
+			lines: string[]
+	  }
 	| { kind: 'text'; text: string; parts: AiSegmentPart[] }
 
 const LINK_RE = /(\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>"')\]]+)/g
@@ -1086,7 +1063,8 @@ function activityFor(
 		return { created: false, added: segment.diffAdded ?? 0, removed: segment.diffRemoved ?? 0 }
 	}
 	const activity = message.activity
-	const samePath = (tracked: string) => tracked === segment.file || tracked.endsWith(`/${segment.file}`)
+	const samePath = (tracked: string) =>
+		tracked === segment.file || tracked.endsWith(`/${segment.file}`)
 	if (activity) {
 		if (activity.filesCreated.some(samePath))
 			return { created: true, added: segment.lines.length, removed: 0 }
@@ -1115,7 +1093,11 @@ function declaredFiles(message: AiMessage): { path: string; verb: string }[] {
 		seen.add(key)
 		const activity = message.activity
 		const samePath = (tracked: string) => tracked === path || tracked.endsWith(`/${path}`)
-		if (activity && (activity.filesCreated.some(samePath) || activity.filesChanged.some((change) => samePath(change.path))))
+		if (
+			activity &&
+			(activity.filesCreated.some(samePath) ||
+				activity.filesChanged.some((change) => samePath(change.path)))
+		)
 			continue
 		out.push({ path, verb: match[1] })
 	}
@@ -1134,7 +1116,9 @@ function parseSegments(content: string): AiSegment[] {
 		const block = blocks[i]
 		if (i % 2 === 1) {
 			const newline = block.indexOf('\n')
-			const metaTokens = (newline >= 0 ? block.slice(0, newline).trim() : '').split(/\s+/).filter(Boolean)
+			const metaTokens = (newline >= 0 ? block.slice(0, newline).trim() : '')
+				.split(/\s+/)
+				.filter(Boolean)
 			const lang = metaTokens.shift() ?? ''
 			let file: string | undefined
 			let diffAdded: number | undefined
@@ -1147,7 +1131,14 @@ function parseSegments(content: string): AiSegment[] {
 				else if (/^[\w./\\-]+\.[A-Za-z0-9]{1,8}$/.test(token)) file = token
 			}
 			const code = newline >= 0 ? block.slice(newline + 1) : block
-			segments.push({ kind: 'code', lang, file, diffAdded, diffRemoved, lines: code.replace(/\n+$/, '').split('\n') })
+			segments.push({
+				kind: 'code',
+				lang,
+				file,
+				diffAdded,
+				diffRemoved,
+				lines: code.replace(/\n+$/, '').split('\n'),
+			})
 		} else {
 			const prose = stripLooseCommands(block).replace(/\n{3,}/g, '\n\n')
 			if (prose.trim())
@@ -1460,17 +1451,9 @@ defineExpose({ send })
 				>
 					<div class="mb-1 flex items-center justify-between gap-2 px-2">
 						<p class="m-0 text-sm font-semibold text-primary">
-							{{ formatMessage(trashOpen ? messages.trashTitle : messages.historyTitle) }}
+							{{ formatMessage(messages.historyTitle) }}
 						</p>
 						<div class="flex items-center gap-1">
-							<IconButton
-								v-tooltip="formatMessage(messages.trashTitle)"
-								type="quiet"
-								:label="formatMessage(messages.trashTitle)"
-								@click="toggleTrash"
-							>
-								<TrashIcon />
-							</IconButton>
 							<Button size="sm" @click="startFreshChat">
 								{{ formatMessage(messages.historyNewChat) }}
 							</Button>
@@ -1478,45 +1461,19 @@ defineExpose({ send })
 					</div>
 					<div class="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
 						<p v-if="historyLoading" class="m-0 px-2 py-3 text-sm text-secondary">…</p>
-						<p
-							v-else-if="(trashOpen ? trashedList : sessionsList).length === 0"
-							class="m-0 px-2 py-3 text-sm text-secondary"
-						>
-							{{ formatMessage(trashOpen ? messages.trashEmpty : messages.historyEmpty) }}
+						<p v-else-if="sessionsList.length === 0" class="m-0 px-2 py-3 text-sm text-secondary">
+							{{ formatMessage(messages.historyEmpty) }}
 						</p>
-						<div
-							v-for="meta in trashOpen ? trashedList : sessionsList"
-							:key="meta.id"
-							class="flex items-center gap-0.5"
-						>
+						<div v-for="meta in sessionsList" :key="meta.id" class="flex items-center gap-0.5">
 							<button class="ai-history-item grow" @click="() => openSession(meta)">
 								<span class="ai-history-meta">{{ sessionLabel(meta) }}</span>
 								<span class="ai-history-preview">{{ shortPreview(meta) }}</span>
 							</button>
-							<template v-if="trashOpen">
-								<IconButton
-									v-tooltip="formatMessage(messages.trashRestore)"
-									type="quiet"
-									:label="formatMessage(messages.trashRestore)"
-									@click="() => restoreTrashed(meta)"
-								>
-									<RefreshCwIcon />
-								</IconButton>
-								<IconButton
-									v-tooltip="formatMessage(messages.trashDeleteForever)"
-									type="quiet"
-									:label="formatMessage(messages.trashDeleteForever)"
-									@click="() => purgeTrashed(meta)"
-								>
-									<XIcon />
-								</IconButton>
-							</template>
 							<IconButton
-								v-else
-								v-tooltip="formatMessage(messages.trashMove)"
+								v-tooltip="formatMessage(messages.chatDelete)"
 								type="quiet"
-								:label="formatMessage(messages.trashMove)"
-								@click="() => moveToTrash(meta)"
+								:label="formatMessage(messages.chatDelete)"
+								@click="() => deleteChat(meta)"
 							>
 								<TrashIcon />
 							</IconButton>
@@ -1602,7 +1559,8 @@ defineExpose({ send })
 									<div class="ai-code-head">
 										<FileCodeIcon class="size-3.5 shrink-0" />
 										<span class="grow truncate">
-											{{ segment.lang || 'код' }}<template v-if="segment.file"> · {{ segment.file }}</template>
+											{{ segment.lang || 'код'
+											}}<template v-if="segment.file"> · {{ segment.file }}</template>
 										</span>
 										<span
 											v-if="activityFor(message, segment)"
@@ -1614,8 +1572,11 @@ defineExpose({ send })
 													? formatMessage(messages.codeFileCreated)
 													: formatMessage(messages.codeFileChanged)
 											}}
-											<span class="text-green">+{{ activityFor(message, segment)?.added ?? 0 }}</span
-											><span class="text-red"> −{{ activityFor(message, segment)?.removed ?? 0 }}</span>
+											<span class="text-green"
+												>+{{ activityFor(message, segment)?.added ?? 0 }}</span
+											><span class="text-red">
+												−{{ activityFor(message, segment)?.removed ?? 0 }}</span
+											>
 										</span>
 										<span class="ai-code-count"
 											>{{ segment.lines.length }} {{ linesWord(segment.lines.length) }}</span
@@ -1630,10 +1591,18 @@ defineExpose({ send })
 											<TextQuoteIcon class="size-3.5" />
 										</button>
 										<button
-											v-tooltip="editingCode[`${index}-${segmentIndex}`] ? formatMessage(messages.codeDone) : formatMessage(messages.codeEdit)"
+											v-tooltip="
+												editingCode[`${index}-${segmentIndex}`]
+													? formatMessage(messages.codeDone)
+													: formatMessage(messages.codeEdit)
+											"
 											type="button"
 											class="ai-code-btn"
-											:aria-label="editingCode[`${index}-${segmentIndex}`] ? formatMessage(messages.codeDone) : formatMessage(messages.codeEdit)"
+											:aria-label="
+												editingCode[`${index}-${segmentIndex}`]
+													? formatMessage(messages.codeDone)
+													: formatMessage(messages.codeEdit)
+											"
 											@click="() => toggleEdit(`${index}-${segmentIndex}`, segment)"
 										>
 											<CheckIcon
@@ -1647,7 +1616,13 @@ defineExpose({ send })
 											type="button"
 											class="ai-code-btn"
 											aria-label="Скопировать"
-											@click="() => copyCode(`${index}-${segmentIndex}`, codeText(`${index}-${segmentIndex}`, segment))"
+											@click="
+												() =>
+													copyCode(
+														`${index}-${segmentIndex}`,
+														codeText(`${index}-${segmentIndex}`, segment),
+													)
+											"
 										>
 											<CheckIcon
 												v-if="copiedCode === `${index}-${segmentIndex}`"
@@ -1686,16 +1661,16 @@ defineExpose({ send })
 										v-if="!editingCode[`${index}-${segmentIndex}`]"
 										class="ai-code-pre m-0"
 									><code><span
-										v-for="(line, lineIndex) in segment.lines"
-										:key="lineIndex"
-										class="ai-code-line"
-										:class="{ 'ai-code-animated': aiSettings.chatEffects }"
-										:style="{ animationDelay: `${Math.min(lineIndex * 70, 2800)}ms` }"
-									><template v-if="segment.lang"><span
-											v-for="(token, tokenIndex) in highlightLine(line, segment.lang)"
-											:key="tokenIndex"
-											:class="token.c"
-										>{{ token.t }}</span></template><template v-else>{{ line }}</template></span></code></pre>
+                                                                                v-for="(line, lineIndex) in segment.lines"
+                                                                                :key="lineIndex"
+                                                                                class="ai-code-line"
+                                                                                :class="{ 'ai-code-animated': aiSettings.chatEffects }"
+                                                                                :style="{ animationDelay: `${Math.min(lineIndex * 70, 2800)}ms` }"
+                                                                        ><template v-if="segment.lang"><span
+                                                                                        v-for="(token, tokenIndex) in highlightLine(line, segment.lang)"
+                                                                                        :key="tokenIndex"
+                                                                                        :class="token.c"
+                                                                                >{{ token.t }}</span></template><template v-else>{{ line }}</template></span></code></pre>
 									<textarea
 										v-else
 										v-model="codeEdits[`${index}-${segmentIndex}`]"
@@ -2336,10 +2311,7 @@ defineExpose({ send })
 				</div>
 				<div
 					v-if="
-						aiSettings.webSearch ||
-						aiSettings.deepThink ||
-						aiSettings.mode === 'ask' ||
-						activeFocus
+						aiSettings.webSearch || aiSettings.deepThink || aiSettings.mode === 'ask' || activeFocus
 					"
 					class="flex shrink-0 items-center gap-1"
 				>

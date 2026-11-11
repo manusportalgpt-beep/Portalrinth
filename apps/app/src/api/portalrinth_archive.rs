@@ -560,22 +560,56 @@ async fn pack_flat_jar(dir: &Path, dest: &Path) -> Result<usize> {
     Ok(files.len())
 }
 
-/// Finds javac: first on PATH, then under JAVA_HOME.
+/// Finds javac: first on PATH, then under JAVA_HOME, then in the usual JDK
+/// install locations (Windows installers put the JDK there without ever
+/// touching PATH, which is why "javac не найден" showed up on machines that
+/// actually have one). Candidates from versioned folders prefer the highest
+/// version, so an old leftover JDK does not shadow a fresh one.
 pub(crate) fn find_javac() -> Option<PathBuf> {
     let name = if cfg!(windows) { "javac.exe" } else { "javac" };
-    if let Ok(home) = std::env::var("JAVA_HOME") {
-        let candidate = PathBuf::from(home).join("bin").join(name);
-        if candidate.is_file() {
-            return Some(candidate);
+    let mut best: Option<(u32, PathBuf)> = None;
+    let mut consider = |candidate: PathBuf| {
+        if !candidate.is_file() {
+            return;
         }
+        // The folder right above bin/ usually names its version: jdk-21.0.5,
+        // jdk-17.0.2, zulu-21.28...
+        let version = candidate
+            .parent()
+            .and_then(Path::parent)
+            .and_then(|dir| dir.file_name())
+            .and_then(|name| name.to_string_lossy().split(['-', '_']).find_map(|part| part.parse::<u32>().ok()))
+            .unwrap_or(0);
+        if best.as_ref().map(|(best_version, _)| version > *best_version).unwrap_or(true) {
+            best = Some((version, candidate));
+        }
+    };
+    if let Ok(home) = std::env::var("JAVA_HOME") {
+        consider(PathBuf::from(home).join("bin").join(name));
     }
     for dir in std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()) {
-        let candidate = dir.join(name);
-        if candidate.is_file() {
-            return Some(candidate);
+        consider(dir.join(name));
+    }
+    if cfg!(windows) {
+        let roots = [
+            r"C:\Program Files\Java",
+            r"C:\Program Files\Eclipse Adoptium",
+            r"C:\Program Files\Microsoft",
+            r"C:\Program Files\Zulu",
+            r"C:\Program Files\Amazon Corretto",
+            r"C:\Program Files\BellSoft",
+            r"C:\Program Files (x86)\Java",
+        ];
+        for root in roots {
+            let Ok(entries) = std::fs::read_dir(root) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                consider(entry.path().join("bin").join(name));
+            }
         }
     }
-    None
+    best.map(|(_, path)| path)
 }
 
 /// `archiver_compile_java`: compiles every .java under a folder with the
@@ -615,7 +649,11 @@ pub async fn archiver_compile_java<R: tauri::Runtime>(
     }
 
     let javac = find_javac().ok_or_else(|| {
-        error("javac не найден: нужен JDK (на коробке Java от Mojang его нет). Установи JDK или добавь его в JAVA_HOME")
+        error(
+            "javac не найден: нужен JDK (на коробке Java от Mojang его нет). Установи JDK — например, \
+             командой `winget install EclipseAdoptium.Temurin.21.JDK` или с adoptium.net — и перезапусти \
+             лаунчер: он сам найдёт его в Program Files\\Java, Eclipse Adoptium и других обычных папках",
+        )
     })?;
 
     let classes = source.parent().unwrap_or(&source).join(".javac-classes");

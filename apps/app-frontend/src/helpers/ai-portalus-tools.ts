@@ -706,6 +706,71 @@ function kindOfFile(
 	return 'resourcepack'
 }
 
+// ---- Шейдеры: машинная проверка против чёрного экрана ----------------------
+
+const GLSL_DECODER = new TextDecoder()
+
+/**
+ * Проверяет файлы шейдерпака до установки: Iris/OptiFine молча рисуют чёрный
+ * экран или не грузят пак с самыми частыми ошибками — нет #version первой
+ * строкой, fsh ничего не пишет в gl_FragData[0]/out-переменную, непарные
+ * скобки, двойная вложенность shaders/shaders/. Возвращает null, если пак
+ * должен загрузиться и нарисовать картинку, иначе — список проблем по
+ * файлам, чтобы ИИ исправил ровно их.
+ */
+export function validateShaderPackEntries(
+	entries: { name: string; data: Uint8Array }[],
+): string | null {
+	const shaderFiles = entries.filter((entry) => /\.(vsh|fsh|glsl)$/i.test(entry.name))
+	if (shaderFiles.length === 0) {
+		return 'в паке нет ни одного .vsh/.fsh — это не шейдерпак; программы лежат в папке shaders/'
+	}
+	const problems: string[] = []
+	const nested = entries.find((entry) => /(^|\/)shaders\/shaders\//i.test(entry.name))
+	if (nested) {
+		problems.push(
+			`двойная вложенность (${nested.name}): папка shaders/ должна быть в КОРНЕ архива, распакуй и пересобери`,
+		)
+	}
+	const outDeclaration = /\bout\s+\w+\s+(\w+)\s*;/
+	for (const file of shaderFiles) {
+		const text = GLSL_DECODER.decode(file.data)
+		const lines = text.split(/\r?\n/)
+		const first = lines.findIndex((line) => line.trim() !== '')
+		if (first === -1) {
+			problems.push(`${file.name}: файл пустой`)
+			continue
+		}
+		if (/^\s*#version/.test(lines[first])) {
+			if (lines.some((line, index) => index > first && /^\s*#version/.test(line))) {
+				problems.push(
+					`${file.name}: #version встречается не один раз — она должна быть ровно в первой строке`,
+				)
+			}
+		} else if (lines.some((line) => /^\s*#version/.test(line))) {
+			problems.push(`${file.name}: #version есть, но не первой строкой — перенеси её в начало`)
+		} else {
+			problems.push(`${file.name}: нет #version в первой строке (например "#version 120")`)
+		}
+		const open = (text.match(/\{/g) ?? []).length
+		const close = (text.match(/\}/g) ?? []).length
+		if (open !== close) {
+			problems.push(`${file.name}: фигурные скобки не парные ({ ${open} против } ${close})`)
+		}
+		if (/\.fsh$/i.test(file.name)) {
+			const declaresOut = outDeclaration.exec(text)
+			const writesFixed = /gl_FragColor\s*=|gl_FragData\s*\[\s*\d+\s*\]\s*=/.test(text)
+			const writesOut = declaresOut ? new RegExp(`\\b${declaresOut[1]}\\s*=`).test(text) : false
+			if (!writesFixed && !writesOut) {
+				problems.push(
+					`${file.name}: ничего не пишет в gl_FragColor / gl_FragData[0] / out-переменную — экран будет ЧЁРНЫМ; в конце main() добавь gl_FragData[0] = vec4(цвет, 1.0)`,
+				)
+			}
+		}
+	}
+	return problems.length ? problems.join('; ') : null
+}
+
 // ---- Builds: search, logs, files, worlds -----------------------------------
 
 type Build = Awaited<ReturnType<typeof list>>[number]
@@ -1378,14 +1443,41 @@ registerAiToolHandler(async (tool, args) => {
 			}
 			let path = pathRaw
 			// A folder gets packed first: the game wants a .zip or a .jar.
+			let folderEntries: { name: string; data: Uint8Array }[] | null = null
 			if (!/\.(zip|jar)$/i.test(path)) {
 				const folder = path.replace(/\/+$/, '')
 				const entries = await readFolder(folder).catch(() => [])
 				if (entries.length === 0) return `В ${folder} пусто или такой папки нет`
+				folderEntries = entries
 				path = `${folder}.zip`
 				await writeSandboxFile(path, buildZip(entries))
 			}
 			const kind = kindOfFile(path, typeHint)
+			// A shaderpack that draws nothing loads to a black screen: it is
+			// machine-checked before it ever reaches the build, and the exact
+			// broken files come back to the model for a fix.
+			if (kind === 'shaderpack') {
+				let checkEntries = folderEntries
+				if (!checkEntries) {
+					const zipAbs = await sandboxAbsolutePath(path)
+					const destRel = `unpacked/shader-check-${Date.now()}`
+					const dest = await sandboxAbsolutePath(destRel)
+					await fs.remove(dest, { recursive: true }).catch(() => {})
+					try {
+						await invoke('plugin:portalrinth-archiver|archiver_unpack', {
+							archive: zipAbs,
+							destDir: dest,
+						})
+					} catch {
+						return `Не смог распаковать ${path} для проверки шейдеров — архив цел?`
+					}
+					checkEntries = await readFolder(destRel)
+				}
+				const problem = validateShaderPackEntries(checkEntries ?? [])
+				if (problem) {
+					return `НЕ установлено: шейдерпак не пройдёт проверку и даст ЧЁРНЫЙ ЭКРАН. Исправь файлы, пересобери и ставь снова. Проблемы: ${problem}`
+				}
+			}
 			if (kind === 'mod' && (target.loader ?? 'vanilla') === 'vanilla') {
 				return `«${target.name}» — ванильная сборка, моды в неё не ставятся`
 			}

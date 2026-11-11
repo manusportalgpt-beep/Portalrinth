@@ -165,6 +165,7 @@ export const configuredXss = new FilterXSS({
 					'i.imgur.com',
 					'cdn.modrinth.com',
 					'staging-cdn.modrinth.com',
+					'media.forgecdn.net',
 					'github.com',
 					'raw.githubusercontent.com',
 					'user-images.githubusercontent.com',
@@ -186,6 +187,13 @@ export const configuredXss = new FilterXSS({
 					!allowedHostnames.includes(url.hostname) &&
 					!allowedHostnameSuffixes.some((suffix) => url.hostname.endsWith(suffix))
 				) {
+					// Only images go through the image proxy: wsrv.nl cannot
+					// serve video or audio, so a rewritten <video>/<audio>/<source>
+					// would just fail to load and show nothing. Media keeps its
+					// original URL untouched.
+					if (tag !== 'img') {
+						return safeAttrValue(tag, name, value, cssFilter)
+					}
 					const proxiedUrl = `https://wsrv.nl/?url=${encodeURIComponent(url.toString())}&n=-1`
 					return safeAttrValue(tag, name, proxiedUrl.replaceAll('&', '&amp;'), cssFilter)
 				}

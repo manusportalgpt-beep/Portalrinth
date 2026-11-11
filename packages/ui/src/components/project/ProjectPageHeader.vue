@@ -5,13 +5,25 @@
 		@contextmenu="emit('contextmenu', $event)"
 	>
 		<template #leading>
-			<Avatar
-				:src="project.icon_url"
-				:raw-src="project.raw_icon_url"
-				:alt="project.title"
-				:tint-by="project.id"
-				size="96px"
-			/>
+			<div class="relative flex shrink-0 items-center">
+				<Avatar
+					:src="project.icon_url"
+					:raw-src="project.raw_icon_url"
+					:alt="project.title"
+					:tint-by="project.id"
+					size="96px"
+				/>
+				<!-- Where the project comes from: Modrinth's own green for its
+                                     projects, CurseForge's orange for the ones imported from
+                                     there. Sits on the avatar, left of the title. -->
+				<span
+					v-tooltip="source.label"
+					class="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full border border-solid border-surface-5 bg-surface-2 p-1"
+					:aria-label="source.label"
+				>
+					<component :is="source.icon" class="size-full" :class="source.iconClass" />
+				</span>
+			</div>
 		</template>
 
 		<template v-if="showStatusBadge" #badges>
@@ -36,7 +48,7 @@
 						:tooltip="formatNumber(project.downloads)"
 					/>
 					<!-- Noctrinth's own: left out for a project whose source counts no
-					     followers (CurseForge's likes are not the same thing). -->
+                                             followers (CurseForge's likes are not the same thing). -->
 					<PageHeaderMetadataNumberItem
 						v-if="project.followers !== undefined"
 						:icon="HeartIcon"
@@ -51,7 +63,14 @@
 						:key="category"
 						:action="() => emit('category', category)"
 					>
-						<component :is="getTagIcon(category)" v-if="getTagIcon(category)" />
+						<img
+							v-if="categoryIcons?.[category]"
+							:src="categoryIcons[category]"
+							alt=""
+							loading="lazy"
+							class="h-4 w-4 rounded-sm object-contain"
+						/>
+						<component :is="getTagIcon(category)" v-else-if="getTagIcon(category)" />
 						<FormattedTag :tag="category" />
 					</TagItem>
 				</PageHeaderMetadataTagsItem>
@@ -68,7 +87,15 @@
 
 <script setup lang="ts">
 import type { Labrinth } from '@modrinth/api-client'
-import { DownloadIcon, getTagIcon, HeartIcon } from '@modrinth/assets'
+import {
+	type Component,
+	CurseForgeIcon,
+	DownloadIcon,
+	getTagIcon,
+	HeartIcon,
+	ModrinthBrandIcon,
+} from '@modrinth/assets'
+import { computed } from 'vue'
 
 import { defineMessages, useFormatNumber, useVIntl } from '../../composables'
 import Avatar from '../base/Avatar.vue'
@@ -95,15 +122,20 @@ type HeaderProjectV3 = Pick<
 	'status' | 'minecraft_server' | 'minecraft_java_server'
 >
 
-withDefaults(
+const props = withDefaults(
 	defineProps<{
 		project: HeaderProject
 		projectV3?: HeaderProjectV3 | null
 		showStatusBadge?: boolean
+		/** Category name to a picture of its own: CurseForge's categories
+                    bring real icons from their API, Modrinth's names fall back to
+                    the tag-icon catalogue. */
+		categoryIcons?: Record<string, string>
 	}>(),
 	{
 		projectV3: null,
 		showStatusBadge: false,
+		categoryIcons: undefined,
 	},
 )
 
@@ -125,4 +157,17 @@ const messages = defineMessages({
 
 const { formatMessage } = useVIntl()
 const formatNumber = useFormatNumber()
+
+/** CurseForge projects are minted with a `cf-` id prefix by the backend; a
+    Modrinth project never has it. The badge tells them apart at a glance. */
+const source = computed(() => {
+	if (props.project.id?.startsWith('cf-')) {
+		return { icon: CurseForgeIcon as Component, label: 'CurseForge', iconClass: '' }
+	}
+	return {
+		icon: ModrinthBrandIcon as Component,
+		label: 'Modrinth',
+		iconClass: 'text-[#00af54] dark:text-[#1bd96a]',
+	}
+})
 </script>
