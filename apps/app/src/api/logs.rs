@@ -19,6 +19,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             logs_get_logs,
             logs_get_logs_by_filename,
             logs_get_output_by_filename,
+            logs_get_output_tail_by_filename,
             logs_delete_logs,
             logs_delete_logs_by_filename,
             logs_get_latest_log_cursor,
@@ -84,6 +85,18 @@ pub async fn logs_get_output_by_filename(
     filename: String,
 ) -> Result<CensoredString> {
     Ok(logs::get_output_by_filename(instance_id, log_type, &filename).await?)
+}
+
+/// Get the tail of an instance log by filename (bounded read: the agent only
+/// needs the end of a giant log, not every megabyte of it).
+#[tauri::command]
+pub async fn logs_get_output_tail_by_filename(
+    instance_id: &str,
+    log_type: LogType,
+    filename: String,
+    max_bytes: Option<u64>,
+) -> Result<CensoredString> {
+    Ok(logs::get_output_tail_by_filename(instance_id, log_type, &filename, max_bytes).await?)
 }
 
 /// Delete all logs for an instance.

@@ -294,9 +294,10 @@ async function waitInstallDone(
 			if (job && isInstallJobFinished(job.status)) {
 				if (job.status === 'succeeded') return 'готова'
 				const detail = job.error
-					? String(
-							(job.error as { message?: string }).message ?? JSON.stringify(job.error),
-					  ).slice(0, 200)
+					? String((job.error as { message?: string }).message ?? JSON.stringify(job.error)).slice(
+							0,
+							200,
+						)
 					: job.status
 				return `установка не удалась: ${detail}`
 			}
@@ -483,7 +484,9 @@ function matchDepToItems(depId: string, items: ContentItem[]): ContentItem[] {
 	const needle = depId.toLowerCase().replace(/[^a-z0-9]+/g, '')
 	if (needle.length < 4) return []
 	return items.filter((item) => {
-		const hay = `${item.project?.title ?? ''} ${item.file_name}`.toLowerCase().replace(/[^a-z0-9]+/g, '')
+		const hay = `${item.project?.title ?? ''} ${item.file_name}`
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '')
 		return hay.includes(needle)
 	})
 }
@@ -523,8 +526,10 @@ async function jarDependencies(
 			}
 			id = meta.id ?? ''
 			for (const key of Object.keys(meta.depends ?? {})) deps.push({ id: key, kind: 'обязательно' })
-			for (const key of Object.keys(meta.recommends ?? {})) deps.push({ id: key, kind: 'опционально' })
-			for (const key of Object.keys(meta.suggests ?? {})) deps.push({ id: key, kind: 'опционально' })
+			for (const key of Object.keys(meta.recommends ?? {}))
+				deps.push({ id: key, kind: 'опционально' })
+			for (const key of Object.keys(meta.suggests ?? {}))
+				deps.push({ id: key, kind: 'опционально' })
 			for (const alias of meta.provides ?? []) deps.push({ id: alias, kind: 'алиас' })
 		} catch {
 			/* битый манифест — всё ещё jar */
@@ -563,7 +568,10 @@ async function jarDependencies(
 	return { id, deps }
 }
 
-function looksLikeLibrary(item: { project?: { title?: string } | null; file_name: string }): boolean {
+function looksLikeLibrary(item: {
+	project?: { title?: string } | null
+	file_name: string
+}): boolean {
 	const title = item.project?.title ?? ''
 	const file = item.file_name ?? ''
 	const lowTitle = title.toLowerCase()
@@ -573,6 +581,38 @@ function looksLikeLibrary(item: { project?: { title?: string } | null; file_name
 		LIB_NAME_RE.test(file) ||
 		LIB_NAME_PARTS.some((part) => lowTitle.includes(part) || lowFile.includes(part))
 	)
+}
+
+/** Инициалы названия мода: «FTB Quests» → «FTBQ», «Just Enough Items» →
+ * «JEI». В логах и краш-репортах моды почти всегда живут под такими
+ * сокращениями, и агент обязан уметь их читать, а не пожимать плечами. */
+export function modAbbreviations(title: string): string[] {
+	if (!title) return []
+	const spaced = title.replace(/([a-z])([A-Z])/g, '$1 $2')
+	const words = spaced.split(/[^0-9A-Za-zА-Яа-яЁё]+/).filter(Boolean)
+	if (words.length < 2 || words.length > 5) return []
+	const initials = words.map((word) => word[0].toUpperCase()).join('')
+	return initials.length >= 2 && initials.length <= 6 ? [initials] : []
+}
+
+/** Строка-справочник к списку контента: сокращение = полное название. */
+function modsAbbreviationLine(
+	items: { project_type: string; project?: { title?: string | null } | null }[],
+): string {
+	const pairs: string[] = []
+	const seen = new Set<string>()
+	for (const item of items) {
+		if (item.project_type !== 'mod') continue
+		const title = item.project?.title ?? ''
+		const abbrev = modAbbreviations(title)[0]
+		if (!abbrev || seen.has(abbrev)) continue
+		seen.add(abbrev)
+		pairs.push(`${abbrev} = ${title}`)
+		if (pairs.length >= 24) break
+	}
+	return pairs.length
+		? `Сокращения (в логах моды часто пишутся инициалами): ${pairs.join('; ')}.`
+		: ''
 }
 
 registerAiToolHandler(async (tool, args) => {
@@ -684,7 +724,7 @@ registerAiToolHandler(async (tool, args) => {
 				return `Обновляю ${updates.length} в «${build.name}»: ${updates
 					.slice(0, 15)
 					.map((item) => item.project?.title ?? item.file_name)
-						.join(', ')} — идёт в фоне. Точечно (один-два мода) — <<mod_update|сборка::мод>>.`
+					.join(', ')} — идёт в фоне. Точечно (один-два мода) — <<mod_update|сборка::мод>>.`
 			} catch (error) {
 				return `Обновление не удалось: ${String(error).slice(0, 300)}`
 			}
@@ -698,7 +738,10 @@ registerAiToolHandler(async (tool, args) => {
 			try {
 				await refresh_content_updates(build.id).catch(() => {})
 				const items = await get_content_items(build.id)
-				const names = modsRaw.split(';;').map((part) => part.trim()).filter(Boolean)
+				const names = modsRaw
+					.split(';;')
+					.map((part) => part.trim())
+					.filter(Boolean)
 				const picked: { path: string; versionId: string; title: string }[] = []
 				const fresh: string[] = []
 				const missing: string[] = []
@@ -775,7 +818,9 @@ registerAiToolHandler(async (tool, args) => {
 				if (!id) {
 					return `Создаю сборку «${finalName}» — Minecraft ${version}, ${loaderLabel(loader)}. Ставится в фоне, прогресс в загрузках.`
 				}
-				noteAgentThought(`Скачиваю Minecraft ${version} и ядро ${loaderLabel(loader)} для «${finalName}»`)
+				noteAgentThought(
+					`Скачиваю Minecraft ${version} и ядро ${loaderLabel(loader)} для «${finalName}»`,
+				)
 				const outcome = await waitInstallDone(job.job_id, id, `«${finalName}»`, 420000)
 				if (outcome === 'готова') {
 					return `Сборка «${finalName}» готова — Minecraft ${version}, ${loaderLabel(loader)} (id: ${id}). Моды ставь через launcher_install.`
@@ -891,7 +936,7 @@ registerAiToolHandler(async (tool, args) => {
 							if (wantsOff) return item.enabled === false
 							const title = (item.project?.title ?? '').toLowerCase()
 							return title.includes(filter) || item.file_name.toLowerCase().includes(filter)
-						  })
+						})
 					: items
 				if (filtered.length === 0) {
 					return wantsUpdates
@@ -914,17 +959,20 @@ registerAiToolHandler(async (tool, args) => {
 					const mark = item.has_update ? ' [есть обновление]' : ''
 					return `- ${kind} «${item.project?.title ?? item.file_name}» ${version} — ${state}${mark}${looksLikeLibrary(item) ? ' [библиотека]' : ''}`
 				})
+				const glossary = modsAbbreviationLine(filtered)
 				const tail =
 					filtered.length > 200
 						? `\n…и ещё ${filtered.length - 200} — сузь фильтр: <<instance_mods|${build.name}::часть имени>>`
 						: ''
-				return `Контент «${build.name}»${filter ? ` (фильтр: «${filterRaw}»)` : ''} — ${filtered.length} из ${items.length}:\n${lines.join('\n')}${tail}\nОбновить названные: <<mod_update|сборка::мод1;;мод2>>. Выключить/включить — <<mod_toggle|…>>, удалить — <<mod_delete|…>>. Зависимости мода — <<mod_deps|сборка::мод>>.`
+				return `Контент «${build.name}»${filter ? ` (фильтр: «${filterRaw}»)` : ''} — ${filtered.length} из ${items.length}:\n${lines.join('\n')}${tail}\nОбновить названные: <<mod_update|сборка::мод1;;мод2>>. Выключить/включить — <<mod_toggle|…>>, удалить — <<mod_delete|…>>. Зависимости мода — <<mod_deps|сборка::мод>>.${glossary ? `\n${glossary}` : ''}`
 			} catch (error) {
 				return `Список контента не получился: ${String(error).slice(0, 300)}`
 			}
 		}
 		case 'mod_toggle': {
-			const [buildRaw = '', modRaw = '', stateRaw = ''] = args.split('::').map((part) => part.trim())
+			const [buildRaw = '', modRaw = '', stateRaw = ''] = args
+				.split('::')
+				.map((part) => part.trim())
 			const build = await resolveBuild(buildRaw)
 			if (typeof build === 'string') return build
 			if (!modRaw) return 'Формат: <<mod_toggle|сборка::мод::вкл или выкл>>'
@@ -981,7 +1029,10 @@ registerAiToolHandler(async (tool, args) => {
 			const build = await resolveBuild(buildRaw)
 			if (typeof build === 'string') return build
 			if (!modsRaw) return 'Формат: <<mod_delete|сборка::мод1;;мод2::да>>'
-			const names = modsRaw.split(';;').map((part) => part.trim()).filter(Boolean)
+			const names = modsRaw
+				.split(';;')
+				.map((part) => part.trim())
+				.filter(Boolean)
 			const libHits = names.filter(
 				(name) =>
 					LIB_NAME_RE.test(name) ||
@@ -1004,7 +1055,9 @@ registerAiToolHandler(async (tool, args) => {
 						await remove_project(build.id, item.file_path ?? item.file_name)
 						results.push(`- удалил «${item.project?.title ?? item.file_name}»`)
 					} catch (error) {
-						results.push(`- «${item.project?.title ?? item.file_name}»: ${String(error).slice(0, 160)}`)
+						results.push(
+							`- «${item.project?.title ?? item.file_name}»: ${String(error).slice(0, 160)}`,
+						)
 					}
 				}
 				return `Удаление в «${build.name}»:\n${results.join('\n')}`
@@ -1023,7 +1076,9 @@ registerAiToolHandler(async (tool, args) => {
 						return await deleteNow()
 					},
 				})
-				const toggles = names.map((name) => `<<mod_toggle|${buildRaw || build.name}::${name}::выкл>>`).join(' ')
+				const toggles = names
+					.map((name) => `<<mod_toggle|${buildRaw || build.name}::${name}::выкл>>`)
+					.join(' ')
 				return `Удаление необратимо, но сначала проверь, нельзя ли обойтись выключением: ${toggles} — это обратимо, файл остаётся в сборке и мод можно вернуть. Удаляй только когда это крайне необходимо: битый файл, дубль, ломающий загрузку, или игрок сам прямо велел стереть. Если удалять действительно нужно — спроси игрока: <<ask_user|Удалить из «${build.name}»: ${names.join(', ')}? Файлы модов будут стёрты.::Да, удалить;;Отмена>> — по клику «Да, удалить» лаунчер сам выполнит удаление и покажет итог, повторно вызывать mod_delete не нужно.${libNote}`
 			}
 			return await deleteNow()
@@ -1034,7 +1089,8 @@ registerAiToolHandler(async (tool, args) => {
 			if (typeof build === 'string') return build
 			if (!modRaw) return 'Формат: <<mod_deps|сборка::мод>>'
 			const items = await get_content_items(build.id).catch(() => [])
-			if (items.length === 0) return `В «${build.name}» контента нет — зависимости смотреть не у чего.`
+			if (items.length === 0)
+				return `В «${build.name}» контента нет — зависимости смотреть не у чего.`
 			const lower = modRaw.toLowerCase()
 			const target =
 				items.find((item) => (item.project?.title ?? '').toLowerCase() === lower) ??
@@ -1050,10 +1106,13 @@ registerAiToolHandler(async (tool, args) => {
 			const targetTitle = target.project?.title ?? target.file_name
 			const projectTitleOf = new Map<string, string>()
 			for (const item of items) {
-				if (item.project?.id && item.project?.title) projectTitleOf.set(item.project.id, item.project.title)
+				if (item.project?.id && item.project?.title)
+					projectTitleOf.set(item.project.id, item.project.title)
 			}
 			const versionDeps = new Map<string, ModrinthDep[]>()
-			const versionIds = [...new Set(items.map((item) => item.version?.id).filter(Boolean) as string[])]
+			const versionIds = [
+				...new Set(items.map((item) => item.version?.id).filter(Boolean) as string[]),
+			]
 			if (versionIds.length > 0) {
 				const versions = await fetchModrinthVersions(versionIds).catch(() => [])
 				for (const version of versions) versionDeps.set(version.id, version.dependencies ?? [])
@@ -1061,7 +1120,8 @@ registerAiToolHandler(async (tool, args) => {
 			const unknownProjectIds = new Set<string>()
 			for (const deps of versionDeps.values()) {
 				for (const dep of deps) {
-					if (dep.project_id && !projectTitleOf.has(dep.project_id)) unknownProjectIds.add(dep.project_id)
+					if (dep.project_id && !projectTitleOf.has(dep.project_id))
+						unknownProjectIds.add(dep.project_id)
 				}
 			}
 			if (unknownProjectIds.size > 0) {
@@ -1074,10 +1134,13 @@ registerAiToolHandler(async (tool, args) => {
 			const targetVersionId = target.version?.id
 			if (targetVersionId && versionDeps.has(targetVersionId)) {
 				for (const dep of versionDeps.get(targetVersionId) ?? []) {
-					const name = dep.project_id ? (projectTitleOf.get(dep.project_id) ?? dep.project_id) : null
+					const name = dep.project_id
+						? (projectTitleOf.get(dep.project_id) ?? dep.project_id)
+						: null
 					if (!name || seenDeps.has(name)) continue
 					seenDeps.add(name)
-					const label = DEP_LABELS[dep.dependency_type ?? 'required'] ?? dep.dependency_type ?? 'зависимость'
+					const label =
+						DEP_LABELS[dep.dependency_type ?? 'required'] ?? dep.dependency_type ?? 'зависимость'
 					requires.push(`${name} (${label})`)
 				}
 			}
@@ -1099,7 +1162,8 @@ registerAiToolHandler(async (tool, args) => {
 							const name = hits.length > 0 ? (hits[0].project?.title ?? hits[0].file_name) : dep.id
 							if (seenDeps.has(name)) continue
 							seenDeps.add(name)
-							const where = hits.length > 0 ? '' : ' — в сборке НЕ НАЙДЕН, скорее всего не хватает мода'
+							const where =
+								hits.length > 0 ? '' : ' — в сборке НЕ НАЙДЕН, скорее всего не хватает мода'
 							requires.push(`${name} (${dep.kind}${where})`)
 						}
 						if (meta.id) metaNote = ` (по метаданным jar это мод «${meta.id}»)`
@@ -1110,7 +1174,8 @@ registerAiToolHandler(async (tool, args) => {
 			const targetProjectId = target.project?.id
 			if (targetProjectId) {
 				for (const item of items) {
-					if ((item.file_path ?? item.file_name) === (target.file_path ?? target.file_name)) continue
+					if ((item.file_path ?? item.file_name) === (target.file_path ?? target.file_name))
+						continue
 					const deps = item.version?.id ? versionDeps.get(item.version.id) : undefined
 					if (!deps) continue
 					const dep = deps.find((entry) => entry.project_id === targetProjectId)
@@ -1134,9 +1199,13 @@ registerAiToolHandler(async (tool, args) => {
 					: 'На нём никто в сборке не держится (по данным Modrinth) — выключение или удаление другим модам не навредит.',
 			)
 			if (looksLikeLibrary(target)) {
-				parts.push('Похоже на библиотеку — такие моды обычно нужны многим; сверяйся со списком «на нём держатся».')
+				parts.push(
+					'Похоже на библиотеку — такие моды обычно нужны многим; сверяйся со списком «на нём держатся».',
+				)
 			}
-			parts.push('Правило: требуемая зависимость чужого мода — не трогай её; находи и чини зависимого виновника.')
+			parts.push(
+				'Правило: требуемая зависимость чужого мода — не трогай её; находи и чини зависимого виновника.',
+			)
 			return parts.join('\n')
 		}
 		case 'fandom':

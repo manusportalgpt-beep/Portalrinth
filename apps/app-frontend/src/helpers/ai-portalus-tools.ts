@@ -34,9 +34,9 @@ import {
 	sandboxWrite,
 	sandboxWriteBinary,
 } from './ai-sandbox'
-import { add_project_from_path, edit, get_full_path, list } from './instance'
+import { add_project_from_path, edit, get_content_items, get_full_path, list } from './instance'
 import { get_max_memory as getMaxMemory } from './jre.js'
-import { get_logs, get_output_by_filename } from './logs.js'
+import { get_logs, get_output_by_filename, get_output_tail_by_filename } from './logs.js'
 import { applyThemeBackground, savedThemes, saveTheme } from './portalrinth-themes'
 import { proxiedFetch } from './proxy-fetch'
 import { get as getSettings, set as setSettings } from './settings'
@@ -217,7 +217,10 @@ async function download(urlRaw: string, pathRaw: string, depth = 0): Promise<str
 	}
 	let path = pathRaw.trim().replace(/^\/+/, '')
 	if (!path || path.endsWith('/')) {
-		const base = fromUrl && /\.[a-z0-9]{2,5}$/i.test(fromUrl) ? fromUrl : `file-${Date.now()}.${extensionFor(type)}`
+		const base =
+			fromUrl && /\.[a-z0-9]{2,5}$/i.test(fromUrl)
+				? fromUrl
+				: `file-${Date.now()}.${extensionFor(type)}`
 		path = `${path || 'downloads/'}${base.replace(/[\\:*?"<>|]+/g, '_')}`
 	}
 	if (FORBIDDEN.test(path)) return 'Исполняемые файлы (.exe и т.п.) в песочницу не скачиваю'
@@ -230,7 +233,9 @@ async function download(urlRaw: string, pathRaw: string, depth = 0): Promise<str
 	const isVideo = /^video\//i.test(type) || VIDEO_EXT.test(path)
 	const line = `Скачано: ${path} (${size}) → ${absolute}.${isVideo ? ' Это видео — сообщи игроку путь к файлу текстом.' : ''}`
 	if (isImage && bytes.length <= 6 * 1024 * 1024) {
-		const mime = /^image\//i.test(type) ? type.split(';')[0] : `image/${(path.split('.').pop() ?? 'png').replace('jpg', 'jpeg')}`
+		const mime = /^image\//i.test(type)
+			? type.split(';')[0]
+			: `image/${(path.split('.').pop() ?? 'png').replace('jpg', 'jpeg')}`
 		return `${line}@@IMG@@data:${mime};base64,${bytesToBase64(bytes)}`
 	}
 	return line
@@ -247,7 +252,10 @@ async function persistAccent(): Promise<void> {
 			...settings,
 			accent_preset: accent.id.value,
 			accent_tint_background: accent.tintBackground.value,
-			accent_custom_color: accent.id.value === CUSTOM_ACCENT_ID ? accent.customColor.value : settings.accent_custom_color,
+			accent_custom_color:
+				accent.id.value === CUSTOM_ACCENT_ID
+					? accent.customColor.value
+					: settings.accent_custom_color,
 		})
 	} catch {
 		/* shown now, just not remembered */
@@ -461,7 +469,12 @@ async function latestFabric(version: string): Promise<{ loader: string; api: str
 	return { loader, api }
 }
 
-async function scaffold(type: string, name: string, version: string, loader: string): Promise<string> {
+async function scaffold(
+	type: string,
+	name: string,
+	version: string,
+	loader: string,
+): Promise<string> {
 	const id = slugOf(name)
 	const root = `projects/${id}`
 	const files: Record<string, string> = {}
@@ -472,21 +485,32 @@ async function scaffold(type: string, name: string, version: string, loader: str
 		.join('')
 	switch (type) {
 		case 'resourcepack': {
-			files['pack.mcmeta'] = packMeta(formatFor(RESOURCE_FORMATS, version), `${name} — сделано Порталусом`)
-			files['assets/minecraft/lang/ru_ru.json'] = `${JSON.stringify({ 'menu.singleplayer': 'Одиночная игра' }, null, 2)}\n`
+			files['pack.mcmeta'] = packMeta(
+				formatFor(RESOURCE_FORMATS, version),
+				`${name} — сделано Порталусом`,
+			)
+			files['assets/minecraft/lang/ru_ru.json'] =
+				`${JSON.stringify({ 'menu.singleplayer': 'Одиночная игра' }, null, 2)}\n`
 			files['assets/minecraft/textures/block/README.txt'] =
 				'Кладите сюда PNG-текстуры блоков с ванильными именами (например stone.png, 16x16).\n'
-			files['assets/minecraft/textures/item/README.txt'] = 'Текстуры предметов (например diamond_sword.png).\n'
+			files['assets/minecraft/textures/item/README.txt'] =
+				'Текстуры предметов (например diamond_sword.png).\n'
 			break
 		}
 		case 'datapack': {
 			const newLayout = compareVersions(version, '1.21') >= 0
 			const folder = newLayout ? 'function' : 'functions'
-			files['pack.mcmeta'] = packMeta(formatFor(DATA_FORMATS, version), `${name} — сделано Порталусом`)
-			files[`data/${id}/${folder}/load.mcfunction`] = `tellraw @a {"text":"${name} загружен","color":"light_purple"}\n`
+			files['pack.mcmeta'] = packMeta(
+				formatFor(DATA_FORMATS, version),
+				`${name} — сделано Порталусом`,
+			)
+			files[`data/${id}/${folder}/load.mcfunction`] =
+				`tellraw @a {"text":"${name} загружен","color":"light_purple"}\n`
 			files[`data/${id}/${folder}/tick.mcfunction`] = '# Выполняется каждый тик\n'
-			files[`data/minecraft/tags/${newLayout ? 'function' : 'functions'}/load.json`] = `${JSON.stringify({ values: [`${id}:load`] }, null, 2)}\n`
-			files[`data/minecraft/tags/${newLayout ? 'function' : 'functions'}/tick.json`] = `${JSON.stringify({ values: [`${id}:tick`] }, null, 2)}\n`
+			files[`data/minecraft/tags/${newLayout ? 'function' : 'functions'}/load.json`] =
+				`${JSON.stringify({ values: [`${id}:load`] }, null, 2)}\n`
+			files[`data/minecraft/tags/${newLayout ? 'function' : 'functions'}/tick.json`] =
+				`${JSON.stringify({ values: [`${id}:tick`] }, null, 2)}\n`
 			break
 		}
 		case 'shader': {
@@ -516,7 +540,8 @@ async function scaffold(type: string, name: string, version: string, loader: str
 				'}',
 				'',
 			].join('\n')
-			files['shaders/lang/ru_ru.lang'] = 'option.VIGNETTE=Виньетка\noption.SATURATION=Насыщенность\n'
+			files['shaders/lang/ru_ru.lang'] =
+				'option.VIGNETTE=Виньетка\noption.SATURATION=Насыщенность\n'
 			break
 		}
 		case 'mod': {
@@ -575,7 +600,11 @@ async function scaffold(type: string, name: string, version: string, loader: str
 						license: 'MIT',
 						environment: '*',
 						entrypoints: { main: [`${javaPackage}.${className}`] },
-						depends: { fabricloader: `>=${fabric.loader}`, minecraft: `~${version}`, 'fabric-api': '*' },
+						depends: {
+							fabricloader: `>=${fabric.loader}`,
+							minecraft: `~${version}`,
+							'fabric-api': '*',
+						},
 					},
 					null,
 					2,
@@ -653,14 +682,19 @@ async function scaffold(type: string, name: string, version: string, loader: str
 		const encoder = new TextEncoder()
 		await writeSandboxFile(
 			archive,
-			buildZip(Object.entries(files).map(([name, content]) => ({ name, data: encoder.encode(content) }))),
+			buildZip(
+				Object.entries(files).map(([name, content]) => ({ name, data: encoder.encode(content) })),
+			),
 		)
 		packed = ` Архив готов: ${archive} — поставь в сборку через <<install_to_instance|${archive}::${type === 'shader' ? 'shaderpack' : type}>>.`
 	}
 	return `Создал проект «${name}» (${type}, Minecraft ${version}${type === 'mod' ? `, ${loader || 'fabric'}` : ''}) в ${root}.${packed}\nФайлы:\n${Object.keys(files).join('\n')}\nДальше дописывай файлы через sandbox_write, потом собери и поставь в сборку через <<install_to_instance|файл::тип>>.`
 }
 
-function kindOfFile(path: string, hint: string): 'mod' | 'resourcepack' | 'shaderpack' | 'datapack' {
+function kindOfFile(
+	path: string,
+	hint: string,
+): 'mod' | 'resourcepack' | 'shaderpack' | 'datapack' {
 	const wanted = hint.trim().toLowerCase()
 	if (/^(mod|мод)/.test(wanted)) return 'mod'
 	if (/^(shader|шейдер)/.test(wanted)) return 'shaderpack'
@@ -700,14 +734,16 @@ async function pickBuild(raw: string): Promise<Build | string> {
 	)
 }
 
-const buildLink = (build: Build) => `[${build.name.replace(/[[\]]/g, '')}](/instance/${encodeURIComponent(build.id)})`
+const buildLink = (build: Build) =>
+	`[${build.name.replace(/[[\]]/g, '')}](/instance/${encodeURIComponent(build.id)})`
 
 async function searchBuilds(query: string): Promise<string> {
 	const all = await list().catch(() => [] as Build[])
 	if (all.length === 0) return 'У игрока пока нет сборок'
 	const words = query.toLowerCase().split(/\s+/).filter(Boolean)
 	const hits = all.filter((instance) => {
-		const hay = `${instance.name} ${instance.game_version} ${instance.loader} ${instance.id}`.toLowerCase()
+		const hay =
+			`${instance.name} ${instance.game_version} ${instance.loader} ${instance.id}`.toLowerCase()
 		return words.every((word) => hay.includes(word))
 	})
 	const shown = (words.length ? hits : all).slice(0, 30)
@@ -721,13 +757,18 @@ async function searchBuilds(query: string): Promise<string> {
 	].join('\n')
 }
 
-const LOG_IMPORTANT = /(error|exception|caused by|fatal|crash|failed|warn|mixin|incompatible|missing)/i
+const LOG_IMPORTANT =
+	/(error|exception|caused by|fatal|crash|failed|warn|mixin|incompatible|missing)/i
+
+/** Хвост обычного лога, который ИИ читает за один вызов: ошибки живут в
+ * конце, а полный файл (компакция, цензура, IPC) тянул на себе секунды. */
+const AI_LOG_TAIL_BYTES = 512 * 1024
 
 async function buildLogs(raw: string): Promise<string> {
 	const [buildRaw = '', fileRaw = ''] = raw.split('::').map((part) => part.trim())
 	const build = await pickBuild(buildRaw)
 	if (typeof build === 'string') return build
-	const logs = ((await get_logs(build.id, true).catch(() => [])) ?? []) as {
+	const logs = ((await get_logs(build.id, false).catch(() => [])) ?? []) as {
 		filename: string
 		log_type: string
 	}[]
@@ -739,18 +780,40 @@ async function buildLogs(raw: string): Promise<string> {
 		(/краш|crash/.test(wanted) ? crash : undefined) ||
 		logs.find((item) => item.filename === 'latest.log') ||
 		logs[0]
-	const output = String((await get_output_by_filename(build.id, log.log_type, log.filename).catch(() => '')) ?? '')
+	const isCrashReport = /crash/i.test(log.log_type) || /crash/i.test(log.filename)
+	const output = String(
+		(isCrashReport
+			? await get_output_by_filename(build.id, log.log_type, log.filename).catch(() => '')
+			: await get_output_tail_by_filename(
+					build.id,
+					log.log_type,
+					log.filename,
+					AI_LOG_TAIL_BYTES,
+				).catch(() => '')) ?? '',
+	)
 	const lines = output.split(/\r?\n/)
 	const important = lines.filter((line) => LOG_IMPORTANT.test(line)).slice(-60)
 	const tail = lines.slice(-80)
+	const glossary = await modAbbreviationGlossary(build, output)
 	return [
-		`Лог «${log.filename}» сборки ${buildLink(build)} — ${lines.length} строк. Все логи: ${logs
+		`Лог «${log.filename}» сборки ${buildLink(build)}${
+			isCrashReport
+				? ''
+				: ` — последние ${Math.max(1, Math.round(output.length / 1024))} КБ (хвост, где живут ошибки)`
+		}. Все логи: ${logs
 			.slice(0, 12)
 			.map((item) => item.filename)
-			.join(', ')}${crash && crash !== log ? ` (есть краш-репорт ${crash.filename} — <<instance_logs|${build.id}::${crash.filename}>>)` : ''}. Экран логов: [Логи](/instance/${encodeURIComponent(build.id)}/logs).`,
-		important.length ? `Ошибки и предупреждения:\n${important.join('\n').slice(-3500)}` : 'Ошибок и предупреждений не видно.',
+			.join(
+				', ',
+			)}${crash && crash !== log ? ` (есть краш-репорт ${crash.filename} — <<instance_logs|${build.id}::${crash.filename}>>)` : ''}. Экран логов: [Логи](/instance/${encodeURIComponent(build.id)}/logs).`,
+		important.length
+			? `Ошибки и предупреждения:\n${important.join('\n').slice(-3500)}`
+			: 'Ошибок и предупреждений не видно.',
 		`Конец лога:\n${tail.join('\n').slice(-3000)}`,
-	].join('\n\n')
+		glossary,
+	]
+		.filter(Boolean)
+		.join('\n\n')
 }
 
 /** A path inside the build's folder, never outside it. */
@@ -805,7 +868,8 @@ async function buildUnpack(raw: string): Promise<string> {
 		return `Нет файла ${relRaw} в сборке ${buildLink(build)} — посмотри папки: <<instance_files|${build.name}>>`
 	}
 	const fileName = relRaw.replace(/\\/g, '/').split('/').pop() ?? 'archive'
-	const folder = fileName.replace(/\.(zip|jar|7z)$/i, '').replace(/[^a-zA-Z0-9_-]+/g, '_') || 'archive'
+	const folder =
+		fileName.replace(/\.(zip|jar|7z)$/i, '').replace(/[^a-zA-Z0-9_-]+/g, '_') || 'archive'
 	const destRel = `unpacked/${folder}`
 	const dest = await sandboxAbsolutePath(destRel)
 	await fs.remove(dest, { recursive: true }).catch(() => {})
@@ -825,9 +889,149 @@ async function buildUnpack(raw: string): Promise<string> {
 	].join('\n')
 }
 
+// ---- Правка файлов сборок без потерь --------------------------------------
+
+/** Сколько символов instance_read отдаёт за один вызов. */
+const READ_PAGE = 7000
+
+/** Что ИИ уже видел из файла: видел ли начало и конец при этом объёме.
+ * Запись урезанного файла без полного чтения - главный способ потерять
+ * текст конфига, поэтому запись спрашивает подтверждение здесь. */
+interface InstanceReadProgress {
+	total: number
+	sawStart: boolean
+	sawEnd: boolean
+}
+const instanceReadProgress = new Map<string, InstanceReadProgress>()
+
+function noteInstanceRead(path: string, text: string, start: number): void {
+	const total = text.length
+	const previous = instanceReadProgress.get(path)
+	if (!previous || previous.total !== total) {
+		instanceReadProgress.set(path, {
+			total,
+			sawStart: start === 0,
+			sawEnd: start + READ_PAGE >= total,
+		})
+		return
+	}
+	if (start === 0) previous.sawStart = true
+	if (start + READ_PAGE >= total) previous.sawEnd = true
+}
+
+function instanceFullyRead(path: string, current: string): boolean {
+	const progress = instanceReadProgress.get(path)
+	return Boolean(
+		progress && progress.total === current.length && progress.sawStart && progress.sawEnd,
+	)
+}
+
+/** Пишет текст через временный файл и переименование: обрыв посередине
+ * оставляет либо старый файл, либо новый, но не пустышку и не обрубок. */
+async function atomicWriteText(path: string, text: string): Promise<void> {
+	const tmp = `${path}.prtmp`
+	await fs.writeTextFile(tmp, text)
+	try {
+		await fs.rename(tmp, path)
+	} catch (error) {
+		await fs.remove(tmp).catch(() => {})
+		throw error
+	}
+}
+
+/** Копия файла до правки ИИ: даже если что-то пойдёт не так, прежний текст
+ * останется лежать рядом в портале бэкапов и его можно вернуть. */
+async function backupInstanceFile(
+	instanceId: string,
+	relPath: string,
+	path: string,
+): Promise<void> {
+	const { appDataDir } = await import('@tauri-apps/api/path')
+	const base = (await appDataDir()).replace(/[\\/]+$/, '')
+	const separator = base.includes('\\') ? '\\' : '/'
+	const dir = `${base}${separator}portalrinth-backups${separator}ai-edits${separator}${instanceId.replace(/[<>:"/\\|?*]+/g, '_')}`
+	const stamp = new Date()
+	const pad = (value: number) => String(value).padStart(2, '0')
+	const stampStr = `${stamp.getFullYear()}-${pad(stamp.getMonth() + 1)}-${pad(stamp.getDate())}-${pad(stamp.getHours())}-${pad(stamp.getMinutes())}-${pad(stamp.getSeconds())}`
+	const ext = relPath.match(/(\.[^./\\]+)$/)?.[1] ?? '.txt'
+	const stem =
+		relPath
+			.replace(/\.[^./\\]+$/, '')
+			.replace(/[\\/]+/g, '__')
+			.replace(/[^\w.-]+/g, '_') || 'file'
+	await fs.mkdir(dir, { recursive: true })
+	await fs.copyFile(path, `${dir}${separator}${stem}.${stampStr}${ext}.bak`)
+	// Десять последних копий на файл - более старые подчищаются.
+	const entries = await fs.readDir(dir).catch(() => [])
+	const ours = (entries ?? [])
+		.filter((entry) => !entry.isDirectory && (entry.name ?? '').startsWith(`${stem}.`))
+		.map((entry) => entry.name as string)
+		.sort()
+	for (const name of ours.slice(0, Math.max(0, ours.length - 10))) {
+		await fs.remove(`${dir}${separator}${name}`).catch(() => {})
+	}
+}
+
+/**
+ * Моды в логах и краш-репортах живут под сокращениями: «FTBQ» вместо
+ * «FTB Quests», «JEI» вместо «Just Enough Items» - и агент раньше делал
+ * вид, что не знает, о ком речь. Здесь собирается справочник: инициалы
+ * названия (и CamelCase), плюс ствол имени файла, всё, что реально
+ * встречается в тексте лога.
+ */
+async function modAbbreviationGlossary(
+	build: { id: string; name: string },
+	logText: string,
+): Promise<string> {
+	try {
+		const items = await get_content_items(build.id)
+		const entries: string[] = []
+		for (const item of items) {
+			if (item.project_type !== 'mod') continue
+			const title = item.project?.title ?? ''
+			const file = item.file_path ?? item.file_name ?? ''
+			const forms = new Set<string>()
+			if (title) {
+				const spaced = title.replace(/([a-z])([A-Z])/g, '$1 $2')
+				const words = spaced.split(/[^0-9A-Za-zА-Яа-яЁё]+/).filter(Boolean)
+				if (words.length >= 2 && words.length <= 5) {
+					const initials = words.map((word) => word[0].toUpperCase()).join('')
+					if (initials.length >= 2) forms.add(initials)
+				}
+			}
+			const slug = item.project?.slug ?? ''
+			if (slug) forms.add(slug)
+			const stem = file.toLowerCase().replace(/\.jar$/i, '')
+			if (stem) forms.add(stem)
+			const matched = [...forms].filter((form) =>
+				form.length >= 2
+					? new RegExp(
+							`(^|[^0-9A-Za-zА-Яа-яЁё])${escapeRegExp(form)}([^0-9A-Za-zА-Яа-яЁё]|$)`,
+							'i',
+						).test(logText)
+					: false,
+			)
+			if (!matched.length || !title) continue
+			entries.push(
+				`- ${matched.map((form) => (form === form.toLowerCase() ? `\`${form}\`` : form)).join(', ')} = ${title}${file ? ` (${file.split(/[\\/]/).pop()})` : ''}`,
+			)
+			if (entries.length >= 30) break
+		}
+		if (entries.length === 0) return ''
+		return `Справочник сокращений этой сборки (в логе упомянуты те самые моды, полные названия здесь):\n${entries.join('\n')}`
+	} catch {
+		return ''
+	}
+}
+
+function escapeRegExp(text: string): string {
+	return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 async function buildRead(raw: string): Promise<string> {
-	const [buildRaw = '', relRaw = ''] = raw.split('::').map((part) => part.trim())
-	if (!relRaw) return 'Формат: <<instance_read|сборка::путь (например config/sodium-options.json)>>'
+	const [buildRaw = '', relRaw = '', offsetRaw = ''] = raw.split('::').map((part) => part.trim())
+	if (!relRaw)
+		return 'Формат: <<instance_read|сборка::путь (например config/sodium-options.json)::с символа (необязательно)>>'
 	const build = await pickBuild(buildRaw)
 	if (typeof build === 'string') return build
 	const path = insideBuild(await get_full_path(build.id), relRaw)
@@ -839,8 +1043,21 @@ async function buildRead(raw: string): Promise<string> {
 		const info = await fs.stat(path)
 		return `${relRaw} — двоичный файл, ${Math.round((info.size ?? 0) / 1024)} КБ; читать его как текст бессмысленно`
 	}
+	const start = Math.max(0, Number.parseInt(offsetRaw || '0', 10) || 0)
 	const text = await fs.readTextFile(path)
-	return `Файл ${relRaw} из ${buildLink(build)} (${text.length} симв.):\n${text.slice(0, 7000)}${text.length > 7000 ? '\n…(обрезано)' : ''}`
+	noteInstanceRead(path, text, start)
+	const page = text.slice(start, start + READ_PAGE)
+	const nextOffset = start + READ_PAGE
+	return [
+		`Файл ${relRaw} из ${buildLink(build)} — ${text.length} симв.; показаны символы ${start}–${Math.min(text.length, nextOffset)}${text.length > READ_PAGE && nextOffset < text.length ? ` из ${text.length}` : ''}.`,
+		text.length > READ_PAGE && nextOffset < text.length
+			? `Это НЕ весь файл: следующая страница — <<instance_read|${buildRaw || build.name}::${relRaw}::${nextOffset}>>. Прежде чем перезаписать этот файл (instance_write), прочитай его целиком.`
+			: '',
+		'',
+		page,
+	]
+		.filter((part, index) => part !== '' || index >= 2)
+		.join('\n')
 }
 
 async function buildWorlds(raw: string): Promise<string> {
@@ -850,11 +1067,13 @@ async function buildWorlds(raw: string): Promise<string> {
 	if (worlds.length === 0) return `В ${buildLink(build)} нет миров и серверов`
 	return [
 		`Миры и серверы ${buildLink(build)} (экран: [Миры](/instance/${encodeURIComponent(build.id)}/worlds)):`,
-		...worlds.slice(0, 40).map((world) =>
-			world.type === 'singleplayer'
-				? `- Мир «${getWorldDisplayName(world)}» — ${world.game_mode}${world.hardcore ? ', хардкор' : ''}${world.last_played ? `, играли ${new Date(world.last_played).toLocaleString('ru-RU')}` : ''}`
-				: `- Сервер «${getWorldDisplayName(world)}» — \`${world.address}\``,
-		),
+		...worlds
+			.slice(0, 40)
+			.map((world) =>
+				world.type === 'singleplayer'
+					? `- Мир «${getWorldDisplayName(world)}» — ${world.game_mode}${world.hardcore ? ', хардкор' : ''}${world.last_played ? `, играли ${new Date(world.last_played).toLocaleString('ru-RU')}` : ''}`
+					: `- Сервер «${getWorldDisplayName(world)}» — \`${world.address}\``,
+			),
 	].join('\n')
 }
 
@@ -869,21 +1088,40 @@ async function buildWrite(raw: string): Promise<string> {
 	if (!relRaw) return 'Формат: <<instance_write|сборка::путь::текст>>'
 	const build = await pickBuild(buildRaw)
 	if (typeof build === 'string') return build
-	if (/\.(jar|zip|png|jpe?g|gif|webp|dat|mca|7z|exe|dll|msi|nbt|litematic|ogg|mp3)$/i.test(relRaw)) {
+	if (
+		/\.(jar|zip|png|jpe?g|gif|webp|dat|mca|7z|exe|dll|msi|nbt|litematic|ogg|mp3)$/i.test(relRaw)
+	) {
 		return `${relRaw} — бинарный файл, записать его текстом нельзя`
 	}
 	const path = insideBuild(await get_full_path(build.id), relRaw)
 	const text = content.replace(/\\n/g, '\n')
+	// Файл становится короче, чем был, а целиком ИИ его не читал - значит,
+	// запись молча стёрла бы хвост конфига. Не даём: пусть дочитает и запишет
+	// полный текст.
+	let current: string | null = null
 	try {
-		await fs.writeTextFile(path, text)
+		current = await fs.readTextFile(path)
+	} catch {
+		current = null
+	}
+	if (current !== null && current.length > text.length + 200 && !instanceFullyRead(path, current)) {
+		return [
+			`СТОП: «${relRaw}» сейчас ${current.length} символов, а ты пишешь ${text.length} — ты видел не весь файл, и такая запись стёрла бы его конец. Файл НЕ тронут.`,
+			`Прочитай файл целиком (<<instance_read|${buildRaw || build.name}::${relRaw}>> и следующие страницы до конца) и запиши ПОЛНЫЙ текст, либо правь только дописыванием/частичными заменами через тот же instance_write с полным содержимым.`,
+		].join('\n')
+	}
+	try {
+		if (current !== null) await backupInstanceFile(build.id, relRaw, path)
+		await atomicWriteText(path, text)
 	} catch {
 		const separator = path.includes('\\') ? '\\' : '/'
 		const parts = path.split(separator)
 		parts.pop()
 		await fs.mkdir(parts.join(separator), { recursive: true }).catch(() => {})
-		await fs.writeTextFile(path, text)
+		await atomicWriteText(path, text)
 	}
-	return `Записал ${relRaw} в ${buildLink(build)} (${text.length} символов). Если игра была запущена, конфиг подхватится после её перезапуска.`
+	instanceReadProgress.set(path, { total: text.length, sawStart: true, sawEnd: true })
+	return `Записал ${relRaw} в ${buildLink(build)} (${text.length} символов). Прежняя версия сохранена в portalrinth-backups/ai-edits. Если игра была запущена, конфиг подхватится после её перезапуска.`
 }
 registerAiToolHandler(async (tool, args) => {
 	try {
@@ -1050,7 +1288,9 @@ registerAiToolHandler(async (tool, args) => {
 				const next = value ? value.split(/\s+/).filter(Boolean).slice(0, 24) : []
 				settings.extra_launch_args = next
 				await setSettings(settings)
-				return next.length ? `Java-аргументы сохранены: ${next.join(' ')}` : 'Java-аргументы очищены'
+				return next.length
+					? `Java-аргументы сохранены: ${next.join(' ')}`
+					: 'Java-аргументы очищены'
 			}
 			return 'Умею менять: force_fullscreen on/off, resolution ШИРИНА::ВЫСОТА, java_args текст'
 		}
@@ -1075,11 +1315,17 @@ registerAiToolHandler(async (tool, args) => {
 			if (!name) return 'Нужно название темы'
 			const accent = useAccentPreset()
 			try {
-				const existing = savedThemes.value.find((saved) => saved.name.toLowerCase() === name.toLowerCase())
+				const existing = savedThemes.value.find(
+					(saved) => saved.name.toLowerCase() === name.toLowerCase(),
+				)
 				const theme = await saveTheme(
 					name,
 					'palette',
-					{ preset: accent.id.value, tint: accent.tintBackground.value, color: accent.customColor.value },
+					{
+						preset: accent.id.value,
+						tint: accent.tintBackground.value,
+						color: accent.customColor.value,
+					},
 					existing?.id,
 				)
 				return `Сохранил текущий вид как тему «${theme.name}»`
@@ -1109,8 +1355,11 @@ registerAiToolHandler(async (tool, args) => {
 		}
 		case 'install_to_instance': {
 			const [pathRaw = '', second = '', third = ''] = args.split('::').map((part) => part.trim())
-			if (!pathRaw) return 'Формат: <<install_to_instance|файл или папка в песочнице::тип (mod/resourcepack/shaderpack/datapack)::сборка>>'
-			const typeHint = /^(mod|мод|shader|шейдер|data|дата|resource|ресурс|rp|текстур)/i.test(second) ? second : ''
+			if (!pathRaw)
+				return 'Формат: <<install_to_instance|файл или папка в песочнице::тип (mod/resourcepack/shaderpack/datapack)::сборка>>'
+			const typeHint = /^(mod|мод|shader|шейдер|data|дата|resource|ресурс|rp|текстур)/i.test(second)
+				? second
+				: ''
 			const buildRaw = typeHint ? third : second
 			const all = await list().catch(() => [])
 			const { readSelectedBuild } = await import('./ai-assistant')
@@ -1119,7 +1368,8 @@ registerAiToolHandler(async (tool, args) => {
 				? (all.find((instance) => instance.id === buildRaw) ??
 					all.find((instance) => instance.name.toLowerCase() === lower) ??
 					all.find((instance) => instance.name.toLowerCase().includes(lower)))
-				: (all.find((instance) => instance.id === readSelectedBuild()?.id) ?? (all.length === 1 ? all[0] : undefined))
+				: (all.find((instance) => instance.id === readSelectedBuild()?.id) ??
+					(all.length === 1 ? all[0] : undefined))
 			if (!target) {
 				return `Не понял, в какую сборку. Есть: ${all
 					.slice(0, 12)

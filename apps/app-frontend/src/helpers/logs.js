@@ -34,6 +34,17 @@ export async function get_output_by_filename(instanceId, logType, filename) {
 	})
 }
 
+/// Get only the tail of an instance's log by filename (bounded read for the
+/// agent: the end of the file is where errors and crashes live)
+export async function get_output_tail_by_filename(instanceId, logType, filename, maxBytes) {
+	return await invoke('plugin:logs|logs_get_output_tail_by_filename', {
+		instanceId,
+		logType,
+		filename,
+		maxBytes: maxBytes ?? null,
+	})
+}
+
 /// Delete an instance's log by filename
 export async function delete_logs_by_filename(instanceId, logType, filename) {
 	return await invoke('plugin:logs|logs_delete_logs_by_filename', {

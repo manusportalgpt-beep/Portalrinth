@@ -86,6 +86,9 @@ function countCommand(): void {
 // ---- Known contents, for +/- diffs -----------------------------------------
 
 const knownContents = new Map<string, string>()
+/** Сколько символов каждого файла ИИ реально видел (выдача чтения обрезана). */
+const seenContents = new Map<string, number>()
+const SANDBOX_READ_CAP = 24000
 
 function countLines(text: string): number {
 	return text.length === 0 ? 0 : text.split('\n').length
@@ -118,9 +121,7 @@ export async function sandboxList(rel = ''): Promise<string> {
 	const lines = entries
 		.sort((a, b) => Number(b.isDirectory) - Number(a.isDirectory))
 		.map((entry) =>
-			entry.isDirectory
-				? `${entry.name}/`
-				: `${entry.name} (${entry.size ?? 0} байт)`,
+			entry.isDirectory ? `${entry.name}/` : `${entry.name} (${entry.size ?? 0} байт)`,
 		)
 	return `Песочница ${rel || '/'}:\n${lines.join('\n')}`
 }
@@ -130,11 +131,19 @@ export async function sandboxRead(rel: string): Promise<string> {
 	const path = await resolveIn(rel, root())
 	const text = await fs.readTextFile(path)
 	knownContents.set(norm(rel), text)
-	return text.length > 24000 ? `${text.slice(0, 24000)}\n…(обрезано, читай дальше через head/tail)` : text
+	// Что ИИ реально видел: выдача обрезается, и запись без хвоста стёрла бы
+	// файл — гвард в sandboxWrite сверяется с этой отметкой.
+	seenContents.set(norm(rel), Math.min(text.length, SANDBOX_READ_CAP))
+	return text.length > SANDBOX_READ_CAP
+		? `${text.slice(0, SANDBOX_READ_CAP)}\n…(обрезано, читай дальше через head/tail)`
+		: text
 }
 
 function norm(rel: string): string {
-	return String(rel || '').replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase()
+	return String(rel || '')
+		.replace(/\\/g, '/')
+		.replace(/^\/+/, '')
+		.toLowerCase()
 }
 
 /**
@@ -145,9 +154,11 @@ function norm(rel: string): string {
 export async function sandboxWrite(rel: string, content: string): Promise<string> {
 	countCommand()
 	const path = await resolveIn(rel, root())
-	await fs.mkdir(path.slice(0, Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/'))), {
-		recursive: true,
-	}).catch(() => {})
+	await fs
+		.mkdir(path.slice(0, Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/'))), {
+			recursive: true,
+		})
+		.catch(() => {})
 	const key = norm(rel)
 	const before = knownContents.get(key)
 	if (before === undefined) {
@@ -158,8 +169,18 @@ export async function sandboxWrite(rel: string, content: string): Promise<string
 		}
 	}
 	const previous = knownContents.get(key) ?? ''
+	// Урезающая запись файла, чей хвост ИИ не видел (чтение обрезано, а
+	// содержимое он не создавал сам), стёрла бы текст молча — не даём.
+	const seen = seenContents.get(key)
+	if (
+		previous.length > content.length + 200 &&
+		(seen === undefined || seen.length < previous.length - 200)
+	) {
+		return `СТОП: в ${rel} сейчас ${previous.length} символов, ты пишешь ${content.length}, а видел только ${seen ?? 0}. Файл НЕ тронут: дочитай его (head/tail), собери укороченную версию в НОВОМ файле или запиши полный текст.`
+	}
 	await fs.writeTextFile(path, content)
 	knownContents.set(key, content)
+	seenContents.set(key, content.length)
 	const { added, removed } = diffLines(previous, content)
 	const created = previous === ''
 	if (created) {
@@ -405,13 +426,10 @@ async function listOne(rel: string, long: boolean): Promise<string> {
 	if (!(await isDir(abs))) return rel
 	const entries = await fs.readDir(abs)
 	const sorted = entries.sort((a, b) => Number(b.isDirectory) - Number(a.isDirectory))
-	if (!long) return sorted.map((entry) => (entry.isDirectory ? `${entry.name}/` : entry.name)).join('  ')
+	if (!long)
+		return sorted.map((entry) => (entry.isDirectory ? `${entry.name}/` : entry.name)).join('  ')
 	return sorted
-		.map((entry) =>
-			entry.isDirectory
-				? `${entry.name}/`
-				: `${entry.name} (${entry.size ?? 0} Б)`,
-		)
+		.map((entry) => (entry.isDirectory ? `${entry.name}/` : `${entry.name} (${entry.size ?? 0} Б)`))
 		.join('\n')
 }
 
@@ -559,13 +577,18 @@ async function runOne(raw: string): Promise<string> {
 			const file = parts.filter((a) => !a.startsWith('-'))[1] ?? ''
 			if (!pattern || !file) throw new Error('grep: укажите образец и файл')
 			const insensitive = parts.includes('-i')
-			const regex = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), insensitive ? 'i' : '')
+			const regex = new RegExp(
+				pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+				insensitive ? 'i' : '',
+			)
 			const text = await sandboxRead(relWithCwd(file))
 			const hits = text.split('\n').filter((row) => regex.test(row))
 			return hits.length > 0 ? hits.slice(0, 40).join('\n') : 'grep: совпадений нет'
 		}
 		default:
-			throw new Error(`${cmd}: такой команды нет (умею: pwd, cd, ls, cat, head, tail, wc, echo, touch, mkdir, rm, cp, mv, find, tree, grep)`)
+			throw new Error(
+				`${cmd}: такой команды нет (умею: pwd, cd, ls, cat, head, tail, wc, echo, touch, mkdir, rm, cp, mv, find, tree, grep)`,
+			)
 	}
 }
 
@@ -577,7 +600,10 @@ export async function sandboxBash(command: string): Promise<string> {
 	countCommand()
 	const input = command.trim()
 	if (!input) return 'Пустая команда'
-	const segments = input.split('&&').map((part) => part.trim()).filter(Boolean)
+	const segments = input
+		.split('&&')
+		.map((part) => part.trim())
+		.filter(Boolean)
 	const outputs: string[] = []
 	try {
 		for (const segment of segments) {
@@ -588,7 +614,6 @@ export async function sandboxBash(command: string): Promise<string> {
 	}
 	return outputs.join('\n')
 }
-
 
 // ---- The inbox -------------------------------------------------------------
 
@@ -608,7 +633,10 @@ export async function inboxSave(files: AttachedFile[]): Promise<string[]> {
 			skipped.push(file.name)
 			continue
 		}
-		const base = file.name.replace(/[^\p{L}\p{N}._ -]/gu, '_').replace(/\s+/g, ' ').trim()
+		const base = file.name
+			.replace(/[^\p{L}\p{N}._ -]/gu, '_')
+			.replace(/\s+/g, ' ')
+			.trim()
 		if (!base) continue
 		const dot = base.lastIndexOf('.')
 		const stem = dot > 0 ? base.slice(0, dot) : base
@@ -902,8 +930,27 @@ export interface AttachedFile {
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']
 const TEXT_EXTENSIONS = [
-	'txt', 'log', 'json', 'js', 'ts', 'vue', 'css', 'scss', 'html', 'md', 'py',
-	'java', 'kt', 'gradle', 'toml', 'yaml', 'yml', 'cfg', 'ini', 'csv', 'mcmeta',
+	'txt',
+	'log',
+	'json',
+	'js',
+	'ts',
+	'vue',
+	'css',
+	'scss',
+	'html',
+	'md',
+	'py',
+	'java',
+	'kt',
+	'gradle',
+	'toml',
+	'yaml',
+	'yml',
+	'cfg',
+	'ini',
+	'csv',
+	'mcmeta',
 ]
 
 export async function attachFromPaths(paths: string[]): Promise<AttachedFile[]> {

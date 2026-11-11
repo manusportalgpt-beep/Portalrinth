@@ -1,5 +1,5 @@
 use std::fmt::Write as _;
-use std::io::{BufRead, SeekFrom};
+use std::io::{BufRead, Seek, SeekFrom};
 use std::time::SystemTime;
 
 use anyhow::bail;
@@ -527,6 +527,72 @@ pub async fn get_output_by_filename(
         file_name,
     )
     .await
+}
+
+/// Reads the last `max_bytes` of a plain-text log, aligned to a line start.
+///
+/// The agent's log lookups only need the end of the file - that is where
+/// errors and crashes live - and reading a many-megabyte `latest.log` whole
+/// (compaction, censoring, IPC) turned every AI log question into a wait.
+/// A bounded tail keeps the same output quality for a fraction of the work;
+/// gzipped logs and everything else fall back to the full read.
+pub async fn get_output_tail_by_filename(
+    instance_id: &str,
+    log_type: LogType,
+    file_name: &str,
+    max_bytes: Option<u64>,
+) -> crate::Result<CensoredString> {
+    let state = State::get().await?;
+    let instance_path = resolve_instance_path(instance_id, &state).await?;
+    let logs_folder = match log_type {
+        LogType::InfoLog => state.directories.instance_logs_dir(&instance_path),
+        LogType::CrashReport => {
+            state.directories.crash_reports_dir(&instance_path)
+        }
+    };
+    let path = logs_folder.join(file_name);
+
+    if let Some(ext) = path.extension() {
+        if ext == "log" || ext == "txt" {
+            let metadata = std::fs::metadata(&path)
+                .map_err(|e| IOError::with_path(e, &path))?;
+            let max = max_bytes.unwrap_or(512 * 1024).clamp(4096, 4 * 1024 * 1024);
+            if metadata.len() > max {
+                let mut reader = std::io::BufReader::new(
+                    std::fs::File::open(&path).map_err(|e| IOError::with_path(e, &path))?,
+                );
+                reader
+                    .seek(SeekFrom::Start(metadata.len() - max))
+                    .map_err(|e| IOError::with_path(e, &path))?;
+                // Drop the partial line the seek landed in the middle of, so
+                // the compaction sees whole lines only.
+                let mut scratch = Vec::new();
+                reader
+                    .read_until(b'\n', &mut scratch)
+                    .map_err(|e| IOError::with_path(e, &path))?;
+                let compacted = read_compacted_log(&mut reader)
+                    .map_err(|e| IOError::with_path(e, &path))?;
+                maybe_emit_log_compaction_warning(file_name, compacted.stats).await;
+                let credentials = Credentials::get_all(&state.pool)
+                    .await?
+                    .into_iter()
+                    .map(|x| x.1)
+                    .collect::<Vec<_>>();
+                let ely_credentials = ElyCredentials::get_all(&state.pool)
+                    .await
+                    .unwrap_or_default();
+                return Ok(CensoredString::censor_all(
+                    compacted.output,
+                    &credentials,
+                    &ely_credentials,
+                ));
+            }
+        }
+    }
+
+    // Small files, gz archives and unknown extensions: the full read.
+    get_output_by_filename_from_path(&state, &instance_path, log_type, file_name)
+        .await
 }
 
 #[tracing::instrument]
