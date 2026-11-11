@@ -404,6 +404,24 @@ function positionSlider(animate = true) {
 	animateSliderTo(newPosition)
 }
 
+/** Which page owns a route for the Discover bars: the skin shelf is its own
+    component, every other /browse path lives in Browse. Two different keys
+    across one navigation mean this bar unmounts and its sibling takes over. */
+function handoffTarget(path: unknown): string {
+	const p = String(path ?? '')
+	if (p.startsWith('/browse/skin')) return 'browse-skin'
+	if (p.startsWith('/browse')) return 'browse'
+	return p
+}
+
+/** True while a navigation is handing this Discover bar over to its sibling
+    page (Browse <-> Skin Browse): the bar is about to unmount, so it must not
+    chase the new route. Its move would overwrite the pill's remembered
+    position with the destination, and the mounting sibling would find the
+    snapshot already standing on the target - the pill would appear in place
+    instead of travelling, exactly what the Скины tab used to do. */
+let handoffInFlight = false
+
 function resetSliderPosition() {
 	/* The mount sequence owns the pill until its slide has started: the
 	 * observer's first callback lands between the two frames of that
@@ -448,10 +466,19 @@ onUnmounted(() => {
 
 watch(
 	() => [route.path, route.query],
-	() => {
-		if (props.mode === 'navigation') {
-			updateActiveTab()
+	([newPath], [oldPath]) => {
+		if (props.mode !== 'navigation') return
+		handoffInFlight = isDiscoverBar.value && handoffTarget(newPath) !== handoffTarget(oldPath)
+		if (handoffInFlight) {
+			if (!String(newPath).startsWith('/browse')) {
+				// Leaving Discover entirely: no sibling bar will pick the
+				// pill up, so drop the memory - a stale position from an old
+				// visit must not leak into the next fresh mount.
+				navTabsSliderMemory.snapshot = null
+			}
+			return
 		}
+		updateActiveTab()
 	},
 )
 
@@ -467,6 +494,10 @@ watch(
 watch(
 	() => props.links,
 	async () => {
+		// The same navigation also replays the links (Browse rebuilds its
+		// suffix from the query), and this watcher fires right after the
+		// route one: a dying bar must stay quiet here too.
+		if (handoffInFlight) return
 		await nextTick()
 		updateActiveTab()
 	},
@@ -477,8 +508,8 @@ watch(
 <style scoped>
 nav {
 	/* A glass plate, not an opaque one: an almost-black slab behind the tabs
-	   read as a black board laid over the page. The blur keeps the labels
-	   readable over whatever the page carries. */
+           read as a black board laid over the page. The blur keeps the labels
+           readable over whatever the page carries. */
 	background: color-mix(in srgb, var(--color-raised-bg) 55%, transparent);
 	backdrop-filter: blur(12px) saturate(1.2);
 	-webkit-backdrop-filter: blur(12px) saturate(1.2);
