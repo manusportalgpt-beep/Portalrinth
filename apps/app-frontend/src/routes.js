@@ -102,6 +102,36 @@ export default new createRouter({
 					name: 'Notifications',
 					component: Dashboard.Notifications,
 				},
+				{
+					path: 'projects',
+					name: 'CreatorProjects',
+					component: Dashboard.Projects,
+				},
+				{
+					path: 'projects/:id',
+					name: 'CreatorProject',
+					component: Dashboard.ProjectManage,
+				},
+				{
+					path: 'organizations',
+					name: 'CreatorOrganizations',
+					component: Dashboard.Organizations,
+				},
+				{
+					path: 'analytics',
+					name: 'CreatorAnalytics',
+					component: Dashboard.Analytics,
+				},
+				{
+					path: 'revenue',
+					name: 'CreatorRevenue',
+					component: Dashboard.Revenue,
+				},
+				{
+					path: 'reports',
+					name: 'CreatorReports',
+					component: Dashboard.Reports,
+				},
 			],
 		},
 		{

@@ -1185,7 +1185,11 @@ export const AI_LAUNCHER_HINT = [
 	'Живой клиент (игра уже запущена): текстуры и шейдеры меняются НА МЕСТЕ — распакуй пак (<<instance_unpack|сборка::путь>>), поправь/добавь файлы, собери (<<sandbox_pack|…>>) и поставь поверх (<<install_to_instance|файл::тип>>); затем скажи игроку ОДНОЙ строкой, что нажать: ресурс-пак — F3+T прямо в игре (без перезапуска), шейдер — заново выбрать пак в настройках шейдеров (Iris/Oculus), конфиги и моды — только после перезапуска игры. Горячей перезагрузки модов не существует — не обещай её',
 	'- <<open_settings|>> — открыть настройки лаунчера',
 	'Установка контента: launcher_install ставит ТОЛЬКО версию под Minecraft и ядро сборки, сама подтягивает зависимости (как кнопка «Установить» в лаунчере). Id с Modrinth — как есть, с CurseForge — cf:ID (их даёт launcher_search_mods). Если ответ «НЕ установлено» — мод не вышел под эту версию: честно скажи и предложи аналог; НИКОГДА не пиши «установил», если инструмент ответил ошибкой.',
-	'Сервер/LAN — думай логично, что к чему относится. «Открыть мир для сети», «игра по сети», «сервер мир», «лан», «друг заходит в мой мир» — это LAN (бесплатно): 1) <<launch_instance|сборка>>; 2) в игре Esc → «Открыть для сети» — ЭТО КЛИКАЕТ ИГРОК: ты не можешь нажимать внутри запущенной игры, честно скажи одной строкой, куда нажать, и подожди, пока игрок откроет мир; 3) <<lan_status|>> — если ответ «мир для сети ещё не открыт», НЕ публиковай и не паникуй: скажи игроку открыть мир и жди, когда он скажет «готово»; когда мир открыт — <<lan_publish|сборка>> даст адрес для друзей (дай адрес в обратных кавычках); <<lan_stop|сборка>> — закрыть. А вот «постоянный сервер», «сервер 24/7», «чтобы работало всегда», «хостинг» — это уже НЕ LAN: либо Modrinth Hosting (платно, экран /hosting/manage), либо свой server.jar (ты не можешь запустить java-сервер — песочница не исполняет программы). Объясни разницу честно: LAN бесплатен, но живёт только пока открыт мир и запущена игра; Hosting платный, но сервер работает всегда. Не смешивай эти вещи и не обещай LAN то, что умеет только Hosting. Экран LAN: /lan.',
+	'Сервер/LAN — думай логично, что к чему относится. «Открыть мир для сети», «игра по сети», «сервер мир», «лан», «друг заходит в мой мир» — это LAN (бесплатно): 1) <<launch_instance|сборка>>; 2) в игре Esc → «Открыть для сети» — ЭТО КЛИКАЕТ ИГРОК: ты не можешь нажимать внутри запущенной игры, честно скажи одной строкой, куда нажать, и подожди, пока игрок откроет мир; 3) <<lan_status|>> — если ответ «мир для сети ещё не открыт», НЕ публиковай и не паникуй: скажи игроку открыть мир и жди, когда он скажет «готово»; когда мир открыт — <<lan_publish|сборка>> даст адрес для друзей (дай адрес в обратных кавычках); <<lan_stop|сборка>> — закрыть. А вот «постоянный сервер», «сервер 24/7», «чтобы работало всегда», «хостинг» — это уже НЕ LAN: либо Modrinth Hosting (платно, экран /hosting/manage), либо Self-Hosted — свой сервер, который лаунчер запускает на компьютере игрока (бесплатно, экран /server-hosting; им ты управляешь сам инструментами hosting_*). Объясни разницу честно: LAN бесплатен, но живёт только пока открыт мир и запущена игра; Hosting платный, но сервер работает всегда. Не смешивай эти вещи и не обещай LAN то, что умеет только Hosting. Экран LAN: /lan.',
+	'Self-Hosted (свои серверы игрока, экран /server-hosting) — ты управляешь ими сам через консоль лаунчера: <<hosting_list|>> — все серверы со статусом, адресом и игроками онлайн; <<hosting_status|сервер>> — подробно (CPU/RAM, настройки, причина падения); <<hosting_power|сервер::start>> (или stop, restart); <<hosting_console|сервер::50>> — последние строки консоли; <<hosting_cmd|сервер::команда;;команда>> — выполнить команды в консоли сервера (без «/», до 20 за раз, ответ сервера вернётся). Сервер можно указать именем или id; если сервер один (или один запущен) — можно оставить пусто: <<hosting_cmd|::say Привет>>.',
+	'Как работать с сервером: 1) сначала <<hosting_list|>> (или status), если не знаешь, какой сервер и запущен ли он; 2) не запущен — спроси игрока, запустить ли, и <<hosting_power|сервер::start>>; 3) переведи просьбу в ванильные команды и выполни <<hosting_cmd|…>>; 4) прочитай ответ консоли и коротко скажи итог (ошибка «Unknown command»/«No player was found» — объясни и исправь). Если в просьбе не хватает важной детали — количество, предмет, ник игрока, время, режим — НЕ выдумывай, спроси через <<ask_user|Сколько алмазов выдать каждому?::1;;16;;64>> с удобными вариантами. Пример: «выдай всем алмазы» → спроси количество → <<hosting_cmd|::give @a minecraft:diamond 64>>.',
+	'Шпаргалка команд (Java 1.13+): выдать предмет give <ник|@a> minecraft:<id> [кол-во] (больше 64 можно — разложится по стакам); зачарованный предмет: give @p minecraft:diamond_sword[enchantments={sharpness:5}] на 1.20.5+, а на старых — give @p diamond_sword{Enchantments:[{id:sharpness,lvl:5}]}; опыт xp add <ник> <N> levels; режим gamemode <survival|creative|adventure|spectator> <ник|@a>; оператор op/deop <ник>; телепорт tp <кто> <к кому> или tp <кто> x y z; время time set <day|night|noon|midnight>; погода weather <clear|rain|thunder> [секунды]; сложность difficulty <peaceful|easy|normal|hard>; правила gamerule <правило> <значение> (keepInventory true, doDaylightCycle false, doMobSpawning false, playersSleepingPercentage 0…); эффекты effect give <ник> minecraft:<эффект> <сек> <уровень>, снять effect clear <ник>; лечение effect give <ник> minecraft:instant_health 1 10; спавн setworldspawn, spawnpoint <ник>; whitelist add/remove <ник>, whitelist on/off, whitelist list; кик kick <ник> [причина]; бан ban <ник> [причина], pardon <ник>; сообщение всем say <текст>, личное tell <ник> <текст>, большой экран title @a title {"text":"…"}; убрать предметы с земли kill @e[type=item]; очистить инвентарь clear <ник>; сохранить мир save-all; список игроков list; граница worldborder set <размер>. Версия сервера есть в hosting_list — учитывай синтаксис версии, при сомнении проверь web_search.',
+	'Опасные команды (stop, ban, ban-ip, op, deop, clear, kill не по предметам, whitelist off, массовый tp, fill/setblock больших областей) выполняй только после явного «да» игрока через ask_user — одной строкой, что именно произойдёт. Остальное (выдать, погода, время, say, list) — делай сразу. Список игроков онлайн бери из hosting_list/hosting_status, а не придумывай ники.',
 	'Вики и гайды: <<fandom|что ищем::мод (необязательно)>> — статья с Fandom-вики мода или Minecraft Wiki (рецепты, механики, гайды), например <<fandom|Mechanical Press::Create>> или <<fandom|незерит>>. Игрок увидит карточку статьи с картинкой — клик по ней открывает статью в браузере; перескажи главное своими словами. Если игрок хочет почитать — <<open_page|ссылка на статью>>. Для вопросов «как скрафтить/как работает/гайд по моду» сначала fandom.',
 	'Сайты: делай проект в песочнице (site/index.html, style.css, script.js), затем <<site_preview|site/index.html>> — игрок увидит живой предпросмотр сайта прямо в чате.',
 ].join('\n')
@@ -1946,7 +1950,7 @@ async function callProvider(
 		// Small talk never needs a lecture back; real work keeps the headroom.
 		// Free reasoning models spend part of the budget thinking before the
 		// first visible word, so even a greeting gets room for that.
-		max_tokens: fastPath ? 1200 : settings.deepThink ? 32768 : 16384,
+		max_tokens: fastPath ? 4096 : settings.deepThink ? 32768 : 16384,
 		stream: Boolean(onDelta),
 	}
 	if (providerId === 'openrouter') {
@@ -2046,11 +2050,11 @@ async function callProvider(
 	}
 	watchdog.rearm(idleCeiling)
 	let data: {
-		choices?: { message?: { content?: string } }[]
+		choices?: { message?: { content?: string }; finish_reason?: string | null }[]
 	}
 	try {
 		data = (await response.json()) as {
-			choices?: { message?: { content?: string } }[]
+			choices?: { message?: { content?: string }; finish_reason?: string | null }[]
 		}
 	} catch (error) {
 		throw normalizeAttemptError(provider.label, error, signal, attemptCeiling)
@@ -2059,6 +2063,13 @@ async function callProvider(
 	}
 	const content = data.choices?.[0]?.message?.content ?? ''
 	if (!content) throw new Error(`${provider.label}: пустой ответ`)
+	if (data.choices?.[0]?.finish_reason === 'length') {
+		const cut = new Error(`${provider.label}: ответ упёрся в лимит токенов`) as Error & {
+			partial?: string
+		}
+		cut.partial = content
+		throw cut
+	}
 	return content
 }
 
@@ -2154,6 +2165,10 @@ async function readStreamedContent(
 	// off mid-generation: such text is shown but never trusted as a
 	// completed answer, so no launcher action runs out of it.
 	let sawTerminal = false
+	// finish_reason "length": the token budget ran out mid-sentence (a
+	// thinking model spends it before the first visible word). That is a
+	// cut answer, not a finished one - it goes back for a continuation.
+	let hitLimit = false
 	const takeLine = (line: string) => {
 		const trimmed = line.trim()
 		if (!trimmed.startsWith('data:')) return
@@ -2173,6 +2188,7 @@ async function readStreamedContent(
 			}
 			const choice = parsed.choices?.[0]
 			if (choice?.finish_reason) sawTerminal = true
+			if (choice?.finish_reason === 'length') hitLimit = true
 			const piece = choice?.delta?.content ?? choice?.message?.content
 			if (piece) {
 				full += piece
@@ -2200,7 +2216,7 @@ async function readStreamedContent(
 		// ends flush against its final data line still gets read.
 		takeLine(buffer)
 		buffer = ''
-		if (full && !sawTerminal) {
+		if (full && (!sawTerminal || hitLimit)) {
 			throw new Error('поток оборвался после части ответа')
 		}
 	} catch (error) {
@@ -2294,7 +2310,7 @@ async function callProviderWithRetry(
 			lastError = error
 			if (signal?.aborted) throw error
 			const partial = (error as { partial?: string } | null)?.partial ?? ''
-			if (partial.trim().length >= 20 && continuations < 3) {
+			if (partial.trim().length >= 2 && continuations < 3) {
 				continuations++
 				prefix += partial
 				currentPayload = [
@@ -2566,6 +2582,9 @@ const PARALLEL_TOOLS = new Set([
 	'sysinfo',
 	'launcher_get_settings',
 	'lan_status',
+	'hosting_list',
+	'hosting_status',
+	'hosting_console',
 ])
 
 /**

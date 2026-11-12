@@ -14,6 +14,7 @@ import {
 	BrainCircuitIcon,
 	CheckIcon,
 	ChevronDownIcon,
+	ChevronRightIcon,
 	ClockIcon,
 	CodeIcon,
 	CompassIcon,
@@ -44,10 +45,13 @@ import {
 	PackageSearchIcon,
 	PaintbrushIcon,
 	PaletteIcon,
+	PlayIcon,
 	ScanEyeIcon,
 	SearchIcon,
+	ServerIcon,
 	ShirtIcon,
 	SparklesIcon,
+	StopCircleIcon,
 	TerminalSquareIcon,
 	TimerIcon,
 	TrashIcon,
@@ -140,6 +144,19 @@ const TOOLS: Record<string, ToolMeta> = {
 	skin_recommend: { title: 'Подбор скинов', icon: ShirtIcon },
 	timer_set: { title: 'Таймер', icon: TimerIcon },
 	celebrate: { title: 'Праздник', icon: SparklesIcon },
+	fandom: { title: 'Вики', icon: BookOpenIcon },
+	plan_start: { title: 'План', icon: ListBulletedIcon },
+	instance_info: { title: 'Сборка', icon: BoxIcon },
+	launch_instance: { title: 'Запуск игры', icon: PlayIcon },
+	stop_instance: { title: 'Закрытие игры', icon: StopCircleIcon },
+	lan_status: { title: 'LAN', icon: GlobeIcon },
+	lan_publish: { title: 'Мир для друзей', icon: GlobeIcon },
+	lan_stop: { title: 'Закрытие LAN', icon: GlobeIcon },
+	hosting_list: { title: 'Мои серверы', icon: ServerIcon },
+	hosting_status: { title: 'Состояние сервера', icon: ServerIcon },
+	hosting_power: { title: 'Питание сервера', icon: ServerIcon },
+	hosting_console: { title: 'Консоль сервера', icon: TerminalSquareIcon },
+	hosting_cmd: { title: 'Команда серверу', icon: TerminalSquareIcon },
 }
 
 function metaOf(step: AiStep): ToolMeta {
@@ -265,6 +282,71 @@ function detailOf(step: AiStep): Detail {
 		default:
 			return output ? { kind: 'text', text: output } : { kind: 'none' }
 	}
+}
+
+type Peek =
+	| { kind: 'search'; query: string; sources: { title: string; url: string }[] }
+	| { kind: 'link'; url: string }
+	| { kind: 'route'; path: string; label: string }
+	| { kind: 'console'; server: string; commands: string[] }
+
+const ROUTES: [string, string][] = [
+	['/browse/modpack', 'Модпаки'],
+	['/browse/mod', 'Моды'],
+	['/browse/resourcepack', 'Ресурс-паки'],
+	['/browse/shader', 'Шейдеры'],
+	['/browse/datapack', 'Датапаки'],
+	['/browse/plugin', 'Плагины'],
+	['/browse/skin', 'Каталог скинов'],
+	['/browse', 'Каталог'],
+	['/project/', 'Страница проекта'],
+	['/instance/', 'Сборка'],
+	['/library', 'Библиотека'],
+	['/skins', 'Скины'],
+	['/screenshots', 'Скриншоты'],
+	['/server-hosting', 'Self-Hosted'],
+	['/hosting', 'Modrinth Hosting'],
+	['/lan', 'LAN'],
+	['/dashboard', 'Панель'],
+	['/user/', 'Профиль'],
+	['/ai', 'Portalus'],
+	['/', 'Главная'],
+]
+
+function routeLabel(path: string) {
+	return ROUTES.find(([prefix]) => path === prefix || path.startsWith(prefix))?.[1] ?? path
+}
+
+const isUrl = (value: string) => /^https?:\/\//i.test(value.trim())
+
+function peekOf(step: AiStep): Peek | null {
+	if (step.kind !== 'tool') return null
+	const args = (step.args ?? '').trim()
+	switch (step.tool) {
+		case 'web_search':
+			return { kind: 'search', query: args, sources: (step.sources ?? []).slice(0, 6) }
+		case 'web_fetch':
+		case 'open_page':
+			return isUrl(head(args)) ? { kind: 'link', url: head(args) } : null
+		case 'navigate':
+			return args ? { kind: 'route', path: args, label: routeLabel(args) } : null
+		case 'hosting_cmd': {
+			const commands = rest(args)
+				.split(/;;|\n/)
+				.map((command) => command.trim().replace(/^\//, ''))
+				.filter(Boolean)
+			return commands.length ? { kind: 'console', server: head(args), commands } : null
+		}
+		default:
+			return null
+	}
+}
+
+const peeks = computed(() => new Map(props.steps.map((step) => [step.id, peekOf(step)])))
+
+function peekAs<K extends Peek['kind']>(id: string, kind: K) {
+	const peek = peeks.value.get(id)
+	return (peek?.kind === kind ? peek : undefined) as Extract<Peek, { kind: K }>
 }
 
 const details = computed(() => new Map(props.steps.map((step) => [step.id, detailOf(step)])))
@@ -507,6 +589,104 @@ async function copy(key: string, text: string) {
 									/>
 								</span>
 							</button>
+
+							<div v-if="peeks.get(step.id)?.kind === 'search'" class="ai-peek ai-peek--search">
+								<template v-for="peek in [peekAs(step.id, 'search')]" :key="step.id + peek.kind">
+									<span class="ai-peek-query">
+										<SearchIcon class="size-3.5 shrink-0" />
+										<span class="truncate" :class="{ 'ai-shimmer': step.status === 'running' }">{{
+											peek.query
+										}}</span>
+									</span>
+									<span v-if="step.status === 'running'" class="ai-peek-chips" aria-hidden="true">
+										<span
+											v-for="n in 3"
+											:key="n"
+											class="ai-peek-ghost"
+											:style="{ animationDelay: `${n * 0.15}s` }"
+										/>
+									</span>
+									<TransitionGroup
+										v-else-if="peek.sources.length"
+										tag="span"
+										name="ai-chip"
+										class="ai-peek-chips"
+										appear
+									>
+										<a
+											v-for="(source, sourceIndex) in peek.sources"
+											:key="source.url"
+											:href="source.url"
+											class="ai-peek-chip"
+											:style="{ transitionDelay: `${sourceIndex * 0.05}s` }"
+											:title="source.title"
+											@click.prevent="emit('open-link', source.url)"
+										>
+											<img :src="favicon(source.url)" alt="" class="ai-favicon" loading="lazy" />
+											<span class="truncate">{{ hostOf(source.url) }}</span>
+										</a>
+									</TransitionGroup>
+								</template>
+							</div>
+
+							<a
+								v-else-if="peeks.get(step.id)?.kind === 'link'"
+								:href="peekAs(step.id, 'link').url"
+								class="ai-peek ai-peek--link"
+								:class="{ 'ai-peek--running': step.status === 'running' }"
+								@click.prevent="emit('open-link', peekAs(step.id, 'link').url)"
+							>
+								<img
+									:src="favicon(peekAs(step.id, 'link').url)"
+									alt=""
+									class="ai-favicon ai-favicon--lg"
+									loading="lazy"
+								/>
+								<span class="ai-source-text">
+									<span class="ai-source-title">{{ hostOf(peekAs(step.id, 'link').url) }}</span>
+									<span class="ai-source-host">{{
+										pathOf(peekAs(step.id, 'link').url) || '/'
+									}}</span>
+								</span>
+								<ExternalIcon class="ai-source-open size-3.5" />
+								<span v-if="step.status === 'running'" class="ai-peek-bar" aria-hidden="true" />
+							</a>
+
+							<div v-else-if="peeks.get(step.id)?.kind === 'route'" class="ai-peek ai-peek--route">
+								<span class="ai-peek-from">
+									<SparklesIcon class="size-3.5" />
+									Portalus
+								</span>
+								<span class="ai-peek-arrow" aria-hidden="true"
+									><ChevronRightIcon class="size-3.5"
+								/></span>
+								<span class="ai-peek-to">
+									<CompassIcon class="size-3.5 shrink-0" />
+									<span class="truncate">{{ peekAs(step.id, 'route').label }}</span>
+								</span>
+							</div>
+
+							<div
+								v-else-if="peeks.get(step.id)?.kind === 'console'"
+								class="ai-peek ai-peek--console"
+								:class="{ 'ai-peek--running': step.status === 'running' }"
+							>
+								<span
+									v-for="(command, commandIndex) in peekAs(step.id, 'console').commands.slice(0, 6)"
+									:key="commandIndex"
+									class="ai-peek-line"
+								>
+									<span class="ai-peek-prompt">&gt;</span>
+									<span class="truncate">{{ command }}</span>
+								</span>
+								<span
+									v-if="peekAs(step.id, 'console').commands.length > 6"
+									class="ai-peek-line ai-peek-more"
+								>
+									+{{ peekAs(step.id, 'console').commands.length - 6 }}
+								</span>
+								<span v-if="step.status === 'running'" class="ai-peek-caret" aria-hidden="true" />
+							</div>
 
 							<!-- The picture is the point of the step, so it is never folded away. -->
 							<div v-if="step.tool === 'gen_image'" class="ai-gen">
@@ -1383,6 +1563,257 @@ async function copy(key: string, text: string) {
 	.ai-shimmer,
 	.ai-steps-badge--live {
 		animation: none;
+	}
+}
+
+.ai-peek {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	margin: 0.15rem 0.4rem 0.35rem 0.4rem;
+	min-width: 0;
+	overflow: hidden;
+	animation: ai-peek-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ai-peek--search {
+	flex-wrap: wrap;
+}
+
+.ai-peek-query {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	max-width: 100%;
+	min-width: 0;
+	padding: 0.25rem 0.6rem;
+	border: 1px solid color-mix(in srgb, var(--color-brand) 30%, transparent);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--color-brand) 10%, transparent);
+	color: var(--color-contrast);
+	font-size: 0.75rem;
+}
+
+.ai-peek-query svg {
+	color: var(--color-brand);
+}
+
+.ai-peek-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3rem;
+	min-width: 0;
+}
+
+.ai-peek-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	max-width: 11rem;
+	padding: 0.2rem 0.55rem 0.2rem 0.3rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--surface-4, var(--color-button-bg)) 70%, transparent);
+	color: var(--color-secondary);
+	font-size: 0.6875rem;
+	text-decoration: none;
+	transition:
+		color 0.2s ease,
+		border-color 0.2s ease,
+		transform 0.2s ease;
+}
+
+.ai-peek-chip:hover {
+	border-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+	color: var(--color-contrast);
+	transform: translateY(-1px);
+}
+
+.ai-peek-ghost {
+	width: 4.5rem;
+	height: 1.3rem;
+	border-radius: 999px;
+	background: linear-gradient(
+		90deg,
+		color-mix(in srgb, var(--color-contrast) 5%, transparent) 0%,
+		color-mix(in srgb, var(--color-contrast) 12%, transparent) 50%,
+		color-mix(in srgb, var(--color-contrast) 5%, transparent) 100%
+	);
+	background-size: 200% 100%;
+	animation: ai-peek-ghost 1.2s ease-in-out infinite;
+}
+
+.ai-peek--link {
+	gap: 0.6rem;
+	padding: 0.45rem 0.65rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 0.65rem;
+	background: color-mix(in srgb, var(--surface-4, var(--color-button-bg)) 55%, transparent);
+	color: inherit;
+	text-decoration: none;
+	transition: border-color 0.2s ease;
+}
+
+.ai-peek--link:hover {
+	border-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+}
+
+.ai-peek--link:hover .ai-source-open {
+	opacity: 1;
+}
+
+.ai-peek-bar {
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	height: 2px;
+	width: 40%;
+	border-radius: 2px;
+	background: var(--color-brand);
+	animation: ai-peek-bar 1.1s ease-in-out infinite;
+}
+
+.ai-peek--route {
+	font-size: 0.75rem;
+}
+
+.ai-peek-from,
+.ai-peek-to {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	min-width: 0;
+	padding: 0.2rem 0.55rem;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--color-contrast) 6%, transparent);
+	color: var(--color-secondary);
+}
+
+.ai-peek-to {
+	background: color-mix(in srgb, var(--color-brand) 14%, transparent);
+	color: var(--color-contrast);
+}
+
+.ai-peek-to svg {
+	color: var(--color-brand);
+}
+
+.ai-peek-arrow {
+	display: inline-flex;
+	flex-shrink: 0;
+	color: var(--color-brand);
+	animation: ai-peek-hop 1.4s ease-in-out infinite;
+}
+
+.ai-peek--console {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0.1rem;
+	padding: 0.45rem 0.65rem;
+	border: 1px solid var(--surface-5);
+	border-radius: 0.65rem;
+	background: color-mix(in srgb, #000 35%, transparent);
+	font-family: var(--mono-font, ui-monospace, monospace);
+	font-size: 0.72rem;
+	color: var(--color-contrast);
+}
+
+.ai-peek-line {
+	display: flex;
+	gap: 0.4rem;
+	min-width: 0;
+}
+
+.ai-peek-prompt {
+	flex-shrink: 0;
+	color: var(--color-brand);
+	font-weight: 700;
+}
+
+.ai-peek-more {
+	color: var(--color-secondary);
+}
+
+.ai-peek-caret {
+	width: 0.45rem;
+	height: 0.85rem;
+	margin-left: 1rem;
+	background: var(--color-brand);
+	animation: ai-peek-caret 1s steps(1) infinite;
+}
+
+.ai-chip-enter-active {
+	transition:
+		opacity 0.3s ease,
+		transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ai-chip-enter-from {
+	opacity: 0;
+	transform: translateY(4px) scale(0.92);
+}
+
+@keyframes ai-peek-in {
+	from {
+		opacity: 0;
+		transform: translateY(-3px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes ai-peek-ghost {
+	0% {
+		background-position: 100% 0;
+	}
+	100% {
+		background-position: -100% 0;
+	}
+}
+
+@keyframes ai-peek-bar {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(260%);
+	}
+}
+
+@keyframes ai-peek-hop {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	50% {
+		transform: translateX(3px);
+	}
+}
+
+@keyframes ai-peek-caret {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ai-peek,
+	.ai-peek-ghost,
+	.ai-peek-bar,
+	.ai-peek-arrow,
+	.ai-peek-caret {
+		animation: none;
+	}
+
+	.ai-chip-enter-active {
+		transition: none;
 	}
 }
 </style>

@@ -26,10 +26,12 @@ import {
 	zaiPeakHoursLabel,
 	zaiPeakHoursNow,
 } from '@/helpers/ai-assistant'
+import { useAiCatalogText } from '@/helpers/ai-catalog-text'
 
 const emit = defineEmits<{ picked: [] }>()
 
 const { formatMessage } = useVIntl()
+const catalog = useAiCatalogText()
 const messages = {
 	search: { id: 'app.ai.picker.search', defaultMessage: 'Найти модель' },
 	providers: { id: 'app.ai.picker.providers', defaultMessage: 'Провайдеры' },
@@ -240,7 +242,7 @@ async function runTest() {
 
 		<div v-if="query.trim()" class="ai-picker-results">
 			<template v-for="group in searchResults" :key="group.provider.id">
-				<p class="ai-picker-caption">{{ group.provider.label }}</p>
+				<p class="ai-picker-caption">{{ catalog.label(group.provider.label) }}</p>
 				<button
 					v-for="model in group.models"
 					:key="model.id"
@@ -250,7 +252,7 @@ async function runTest() {
 					@click="selectModel(group.provider, model.id)"
 				>
 					<span class="min-w-0 grow">
-						<span class="ai-picker-model-name">{{ model.label }}</span>
+						<span class="ai-picker-model-name">{{ catalog.label(model.label) }}</span>
 						<span class="ai-picker-model-id">{{ model.id }}</span>
 					</span>
 					<CheckIcon
@@ -275,7 +277,7 @@ async function runTest() {
 					@click="viewedId = p.id"
 				>
 					<span class="ai-picker-provider-row">
-						<span class="ai-picker-provider-name">{{ p.label }}</span>
+						<span class="ai-picker-provider-name">{{ catalog.label(p.label) }}</span>
 						<span
 							v-if="aiSettings.provider === p.id"
 							v-tooltip="formatMessage(messages.active)"
@@ -297,8 +299,8 @@ async function runTest() {
 
 			<section class="ai-picker-detail">
 				<div class="ai-picker-detail-head">
-					<span class="ai-picker-detail-title">{{ viewed.label }}</span>
-					<p v-if="viewed.note" class="ai-picker-note">{{ viewed.note }}</p>
+					<span class="ai-picker-detail-title">{{ catalog.label(viewed.label) }}</span>
+					<p v-if="viewed.note" class="ai-picker-note">{{ catalog.note(viewed) }}</p>
 				</div>
 
 				<div v-if="viewed.needsKey" class="ai-picker-key">
@@ -381,7 +383,7 @@ async function runTest() {
 					<template v-if="managing">
 						<label v-for="model in visibleModels" :key="model.id" class="ai-picker-model">
 							<span class="min-w-0 grow">
-								<span class="ai-picker-model-name">{{ model.label }}</span>
+								<span class="ai-picker-model-name">{{ catalog.label(model.label) }}</span>
 								<span class="ai-picker-model-id">{{ model.id }}</span>
 							</span>
 							<Toggle
@@ -401,7 +403,7 @@ async function runTest() {
 							@click="selectModel(viewed, model.id)"
 						>
 							<span class="min-w-0 grow">
-								<span class="ai-picker-model-name">{{ model.label }}</span>
+								<span class="ai-picker-model-name">{{ catalog.label(model.label) }}</span>
 								<span class="ai-picker-model-id">{{ model.id }}</span>
 							</span>
 							<CheckIcon v-if="isCurrent(viewed, model.id)" class="size-4 shrink-0 text-brand" />
@@ -560,12 +562,15 @@ async function runTest() {
 }
 
 .ai-picker-provider-name {
+	display: -webkit-box;
 	overflow: hidden;
 	font-size: 0.8125rem;
 	font-weight: 600;
+	line-height: 1.25;
 	color: var(--color-contrast);
-	white-space: nowrap;
-	text-overflow: ellipsis;
+	overflow-wrap: anywhere;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
 }
 
 .ai-picker-dot {

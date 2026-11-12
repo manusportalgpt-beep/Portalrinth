@@ -81,6 +81,7 @@ import {
 	stopAgentRun,
 	stripLooseCommands,
 } from '@/helpers/ai-assistant'
+import { useAiCatalogText } from '@/helpers/ai-catalog-text'
 import { highlightLine } from '@/helpers/ai-code-highlight'
 import { buildSitePreview } from '@/helpers/ai-launcher-tools'
 import { addAiPing, aiPings, removeAiPing, serializeAiPings } from '@/helpers/ai-pings'
@@ -282,16 +283,19 @@ const router = useRouter()
 
 const visibleHistory = computed(() => aiHistory.value.filter((m) => m.role !== 'note'))
 
+const catalog = useAiCatalogText()
+
 const modelChipLabel = computed(() => {
 	const provider = providerById(aiSettings.value.provider)
 	if (provider?.id === 'custom') {
-		return aiSettings.value.customModel || 'Своя модель'
+		return aiSettings.value.customModel || catalog.label('Своя модель')
 	}
 	// The chip shows what actually goes on the wire: a stored id that left
 	// the catalogue is silently replaced by chosenModel(), and the label
 	// must not claim the retired model while another one answers.
 	const stored = chosenModel(aiSettings.value, provider?.id ?? '')
-	return provider?.models.find((m) => m.id === stored)?.label ?? stored
+	const label = provider?.models.find((m) => m.id === stored)?.label
+	return label ? catalog.label(label) : stored
 })
 
 const lastQuestion = computed(() => {

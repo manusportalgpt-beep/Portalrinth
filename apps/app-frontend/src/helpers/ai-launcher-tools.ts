@@ -5,9 +5,12 @@
  * sandbox. Registered once from App.vue; every result is a short plain text
  * the model can act on, cards ride along as markers.
  */
+import './ai-hosting-tools'
+
 import type { ContentItem } from '@modrinth/ui'
 import { invoke } from '@tauri-apps/api/core'
 import * as fs from '@tauri-apps/plugin-fs'
+
 import {
 	noteAgentThought,
 	playerTookOver,

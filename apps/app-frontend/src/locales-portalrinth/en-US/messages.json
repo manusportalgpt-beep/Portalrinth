@@ -2537,5 +2537,740 @@
 	},
 	"console.actions.copy": {
 		"message": "Copy"
+	},
+	"app.ai.attach": {
+		"message": "Attach files"
+	},
+	"app.ai.cards.skins": {
+		"message": "Skins"
+	},
+	"app.ai.cards.skin-install": {
+		"message": "Apply"
+	},
+	"app.ai.cards.skin-installed": {
+		"message": "Applied"
+	},
+	"app.ai.chat.delete": {
+		"message": "Delete chat forever"
+	},
+	"app.ai.builds": {
+		"message": "Instance to work with"
+	},
+	"app.ai.builds.none": {
+		"message": "No instance"
+	},
+	"app.ai.builds.none-hint": {
+		"message": "Like with an instance, but not limited to it — the agent asks where to install"
+	},
+	"app.ai.composer.mode.ask": {
+		"message": "Ask"
+	},
+	"app.ai.composer.mode.build": {
+		"message": "Build"
+	},
+	"app.ai.composer.mode.ask-hint": {
+		"message": "Only answers and searches, changes nothing in the launcher"
+	},
+	"app.ai.composer.mode.build-hint": {
+		"message": "Answers questions and carries out tasks in the launcher itself"
+	},
+	"app.ai.composer.focus": {
+		"message": "Where to search"
+	},
+	"app.ai.composer.attach": {
+		"message": "File"
+	},
+	"app.ai.composer.attach-hint": {
+		"message": "Image, log, config"
+	},
+	"app.ai.composer.commands": {
+		"message": "Commands"
+	},
+	"app.ai.composer.commands-hint": {
+		"message": "Tasks and skills"
+	},
+	"app.ai.composer.tools": {
+		"message": "Capabilities"
+	},
+	"app.ai.composer.web": {
+		"message": "Web search"
+	},
+	"app.ai.composer.web-hint": {
+		"message": "Fresh data from the internet"
+	},
+	"app.ai.composer.deep": {
+		"message": "Deep thinking"
+	},
+	"app.ai.composer.deep-hint": {
+		"message": "Smarter and more careful, but slower"
+	},
+	"app.ai.composer.effort": {
+		"message": "Reasoning"
+	},
+	"app.ai.composer.effort.low": {
+		"message": "Low"
+	},
+	"app.ai.composer.effort.medium": {
+		"message": "Medium"
+	},
+	"app.ai.composer.effort.high": {
+		"message": "High"
+	},
+	"app.ai.picker.search": {
+		"message": "Find a model"
+	},
+	"app.ai.picker.providers": {
+		"message": "Providers"
+	},
+	"app.ai.picker.models": {
+		"message": "Models"
+	},
+	"app.ai.picker.active": {
+		"message": "Answering now"
+	},
+	"app.ai.picker.need-key": {
+		"message": "key needed"
+	},
+	"app.ai.picker.free": {
+		"message": "free"
+	},
+	"app.ai.picker.russia": {
+		"message": "RU"
+	},
+	"app.ai.picker.key": {
+		"message": "API key"
+	},
+	"app.ai.picker.key.placeholder": {
+		"message": "Paste the key"
+	},
+	"app.ai.picker.key.missing": {
+		"message": "Without a key this provider's models don't answer."
+	},
+	"app.ai.picker.get-key": {
+		"message": "Get it at {domain}"
+	},
+	"app.ai.picker.show-key": {
+		"message": "Show key"
+	},
+	"app.ai.picker.hide-key": {
+		"message": "Hide key"
+	},
+	"app.ai.picker.custom-base": {
+		"message": "Address (OpenAI-compatible)"
+	},
+	"app.ai.picker.custom-model": {
+		"message": "Model name"
+	},
+	"app.ai.picker.custom-use": {
+		"message": "Use my own server"
+	},
+	"app.ai.picker.custom-in-use": {
+		"message": "In use"
+	},
+	"app.ai.picker.all-off": {
+		"message": "All models are hidden — turn the ones you need on in Manage."
+	},
+	"app.ai.picker.nothing": {
+		"message": "Nothing found"
+	},
+	"app.ai.picker.manage": {
+		"message": "Manage"
+	},
+	"app.ai.picker.manage-done": {
+		"message": "Done"
+	},
+	"app.ai.picker.manage-hint": {
+		"message": "Disabled models are not shown in the picker"
+	},
+	"app.ai.picker.test": {
+		"message": "Test connection"
+	},
+	"app.ai.picker.test.running": {
+		"message": "Testing…"
+	},
+	"app.ai.picker.test.fail": {
+		"message": "Not responding"
+	},
+	"app.ai.picker.peak-busy": {
+		"message": "Z.AI: peak hours"
+	},
+	"app.ai.picker.peak-free": {
+		"message": "Z.AI: free"
+	},
+	"app.ai.catalog.note.zai": {
+		"message": "Free GLM models that work from Russia. 4.5 Flash has thinking off, 4.7 Flash always thinks but is smarter; 4.6V Flash looks at pictures (switches on by itself when you attach an image). Free key at z.ai/model-api."
+	},
+	"app.ai.catalog.note.genapi": {
+		"message": "A Russian OpenAI-format aggregator: a new account gets free trial generations (“Try for free”), then a few kopecks per request. Only budget text models are listed."
+	},
+	"app.ai.catalog.note.kilo": {
+		"message": "No key needed — the free models work right away. A good backup brain when GLM is at peak hours."
+	},
+	"app.ai.catalog.note.ovh": {
+		"message": "Without a key — anonymous, but with a per-minute request limit; a free OVH token removes the limit (optional)."
+	},
+	"app.ai.catalog.note.nvidia": {
+		"message": "DeepSeek, Kimi, GLM 5 and MiniMax for free with an NVIDIA key (build.nvidia.com). Signing up from Russia may ask for a VPN — the requests themselves usually go through."
+	},
+	"app.ai.catalog.note.pollinations": {
+		"message": "No key needed — works right away. Anonymous limit: 1 answer per 30 seconds per IP, so it's a backup, not the main option."
+	},
+	"app.ai.catalog.note.llm7": {
+		"message": "No key needed — the free “turbo” tier answers right away (if the service asks for a token, the word unused works as a key). A backup brain without signing up."
+	},
+	"app.ai.catalog.note.openrouter": {
+		"message": "Free models under one key — the lineup changes, current ones always end with :free. Usually reachable from Russia."
+	},
+	"app.ai.catalog.note.custom": {
+		"message": "Local models (LM Studio, Ollama) — free, everything runs on your computer."
+	},
+	"app.ai.catalog.note.image-pollinations": {
+		"message": "Free and without a key."
+	},
+	"app.ai.catalog.note.image-zai": {
+		"message": "CogView-3-Flash is free; the same Z.AI key as for chat works."
+	},
+	"app.ai.catalog.tag.fastest": {
+		"message": "fastest"
+	},
+	"app.ai.catalog.tag.smarter": {
+		"message": "smarter"
+	},
+	"app.ai.catalog.tag.vision": {
+		"message": "sees images"
+	},
+	"app.ai.catalog.tag.cheapest": {
+		"message": "cheapest"
+	},
+	"app.ai.catalog.tag.best-free": {
+		"message": "best free"
+	},
+	"app.ai.catalog.tag.smart": {
+		"message": "smart"
+	},
+	"app.ai.catalog.tag.fast": {
+		"message": "fast"
+	},
+	"app.ai.catalog.tag.code": {
+		"message": "code"
+	},
+	"app.ai.catalog.tag.context": {
+		"message": "{size} context"
+	},
+	"app.ai.catalog.tag.no-key": {
+		"message": "no key"
+	},
+	"app.ai.catalog.name.auto": {
+		"message": "Auto"
+	},
+	"app.ai.catalog.name.gpt-fast": {
+		"message": "GPT fast"
+	},
+	"app.ai.catalog.name.custom": {
+		"message": "Own server"
+	},
+	"app.ai.catalog.name.custom-model": {
+		"message": "Own model"
+	},
+	"app.creator.sign-in": {
+		"message": "Sign in to Modrinth"
+	},
+	"app.creator.sign-in.body": {
+		"message": "This page works with your Modrinth account. Sign in to continue."
+	},
+	"app.creator.open-on-site": {
+		"message": "Open on Modrinth"
+	},
+	"app.creator.load-failed": {
+		"message": "Could not load data"
+	},
+	"app.creator.cancel": {
+		"message": "Cancel"
+	},
+	"app.creator.save": {
+		"message": "Save changes"
+	},
+	"app.creator.saving": {
+		"message": "Saving..."
+	},
+	"app.creator.saved": {
+		"message": "Changes saved"
+	},
+	"app.creator.delete": {
+		"message": "Delete"
+	},
+	"app.creator.projects.search": {
+		"message": "Search projects..."
+	},
+	"app.creator.projects.create": {
+		"message": "Create a project"
+	},
+	"app.creator.projects.empty": {
+		"message": "You don't have any projects yet"
+	},
+	"app.creator.projects.empty.body": {
+		"message": "Create a project to publish your mods, packs and plugins on Modrinth."
+	},
+	"app.creator.projects.no-match": {
+		"message": "No projects match your search"
+	},
+	"app.creator.projects.column.name": {
+		"message": "Name"
+	},
+	"app.creator.projects.column.type": {
+		"message": "Type"
+	},
+	"app.creator.projects.column.status": {
+		"message": "Status"
+	},
+	"app.creator.projects.column.downloads": {
+		"message": "Downloads"
+	},
+	"app.creator.projects.manage": {
+		"message": "Manage"
+	},
+	"app.creator.projects.total": {
+		"message": "Projects"
+	},
+	"app.creator.projects.total-downloads": {
+		"message": "Total downloads"
+	},
+	"app.creator.projects.total-followers": {
+		"message": "Followers"
+	},
+	"app.creator.type.mod": {
+		"message": "Mod"
+	},
+	"app.creator.type.modpack": {
+		"message": "Modpack"
+	},
+	"app.creator.type.resourcepack": {
+		"message": "Resource pack"
+	},
+	"app.creator.type.shader": {
+		"message": "Shader"
+	},
+	"app.creator.type.datapack": {
+		"message": "Data pack"
+	},
+	"app.creator.type.plugin": {
+		"message": "Plugin"
+	},
+	"app.creator.status.approved": {
+		"message": "Public"
+	},
+	"app.creator.status.unlisted": {
+		"message": "Unlisted"
+	},
+	"app.creator.status.private": {
+		"message": "Private"
+	},
+	"app.creator.status.draft": {
+		"message": "Draft"
+	},
+	"app.creator.status.processing": {
+		"message": "Under review"
+	},
+	"app.creator.status.rejected": {
+		"message": "Rejected"
+	},
+	"app.creator.status.archived": {
+		"message": "Archived"
+	},
+	"app.creator.status.withheld": {
+		"message": "Withheld"
+	},
+	"app.creator.status.scheduled": {
+		"message": "Scheduled"
+	},
+	"app.creator.status.unknown": {
+		"message": "Unknown"
+	},
+	"app.creator.create.header": {
+		"message": "Creating a project"
+	},
+	"app.creator.create.name": {
+		"message": "Name"
+	},
+	"app.creator.create.name.placeholder": {
+		"message": "Enter project name..."
+	},
+	"app.creator.create.url": {
+		"message": "URL"
+	},
+	"app.creator.create.url.hint": {
+		"message": "Letters, numbers and dashes, 3 to 64 characters."
+	},
+	"app.creator.create.type": {
+		"message": "Project type"
+	},
+	"app.creator.create.visibility": {
+		"message": "Visibility"
+	},
+	"app.creator.create.visibility.hint": {
+		"message": "The visibility your project will have after it has been approved."
+	},
+	"app.creator.create.summary": {
+		"message": "Summary"
+	},
+	"app.creator.create.summary.hint": {
+		"message": "A sentence or two that describes your project."
+	},
+	"app.creator.create.summary.placeholder": {
+		"message": "This project adds..."
+	},
+	"app.creator.create.icon": {
+		"message": "Icon"
+	},
+	"app.creator.create.icon.choose": {
+		"message": "Choose image"
+	},
+	"app.creator.create.icon.remove": {
+		"message": "Remove"
+	},
+	"app.creator.create.submit": {
+		"message": "Create project"
+	},
+	"app.creator.create.submitting": {
+		"message": "Creating..."
+	},
+	"app.creator.create.created": {
+		"message": "Project created"
+	},
+	"app.creator.create.created.detail": {
+		"message": "“{name}” was created as a draft."
+	},
+	"app.creator.manage.back": {
+		"message": "All projects"
+	},
+	"app.creator.manage.tab.general": {
+		"message": "General"
+	},
+	"app.creator.manage.tab.versions": {
+		"message": "Versions"
+	},
+	"app.creator.manage.tab.links": {
+		"message": "Links"
+	},
+	"app.creator.manage.description": {
+		"message": "Description"
+	},
+	"app.creator.manage.description.hint": {
+		"message": "The full page of your project. Markdown is supported."
+	},
+	"app.creator.manage.environment": {
+		"message": "Environment"
+	},
+	"app.creator.manage.client": {
+		"message": "Client"
+	},
+	"app.creator.manage.server": {
+		"message": "Server"
+	},
+	"app.creator.side.required": {
+		"message": "Required"
+	},
+	"app.creator.side.optional": {
+		"message": "Optional"
+	},
+	"app.creator.side.unsupported": {
+		"message": "Unsupported"
+	},
+	"app.creator.manage.icon.change": {
+		"message": "Change icon"
+	},
+	"app.creator.manage.icon.updated": {
+		"message": "Icon updated"
+	},
+	"app.creator.manage.links.source": {
+		"message": "Source code"
+	},
+	"app.creator.manage.links.issues": {
+		"message": "Issue tracker"
+	},
+	"app.creator.manage.links.wiki": {
+		"message": "Wiki page"
+	},
+	"app.creator.manage.links.discord": {
+		"message": "Discord invite"
+	},
+	"app.creator.manage.links.hint": {
+		"message": "Links shown on the project page. Leave a field empty to hide it."
+	},
+	"app.creator.manage.submit": {
+		"message": "Submit for review"
+	},
+	"app.creator.manage.submitted": {
+		"message": "Sent for review"
+	},
+	"app.creator.manage.submitted.detail": {
+		"message": "The moderators will look at your project soon."
+	},
+	"app.creator.manage.draft-note": {
+		"message": "This project is a draft. Upload at least one version, then submit it for review to publish it."
+	},
+	"app.creator.manage.processing-note": {
+		"message": "This project is waiting for the moderators. You can keep editing it."
+	},
+	"app.creator.manage.delete": {
+		"message": "Delete project"
+	},
+	"app.creator.manage.delete.title": {
+		"message": "Are you sure you want to delete this project?"
+	},
+	"app.creator.manage.delete.body": {
+		"message": "The project, its versions and its files will be removed from Modrinth forever. This cannot be undone."
+	},
+	"app.creator.manage.deleted": {
+		"message": "Project deleted"
+	},
+	"app.creator.versions.upload": {
+		"message": "Upload a version"
+	},
+	"app.creator.versions.empty": {
+		"message": "No versions yet"
+	},
+	"app.creator.versions.empty.body": {
+		"message": "Upload the first file of your project so players can download it."
+	},
+	"app.creator.versions.delete.title": {
+		"message": "Delete this version?"
+	},
+	"app.creator.versions.delete.body": {
+		"message": "Its files will no longer be available to download."
+	},
+	"app.creator.versions.deleted": {
+		"message": "Version deleted"
+	},
+	"app.creator.version.header": {
+		"message": "Uploading a version"
+	},
+	"app.creator.version.files": {
+		"message": "Files"
+	},
+	"app.creator.version.files.hint": {
+		"message": "The first file is the primary one. .jar, .zip and .mrpack are accepted."
+	},
+	"app.creator.version.files.primary": {
+		"message": "Primary"
+	},
+	"app.creator.version.files.choose": {
+		"message": "Choose files"
+	},
+	"app.creator.version.name": {
+		"message": "Version name"
+	},
+	"app.creator.version.number": {
+		"message": "Version number"
+	},
+	"app.creator.version.channel": {
+		"message": "Release channel"
+	},
+	"app.creator.version.channel.release": {
+		"message": "Release"
+	},
+	"app.creator.version.channel.beta": {
+		"message": "Beta"
+	},
+	"app.creator.version.channel.alpha": {
+		"message": "Alpha"
+	},
+	"app.creator.version.loaders": {
+		"message": "Loaders"
+	},
+	"app.creator.version.game-versions": {
+		"message": "Game versions"
+	},
+	"app.creator.version.snapshots": {
+		"message": "Show snapshots"
+	},
+	"app.creator.version.game-versions.search": {
+		"message": "Search versions..."
+	},
+	"app.creator.version.changelog": {
+		"message": "Changelog"
+	},
+	"app.creator.version.changelog.placeholder": {
+		"message": "What changed in this version?"
+	},
+	"app.creator.version.featured": {
+		"message": "Feature this version"
+	},
+	"app.creator.version.submit": {
+		"message": "Upload version"
+	},
+	"app.creator.version.submitting": {
+		"message": "Uploading..."
+	},
+	"app.creator.version.uploaded": {
+		"message": "Version uploaded"
+	},
+	"app.creator.version.selected": {
+		"message": "{count, plural, =0 {Nothing selected} one {# selected} other {# selected}}"
+	},
+	"app.creator.orgs.title": {
+		"message": "Organizations"
+	},
+	"app.creator.orgs.create": {
+		"message": "Create organization"
+	},
+	"app.creator.orgs.empty": {
+		"message": "You aren't in any organizations yet"
+	},
+	"app.creator.orgs.empty.body": {
+		"message": "Organizations let a team publish and manage projects together."
+	},
+	"app.creator.orgs.header": {
+		"message": "Creating an organization"
+	},
+	"app.creator.orgs.name.placeholder": {
+		"message": "Enter organization name..."
+	},
+	"app.creator.orgs.summary.hint": {
+		"message": "A sentence or two that describes your organization."
+	},
+	"app.creator.orgs.created": {
+		"message": "Organization created"
+	},
+	"app.creator.orgs.members": {
+		"message": "{count, plural, one {# member} other {# members}}"
+	},
+	"app.creator.analytics.title": {
+		"message": "Analytics"
+	},
+	"app.creator.analytics.downloads": {
+		"message": "Downloads"
+	},
+	"app.creator.analytics.views": {
+		"message": "Views"
+	},
+	"app.creator.analytics.range.1": {
+		"message": "24 hours"
+	},
+	"app.creator.analytics.range.7": {
+		"message": "7 days"
+	},
+	"app.creator.analytics.range.30": {
+		"message": "30 days"
+	},
+	"app.creator.analytics.range.90": {
+		"message": "90 days"
+	},
+	"app.creator.analytics.total": {
+		"message": "Total for the period"
+	},
+	"app.creator.analytics.top": {
+		"message": "By project"
+	},
+	"app.creator.analytics.empty": {
+		"message": "Analytics appear once you have a published project."
+	},
+	"app.creator.revenue.title": {
+		"message": "Revenue"
+	},
+	"app.creator.revenue.available": {
+		"message": "Available now"
+	},
+	"app.creator.revenue.pending": {
+		"message": "Pending"
+	},
+	"app.creator.revenue.pending.hint": {
+		"message": "Revenue becomes available about 60 days after the end of the month."
+	},
+	"app.creator.revenue.lifetime": {
+		"message": "Withdrawn in total"
+	},
+	"app.creator.revenue.ytd": {
+		"message": "Withdrawn this year"
+	},
+	"app.creator.revenue.withdraw": {
+		"message": "Withdraw"
+	},
+	"app.creator.revenue.withdraw.hint": {
+		"message": "Withdrawals need identity checks, so they finish on modrinth.com."
+	},
+	"app.creator.revenue.transactions": {
+		"message": "Transactions"
+	},
+	"app.creator.revenue.transactions.empty": {
+		"message": "No transactions yet"
+	},
+	"app.creator.revenue.tx.withdrawal": {
+		"message": "Withdrawal"
+	},
+	"app.creator.revenue.tx.income": {
+		"message": "Creator revenue"
+	},
+	"app.creator.revenue.tx.fee": {
+		"message": "Fee {amount}"
+	},
+	"app.creator.revenue.tx.success": {
+		"message": "Completed"
+	},
+	"app.creator.revenue.tx.failed": {
+		"message": "Failed"
+	},
+	"app.creator.revenue.tx.pending": {
+		"message": "Processing"
+	},
+	"app.creator.revenue.upcoming": {
+		"message": "Becoming available"
+	},
+	"app.creator.reports.title": {
+		"message": "Active reports"
+	},
+	"app.creator.reports.empty": {
+		"message": "You have no active reports"
+	},
+	"app.creator.reports.empty.body": {
+		"message": "Reports you send about projects, versions or users appear here."
+	},
+	"app.creator.reports.open": {
+		"message": "Open"
+	},
+	"app.creator.reports.closed": {
+		"message": "Closed"
+	},
+	"app.creator.reports.on": {
+		"message": "Reported {type}"
+	},
+	"app.creator.reports.item.project": {
+		"message": "project"
+	},
+	"app.creator.reports.item.version": {
+		"message": "version"
+	},
+	"app.creator.reports.item.user": {
+		"message": "user"
+	},
+	"app.creator.reports.show-closed": {
+		"message": "Show closed"
+	},
+	"app.account.profile": {
+		"message": "Profile"
+	},
+	"app.account.modrinth-plus": {
+		"message": "Get Modrinth+"
+	},
+	"app.account.servers": {
+		"message": "My servers"
+	},
+	"app.account.settings": {
+		"message": "Settings"
+	},
+	"app.account.reports": {
+		"message": "Active reports"
+	},
+	"app.account.projects": {
+		"message": "Projects"
+	},
+	"app.account.organizations": {
+		"message": "Organizations"
+	},
+	"app.account.analytics": {
+		"message": "Analytics"
+	},
+	"app.account.revenue": {
+		"message": "Revenue"
 	}
 }

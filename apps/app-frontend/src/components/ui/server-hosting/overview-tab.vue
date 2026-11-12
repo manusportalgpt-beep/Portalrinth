@@ -144,30 +144,30 @@ const uptime = computed(() => {
 </script>
 
 <template>
-	<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-		<section class="hosting-panel flex flex-col gap-3">
-			<div class="flex flex-wrap items-start justify-between gap-3">
-				<div class="flex flex-col gap-2">
-					<h2 class="m-0 text-lg font-bold text-contrast">{{ formatMessage(messages.online) }}</h2>
-					<div class="hosting-segment">
-						<button
-							v-for="option in ranges"
-							:key="option.id"
-							type="button"
-							:class="{ 'is-active': range === option.id }"
-							@click="range = option.id"
-						>
-							{{ option.label }}
-						</button>
-					</div>
-				</div>
-				<div class="hosting-stat text-right">
-					<span class="text-xs text-secondary">{{ formatMessage(messages.now) }}</span>
-					<span class="text-2xl font-bold text-contrast">{{ current }}</span>
+	<section class="hosting-panel flex flex-col gap-3">
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<div class="flex flex-wrap items-center gap-3">
+				<h2 class="m-0 text-lg font-bold text-contrast">{{ formatMessage(messages.online) }}</h2>
+				<div class="hosting-segment">
+					<button
+						v-for="option in ranges"
+						:key="option.id"
+						type="button"
+						:class="{ 'is-active': range === option.id }"
+						@click="range = option.id"
+					>
+						{{ option.label }}
+					</button>
 				</div>
 			</div>
+			<div class="hosting-stat hosting-stat--inline">
+				<span class="text-xs text-secondary">{{ formatMessage(messages.now) }}</span>
+				<span class="text-xl font-bold text-contrast">{{ current }}</span>
+			</div>
+		</div>
 
-			<div class="relative">
+		<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+			<div class="flex min-w-0 flex-col">
 				<svg
 					v-if="chart"
 					:viewBox="`0 0 ${WIDTH} ${HEIGHT}`"
@@ -193,58 +193,58 @@ const uptime = computed(() => {
 				</div>
 			</div>
 
-			<div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-				<div class="hosting-stat">
-					<span class="text-xs text-secondary">{{ formatMessage(messages.peak) }}</span>
-					<span class="text-lg font-bold text-contrast">{{ stats?.peak[1] ?? 0 }}</span>
-					<span class="truncate text-xs text-secondary">
-						{{ stats ? formatTime(stats.peak[0]) : '—' }}
-					</span>
+			<div class="hosting-usage flex min-w-0 flex-col gap-2">
+				<span class="text-sm font-bold text-contrast">{{ formatMessage(messages.usage) }}</span>
+				<div class="grid grid-cols-2 gap-2">
+					<UsageRing
+						:label="formatMessage(messages.cpu)"
+						:percent="cpuPercent"
+						:value="cpuPercent === null ? '—' : `${Math.round(cpuPercent)}%`"
+					/>
+					<UsageRing
+						:label="formatMessage(messages.ram)"
+						:percent="ramPercent"
+						:value="
+							ramPercent === null
+								? '—'
+								: formatMessage(messages.ramValue, {
+										used: server.ram_used_mb,
+										total: server.memory_mb,
+									})
+						"
+					/>
 				</div>
-				<div class="hosting-stat">
-					<span class="text-xs text-secondary">{{ formatMessage(messages.min) }}</span>
-					<span class="text-lg font-bold text-contrast">{{ stats?.min[1] ?? 0 }}</span>
-					<span class="truncate text-xs text-secondary">
-						{{ stats ? formatTime(stats.min[0]) : '—' }}
-					</span>
-				</div>
-				<div class="hosting-stat">
-					<span class="text-xs text-secondary">{{ formatMessage(messages.average) }}</span>
-					<span class="text-lg font-bold text-contrast">{{ stats?.average ?? 0 }}</span>
-					<span class="truncate text-xs text-secondary">{{
-						formatMessage(messages.averageHint)
-					}}</span>
+				<div class="hosting-stat flex-row items-center justify-between gap-2">
+					<span class="truncate text-sm text-secondary">{{ formatMessage(messages.uptime) }}</span>
+					<span class="shrink-0 text-sm font-bold text-contrast">{{ uptime }}</span>
 				</div>
 			</div>
-		</section>
+		</div>
 
-		<section class="hosting-panel flex flex-col gap-3 self-start">
-			<h2 class="m-0 text-lg font-bold text-contrast">{{ formatMessage(messages.usage) }}</h2>
-			<div class="grid grid-cols-2 gap-2">
-				<UsageRing
-					:label="formatMessage(messages.cpu)"
-					:percent="cpuPercent"
-					:value="cpuPercent === null ? '—' : `${Math.round(cpuPercent)}%`"
-				/>
-				<UsageRing
-					:label="formatMessage(messages.ram)"
-					:percent="ramPercent"
-					:value="
-						ramPercent === null
-							? '—'
-							: formatMessage(messages.ramValue, {
-									used: server.ram_used_mb,
-									total: server.memory_mb,
-								})
-					"
-				/>
+		<div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+			<div class="hosting-stat">
+				<span class="truncate text-xs text-secondary">{{ formatMessage(messages.peak) }}</span>
+				<span class="text-lg font-bold text-contrast">{{ stats?.peak[1] ?? 0 }}</span>
+				<span class="truncate text-xs text-secondary">
+					{{ stats ? formatTime(stats.peak[0]) : '—' }}
+				</span>
 			</div>
-			<div class="hosting-stat flex-row items-center justify-between">
-				<span class="text-sm text-secondary">{{ formatMessage(messages.uptime) }}</span>
-				<span class="text-sm font-bold text-contrast">{{ uptime }}</span>
+			<div class="hosting-stat">
+				<span class="truncate text-xs text-secondary">{{ formatMessage(messages.min) }}</span>
+				<span class="text-lg font-bold text-contrast">{{ stats?.min[1] ?? 0 }}</span>
+				<span class="truncate text-xs text-secondary">
+					{{ stats ? formatTime(stats.min[0]) : '—' }}
+				</span>
 			</div>
-		</section>
-	</div>
+			<div class="hosting-stat">
+				<span class="truncate text-xs text-secondary">{{ formatMessage(messages.average) }}</span>
+				<span class="text-lg font-bold text-contrast">{{ stats?.average ?? 0 }}</span>
+				<span class="truncate text-xs text-secondary">{{
+					formatMessage(messages.averageHint)
+				}}</span>
+			</div>
+		</div>
+	</section>
 </template>
 
 <style scoped lang="scss">
@@ -265,6 +265,23 @@ const uptime = computed(() => {
 	border-radius: var(--radius-md, 0.5rem);
 	border: 1px solid var(--surface-5);
 	background: var(--surface-3);
+}
+
+.hosting-stat--inline {
+	flex-direction: row;
+	align-items: baseline;
+	gap: 0.5rem;
+	padding: 0.375rem 0.75rem;
+}
+
+.hosting-usage {
+	padding-left: 1rem;
+	border-left: 1px solid var(--surface-5);
+
+	@media (max-width: 1023px) {
+		padding-left: 0;
+		border-left: none;
+	}
 }
 
 .hosting-segment {
@@ -301,7 +318,7 @@ const uptime = computed(() => {
 .hosting-chart {
 	display: block;
 	width: 100%;
-	height: 10rem;
+	height: clamp(5rem, calc(100vh - 36rem), 14rem);
 
 	&--empty {
 		display: grid;

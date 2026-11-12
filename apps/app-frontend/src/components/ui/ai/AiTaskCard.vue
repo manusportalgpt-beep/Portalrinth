@@ -42,6 +42,11 @@ const currentStage = computed(() => {
 	return index
 })
 
+const doneCount = computed(() => props.task.stages.filter((stage) => stage.done).length)
+const progress = computed(() =>
+	props.task.stages.length ? Math.round((doneCount.value / props.task.stages.length) * 100) : 0,
+)
+
 function stateOf(index: number): 'done' | 'current' | 'ahead' {
 	// A plan can be ticked out of order: trust the stage flag, not the position.
 	if (props.task.stages[index].done) return 'done'
@@ -58,7 +63,21 @@ function stateOf(index: number): 'done' | 'current' | 'ahead' {
 			</span>
 			<span class="ai-task-kind">{{ kind.label }}</span>
 			<span class="ai-task-title">{{ task.title }}</span>
+			<span v-if="task.stages.length" class="ai-task-count">
+				{{ doneCount }}/{{ task.stages.length }}
+			</span>
 			<CheckIcon v-if="currentStage < 0" class="size-4 shrink-0 text-green" />
+		</div>
+		<div
+			v-if="task.stages.length"
+			class="ai-task-progress"
+			:class="{ 'ai-task-progress--live': live && currentStage >= 0 }"
+			role="progressbar"
+			:aria-valuenow="progress"
+			aria-valuemin="0"
+			aria-valuemax="100"
+		>
+			<span class="ai-task-progress-fill" :style="{ width: `${progress}%` }" />
 		</div>
 		<ol class="ai-task-stages">
 			<li
@@ -86,6 +105,63 @@ function stateOf(index: number): 'done' | 'current' | 'ahead' {
 	border: 1px solid color-mix(in srgb, var(--color-brand) 22%, transparent);
 	border-radius: 0.75rem;
 	background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+	backdrop-filter: blur(14px) saturate(1.2);
+	-webkit-backdrop-filter: blur(14px) saturate(1.2);
+}
+
+.ai-task-count {
+	flex-shrink: 0;
+	margin-left: auto;
+	color: var(--color-secondary);
+	font-size: 0.6875rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.ai-task-progress {
+	position: relative;
+	height: 4px;
+	overflow: hidden;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--color-contrast) 8%, transparent);
+}
+
+.ai-task-progress-fill {
+	position: absolute;
+	inset: 0 auto 0 0;
+	border-radius: inherit;
+	background: linear-gradient(
+		90deg,
+		var(--color-brand),
+		color-mix(in srgb, var(--color-brand) 55%, #fff)
+	);
+	transition: width 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ai-task-progress--live .ai-task-progress-fill::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(90deg, transparent, rgb(255 255 255 / 45%), transparent);
+	animation: ai-task-sheen 1.3s ease-in-out infinite;
+}
+
+@keyframes ai-task-sheen {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(100%);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ai-task-progress-fill {
+		transition: none;
+	}
+
+	.ai-task-progress--live .ai-task-progress-fill::after {
+		animation: none;
+	}
 }
 
 .ai-task-head {

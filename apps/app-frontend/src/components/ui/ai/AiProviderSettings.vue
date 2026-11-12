@@ -30,6 +30,7 @@ import {
 	stopBridge,
 	testProvider,
 } from '@/helpers/ai-assistant'
+import { useAiCatalogText } from '@/helpers/ai-catalog-text'
 
 defineProps<{
 	/** Inside the chat's model popover: only the talking essentials, so
@@ -38,6 +39,7 @@ defineProps<{
 }>()
 
 const { formatMessage } = useVIntl()
+const catalog = useAiCatalogText()
 const messages = {
 	workGroup: { id: 'app.ai.settings.group.work', defaultMessage: 'Для работы' },
 	imageGroup: {
@@ -61,7 +63,8 @@ const messages = {
 	done: { id: 'app.ai.settings.done', defaultMessage: 'Готово' },
 	manageHint: {
 		id: 'app.ai.settings.manage.hint',
-		defaultMessage: 'Нажмите на название провайдера, чтобы вставить ключ. Ползунок прячет модель из выбора выше.',
+		defaultMessage:
+			'Нажмите на название провайдера, чтобы вставить ключ. Ползунок прячет модель из выбора выше.',
 	},
 	keyMissing: {
 		id: 'app.ai.settings.key.missing',
@@ -360,20 +363,27 @@ onMounted(() => {
 				}"
 			>
 				<button type="button" class="ai-provider-head" @click="() => toggleGroup(p.id)">
-					<span class="ai-provider-name">{{ p.label }}</span>
+					<span class="ai-provider-name">{{ catalog.label(p.label) }}</span>
 					<span
 						class="ai-provider-meta"
 						:class="{ 'ai-provider-meta--warn': p.needsKey && !hasKey(p) }"
 						>{{ providerMeta(p) }}</span
 					>
-					<ChevronDownIcon class="ai-provider-chevron" :class="{ 'ai-provider-chevron--open': groupOpen(p.id) }" />
+					<ChevronDownIcon
+						class="ai-provider-chevron"
+						:class="{ 'ai-provider-chevron--open': groupOpen(p.id) }"
+					/>
 				</button>
 
 				<div v-if="groupOpen(p.id)" class="ai-provider-body">
 					<!-- Manage view: key first, then per-model switches -->
 					<template v-if="managing">
 						<div v-if="p.id === 'custom'" class="flex flex-col gap-2 py-1">
-							<Input v-model="customBase" autocomplete="off" placeholder="http://localhost:1234/v1/chat/completions" />
+							<Input
+								v-model="customBase"
+								autocomplete="off"
+								placeholder="http://localhost:1234/v1/chat/completions"
+							/>
 							<Input v-model="customModelName" autocomplete="off" placeholder="my-model" />
 						</div>
 						<template v-else>
@@ -388,7 +398,11 @@ onMounted(() => {
 								<button type="button" class="ai-key-eye" @click="() => toggleKeyShown(p.id)">
 									<EyeIcon v-if="keyShown(p.id)" class="size-4" />
 									<EyeOffIcon v-else class="size-4" />
-									{{ keyShown(p.id) ? formatMessage(messages.hideKey) : formatMessage(messages.showKey) }}
+									{{
+										keyShown(p.id)
+											? formatMessage(messages.hideKey)
+											: formatMessage(messages.showKey)
+									}}
 								</button>
 								<a
 									v-if="p.keyUrl"
@@ -406,7 +420,7 @@ onMounted(() => {
 							<div v-else class="ai-manage-list">
 								<div v-for="m in p.models" :key="m.id" class="ai-manage-row">
 									<span class="min-w-0">
-										<span class="ai-model-label">{{ m.label }}</span>
+										<span class="ai-model-label">{{ catalog.label(m.label) }}</span>
 										<span class="ai-model-id">{{ m.id }}</span>
 									</span>
 									<Toggle
@@ -423,7 +437,11 @@ onMounted(() => {
 					<!-- Picker view: enabled models of this provider -->
 					<template v-else>
 						<div v-if="p.id === 'custom'" class="flex flex-col gap-2 py-1">
-							<Input v-model="customBase" autocomplete="off" placeholder="http://localhost:1234/v1/chat/completions" />
+							<Input
+								v-model="customBase"
+								autocomplete="off"
+								placeholder="http://localhost:1234/v1/chat/completions"
+							/>
 							<Input v-model="customModelName" autocomplete="off" placeholder="my-model" />
 						</div>
 						<template v-else>
@@ -438,7 +456,11 @@ onMounted(() => {
 								<button type="button" class="ai-key-eye" @click="() => toggleKeyShown(p.id)">
 									<EyeIcon v-if="keyShown(p.id)" class="size-4" />
 									<EyeOffIcon v-else class="size-4" />
-									{{ keyShown(p.id) ? formatMessage(messages.hideKey) : formatMessage(messages.showKey) }}
+									{{
+										keyShown(p.id)
+											? formatMessage(messages.hideKey)
+											: formatMessage(messages.showKey)
+									}}
 								</button>
 								<a
 									v-if="p.keyUrl"
@@ -456,15 +478,21 @@ onMounted(() => {
 									:key="m.id"
 									type="button"
 									class="ai-model-row"
-									:class="{ 'ai-model-row--active': p.id === aiSettings.provider && chosenId(p) === m.id }"
+									:class="{
+										'ai-model-row--active': p.id === aiSettings.provider && chosenId(p) === m.id,
+									}"
 									@click="() => selectModel(p, m.id)"
 								>
 									<span class="ai-model-dot" />
 									<span class="min-w-0 grow text-left">
-										<span class="ai-model-label">{{ m.label }}</span>
+										<span class="ai-model-label">{{ catalog.label(m.label) }}</span>
 										<span class="ai-model-id">{{ m.id }}</span>
 									</span>
-									<span v-if="p.id === aiSettings.provider && chosenId(p) === m.id" class="ai-model-check">✓</span>
+									<span
+										v-if="p.id === aiSettings.provider && chosenId(p) === m.id"
+										class="ai-model-check"
+										>✓</span
+									>
 								</button>
 								<p v-if="enabledModels(p).length === 0" class="ai-model-missing m-0">
 									{{ formatMessage(messages.allOff) }}
@@ -491,7 +519,9 @@ onMounted(() => {
 			<p v-if="provider.id === 'pollinations'" class="m-0 text-sm text-secondary">
 				{{ formatMessage(messages.noteFree) }}
 			</p>
-			<p v-else-if="provider.note" class="m-0 text-sm text-secondary">{{ provider.note }}</p>
+			<p v-else-if="provider.note" class="m-0 text-sm text-secondary">
+				{{ catalog.note(provider) }}
+			</p>
 			<p class="m-0 flex items-center gap-1.5 text-sm text-secondary">
 				<KeyIcon class="size-4 shrink-0" />
 				{{ formatMessage(messages.fallback) }}
@@ -517,7 +547,7 @@ onMounted(() => {
 					"
 				>
 					<span class="flex items-center gap-1.5">
-						{{ p.label }}
+						{{ catalog.label(p.label) }}
 						<span v-if="p.fromRussia" class="ai-badge ai-badge-rf">РФ</span>
 						<span v-if="!p.needsKey" class="ai-badge ai-badge-free">free</span>
 					</span>
@@ -544,7 +574,7 @@ onMounted(() => {
 				</Button>
 			</div>
 			<p v-if="imageProvider.note" class="m-0 text-xs text-secondary">
-				{{ imageProvider.note }}
+				{{ catalog.imageNote(imageProvider) }}
 			</p>
 		</div>
 

@@ -11,7 +11,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { appDataDir } from '@tauri-apps/api/path'
 import * as fs from '@tauri-apps/plugin-fs'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const SANDBOX_DIR = 'portalrinth-sandbox'
 const SESSIONS_DIR = 'ai-sessions'
@@ -678,24 +678,54 @@ export interface StoredSession {
 	messages: unknown[]
 }
 
+const SESSION_KEY = 'portalrinth-ai-session'
+
+function storedSessionId(): string | null {
+	try {
+		return localStorage.getItem(SESSION_KEY)
+	} catch {
+		return null
+	}
+}
+
+/** The open chat's id survives a restart together with its messages: a
+    fresh id over the old messages used to save them as a second copy, and a
+    chat deleted from history came back on the next message. */
 export const currentSessionId = ref<string>(
-	`session-${new Date().toISOString().replace(/[:.]/g, '-')}`,
+	storedSessionId() ?? `session-${new Date().toISOString().replace(/[:.]/g, '-')}`,
 )
+
+watch(currentSessionId, (id) => {
+	try {
+		localStorage.setItem(SESSION_KEY, id)
+	} catch {
+		/* a full quota only costs the id after a restart */
+	}
+})
 
 export function startNewSession(): void {
 	currentSessionId.value = `session-${new Date().toISOString().replace(/[:.]/g, '-')}`
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined
+/** Chats erased this run: a save already in flight must not bring them back. */
+const erasedSessions = new Set<string>()
 
 /** Persists the conversation into the sessions folder, debounced. */
 export function saveSession(messages: unknown[]): void {
 	clearTimeout(saveTimer)
 	const id = currentSessionId.value
+	if (erasedSessions.has(id)) return
+	try {
+		localStorage.setItem(SESSION_KEY, id)
+	} catch {
+		/* see currentSessionId */
+	}
 	saveTimer = setTimeout(async () => {
 		try {
 			const dir = await sessionsRoot()
 			await fs.mkdir(dir, { recursive: true }).catch(() => {})
+			if (erasedSessions.has(id)) return
 			const session: StoredSession = {
 				id,
 				started: Date.now(),
@@ -713,7 +743,9 @@ export async function readLatestSession(): Promise<StoredSession | null> {
 	try {
 		const dir = await sessionsRoot()
 		const entries = (await fs.readDir(dir))
-			.filter((entry) => entry.name?.endsWith('.json'))
+			.filter(
+				(entry) => entry.name?.endsWith('.json') && !erasedSessions.has(entry.name.slice(0, -5)),
+			)
 			.sort((a, b) => (b.name ?? '').localeCompare(a.name ?? ''))
 		if (entries.length === 0) return null
 		const text = await fs.readTextFile(joinPath(dir, entries[0].name ?? ''))
@@ -774,7 +806,9 @@ export async function listSessions(limit = 30): Promise<SessionMeta[]> {
 	try {
 		const dir = await sessionsRoot()
 		const entries = (await fs.readDir(dir))
-			.filter((entry) => entry.name?.endsWith('.json'))
+			.filter(
+				(entry) => entry.name?.endsWith('.json') && !erasedSessions.has(entry.name.slice(0, -5)),
+			)
 			.sort((a, b) => (b.name ?? '').localeCompare(a.name ?? ''))
 			.slice(0, limit)
 		const found: SessionMeta[] = []
@@ -826,9 +860,13 @@ export async function readSession(id: string): Promise<StoredSession | null> {
     conversation also cancels its pending debounced save, so the file does
     not come back a second later. */
 export async function deleteSessionForever(id: string): Promise<void> {
+	erasedSessions.add(id)
 	if (currentSessionId.value === id) clearTimeout(saveTimer)
 	const dir = await sessionsRoot()
-	await fs.remove(joinPath(dir, `${id}.json`), { recursive: true }).catch(() => {})
+	const file = joinPath(dir, `${id}.json`)
+	await fs.remove(file, { recursive: true }).catch(() => {})
+	// A write that was already on its way lands a moment later: sweep again.
+	setTimeout(() => void fs.remove(file, { recursive: true }).catch(() => {}), 1500)
 	// Leftovers of the old recycle-bin flow are cleaned out too.
 	await fs.remove(joinPath(dir, 'trash', `${id}.json`), { recursive: true }).catch(() => {})
 }

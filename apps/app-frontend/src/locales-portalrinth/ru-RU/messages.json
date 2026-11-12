@@ -4697,5 +4697,506 @@
 	},
 	"app.server-hosting.boot.world-progress": {
 		"message": "Готовлю мир — {percent}%"
+	},
+	"app.creator.sign-in": {
+		"message": "Войдите в Modrinth"
+	},
+	"app.creator.sign-in.body": {
+		"message": "Эта страница работает с вашим аккаунтом Modrinth. Войдите, чтобы продолжить."
+	},
+	"app.creator.open-on-site": {
+		"message": "Открыть на Modrinth"
+	},
+	"app.creator.load-failed": {
+		"message": "Не удалось загрузить данные"
+	},
+	"app.creator.cancel": {
+		"message": "Отмена"
+	},
+	"app.creator.save": {
+		"message": "Сохранить"
+	},
+	"app.creator.saving": {
+		"message": "Сохранение..."
+	},
+	"app.creator.saved": {
+		"message": "Изменения сохранены"
+	},
+	"app.creator.delete": {
+		"message": "Удалить"
+	},
+	"app.creator.projects.search": {
+		"message": "Поиск проектов..."
+	},
+	"app.creator.projects.create": {
+		"message": "Создать проект"
+	},
+	"app.creator.projects.empty": {
+		"message": "У вас пока нет проектов"
+	},
+	"app.creator.projects.empty.body": {
+		"message": "Создайте проект, чтобы публиковать моды, сборки и плагины на Modrinth."
+	},
+	"app.creator.projects.no-match": {
+		"message": "Нет проектов по вашему запросу"
+	},
+	"app.creator.projects.column.name": {
+		"message": "Название"
+	},
+	"app.creator.projects.column.type": {
+		"message": "Тип"
+	},
+	"app.creator.projects.column.status": {
+		"message": "Статус"
+	},
+	"app.creator.projects.column.downloads": {
+		"message": "Загрузки"
+	},
+	"app.creator.projects.manage": {
+		"message": "Управление"
+	},
+	"app.creator.projects.total": {
+		"message": "Проекты"
+	},
+	"app.creator.projects.total-downloads": {
+		"message": "Всего загрузок"
+	},
+	"app.creator.projects.total-followers": {
+		"message": "Подписчики"
+	},
+	"app.creator.type.mod": {
+		"message": "Мод"
+	},
+	"app.creator.type.modpack": {
+		"message": "Сборка"
+	},
+	"app.creator.type.resourcepack": {
+		"message": "Ресурспак"
+	},
+	"app.creator.type.shader": {
+		"message": "Шейдер"
+	},
+	"app.creator.type.datapack": {
+		"message": "Датапак"
+	},
+	"app.creator.type.plugin": {
+		"message": "Плагин"
+	},
+	"app.creator.status.approved": {
+		"message": "Публичный"
+	},
+	"app.creator.status.unlisted": {
+		"message": "По ссылке"
+	},
+	"app.creator.status.private": {
+		"message": "Приватный"
+	},
+	"app.creator.status.draft": {
+		"message": "Черновик"
+	},
+	"app.creator.status.processing": {
+		"message": "На проверке"
+	},
+	"app.creator.status.rejected": {
+		"message": "Отклонён"
+	},
+	"app.creator.status.archived": {
+		"message": "В архиве"
+	},
+	"app.creator.status.withheld": {
+		"message": "Скрыт"
+	},
+	"app.creator.status.scheduled": {
+		"message": "Запланирован"
+	},
+	"app.creator.status.unknown": {
+		"message": "Неизвестно"
+	},
+	"app.creator.create.header": {
+		"message": "Создание проекта"
+	},
+	"app.creator.create.name": {
+		"message": "Название"
+	},
+	"app.creator.create.name.placeholder": {
+		"message": "Введите название проекта..."
+	},
+	"app.creator.create.url": {
+		"message": "Адрес"
+	},
+	"app.creator.create.url.hint": {
+		"message": "Латиница, цифры и дефисы, от 3 до 64 символов."
+	},
+	"app.creator.create.type": {
+		"message": "Тип проекта"
+	},
+	"app.creator.create.visibility": {
+		"message": "Видимость"
+	},
+	"app.creator.create.visibility.hint": {
+		"message": "Какая видимость будет у проекта после одобрения."
+	},
+	"app.creator.create.summary": {
+		"message": "Краткое описание"
+	},
+	"app.creator.create.summary.hint": {
+		"message": "Одно-два предложения о вашем проекте."
+	},
+	"app.creator.create.summary.placeholder": {
+		"message": "Этот проект добавляет..."
+	},
+	"app.creator.create.icon": {
+		"message": "Иконка"
+	},
+	"app.creator.create.icon.choose": {
+		"message": "Выбрать изображение"
+	},
+	"app.creator.create.icon.remove": {
+		"message": "Убрать"
+	},
+	"app.creator.create.submit": {
+		"message": "Создать проект"
+	},
+	"app.creator.create.submitting": {
+		"message": "Создание..."
+	},
+	"app.creator.create.created": {
+		"message": "Проект создан"
+	},
+	"app.creator.create.created.detail": {
+		"message": "«{name}» создан как черновик."
+	},
+	"app.creator.manage.back": {
+		"message": "Все проекты"
+	},
+	"app.creator.manage.tab.general": {
+		"message": "Основное"
+	},
+	"app.creator.manage.tab.versions": {
+		"message": "Версии"
+	},
+	"app.creator.manage.tab.links": {
+		"message": "Ссылки"
+	},
+	"app.creator.manage.description": {
+		"message": "Описание"
+	},
+	"app.creator.manage.description.hint": {
+		"message": "Полная страница проекта. Поддерживается Markdown."
+	},
+	"app.creator.manage.environment": {
+		"message": "Окружение"
+	},
+	"app.creator.manage.client": {
+		"message": "Клиент"
+	},
+	"app.creator.manage.server": {
+		"message": "Сервер"
+	},
+	"app.creator.side.required": {
+		"message": "Обязательно"
+	},
+	"app.creator.side.optional": {
+		"message": "Необязательно"
+	},
+	"app.creator.side.unsupported": {
+		"message": "Не поддерживается"
+	},
+	"app.creator.manage.icon.change": {
+		"message": "Сменить иконку"
+	},
+	"app.creator.manage.icon.updated": {
+		"message": "Иконка обновлена"
+	},
+	"app.creator.manage.links.source": {
+		"message": "Исходный код"
+	},
+	"app.creator.manage.links.issues": {
+		"message": "Баг-трекер"
+	},
+	"app.creator.manage.links.wiki": {
+		"message": "Вики"
+	},
+	"app.creator.manage.links.discord": {
+		"message": "Приглашение в Discord"
+	},
+	"app.creator.manage.links.hint": {
+		"message": "Ссылки на странице проекта. Оставьте поле пустым, чтобы скрыть его."
+	},
+	"app.creator.manage.submit": {
+		"message": "Отправить на проверку"
+	},
+	"app.creator.manage.submitted": {
+		"message": "Отправлено на проверку"
+	},
+	"app.creator.manage.submitted.detail": {
+		"message": "Модераторы скоро посмотрят ваш проект."
+	},
+	"app.creator.manage.draft-note": {
+		"message": "Это черновик. Загрузите хотя бы одну версию и отправьте проект на проверку, чтобы опубликовать его."
+	},
+	"app.creator.manage.processing-note": {
+		"message": "Проект ждёт проверки модераторами. Его можно продолжать редактировать."
+	},
+	"app.creator.manage.delete": {
+		"message": "Удалить проект"
+	},
+	"app.creator.manage.delete.title": {
+		"message": "Точно удалить этот проект?"
+	},
+	"app.creator.manage.delete.body": {
+		"message": "Проект, его версии и файлы будут навсегда удалены с Modrinth. Это нельзя отменить."
+	},
+	"app.creator.manage.deleted": {
+		"message": "Проект удалён"
+	},
+	"app.creator.versions.upload": {
+		"message": "Загрузить версию"
+	},
+	"app.creator.versions.empty": {
+		"message": "Версий пока нет"
+	},
+	"app.creator.versions.empty.body": {
+		"message": "Загрузите первый файл проекта, чтобы игроки могли его скачать."
+	},
+	"app.creator.versions.delete.title": {
+		"message": "Удалить эту версию?"
+	},
+	"app.creator.versions.delete.body": {
+		"message": "Её файлы больше нельзя будет скачать."
+	},
+	"app.creator.versions.deleted": {
+		"message": "Версия удалена"
+	},
+	"app.creator.version.header": {
+		"message": "Загрузка версии"
+	},
+	"app.creator.version.files": {
+		"message": "Файлы"
+	},
+	"app.creator.version.files.hint": {
+		"message": "Первый файл — основной. Подходят .jar, .zip и .mrpack."
+	},
+	"app.creator.version.files.primary": {
+		"message": "Основной"
+	},
+	"app.creator.version.files.choose": {
+		"message": "Выбрать файлы"
+	},
+	"app.creator.version.name": {
+		"message": "Название версии"
+	},
+	"app.creator.version.number": {
+		"message": "Номер версии"
+	},
+	"app.creator.version.channel": {
+		"message": "Канал выпуска"
+	},
+	"app.creator.version.channel.release": {
+		"message": "Релиз"
+	},
+	"app.creator.version.channel.beta": {
+		"message": "Бета"
+	},
+	"app.creator.version.channel.alpha": {
+		"message": "Альфа"
+	},
+	"app.creator.version.loaders": {
+		"message": "Загрузчики"
+	},
+	"app.creator.version.game-versions": {
+		"message": "Версии игры"
+	},
+	"app.creator.version.snapshots": {
+		"message": "Показать снапшоты"
+	},
+	"app.creator.version.game-versions.search": {
+		"message": "Поиск версий..."
+	},
+	"app.creator.version.changelog": {
+		"message": "Список изменений"
+	},
+	"app.creator.version.changelog.placeholder": {
+		"message": "Что изменилось в этой версии?"
+	},
+	"app.creator.version.featured": {
+		"message": "Рекомендуемая версия"
+	},
+	"app.creator.version.submit": {
+		"message": "Загрузить версию"
+	},
+	"app.creator.version.submitting": {
+		"message": "Загрузка..."
+	},
+	"app.creator.version.uploaded": {
+		"message": "Версия загружена"
+	},
+	"app.creator.version.selected": {
+		"message": "{count, plural, =0 {Ничего не выбрано} one {Выбрано: #} few {Выбрано: #} many {Выбрано: #} other {Выбрано: #}}"
+	},
+	"app.creator.orgs.title": {
+		"message": "Организации"
+	},
+	"app.creator.orgs.create": {
+		"message": "Создать организацию"
+	},
+	"app.creator.orgs.empty": {
+		"message": "Вы пока не состоите в организациях"
+	},
+	"app.creator.orgs.empty.body": {
+		"message": "Организации позволяют команде вместе публиковать проекты и управлять ими."
+	},
+	"app.creator.orgs.header": {
+		"message": "Создание организации"
+	},
+	"app.creator.orgs.name.placeholder": {
+		"message": "Введите название организации..."
+	},
+	"app.creator.orgs.summary.hint": {
+		"message": "Одно-два предложения о вашей организации."
+	},
+	"app.creator.orgs.created": {
+		"message": "Организация создана"
+	},
+	"app.creator.orgs.members": {
+		"message": "{count, plural, one {# участник} few {# участника} many {# участников} other {# участника}}"
+	},
+	"app.creator.analytics.title": {
+		"message": "Аналитика"
+	},
+	"app.creator.analytics.downloads": {
+		"message": "Загрузки"
+	},
+	"app.creator.analytics.views": {
+		"message": "Просмотры"
+	},
+	"app.creator.analytics.range.1": {
+		"message": "24 часа"
+	},
+	"app.creator.analytics.range.7": {
+		"message": "7 дней"
+	},
+	"app.creator.analytics.range.30": {
+		"message": "30 дней"
+	},
+	"app.creator.analytics.range.90": {
+		"message": "90 дней"
+	},
+	"app.creator.analytics.total": {
+		"message": "Всего за период"
+	},
+	"app.creator.analytics.top": {
+		"message": "По проектам"
+	},
+	"app.creator.analytics.empty": {
+		"message": "Аналитика появится, когда у вас будет опубликованный проект."
+	},
+	"app.creator.revenue.title": {
+		"message": "Доход"
+	},
+	"app.creator.revenue.available": {
+		"message": "Доступно сейчас"
+	},
+	"app.creator.revenue.pending": {
+		"message": "В ожидании"
+	},
+	"app.creator.revenue.pending.hint": {
+		"message": "Доход становится доступен примерно через 60 дней после конца месяца."
+	},
+	"app.creator.revenue.lifetime": {
+		"message": "Выведено всего"
+	},
+	"app.creator.revenue.ytd": {
+		"message": "Выведено за год"
+	},
+	"app.creator.revenue.withdraw": {
+		"message": "Вывести"
+	},
+	"app.creator.revenue.withdraw.hint": {
+		"message": "Вывод требует проверки личности, поэтому завершается на modrinth.com."
+	},
+	"app.creator.revenue.transactions": {
+		"message": "Операции"
+	},
+	"app.creator.revenue.transactions.empty": {
+		"message": "Операций пока нет"
+	},
+	"app.creator.revenue.tx.withdrawal": {
+		"message": "Вывод средств"
+	},
+	"app.creator.revenue.tx.income": {
+		"message": "Доход автора"
+	},
+	"app.creator.revenue.tx.fee": {
+		"message": "Комиссия {amount}"
+	},
+	"app.creator.revenue.tx.success": {
+		"message": "Выполнено"
+	},
+	"app.creator.revenue.tx.failed": {
+		"message": "Ошибка"
+	},
+	"app.creator.revenue.tx.pending": {
+		"message": "В обработке"
+	},
+	"app.creator.revenue.upcoming": {
+		"message": "Скоро станет доступно"
+	},
+	"app.creator.reports.title": {
+		"message": "Активные жалобы"
+	},
+	"app.creator.reports.empty": {
+		"message": "У вас нет активных жалоб"
+	},
+	"app.creator.reports.empty.body": {
+		"message": "Здесь появятся жалобы, которые вы отправили на проекты, версии или пользователей."
+	},
+	"app.creator.reports.open": {
+		"message": "Открыта"
+	},
+	"app.creator.reports.closed": {
+		"message": "Закрыта"
+	},
+	"app.creator.reports.on": {
+		"message": "Жалоба на {type}"
+	},
+	"app.creator.reports.item.project": {
+		"message": "проект"
+	},
+	"app.creator.reports.item.version": {
+		"message": "версию"
+	},
+	"app.creator.reports.item.user": {
+		"message": "пользователя"
+	},
+	"app.creator.reports.show-closed": {
+		"message": "Показать закрытые"
+	},
+	"app.account.profile": {
+		"message": "Профиль"
+	},
+	"app.account.modrinth-plus": {
+		"message": "Перейти на Modrinth+"
+	},
+	"app.account.servers": {
+		"message": "Мои серверы"
+	},
+	"app.account.settings": {
+		"message": "Настройки"
+	},
+	"app.account.reports": {
+		"message": "Активные жалобы"
+	},
+	"app.account.projects": {
+		"message": "Проекты"
+	},
+	"app.account.organizations": {
+		"message": "Организации"
+	},
+	"app.account.analytics": {
+		"message": "Аналитика"
+	},
+	"app.account.revenue": {
+		"message": "Доход"
 	}
 }

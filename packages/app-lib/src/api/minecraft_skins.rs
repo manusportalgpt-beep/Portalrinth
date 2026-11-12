@@ -47,7 +47,7 @@
 //! latest profile again whenever the result is unclear.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, LazyLock},
     time::Duration,
 };
@@ -102,6 +102,14 @@ static PENDING_SKIN_CHANGE: LazyLock<Mutex<PendingSkinChangeState>> =
     LazyLock::new(|| Mutex::new(PendingSkinChangeState::default()));
 static SKIN_CHANGE_FLUSH_LOCK: LazyLock<Mutex<()>> =
     LazyLock::new(|| Mutex::new(()));
+/// A skin put on from Discover is saved under a temporary `local-…` key and
+/// re-saved under Mojang's key once Mojang accepts it. The skins screen may
+/// still hold the first key: deleting it must reach the second one too.
+static SKIN_KEY_ALIASES: LazyLock<std::sync::Mutex<HashMap<String, String>>> =
+    LazyLock::new(|| std::sync::Mutex::new(HashMap::new()));
+/// Temporary keys deleted while their upload was still on its way.
+static REMOVED_LOCAL_SKIN_KEYS: LazyLock<std::sync::Mutex<HashSet<String>>> =
+    LazyLock::new(|| std::sync::Mutex::new(HashSet::new()));
 
 #[derive(Debug, Default)]
 struct PendingSkinChangeState {
@@ -716,6 +724,26 @@ async fn add_and_equip_custom_skin_now(
         }
         .remove(profile.id, &state.pool)
         .await?;
+
+        if let Ok(mut aliases) = SKIN_KEY_ALIASES.lock() {
+            aliases.insert(
+                local_texture_key.to_string(),
+                equipped_skin_texture_key.to_string(),
+            );
+        }
+        let removed_meanwhile = REMOVED_LOCAL_SKIN_KEYS
+            .lock()
+            .is_ok_and(|removed| removed.contains(local_texture_key));
+        if removed_meanwhile {
+            CustomMinecraftSkin {
+                texture_key: equipped_skin_texture_key.to_string(),
+                variant,
+                cape_id,
+                display_order: 0,
+            }
+            .remove(profile.id, &state.pool)
+            .await?;
+        }
     }
 
     if let Err(error) = sync_cape(selected_credentials, &profile, cape_id).await
@@ -891,6 +919,27 @@ pub async fn remove_custom_skin(skin: Skin) -> crate::Result<()> {
     }
     .remove(selected_credentials.offline_profile.id, &state.pool)
     .await?;
+
+    let key = skin.texture_key.to_string();
+    if key.starts_with("local-") {
+        if let Ok(mut removed) = REMOVED_LOCAL_SKIN_KEYS.lock() {
+            removed.insert(key.clone());
+        }
+    }
+    let alias = SKIN_KEY_ALIASES
+        .lock()
+        .ok()
+        .and_then(|mut aliases| aliases.remove(&key));
+    if let Some(alias) = alias {
+        CustomMinecraftSkin {
+            texture_key: alias,
+            variant: skin.variant,
+            cape_id: skin.cape_id,
+            display_order: 0,
+        }
+        .remove(selected_credentials.offline_profile.id, &state.pool)
+        .await?;
+    }
 
     cancel_pending_skin_change_for_skin(
         selected_credentials.offline_profile.id,

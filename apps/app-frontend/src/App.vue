@@ -6,15 +6,20 @@ import { ModrinthApiError } from '@modrinth/api-client'
 import {
         ArrowLeftRightIcon,
         BellIcon,
+        BoxIcon,
+        ChartIcon,
         CompassIcon,
+        CurrencyIcon,
         ImageIcon,
         LibraryIcon,
         LogInIcon,
         LogOutIcon,
+        OrganizationIcon,
         PlayIcon,
         PlusIcon,
         RadioTowerIcon,
         RefreshCwIcon,
+        ReportIcon,
         ServerIcon,
         ServerStackIcon,
         SettingsIcon,
@@ -855,6 +860,42 @@ const messages = defineMessages({
                 id: 'app.account.notifications',
                 defaultMessage: 'Notifications',
         },
+        accountProfile: {
+                id: 'app.account.profile',
+                defaultMessage: 'Profile',
+        },
+        accountModrinthPlus: {
+                id: 'app.account.modrinth-plus',
+                defaultMessage: 'Get Modrinth+',
+        },
+        accountServers: {
+                id: 'app.account.servers',
+                defaultMessage: 'My servers',
+        },
+        accountSettings: {
+                id: 'app.account.settings',
+                defaultMessage: 'Settings',
+        },
+        accountReports: {
+                id: 'app.account.reports',
+                defaultMessage: 'Active reports',
+        },
+        accountProjects: {
+                id: 'app.account.projects',
+                defaultMessage: 'Projects',
+        },
+        accountOrganizations: {
+                id: 'app.account.organizations',
+                defaultMessage: 'Organizations',
+        },
+        accountAnalytics: {
+                id: 'app.account.analytics',
+                defaultMessage: 'Analytics',
+        },
+        accountRevenue: {
+                id: 'app.account.revenue',
+                defaultMessage: 'Revenue',
+        },
 })
 
 function handleAdsConsentRequired(required) {
@@ -1567,15 +1608,42 @@ async function forgetModrinthAccount(userId) {
 const modrinthAccountMenuOptions = computed(() => [
         {
                 id: 'view-profile',
-                label: formatMessage(messages.viewProfile),
+                label: formatMessage(messages.accountProfile),
                 icon: UserIcon,
                 action: () => router.push(`/user/${encodeURIComponent(credentials.value.user.username)}`),
         },
         {
-                id: 'add-friend',
-                label: formatMessage(messages.addFriend),
-                icon: UserPlusIcon,
-                action: () => sidebar.value?.showAddFriendModal(),
+                id: 'modrinth-plus',
+                label: formatMessage(messages.accountModrinthPlus),
+                icon: SparklesIcon,
+                action: () => openUrl('https://modrinth.com/plus'),
+        },
+        {
+                id: 'servers',
+                label: formatMessage(messages.accountServers),
+                icon: ServerIcon,
+                action: () => router.push('/hosting/manage/'),
+        },
+        {
+                id: 'settings',
+                label: formatMessage(messages.accountSettings),
+                icon: SettingsIcon,
+                action: () => openUrl('https://modrinth.com/settings'),
+        },
+        {
+                type: 'divider',
+        },
+        {
+                id: 'notifications',
+                label: formatMessage(messages.accountNotifications),
+                icon: BellIcon,
+                action: () => router.push('/dashboard/notifications'),
+        },
+        {
+                id: 'reports',
+                label: formatMessage(messages.accountReports),
+                icon: ReportIcon,
+                action: () => router.push('/dashboard/reports'),
         },
         {
                 id: 'collections',
@@ -1584,10 +1652,37 @@ const modrinthAccountMenuOptions = computed(() => [
                 action: () => router.push('/dashboard/collections'),
         },
         {
-                id: 'notifications',
-                label: formatMessage(messages.accountNotifications),
-                icon: BellIcon,
-                action: () => router.push('/dashboard/notifications'),
+                id: 'add-friend',
+                label: formatMessage(messages.addFriend),
+                icon: UserPlusIcon,
+                action: () => sidebar.value?.showAddFriendModal(),
+        },
+        {
+                type: 'divider',
+        },
+        {
+                id: 'projects',
+                label: formatMessage(messages.accountProjects),
+                icon: BoxIcon,
+                action: () => router.push('/dashboard/projects'),
+        },
+        {
+                id: 'organizations',
+                label: formatMessage(messages.accountOrganizations),
+                icon: OrganizationIcon,
+                action: () => router.push('/dashboard/organizations'),
+        },
+        {
+                id: 'analytics',
+                label: formatMessage(messages.accountAnalytics),
+                icon: ChartIcon,
+                action: () => router.push('/dashboard/analytics'),
+        },
+        {
+                id: 'revenue',
+                label: formatMessage(messages.accountRevenue),
+                icon: CurrencyIcon,
+                action: () => router.push('/dashboard/revenue'),
         },
         {
                 id: 'flags',
@@ -1683,7 +1778,8 @@ onMounted(() => {
         const normalizeAgentPath = (raw) => {
                 let path = raw.trim().replace(/^["'`]+|["'`]+$/g, '')
                 if (!path) return ''
-                if (/^https?:\/\/modrinth\.com\//.test(path)) path = path.replace(/^https?:\/\/modrinth\.com/, '')
+                if (/^https?:\/\/modrinth\.com\//.test(path))
+                        path = path.replace(/^https?:\/\/modrinth\.com/, '')
                 const bare = path.replace(/^\/+/, '').toLowerCase()
                 const aliases = {
                         '': '/',
@@ -1716,8 +1812,14 @@ onMounted(() => {
                 if (bare in aliases) return aliases[bare]
                 path = `/${path.replace(/^\/+/, '')}`
                 return path
-                        .replace(/^\/browse\/(mods|modpacks|shaders|resourcepacks|datapacks|plugins)(?=$|[?/])/, (_m, kind) => `/browse/${kind.slice(0, -1)}`)
-                        .replace(/^\/(mods|modpacks|shaders|resourcepacks)(?=\?)/, (_m, kind) => `/browse/${kind.slice(0, -1)}`)
+                        .replace(
+                                /^\/browse\/(mods|modpacks|shaders|resourcepacks|datapacks|plugins)(?=$|[?/])/,
+                                (_m, kind) => `/browse/${kind.slice(0, -1)}`,
+                        )
+                        .replace(
+                                /^\/(mods|modpacks|shaders|resourcepacks)(?=\?)/,
+                                (_m, kind) => `/browse/${kind.slice(0, -1)}`,
+                        )
                         .replace(/^\/settings.*$/, 'settings')
         }
 
@@ -2847,16 +2949,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                                         :src="credentials?.user?.avatar_url"
                                         alt=""
                                         size="32px"
-                                        circle
                                         no-shadow
-                                        class="pointer-events-none !size-8"
+                                        class="pointer-events-none !size-8 !rounded-[6px] [image-rendering:pixelated]"
                                 />
                                 <template
                                         v-for="account in accountSwitcherAccounts"
                                         :key="account.user_id"
                                         #[account.optionId]
                                 >
-                                        <Avatar :src="account.user.avatar_url" size="1.25rem" aria-hidden="true" circle />
+                                        <Avatar
+                                                :src="account.user.avatar_url"
+                                                size="1.25rem"
+                                                aria-hidden="true"
+                                                no-shadow
+                                                class="!rounded-[4px] [image-rendering:pixelated]"
+                                        />
                                         {{ account.user.username }}
                                         <UserRoleIcon :role="account.user.role" />
                                 </template>
@@ -2877,7 +2984,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                                         :key="account.user_id"
                                         #[account.optionId]
                                 >
-                                        <Avatar :src="account.user.avatar_url" size="1.25rem" aria-hidden="true" circle />
+                                        <Avatar
+                                                :src="account.user.avatar_url"
+                                                size="1.25rem"
+                                                aria-hidden="true"
+                                                no-shadow
+                                                class="!rounded-[4px] [image-rendering:pixelated]"
+                                        />
                                         {{ account.user.username }}
                                         <UserRoleIcon :role="account.user.role" />
                                 </template>
