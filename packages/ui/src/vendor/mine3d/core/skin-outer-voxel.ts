@@ -53,6 +53,8 @@ export class OuterVoxelLayers {
   private readonly _replacedOuters: Mesh[] = [];
   /** Общий материал с inner — не dispose (владеет skin3d) */
   private _material: MeshStandardMaterial | null = null;
+  /** Клон для полупрозрачных пикселей: inner-материал непрозрачный и съедает alpha */
+  private _glass: MeshStandardMaterial | null = null;
 
   get hasLayers(): boolean {
     return this._groups.length > 0;
@@ -83,26 +85,58 @@ export class OuterVoxelLayers {
     // Единый PBR с inner (голова/торс) — отражения и тон как у основы
     this._material = (skin.head.innerLayer as Mesh).material as MeshStandardMaterial;
 
-    for (const spec of partSpecs(slim)) {
-      const [merged] = buildPartVoxels(img.data, width, height, scale, spec);
-      if (!merged) continue;
+    const base = this._material;
+    const glass = base.clone();
+    glass.transparent = true;
+    glass.depthWrite = false;
+    glass.alphaTest = 0;
+    this._glass = glass;
+    const syncGlass = () => {
+      if (glass.map !== base.map || glass.envMap !== base.envMap) {
+        glass.map = base.map;
+        glass.envMap = base.envMap;
+        glass.needsUpdate = true;
+      }
+      glass.envMapIntensity = base.envMapIntensity;
+      glass.roughness = base.roughness;
+      glass.metalness = base.metalness;
+    };
 
-      this._geometries.push(merged);
-      const mesh = new Mesh(merged, this._material);
-      mesh.name = "outer3d";
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.renderOrder = 3;
+    for (const spec of partSpecs(slim)) {
+      const { solid, translucent } = buildPartVoxels(img.data, width, height, scale, spec);
+      if (!solid && !translucent) continue;
 
       const outer = spec.getOuter(skin);
       const parent = outer.parent;
-      if (!parent) continue;
+      if (!parent) {
+        solid?.dispose();
+        translucent?.dispose();
+        continue;
+      }
 
       const group = new Group();
       group.name = "outer3dGroup";
       group.position.copy(outer.position);
       applyShellScale(group, outer, spec.w, spec.h, spec.d);
-      group.add(mesh);
+      if (solid) {
+        this._geometries.push(solid);
+        const mesh = new Mesh(solid, base);
+        mesh.name = "outer3d";
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.renderOrder = 3;
+        group.add(mesh);
+      }
+      if (translucent) {
+        this._geometries.push(translucent);
+        const mesh = new Mesh(translucent, glass);
+        mesh.name = "outer3d";
+        mesh.castShadow = false;
+        mesh.receiveShadow = true;
+        mesh.renderOrder = 4;
+        mesh.onBeforeRender = syncGlass;
+        group.add(mesh);
+      }
       parent.add(group);
       this._groups.push(group);
 
@@ -139,8 +173,10 @@ export class OuterVoxelLayers {
     for (const g of this._geometries) g.dispose();
     this._geometries.length = 0;
 
-    // Материал общий с skin3d — не dispose
+    // Материал общий с skin3d — не dispose, клон для полупрозрачных — свой
     this._material = null;
+    this._glass?.dispose();
+    this._glass = null;
 
     if (!skin) return;
     for (const spec of partSpecs(false)) {
@@ -205,6 +241,13 @@ interface Voxel {
   /** Тексель по направлению внешней нормали сетки, из которой пришёл воксель */
   texels: Map<string, [number, number]>;
   primary: [number, number];
+  /** Все тексели вокселя полностью непрозрачны */
+  solid: boolean;
+}
+
+interface PartVoxels {
+  solid?: BufferGeometry;
+  translucent?: BufferGeometry;
 }
 
 /**
@@ -219,7 +262,7 @@ function buildPartVoxels(
   imgH: number,
   scale: number,
   spec: PartSpec,
-): BufferGeometry[] {
+): PartVoxels {
   const { u, v, w, h, d } = spec;
   const dims = { w, h, d };
   const voxels = new Map<number, Voxel>();
@@ -232,29 +275,29 @@ function buildPartVoxels(
     for (let fu = 0; fu < fuMax; fu++) {
       for (let fv = 0; fv < fvMax; fv++) {
         const [tu, tv] = onTextureUV(u, v, dims, face, fu, fv);
-        if (!isPresent(data, imgW, imgH, scale, tu, tv)) continue;
+        const alpha = alphaAt(data, imgW, imgH, scale, tu, tv);
+        if (alpha < ALPHA_PRESENT) continue;
         const [mx, my, mz] = uvToModXYZ(dims, face, fu, fv);
         const key = keyOf(mx, my, mz);
         let voxel = voxels.get(key);
         if (!voxel) {
-          voxel = { mx, my, mz, texels: new Map(), primary: [tu, tv] };
+          voxel = { mx, my, mz, texels: new Map(), primary: [tu, tv], solid: true };
           voxels.set(key, voxel);
         }
+        if (alpha < 255) voxel.solid = false;
         voxel.texels.set(normalKey, [tu, tv]);
       }
     }
   }
-  if (voxels.size === 0) return [];
+  if (voxels.size === 0) return {};
 
   const inside = (mx: number, my: number, mz: number) =>
     mx >= 0 && my >= 0 && mz >= 0 && mx < w && my < h && mz < d;
   const onShell = (mx: number, my: number, mz: number) =>
     mx === 0 || my === 0 || mz === 0 || mx === w - 1 || my === h - 1 || mz === d - 1;
 
-  const positions: number[] = [];
-  const normals: number[] = [];
-  const uvs: number[] = [];
-  const indices: number[] = [];
+  const solid = new FaceBuffer();
+  const translucent = new FaceBuffer();
   const INSET = 0.02;
 
   for (const voxel of voxels.values()) {
@@ -264,40 +307,57 @@ function buildPartVoxels(
       const nx = voxel.mx + n[0];
       const ny = voxel.my - n[1];
       const nz = voxel.mz - n[2];
-      if (inside(nx, ny, nz) && (voxels.has(keyOf(nx, ny, nz)) || !onShell(nx, ny, nz))) continue;
-
       const [tu, tv] = voxel.texels.get(n.join(",")) ?? voxel.primary;
+      const opaque = alphaAt(data, imgW, imgH, scale, tu, tv) >= 255;
+      if (inside(nx, ny, nz)) {
+        // Грань под полупрозрачным соседом видна сквозь него — её оставляем
+        const neighbour = voxels.get(keyOf(nx, ny, nz));
+        if (neighbour ? neighbour.solid || !opaque : !onShell(nx, ny, nz)) continue;
+      }
+      const out = opaque ? solid : translucent;
       const u0 = (tu + INSET) / TEX;
       const u1 = (tu + 1 - INSET) / TEX;
       const v0 = 1 - (tv + 1 - INSET) / TEX;
       const v1 = 1 - (tv + INSET) / TEX;
 
-      const base = positions.length / 3;
+      const base = out.positions.length / 3;
       for (const [su, sv] of [
         [-1, -1],
         [1, -1],
         [1, 1],
         [-1, 1],
       ]) {
-        positions.push(
+        out.positions.push(
           cx + (n[0] + su * fu[0] + sv * fv[0]) * 0.5,
           cy + (n[1] + su * fu[1] + sv * fv[1]) * 0.5,
           cz + (n[2] + su * fu[2] + sv * fv[2]) * 0.5,
         );
-        normals.push(n[0], n[1], n[2]);
+        out.normals.push(n[0], n[1], n[2]);
       }
-      uvs.push(u0, v0, u1, v0, u1, v1, u0, v1);
-      indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      out.uvs.push(u0, v0, u1, v0, u1, v1, u0, v1);
+      out.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
     }
   }
 
-  const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
-  geometry.setAttribute("normal", new Float32BufferAttribute(normals, 3));
-  geometry.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
-  geometry.setIndex(indices);
-  geometry.computeBoundingSphere();
-  return [geometry];
+  return { solid: solid.build(), translucent: translucent.build() };
+}
+
+class FaceBuffer {
+  readonly positions: number[] = [];
+  readonly normals: number[] = [];
+  readonly uvs: number[] = [];
+  readonly indices: number[] = [];
+
+  build(): BufferGeometry | undefined {
+    if (this.indices.length === 0) return undefined;
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new Float32BufferAttribute(this.positions, 3));
+    geometry.setAttribute("normal", new Float32BufferAttribute(this.normals, 3));
+    geometry.setAttribute("uv", new Float32BufferAttribute(this.uvs, 2));
+    geometry.setIndex(this.indices);
+    geometry.computeBoundingSphere();
+    return geometry;
+  }
 }
 
 function faceSize(dims: { w: number; h: number; d: number }, face: McDir): [number, number] {
@@ -375,16 +435,16 @@ function modToThreeCenter(
   ];
 }
 
-function isPresent(
+function alphaAt(
   data: Uint8ClampedArray,
   imgW: number,
   imgH: number,
   scale: number,
   tu: number,
   tv: number,
-): boolean {
+): number {
   const x = Math.min(imgW - 1, Math.floor(tu * scale));
   const y = Math.min(imgH - 1, Math.floor(tv * scale));
-  if (x < 0 || y < 0 || tu < 0 || tv < 0) return false;
-  return data[(y * imgW + x) * 4 + 3]! >= ALPHA_PRESENT;
+  if (x < 0 || y < 0 || tu < 0 || tv < 0) return 0;
+  return data[(y * imgW + x) * 4 + 3]!;
 }
