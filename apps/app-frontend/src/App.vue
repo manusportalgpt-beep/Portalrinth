@@ -2949,21 +2949,16 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                                         :src="credentials?.user?.avatar_url"
                                         alt=""
                                         size="32px"
+                                        circle
                                         no-shadow
-                                        class="pointer-events-none !size-8 !rounded-[6px] [image-rendering:pixelated]"
+                                        class="pointer-events-none !size-8"
                                 />
                                 <template
                                         v-for="account in accountSwitcherAccounts"
                                         :key="account.user_id"
                                         #[account.optionId]
                                 >
-                                        <Avatar
-                                                :src="account.user.avatar_url"
-                                                size="1.25rem"
-                                                aria-hidden="true"
-                                                no-shadow
-                                                class="!rounded-[4px] [image-rendering:pixelated]"
-                                        />
+                                        <Avatar :src="account.user.avatar_url" size="1.25rem" aria-hidden="true" circle />
                                         {{ account.user.username }}
                                         <UserRoleIcon :role="account.user.role" />
                                 </template>
@@ -2984,13 +2979,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                                         :key="account.user_id"
                                         #[account.optionId]
                                 >
-                                        <Avatar
-                                                :src="account.user.avatar_url"
-                                                size="1.25rem"
-                                                aria-hidden="true"
-                                                no-shadow
-                                                class="!rounded-[4px] [image-rendering:pixelated]"
-                                        />
+                                        <Avatar :src="account.user.avatar_url" size="1.25rem" aria-hidden="true" circle />
                                         {{ account.user.username }}
                                         <UserRoleIcon :role="account.user.role" />
                                 </template>

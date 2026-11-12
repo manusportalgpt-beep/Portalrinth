@@ -68,7 +68,7 @@ function statusTone(status: string) {
 </script>
 
 <template>
-	<div class="flex flex-col gap-4">
+	<div class="creator-sheet">
 		<div v-if="!signedIn" class="empty-state">
 			<CurrencyIcon aria-hidden="true" />
 			<p class="m-0 text-lg font-medium text-contrast">{{ formatMessage(messages.signIn) }}</p>
@@ -193,18 +193,21 @@ function statusTone(status: string) {
 <style scoped lang="scss">
 @use './creator.scss';
 
-.balance-card {
+.creator-sheet .balance-card {
 	flex-direction: row;
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
+	padding: var(--gap-lg);
+	border-radius: var(--radius-lg);
+	border: 1px solid color-mix(in srgb, var(--surface-5) 80%, transparent);
 	background:
 		radial-gradient(
 			circle at 0% 0%,
 			color-mix(in srgb, var(--color-brand) 16%, transparent),
 			transparent 60%
 		),
-		var(--color-bg-raised);
+		color-mix(in srgb, var(--surface-4) 55%, transparent);
 }
 
 .balance {

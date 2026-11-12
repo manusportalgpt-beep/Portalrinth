@@ -95,7 +95,7 @@ function open(organization: CreatorOrganization) {
 </script>
 
 <template>
-	<div class="flex flex-col gap-4">
+	<div class="creator-sheet">
 		<NewModal ref="modal" :header="formatMessage(messages.orgHeader)">
 			<div class="flex w-[28rem] max-w-full flex-col gap-4">
 				<div class="flex flex-col gap-2">
@@ -216,9 +216,9 @@ function open(organization: CreatorOrganization) {
 	align-items: center;
 	gap: var(--gap-md);
 	padding: var(--gap-lg);
-	border: none;
+	border: 1px solid color-mix(in srgb, var(--surface-5) 80%, transparent);
 	border-radius: var(--radius-xl);
-	background-color: var(--color-bg-raised);
+	background-color: color-mix(in srgb, var(--surface-4) 55%, transparent);
 	color: inherit;
 	font: inherit;
 	text-align: left;

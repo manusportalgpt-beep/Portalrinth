@@ -52,7 +52,7 @@ function open(report: CreatorReport) {
 </script>
 
 <template>
-	<div class="flex flex-col gap-4">
+	<div class="creator-sheet">
 		<div v-if="!signedIn" class="empty-state">
 			<ReportIcon aria-hidden="true" />
 			<p class="m-0 text-lg font-medium text-contrast">{{ formatMessage(messages.signIn) }}</p>
@@ -105,6 +105,13 @@ function open(report: CreatorReport) {
 
 <style scoped lang="scss">
 @use './creator.scss';
+
+.creator-sheet .report {
+	padding: var(--gap-lg);
+	border-radius: var(--radius-lg);
+	border: 1px solid color-mix(in srgb, var(--surface-5) 80%, transparent);
+	background-color: color-mix(in srgb, var(--surface-4) 55%, transparent);
+}
 
 .report-icon {
 	display: grid;

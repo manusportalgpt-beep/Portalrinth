@@ -249,7 +249,7 @@ function openOnSite() {
 </script>
 
 <template>
-	<div class="flex flex-col gap-4">
+	<div class="creator-sheet">
 		<Button class="w-fit" type="quiet" @click="router.push('/dashboard/projects')">
 			<ArrowLeftIcon aria-hidden="true" />
 			{{ formatMessage(messages.backToProjects) }}
@@ -458,9 +458,7 @@ function openOnSite() {
 							<span class="truncate font-semibold text-contrast">{{ version.name }}</span>
 							<span class="truncate text-sm text-secondary">
 								{{ version.version_number }} ·
-								{{
-									version.loaders.map((l) => l.charAt(0).toUpperCase() + l.slice(1)).join(', ')
-								}}
+								{{ version.loaders.map((l) => l.charAt(0).toUpperCase() + l.slice(1)).join(', ') }}
 								· {{ version.game_versions.slice(0, 4).join(', ')
 								}}{{ version.game_versions.length > 4 ? '…' : '' }}
 							</span>
@@ -546,7 +544,7 @@ function openOnSite() {
 	padding: var(--gap-md) var(--gap-lg);
 	border-radius: var(--radius-xl);
 	border-left: 3px solid var(--color-orange);
-	background-color: color-mix(in srgb, var(--color-orange) 10%, var(--color-bg-raised));
+	background-color: color-mix(in srgb, var(--color-orange) 12%, transparent);
 	color: var(--color-base);
 	font-size: var(--font-size-sm);
 }

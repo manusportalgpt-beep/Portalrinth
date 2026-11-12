@@ -141,7 +141,7 @@ function rangeLabel(item: Range) {
 </script>
 
 <template>
-	<div class="flex flex-col gap-4">
+	<div class="creator-sheet">
 		<div v-if="!signedIn" class="empty-state">
 			<ChartIcon aria-hidden="true" />
 			<p class="m-0 text-lg font-medium text-contrast">{{ formatMessage(messages.signIn) }}</p>

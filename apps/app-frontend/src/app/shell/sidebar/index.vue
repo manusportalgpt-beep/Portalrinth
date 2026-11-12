@@ -263,34 +263,35 @@ const messages = defineMessages({
 				when it opens.
 			-->
 			<template v-if="!pageHasPanel">
-			<IconButton
-				v-tooltip="formatMessage(messages.playingAs)"
-				:label="formatMessage(messages.playingAs)"
-				@click="unfold"
-			>
-				<img
-					v-if="headUrl"
-					:src="headUrl"
-					alt=""
-					class="size-6 rounded-[3px] object-cover"
-					draggable="false"
-				/>
-				<UserIcon v-else />
-			</IconButton>
-			<IconButton
-				v-tooltip="formatMessage(messages.findFriends)"
-				:label="formatMessage(messages.findFriends)"
-				@click="showFindFriendsModal()"
-			>
-				<SearchIcon />
-			</IconButton>
-			<IconButton
-				v-tooltip="formatMessage(messages.addFriend)"
-				:label="formatMessage(messages.addFriend)"
-				@click="showAddFriendModal()"
-			>
-				<UserPlusIcon />
-			</IconButton>
+				<IconButton
+					v-tooltip="formatMessage(messages.playingAs)"
+					:label="formatMessage(messages.playingAs)"
+					:circular="false"
+					@click="unfold"
+				>
+					<img
+						v-if="headUrl"
+						:src="headUrl"
+						alt=""
+						class="size-6 rounded-[3px] object-cover"
+						draggable="false"
+					/>
+					<UserIcon v-else />
+				</IconButton>
+				<IconButton
+					v-tooltip="formatMessage(messages.findFriends)"
+					:label="formatMessage(messages.findFriends)"
+					@click="showFindFriendsModal()"
+				>
+					<SearchIcon />
+				</IconButton>
+				<IconButton
+					v-tooltip="formatMessage(messages.addFriend)"
+					:label="formatMessage(messages.addFriend)"
+					@click="showAddFriendModal()"
+				>
+					<UserPlusIcon />
+				</IconButton>
 			</template>
 
 			<!--

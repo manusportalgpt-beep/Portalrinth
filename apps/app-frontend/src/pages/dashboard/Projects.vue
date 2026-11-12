@@ -71,7 +71,7 @@ function manage(project: CreatorProject) {
 </script>
 
 <template>
-	<div class="flex flex-col gap-4">
+	<div class="creator-sheet">
 		<ProjectCreateModal ref="createModal" @created="onCreated" />
 
 		<div v-if="!signedIn" class="empty-state">
