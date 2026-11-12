@@ -22,6 +22,7 @@ import {
 } from '@/helpers/hosting'
 import { openPath } from '@/helpers/utils.js'
 
+import ContentBrowser from './content-browser.vue'
 import { contentFolder, contentKind, contentMessages, formatSize } from './content-kind'
 
 const props = defineProps<{ server: HostedServerView }>()
@@ -82,75 +83,84 @@ async function importFiles() {
 	await apply('import', () => hosting_plugin_import(props.server.id, paths))
 }
 
+function onInstalled(list: HostedPlugin[]) {
+	queryClient.setQueryData(queryKey.value, list)
+}
+
 function openFolder() {
 	void openPath(`${props.server.dir}/${contentFolder(props.server)}`).catch(handleError)
 }
 </script>
 
 <template>
-	<section class="hosting-panel flex flex-col gap-3">
-		<div class="flex flex-wrap items-center justify-between gap-2">
-			<h2 class="m-0 flex items-center gap-2 text-lg font-bold text-contrast">
-				<BoxIcon class="shrink-0" />
-				{{ formatMessage(contentMessages[kind]) }}
-				<span v-if="plugins.length > 0" class="text-secondary">{{ plugins.length }}</span>
-			</h2>
-			<div class="flex items-center gap-2">
-				<Button type="outlined" @click="openFolder">
-					<FolderOpenIcon />
-					{{ formatMessage(messages.openFolder) }}
-				</Button>
-				<Button type="colored" color="brand" :loading="busy === 'import'" @click="importFiles">
-					<UploadIcon />
-					{{ formatMessage(messages.importButton) }}
-				</Button>
-			</div>
-		</div>
-
-		<EmptyState
-			v-if="!pluginsQuery.isPending.value && plugins.length === 0"
-			type="empty"
-			:heading="formatMessage(messages.empty)"
-			:description="formatMessage(messages.emptyHint)"
-		/>
-		<template v-else>
-			<div class="flex flex-col gap-2">
-				<div
-					v-for="plugin in plugins"
-					:key="plugin.name"
-					class="hosting-item"
-					:class="{ 'is-off': !plugin.enabled }"
-				>
-					<BoxIcon class="shrink-0 text-secondary" />
-					<span class="min-w-0 flex-1 truncate font-semibold text-contrast">{{ plugin.name }}</span>
-					<span class="shrink-0 text-sm text-secondary">{{ formatSize(plugin.size) }}</span>
-					<Toggle
-						:model-value="plugin.enabled"
-						:disabled="busy !== null"
-						@update:model-value="
-							apply(`toggle:${plugin.name}`, () => hosting_plugin_toggle(server.id, plugin.name))
-						"
-					/>
-					<Button
-						v-tooltip="formatMessage(messages.remove)"
-						size="sm"
-						type="quiet"
-						color="red"
-						:disabled="busy !== null"
-						:aria-label="formatMessage(messages.remove)"
-						@click="
-							apply(`remove:${plugin.name}`, () => hosting_plugin_remove(server.id, plugin.name))
-						"
-					>
-						<TrashIcon />
+	<div class="flex flex-col gap-4">
+		<section class="hosting-panel flex flex-col gap-3">
+			<div class="flex flex-wrap items-center justify-between gap-2">
+				<h2 class="m-0 flex items-center gap-2 text-lg font-bold text-contrast">
+					<BoxIcon class="shrink-0" />
+					{{ formatMessage(contentMessages[kind]) }}
+					<span v-if="plugins.length > 0" class="text-secondary">{{ plugins.length }}</span>
+				</h2>
+				<div class="flex items-center gap-2">
+					<Button type="outlined" @click="openFolder">
+						<FolderOpenIcon />
+						{{ formatMessage(messages.openFolder) }}
+					</Button>
+					<Button type="colored" color="brand" :loading="busy === 'import'" @click="importFiles">
+						<UploadIcon />
+						{{ formatMessage(messages.importButton) }}
 					</Button>
 				</div>
 			</div>
-			<span v-if="plugins.length > 0" class="text-sm text-secondary">
-				{{ formatMessage(messages.restartHint) }}
-			</span>
-		</template>
-	</section>
+
+			<EmptyState
+				v-if="!pluginsQuery.isPending.value && plugins.length === 0"
+				type="empty"
+				:heading="formatMessage(messages.empty)"
+				:description="formatMessage(messages.emptyHint)"
+			/>
+			<template v-else>
+				<div class="flex flex-col gap-2">
+					<div
+						v-for="plugin in plugins"
+						:key="plugin.name"
+						class="hosting-item"
+						:class="{ 'is-off': !plugin.enabled }"
+					>
+						<BoxIcon class="shrink-0 text-secondary" />
+						<span class="min-w-0 flex-1 truncate font-semibold text-contrast">{{
+							plugin.name
+						}}</span>
+						<span class="shrink-0 text-sm text-secondary">{{ formatSize(plugin.size) }}</span>
+						<Toggle
+							:model-value="plugin.enabled"
+							:disabled="busy !== null"
+							@update:model-value="
+								apply(`toggle:${plugin.name}`, () => hosting_plugin_toggle(server.id, plugin.name))
+							"
+						/>
+						<Button
+							v-tooltip="formatMessage(messages.remove)"
+							size="sm"
+							type="quiet"
+							color="red"
+							:disabled="busy !== null"
+							:aria-label="formatMessage(messages.remove)"
+							@click="
+								apply(`remove:${plugin.name}`, () => hosting_plugin_remove(server.id, plugin.name))
+							"
+						>
+							<TrashIcon />
+						</Button>
+					</div>
+				</div>
+				<span v-if="plugins.length > 0" class="text-sm text-secondary">
+					{{ formatMessage(messages.restartHint) }}
+				</span>
+			</template>
+		</section>
+		<ContentBrowser :server="server" @installed="onInstalled" />
+	</div>
 </template>
 
 <style scoped lang="scss">

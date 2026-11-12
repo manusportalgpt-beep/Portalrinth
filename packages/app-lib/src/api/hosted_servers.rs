@@ -1061,7 +1061,7 @@ fn spawn_server(
         tokio::spawn(read_output(id.to_string(), server.clone(), stderr));
     }
     if let Some(pid) = pid {
-        tokio::spawn(sample_usage(id.to_string(), pid));
+        tokio::spawn(sample_usage(id.to_string(), pid, server.port));
     }
     Ok(child)
 }
@@ -1127,6 +1127,17 @@ static SPAWN_PROGRESS: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"Preparing spawn area: (\d{1,3})%").expect("valid regex")
 });
 
+static ANSI_CODES: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"\x1b\[[0-9;?]*[A-Za-z]").expect("valid regex")
+});
+
+/// A player whose connection dropped; Paper and Fabric say so before, or
+/// instead of, the usual "left the game".
+static LOST_CONNECTION: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"\]: (?:\[[^\]]*\] )?([A-Za-z0-9_.]{1,32}) lost connection:")
+        .expect("valid regex")
+});
+
 static JOIN_LEAVE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"\]: (?:\[[^\]]*\] )?([A-Za-z0-9_.]{1,32}) (joined|left) the game")
         .expect("valid regex")
@@ -1172,13 +1183,21 @@ async fn read_output(
                 Some("the Minecraft EULA has not been accepted".to_string()),
             );
         }
-        if let Some(found) = JOIN_LEAVE.captures(&line) {
+        let plain = ANSI_CODES.replace_all(&line, "");
+        if let Some(found) = JOIN_LEAVE.captures(&plain) {
             let name = found[1].to_string();
             let mut run = RUNTIME.entry(id.clone()).or_default();
             run.players.retain(|player| *player != name);
             if &found[2] == "joined" {
                 run.players.push(name);
             }
+        } else if let Some(found) = LOST_CONNECTION.captures(&plain) {
+            let name = found[1].to_string();
+            RUNTIME
+                .entry(id.clone())
+                .or_default()
+                .players
+                .retain(|player| *player != name);
         }
         push_log(&id, line);
     }
@@ -1229,17 +1248,80 @@ pub async fn republish(id: &str) -> crate::Result<HostedServerView> {
     get(id).await
 }
 
-async fn sample_usage(id: String, pid: u32) {
+/// Asks the server itself how many players it has, so that a leave line the
+/// log never printed (a crash of the client, a dropped tunnel) cannot leave a
+/// player counted forever.
+async fn reconcile_players(id: &str, port: u16) {
+    let Ok(Ok(connection)) = tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        async_minecraft_ping::ConnectionConfig::build("127.0.0.1")
+            .with_port(port)
+            .with_timeout(std::time::Duration::from_secs(2))
+            .connect(),
+    )
+    .await
+    else {
+        return;
+    };
+    let Ok(Ok(status)) = tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        connection.status(),
+    )
+    .await
+    else {
+        return;
+    };
+    let online = status.status.players.online.max(0) as usize;
+    let named: Vec<String> = status
+        .status
+        .players
+        .sample
+        .as_ref()
+        .map(|sample| {
+            sample
+                .iter()
+                .map(|player| player.name.clone())
+                .filter(|name| {
+                    !name.is_empty()
+                        && name.chars().all(|c| {
+                            c.is_ascii_alphanumeric() || c == '_' || c == '.'
+                        })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let Some(mut run) = RUNTIME.get_mut(id) else {
+        return;
+    };
+    if run.status != HostedStatus::Running {
+        return;
+    }
+    if online == 0 {
+        run.players.clear();
+    } else if named.len() == online {
+        run.players = named;
+    } else if run.players.len() > online {
+        let extra = run.players.len() - online;
+        run.players.drain(..extra);
+    }
+}
+
+async fn sample_usage(id: String, pid: u32, port: u16) {
     use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System};
     let cores = std::thread::available_parallelism()
         .map(|cores| cores.get())
         .unwrap_or(1) as f32;
     let target = Pid::from_u32(pid);
     let mut system = System::new();
+    let mut tick: u32 = 0;
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         if RUNTIME.get(&id).and_then(|run| run.pid) != Some(pid) {
             return;
+        }
+        tick = tick.wrapping_add(1);
+        if tick % 5 == 0 {
+            reconcile_players(&id, port).await;
         }
         system.refresh_processes_specifics(
             ProcessesToUpdate::Some(&[target]),
@@ -1425,6 +1507,50 @@ pub async fn plugin_import(
             tokio::fs::copy(&path, dir.join(name)).await?;
         }
     }
+    plugins(id).await
+}
+
+/// Fetches a file published on Modrinth straight into the server's content
+/// folder. Only Modrinth's CDN is trusted, so the launcher never writes
+/// whatever a page happened to link to.
+pub async fn plugin_download(
+    id: &str,
+    url: &str,
+    name: &str,
+) -> crate::Result<Vec<HostedPlugin>> {
+    let name = plain_name(name)?;
+    let lower = name.to_lowercase();
+    if !(lower.ends_with(".jar") || lower.ends_with(".zip")) {
+        return Err(input_error("only .jar and .zip files can be installed"));
+    }
+    let trusted = url::Url::parse(url)
+        .ok()
+        .filter(|parsed| parsed.scheme() == "https")
+        .and_then(|parsed| parsed.host_str().map(str::to_owned))
+        .is_some_and(|host| {
+            host == "cdn.modrinth.com" || host.ends_with(".modrinth.com")
+        });
+    if !trusted {
+        return Err(input_error("the file is not hosted on Modrinth"));
+    }
+    let dir = content_dir(id).await?;
+    let response = crate::util::fetch::REQWEST_CLIENT
+        .get(url)
+        .header("User-Agent", USER_AGENT)
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        return Err(anyhow::anyhow!(format!(
+            "the download answered HTTP {}",
+            response.status()
+        )));
+    }
+    let bytes = response.bytes().await?;
+    let part = dir.join(format!("{name}.part"));
+    tokio::fs::write(&part, &bytes).await?;
+    let _ = tokio::fs::remove_file(dir.join(format!("{name}.disabled"))).await;
+    tokio::fs::rename(&part, dir.join(name)).await?;
+    push_log(id, format!("Installed {name}"));
     plugins(id).await
 }
 

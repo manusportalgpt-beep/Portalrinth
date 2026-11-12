@@ -758,7 +758,7 @@ impl PortRelay {
 async fn signed_in_bearer(
     state: &crate::State,
 ) -> crate::Result<(String, String)> {
-    let identity = resolve_identity(state, "").await?;
+    let identity = selected_identity(state).await?;
     let username = match &identity {
         RelayIdentity::Online { username, .. }
         | RelayIdentity::Nickname { username, .. } => username.clone(),
@@ -790,14 +790,33 @@ pub async fn publish_port(
         tracing::debug!("the relay did not reserve an address: {error}");
     }
 
-    let opened = open_session(
+    let opened = match open_session(
         &state,
         &bearer,
         serde_json::json!({ "localPort": local_port, "serverId": server_id }),
         local_port,
         || {},
     )
-    .await?;
+    .await
+    {
+        Ok(opened) => opened,
+        // A reserved address can still belong to the account the server was
+        // first published from; the relay then refuses the tunnel. Players
+        // are better off with an address of the relay's choosing than none.
+        Err(error) => {
+            tracing::warn!(
+                "the reserved address could not be opened, trying without it: {error}"
+            );
+            open_session(
+                &state,
+                &bearer,
+                serde_json::json!({ "localPort": local_port }),
+                local_port,
+                || {},
+            )
+            .await?
+        }
+    };
 
     Ok(PortRelay {
         session_id: opened.session_id,
@@ -904,6 +923,39 @@ async fn resolve_identity(
             "sign in to an account first".to_string(),
         ))
     })
+}
+
+/// The account picked in the launcher's account switcher, in the order a game
+/// is launched with: Microsoft, then Ely.by. Only one of them is ever active;
+/// with neither, whichever real account there is.
+async fn selected_identity(
+    state: &crate::State,
+) -> crate::Result<RelayIdentity> {
+    let selected = match crate::state::Credentials::get_active(&state.pool)
+        .await
+        .ok()
+        .flatten()
+    {
+        Some(microsoft) => Some(("msa", microsoft.offline_profile.id)),
+        None => crate::state::ElyCredentials::get_active(&state.pool)
+            .await
+            .ok()
+            .flatten()
+            .map(|ely| ("ely", ely.uuid)),
+    };
+    if let Some((wanted, wanted_uuid)) = selected {
+        let mut identities = identities(state).await?;
+        if let Some(at) = identities.iter().position(|identity| {
+            matches!(
+                identity,
+                RelayIdentity::Online { provider, uuid, .. }
+                    if *provider == wanted && *uuid == wanted_uuid
+            )
+        }) {
+            return Ok(identities.swap_remove(at));
+        }
+    }
+    resolve_identity(state, "").await
 }
 
 /// Every account the launcher holds, most specific first.

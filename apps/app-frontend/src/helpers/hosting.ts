@@ -162,6 +162,8 @@ export const hosting_plugin_remove = (id: string, name: string) =>
 	invoke<HostedPlugin[]>(plugin('hosting_plugin_remove'), { id, name })
 export const hosting_plugin_import = (id: string, paths: string[]) =>
 	invoke<HostedPlugin[]>(plugin('hosting_plugin_import'), { id, paths })
+export const hosting_plugin_download = (id: string, url: string, name: string) =>
+	invoke<HostedPlugin[]>(plugin('hosting_plugin_download'), { id, url, name })
 export const hosting_files = (id: string, path: string) =>
 	invoke<HostedFile[]>(plugin('hosting_files'), { id, path })
 export const hosting_file_delete = (id: string, path: string) =>

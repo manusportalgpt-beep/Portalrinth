@@ -116,38 +116,31 @@
 						Which way it runs, as arrows around a picture of it: the
 						arrow is the direction, so nothing has to be read.
 					-->
-					<div class="flex items-center gap-3">
-						<span class="text-xs text-secondary">{{ directionLabel }}</span>
-						<div
-							class="ml-auto grid grid-cols-3 gap-1"
-							role="radiogroup"
-							:aria-label="directionLabel"
-						>
-							<template v-for="cell in DIRECTION_GRID" :key="cell">
-								<span
-									v-if="cell === null"
-									class="size-7 rounded-md border border-solid border-surface-5"
-									:style="{ background: gradientCss(angle, stops) }"
-									aria-hidden="true"
-								/>
-								<button
-									v-else
-									type="button"
-									role="radio"
-									:aria-checked="angle === cell"
-									:aria-label="`${directionLabel}: ${cell}°`"
-									class="grid size-7 cursor-pointer place-items-center rounded-md border-0 p-0 transition-colors"
-									:class="
-										angle === cell
-											? 'bg-brand text-brand-inverted'
-											: 'bg-surface-4 text-secondary hover:text-contrast'
-									"
-									@click="setAngle(cell)"
-								>
-									<ArrowUpIcon class="size-4" :style="{ transform: `rotate(${cell}deg)` }" />
-								</button>
-							</template>
-						</div>
+					<div class="grid w-full grid-cols-3 gap-1" role="radiogroup" :aria-label="directionLabel">
+						<template v-for="cell in DIRECTION_GRID" :key="cell">
+							<span
+								v-if="cell === null"
+								class="h-8 w-full rounded-md border border-solid border-surface-5"
+								:style="{ background: gradientCss(angle, stops) }"
+								aria-hidden="true"
+							/>
+							<button
+								v-else
+								type="button"
+								role="radio"
+								:aria-checked="angle === cell"
+								:aria-label="`${directionLabel}: ${cell}°`"
+								class="grid h-8 w-full cursor-pointer place-items-center rounded-md border-0 p-0 transition-colors"
+								:class="
+									angle === cell
+										? 'bg-brand text-brand-inverted'
+										: 'bg-surface-4 text-secondary hover:text-contrast'
+								"
+								@click="setAngle(cell)"
+							>
+								<ArrowUpIcon class="size-4" :style="{ transform: `rotate(${cell}deg)` }" />
+							</button>
+						</template>
 					</div>
 				</div>
 

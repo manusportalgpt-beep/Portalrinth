@@ -5198,5 +5198,59 @@
 	},
 	"app.account.revenue": {
 		"message": "Доход"
+	},
+	"app.server-hosting.browse.title": {
+		"message": "Найти на Modrinth"
+	},
+	"app.server-hosting.browse.search": {
+		"message": "Поиск"
+	},
+	"app.server-hosting.browse.install": {
+		"message": "Установить"
+	},
+	"app.server-hosting.browse.installed": {
+		"message": "Установлено"
+	},
+	"app.server-hosting.browse.more": {
+		"message": "Показать ещё"
+	},
+	"app.server-hosting.browse.by": {
+		"message": "от {author}"
+	},
+	"app.server-hosting.browse.nothing": {
+		"message": "Ничего не найдено"
+	},
+	"app.server-hosting.browse.nothing-hint": {
+		"message": "Под {core} {version} ничего не подходит. Попробуйте другое слово."
+	},
+	"app.server-hosting.browse.failed": {
+		"message": "Не удалось связаться с Modrinth"
+	},
+	"app.server-hosting.browse.no-version": {
+		"message": "У {name} нет файла под этот сервер"
+	},
+	"app.server-hosting.browse.installed-toast": {
+		"message": "{name} установлен — перезапустите сервер, чтобы он загрузился"
+	},
+	"app.server-hosting.install-to.header": {
+		"message": "Установить на сервер"
+	},
+	"app.server-hosting.install-to.loading": {
+		"message": "Загрузка серверов…"
+	},
+	"app.server-hosting.install-to.none": {
+		"message": "Нет серверов для плагинов"
+	},
+	"app.server-hosting.install-to.none-hint": {
+		"message": "Сначала создайте сервер на Paper, Purpur или Folia в Self-Hosted."
+	},
+	"app.server-hosting.install-to.unsupported": {
+		"message": "Не поддерживается"
+	},
+	"app.server-hosting.install-to.unsupported-hint": {
+		"message": "У этого плагина нет сборки под это ядро"
+	},
+	"app.browse.install-on-hosted-server": {
+		"message": "Установить на сервер"
 	}
 }

@@ -2,8 +2,8 @@
 import { CheckIcon, DropdownIcon, PlusIcon, XIcon } from '@modrinth/assets'
 import {
 	AppearanceSettingsLayout,
-	ColorPicker,
 	Collapsible,
+	ColorPicker,
 	Combobox,
 	commonMessages,
 	defineMessages,
@@ -30,7 +30,6 @@ import {
 	findAccentPreset,
 	iconsAccent,
 	MAX_ACCENT_GRADIENT_STOPS,
-	MAX_CUSTOM_ACCENT_COLORS,
 	removeCustomAccentColor,
 	setAccentGradientAnimated,
 	setAccentGradientSpeed,
@@ -101,15 +100,6 @@ function onPickerPreview(color: string | null): void {
 	else endAccentPreview()
 }
 
-function onCustomColoursChanged(colors: string[]): void {
-	for (const color of accent.customColors.value) {
-		if (!colors.includes(color)) removeCustomAccentColor(color)
-	}
-	for (const color of colors) {
-		addCustomAccentColor(color)
-	}
-}
-
 const appSettings = useAppSettings()
 const auth = injectAuth()
 const { updatePreferences } = injectUserPreferences()
@@ -159,21 +149,9 @@ const messages = defineMessages({
 		id: 'app.appearance-settings.accent.pick',
 		defaultMessage: 'Pick an accent colour',
 	},
-	accentMyColoursTitle: {
-		id: 'app.appearance-settings.accent.my-colours',
-		defaultMessage: 'My accent colours',
-	},
-	accentKeepColour: {
-		id: 'app.appearance-settings.accent.keep-colour',
-		defaultMessage: 'Keep this colour',
-	},
 	accentRemoveColour: {
 		id: 'app.appearance-settings.accent.remove-colour',
 		defaultMessage: 'Remove this colour',
-	},
-	accentTooManyColours: {
-		id: 'app.appearance-settings.accent.too-many-colours',
-		defaultMessage: 'The row is full - remove one of your colours first',
 	},
 	accentSolid: { id: 'app.appearance-settings.accent.solid', defaultMessage: 'Colour' },
 	accentGradient: { id: 'app.appearance-settings.accent.gradient', defaultMessage: 'Gradient' },
@@ -549,12 +527,6 @@ provideAppearanceSettings({
 			<ColorPicker
 				v-model="pickedColor"
 				:label="formatMessage(messages.accentPickTitle)"
-				:custom-colors="accent.customColors.value"
-				:custom-colors-label="formatMessage(messages.accentMyColoursTitle)"
-				:custom-colors-add-label="formatMessage(messages.accentKeepColour)"
-				:custom-colors-remove-label="formatMessage(messages.accentRemoveColour)"
-				:custom-colors-full-label="formatMessage(messages.accentTooManyColours)"
-				:custom-colors-limit="MAX_CUSTOM_ACCENT_COLORS"
 				allow-gradient
 				:max-stops="MAX_ACCENT_GRADIENT_STOPS"
 				:solid-label="formatMessage(messages.accentSolid)"
@@ -566,7 +538,6 @@ provideAppearanceSettings({
 				class="!h-8 !w-8 !rounded-full"
 				@update:model-value="onColourPicked"
 				@preview="onPickerPreview"
-				@update:custom-colors="onCustomColoursChanged"
 			>
 				<template #trigger>
 					<span

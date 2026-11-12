@@ -29,6 +29,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             hosting_plugin_toggle,
             hosting_plugin_remove,
             hosting_plugin_import,
+            hosting_plugin_download,
             hosting_files,
             hosting_file_delete,
             hosting_file_import,
@@ -135,6 +136,15 @@ pub async fn hosting_plugin_import(
     paths: Vec<PathBuf>,
 ) -> Result<Vec<HostedPlugin>> {
     Ok(hosted_servers::plugin_import(&id, paths).await?)
+}
+
+#[tauri::command]
+pub async fn hosting_plugin_download(
+    id: String,
+    url: String,
+    name: String,
+) -> Result<Vec<HostedPlugin>> {
+    Ok(hosted_servers::plugin_download(&id, &url, &name).await?)
 }
 
 #[tauri::command]

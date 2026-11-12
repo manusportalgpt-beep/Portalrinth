@@ -57,6 +57,7 @@ import type { LocationQuery } from 'vue-router'
 import { useRoute, useRouter } from 'vue-router'
 
 import BrowseSourcePicker from '@/components/ui/curseforge/BrowseSourcePicker.vue'
+import HostedInstallModal from '@/components/ui/server-hosting/hosted-install-modal.vue'
 import { useAppServerBrowse } from '@/composables/browse/use-app-server-browse'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
@@ -160,6 +161,7 @@ const breadcrumbLabel = computed(() => {
 const appSettings = useAppSettings()
 const browseRouteActive = computed(() => route.path.startsWith('/browse/'))
 const serverSetupModalRef = ref<InstanceType<typeof CreationFlowModal> | null>(null)
+const hostedInstallModalRef = ref<InstanceType<typeof HostedInstallModal> | null>(null)
 const serverInstallContent = createServerInstallContent({ serverSetupModalRef })
 provideServerInstallContent(serverInstallContent)
 const {
@@ -705,6 +707,10 @@ const messages = defineMessages({
 	hideInstalledModpacks: {
 		id: 'app.browse.hide-installed-modpacks',
 		defaultMessage: 'Hide already installed',
+	},
+	installOnHostedServer: {
+		id: 'app.browse.install-on-hosted-server',
+		defaultMessage: 'Install on server',
 	},
 	installingToServer: {
 		id: 'app.browse.server.installing',
@@ -1262,6 +1268,25 @@ function getCardActions(
 						}
 					}
 				},
+			},
+		]
+	}
+
+	if (currentProjectType === 'plugin') {
+		return [
+			{
+				key: 'install',
+				label: formatMessage(messages.installOnHostedServer),
+				icon: ServerStackIcon,
+				color: 'brand',
+				type: 'outlined',
+				onClick: () =>
+					hostedInstallModalRef.value?.show({
+						id: projectResult.project_id,
+						name: projectResult.name,
+						iconUrl: projectResult.icon_url,
+						loaders: projectResult.loaders ?? projectResult.categories ?? [],
+					}),
 			},
 		]
 	}
@@ -2058,6 +2083,7 @@ provideBrowseManager({
 				</ContextMenu>
 			</template>
 		</BrowsePageLayout>
+		<HostedInstallModal ref="hostedInstallModalRef" />
 		<CreationFlowModal
 			v-if="isServerContext && projectType === 'modpack'"
 			ref="serverSetupModalRef"

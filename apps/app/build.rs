@@ -701,6 +701,7 @@ fn main() {
                         "hosting_plugin_toggle",
                         "hosting_plugin_remove",
                         "hosting_plugin_import",
+                        "hosting_plugin_download",
                         "hosting_files",
                         "hosting_file_delete",
                         "hosting_file_import",

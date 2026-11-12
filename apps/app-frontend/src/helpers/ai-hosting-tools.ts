@@ -4,6 +4,7 @@
  * as the player would on the server's console tab.
  */
 import { noteAgentThought, registerAiToolHandler } from './ai-assistant'
+import { installToHostedServer, NoFittingVersionError, searchHostedContent } from './hosted-content'
 import {
 	hostedAddress,
 	type HostedServerView,
@@ -78,12 +79,12 @@ async function waitRunning(id: string, timeoutMs: number) {
 	return hosting_get(id).catch(() => null)
 }
 
-async function runCommands(server: HostedServerView, commands: string[]) {
+async function runCommands(server: HostedServerView, commands: string[], gapMs = 150) {
 	const before = await hosting_log(server.id).catch(() => [] as string[])
 	const mark = before[before.length - 1]
 	for (const command of commands) {
 		await hosting_command(server.id, command)
-		await sleep(150)
+		await sleep(gapMs)
 	}
 	let answer: string[] = []
 	for (let attempt = 0; attempt < 6; attempt++) {
@@ -95,10 +96,40 @@ async function runCommands(server: HostedServerView, commands: string[]) {
 		)
 		if (answer.length >= commands.length) break
 	}
-	return answer
-		.map((line) => line.replace(ANSI, '').trim())
+	return answer.map((line) => line.replace(ANSI, '').trim()).filter(Boolean)
+}
+
+function parseCommands(raw: string, limit: number) {
+	return raw
+		.split(/;;|\n/)
+		.map((command) => command.trim().replace(/^\//, ''))
 		.filter(Boolean)
-		.slice(-20)
+		.slice(0, limit)
+}
+
+/** Console lines carry a «[12:00:00 INFO]: » head; the model needs only the text. */
+function stripHead(line: string) {
+	return line.replace(/^\[[^\]]*\]\s*(?:\[[^\]]*\]\s*)?:?\s*/, '')
+}
+
+const COMMAND_ERROR_RE =
+	/unknown|incorrect|invalid|expected|no (?:player|entity|entities|block|item)|could not|cannot|can't|not loaded|out of (?:the )?world|too many blocks|failed|<--\[HERE\]/i
+
+function atLeast(version: string, major: number, minor: number, patch = 0) {
+	const [a = 0, b = 0, c = 0] = version.split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0)
+	if (a !== major) return a > major
+	if (b !== minor) return b > minor
+	return c >= patch
+}
+
+function notRunning(server: HostedServerView) {
+	return `«${server.name}» ${STATUS[server.status] ?? server.status} — команды принимает только работающий сервер. Предложи игроку запустить: <<hosting_power|${server.id}::start>>.`
+}
+
+function pickPlayer(server: HostedServerView, wanted: string): string {
+	const name = wanted.trim()
+	if (name) return server.players.find((p) => p.toLowerCase() === name.toLowerCase()) ?? name
+	return server.players.length === 1 ? server.players[0] : ''
 }
 
 registerAiToolHandler(async (tool, args) => {
@@ -152,22 +183,124 @@ registerAiToolHandler(async (tool, args) => {
 			const [target, raw] = splitArgs(args)
 			const server = await resolveServer(target)
 			if (typeof server === 'string') return server
-			const commands = raw
-				.split(/;;|\n/)
-				.map((command) => command.trim().replace(/^\//, ''))
-				.filter(Boolean)
-				.slice(0, 20)
+			const commands = parseCommands(raw, 20)
 			if (commands.length === 0)
 				return 'Нет команды. Формат: <<hosting_cmd|сервер::команда;;команда>>.'
-			if (server.status !== 'running') {
-				return `«${server.name}» ${STATUS[server.status] ?? server.status} — команды принимает только работающий сервер. Предложи игроку запустить: <<hosting_power|${server.id}::start>>.`
-			}
-			const answer = await runCommands(server, commands)
+			if (server.status !== 'running') return notRunning(server)
+			const answer = (await runCommands(server, commands)).slice(-30)
 			return [
 				`Консоль «${server.name}»:`,
 				...commands.map((command) => `> ${command}`),
-				answer.length ? answer.join('\n') : '(сервер ничего не ответил)',
+				answer.length ? answer.map(stripHead).join('\n') : '(сервер ничего не ответил)',
 			].join('\n')
+		}
+		case 'hosting_build': {
+			const [target, raw] = splitArgs(args)
+			const server = await resolveServer(target)
+			if (typeof server === 'string') return server
+			const commands = parseCommands(raw, 600)
+			if (commands.length === 0)
+				return 'Нет команд. Формат: <<hosting_build|сервер::setblock x y z блок;;fill …>>.'
+			if (server.status !== 'running') return notRunning(server)
+			noteAgentThought(`Строю на «${server.name}»: ${commands.length} команд`)
+			const answer = (await runCommands(server, commands, commands.length > 60 ? 20 : 45)).map(
+				stripHead,
+			)
+			const errors = answer.filter((line) => COMMAND_ERROR_RE.test(line))
+			const done = Math.max(0, Math.min(commands.length, answer.length - errors.length))
+			return [
+				`Стройка на «${server.name}»: отправлено ${commands.length} команд, успешных ответов ~${done}, ошибок ${errors.length}.`,
+				...(errors.length
+					? [
+							'Ошибки (исправь id блока/состояние/координаты и повтори только их):',
+							...errors.slice(0, 12),
+						]
+					: []),
+				...(errors.length === 0 && answer.length ? ['Последние ответы:', ...answer.slice(-4)] : []),
+			].join('\n')
+		}
+		case 'hosting_player': {
+			const [target, wanted] = splitArgs(args)
+			const server = await resolveServer(target)
+			if (typeof server === 'string') return server
+			if (server.status !== 'running') return notRunning(server)
+			const player = pickPlayer(server, wanted)
+			if (!player)
+				return server.players.length
+					? `Чей инвентарь смотреть? Онлайн: ${server.players.join(', ')}. Спроси через ask_user.`
+					: 'На сервере сейчас никого нет — смотреть некого.'
+			const modern = atLeast(server.game_version, 1, 21, 5)
+			const commands = [
+				`data get entity ${player} Pos`,
+				`data get entity ${player} Dimension`,
+				`data get entity ${player} Rotation`,
+				`data get entity ${player} SelectedItemSlot`,
+				`data get entity ${player} SelectedItem`,
+				modern
+					? `data get entity ${player} equipment`
+					: `data get entity ${player} Inventory[{Slot:-106b}]`,
+				...(modern
+					? []
+					: [100, 101, 102, 103].map(
+							(slot) => `data get entity ${player} Inventory[{Slot:${slot}b}]`,
+						)),
+			]
+			const answer = (await runCommands(server, commands, 60)).map(stripHead).slice(-14)
+			return [
+				`Игрок ${player} на «${server.name}» (${server.software} ${server.game_version}) — по порядку: позиция, измерение, поворот [yaw, pitch], номер слота в руке, предмет в руке (если ошибка — смотри Inventory[{Slot:<номер>b}]), ${modern ? 'экипировка (броня, вторая рука)' : 'вторая рука и броня (слоты 100-103)'}:`,
+				answer.length ? answer.join('\n') : '(сервер ничего не ответил)',
+				'«Found no elements» = слот пуст. Id модового предмета (mod:item) объясни по его моду; при сомнении — web_search по id.',
+			].join('\n')
+		}
+		case 'hosting_chest': {
+			const [target, where] = splitArgs(args)
+			const server = await resolveServer(target)
+			if (typeof server === 'string') return server
+			if (server.status !== 'running') return notRunning(server)
+			const coords = where
+				.match(/-?\d+(?:\.\d+)?/g)
+				?.slice(0, 3)
+				.map((n) => Math.floor(Number(n)))
+			if (!coords || coords.length < 3)
+				return 'Нужны координаты: <<hosting_chest|сервер::x y z>>. Позицию игрока даёт hosting_player.'
+			const [x, y, z] = coords
+			const answer = (await runCommands(server, [`data get block ${x} ${y} ${z} Items`], 60)).map(
+				stripHead,
+			)
+			return [
+				`Блок ${x} ${y} ${z} на «${server.name}»:`,
+				answer.length ? answer.join('\n') : '(сервер ничего не ответил)',
+				'«is not a block entity» — там не сундук/контейнер; пустой список [] — контейнер пуст.',
+			].join('\n')
+		}
+		case 'hosting_install': {
+			const [target, wanted] = splitArgs(args)
+			const server = await resolveServer(target)
+			if (typeof server === 'string') return server
+			if (!wanted)
+				return 'Что ставить? Формат: <<hosting_install|сервер::название или id на Modrinth>>.'
+			noteAgentThought(`Ставлю «${wanted}» на «${server.name}»`)
+			const attempt = async (projectId: string, title: string) => {
+				await installToHostedServer(server, projectId)
+				return `Установлено на «${server.name}» (${server.software} ${server.game_version}): ${title}. Заработает после перезапуска — предложи <<hosting_power|${server.id}::restart>>.`
+			}
+			try {
+				if (/^[\w-]{3,64}$/.test(wanted)) return await attempt(wanted, wanted)
+			} catch (error) {
+				if (!(error instanceof NoFittingVersionError) && !/HTTP 404/.test(String(error)))
+					return `Не установилось: ${String(error).slice(0, 200)}`
+			}
+			const { hits } = await searchHostedContent(server, wanted, 0).catch(() => ({ hits: [] }))
+			const hit = hits[0]
+			if (!hit)
+				return `На Modrinth нет «${wanted}» под ${server.software} ${server.game_version}. Предложи аналог.`
+			try {
+				return await attempt(hit.project_id, hit.title)
+			} catch (error) {
+				return error instanceof NoFittingVersionError
+					? `У «${hit.title}» нет файла под ${server.software} ${server.game_version}.`
+					: `Не установилось: ${String(error).slice(0, 200)}`
+			}
 		}
 		case 'hosting_console': {
 			const [target, count] = splitArgs(args)
