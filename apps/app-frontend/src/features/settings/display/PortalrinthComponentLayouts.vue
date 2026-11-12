@@ -9,12 +9,10 @@
 			</p>
 		</div>
 		<div>
-			<ButtonStyled>
-				<button type="button" @click="open">
-					<LayoutGridIcon />
-					{{ formatMessage(messages.button) }}
-				</button>
-			</ButtonStyled>
+			<Button @click="open">
+				<LayoutGridIcon />
+				{{ formatMessage(messages.button) }}
+			</Button>
 		</div>
 
 		<NewModal ref="modal" :header="formatMessage(messages.modalHeader)">
@@ -66,7 +64,7 @@
 
 <script setup lang="ts">
 import { LayoutGridIcon } from '@modrinth/assets'
-import { ButtonStyled, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
+import { Button, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
 import { ref } from 'vue'
 
 import {
