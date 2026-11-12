@@ -1,5 +1,4 @@
 <template>
-	<!-- eslint-disable vue/no-undef-components -->
 	<div
 		ref="skinPreviewContainer"
 		class="relative w-full h-full overflow-visible cursor-grab"
@@ -54,57 +53,15 @@
 			</div>
 		</div>
 
-		<TresCanvas
-			alpha
-			:antialias="true"
-			:dpr="rendererDpr"
-			:renderer-options="{
-				outputColorSpace: THREE.SRGBColorSpace,
-				toneMapping: THREE.NoToneMapping,
-				toneMappingExposure: 10.0,
-			}"
-			class="object-contain transition-opacity duration-500"
+		<canvas
+			ref="canvasElement"
+			class="block h-full w-full object-contain transition-opacity duration-500"
 			:class="{ 'opacity-0': !isPreviewVisible, 'opacity-100': isPreviewVisible }"
 			@pointerdown="onPointerDown"
 			@pointermove="onPointerMove"
 			@pointerup="onPointerUp"
 			@pointerleave="onPointerUp"
-		>
-			<Suspense>
-				<TresGroup
-					:rotation="animatedModelGroupRotation"
-					:position="animatedModelGroupPosition"
-					:scale="animatedModelGroupScale"
-				>
-					<TresGroup :position="modelOffset">
-						<primitive v-if="scene" :object="scene" />
-					</TresGroup>
-				</TresGroup>
-			</Suspense>
-
-			<Suspense>
-				<TresGroup :rotation="[modelPitch, 0, 0]">
-					<TresMesh
-						:position="animatedSpotlightPosition"
-						:rotation="[-Math.PI / 2, 0, 0]"
-						:scale="animatedSpotlightScale"
-					>
-						<TresCircleGeometry :args="[1, 128]" />
-						<TresShaderMaterial v-bind="radialSpotlightShader" />
-					</TresMesh>
-				</TresGroup>
-			</Suspense>
-
-			<TresPerspectiveCamera
-				:make-default.camel="true"
-				:fov="cameraConfig.fov"
-				:position="cameraConfig.position"
-				:look-at="cameraConfig.target"
-			/>
-
-			<TresAmbientLight :intensity="2" />
-			<TresDirectionalLight :position="[-3, 4, -2]" :intensity="1.2" />
-		</TresCanvas>
+		/>
 
 		<div v-if="showLoading" class="absolute inset-0 flex items-center justify-center">
 			<div class="text-primary">Loading...</div>
@@ -114,11 +71,11 @@
 
 <script setup lang="ts">
 import { ChevronsUpDownIcon, ClassicPlayerModel, MoveIcon, SlimPlayerModel } from '@modrinth/assets'
-import { TresCanvas } from '@tresjs/core'
 import { useElementSize } from '@vueuse/core'
 import * as THREE from 'three'
 import {
 	computed,
+	markRaw,
 	nextTick,
 	onMounted,
 	onUnmounted,
@@ -145,6 +102,21 @@ import {
 	useSkinPreviewPose,
 	useSkinPreviewScene,
 } from '#ui/composables/skin-rendering'
+import {
+	clearMirroredEars,
+	ENGINE_PLAYER_FEET_OFFSET,
+	engineModelType,
+	type EnginePlayer,
+	findRigNodes,
+	mirrorEarsFeatures,
+	readRigCapeImage,
+	readRigSkinImage,
+	retargetRigToPlayer,
+	RIG_TO_ENGINE_SCALE,
+	RigDrivenAnimation,
+	type SkinRigNodes,
+	SkinViewEngine,
+} from '#ui/composables/skin-rendering/mine3d-bridge'
 
 import { useDynamicFontSize } from '../../composables'
 import { createRadialSpotlightShader, syncDamageFlashShader } from './skin-preview-shader'
@@ -215,6 +187,7 @@ const emit = defineEmits<{
 }>()
 
 const skinPreviewContainer = useTemplateRef<HTMLElement>('skinPreviewContainer')
+const canvasElement = useTemplateRef<HTMLCanvasElement>('canvasElement')
 const subtitleElement = useTemplateRef<HTMLElement>('subtitleElement')
 const slots = useSlots()
 const nametagText = computed(() => props.nametag)
@@ -296,6 +269,7 @@ const {
 	playAnimation,
 	playClickInteraction,
 	stopAnimations,
+	update: updateAnimation,
 } = useSkinPreviewAnimation(toRef(props, 'animationConfig'))
 
 const {
@@ -321,6 +295,7 @@ const {
 	isTextureLoaded,
 	modelCenter,
 	modelSize,
+	revision: sceneRevision,
 	scene,
 	visibleBounds,
 } = useSkinPreviewScene({
@@ -333,8 +308,12 @@ const {
 	cleanupAnimationState,
 })
 
-useSkinPreviewLook({ scene, container: skinPreviewContainer, modelRotation })
-useSkinPreviewPose({
+const { update: updateLook } = useSkinPreviewLook({
+	scene,
+	container: skinPreviewContainer,
+	modelRotation,
+})
+const { update: updatePose } = useSkinPreviewPose({
 	scene,
 	crouch: toRef(props, 'crouch'),
 	walk: toRef(props, 'walk'),
@@ -343,6 +322,7 @@ useSkinPreviewPose({
 
 function syncDamageFlashShaderMaterials() {
 	syncDamageFlashShader(scene.value, damageFlashIntensity.value)
+	if (engine) syncDamageFlashShader(engine.player.skin, damageFlashIntensity.value)
 }
 
 const {
@@ -403,15 +383,135 @@ const boundedPreviewControlsPositionStyle = computed(() => {
 	return { ...style, top: `${Math.min(top, limit)}px` }
 })
 
-const rendererDpr: [number, number] = [1, 1.5]
 const radialSpotlightShader = createRadialSpotlightShader()
-const isReady = computed(() => isModelLoaded.value && isTextureLoaded.value && hasResolvedFit.value)
+const isEngineSkinLoaded = ref(false)
+const isReady = computed(
+	() =>
+		isModelLoaded.value &&
+		isTextureLoaded.value &&
+		hasResolvedFit.value &&
+		isEngineSkinLoaded.value,
+)
 const { isPreviewVisible, showLoading } = useSkinPreviewLoading(isReady)
 watch(isPreviewVisible, (visible) => {
 	if (visible) emit('ready')
 })
 
 onMounted(observeSubtitleElement)
+
+let engine: SkinViewEngine | null = null
+let rigNodes: SkinRigNodes | null = null
+let rigOwner: THREE.Object3D | null = null
+let skinSyncVersion = 0
+const spotlightGroup = markRaw(new THREE.Group())
+const spotlightMesh = markRaw(
+	new THREE.Mesh(new THREE.CircleGeometry(1, 128), new THREE.ShaderMaterial(radialSpotlightShader)),
+)
+spotlightMesh.rotation.x = -Math.PI / 2
+spotlightGroup.add(spotlightMesh)
+const cameraTarget = new THREE.Vector3()
+
+function scaled(target: THREE.Vector3, [x, y, z]: SkinPreviewTuple) {
+	return target.set(x * RIG_TO_ENGINE_SCALE, y * RIG_TO_ENGINE_SCALE, z * RIG_TO_ENGINE_SCALE)
+}
+
+function applyFrameLayout(activeEngine: SkinViewEngine, player: EnginePlayer) {
+	const [offsetX, offsetY, offsetZ] = modelOffset.value
+	player.position.set(
+		offsetX * RIG_TO_ENGINE_SCALE,
+		offsetY * RIG_TO_ENGINE_SCALE + ENGINE_PLAYER_FEET_OFFSET,
+		offsetZ * RIG_TO_ENGINE_SCALE,
+	)
+	player.rotation.set(0, 0, 0)
+
+	const wrapper = player.parent
+	if (wrapper) {
+		wrapper.rotation.set(...animatedModelGroupRotation.value)
+		scaled(wrapper.position, animatedModelGroupPosition.value)
+		wrapper.scale.set(...animatedModelGroupScale.value)
+	}
+
+	spotlightGroup.rotation.set(modelPitch.value, 0, 0)
+	scaled(spotlightMesh.position, animatedSpotlightPosition.value)
+	scaled(spotlightMesh.scale, animatedSpotlightScale.value)
+
+	const camera = activeEngine.threeCamera
+	const { fov, position, target } = cameraConfig.value
+	if (camera.fov !== fov) {
+		camera.fov = fov
+		camera.updateProjectionMatrix()
+	}
+	scaled(camera.position, position)
+	camera.lookAt(scaled(cameraTarget, target))
+}
+
+function onEngineFrame(player: EnginePlayer, delta: number) {
+	updateAnimation(delta)
+	updateLook(delta)
+	updatePose(delta)
+
+	const root = scene.value
+	if (root !== rigOwner) {
+		rigOwner = root
+		rigNodes = findRigNodes(root)
+	}
+	if (rigNodes) retargetRigToPlayer(rigNodes, player)
+	if (engine) applyFrameLayout(engine, player)
+}
+
+async function syncEngineSkin() {
+	const activeEngine = engine
+	if (!activeEngine) return
+	const version = ++skinSyncVersion
+	const root = scene.value
+	const skinImage = readRigSkinImage(root)
+	const capeImage = readRigCapeImage(root)
+
+	const modelType = engineModelType(props.variant)
+	if (activeEngine.modelType !== modelType) activeEngine.setModelType(modelType)
+	try {
+		if (skinImage) await activeEngine.setSkin(skinImage as HTMLCanvasElement)
+		if (capeImage) await activeEngine.setCape(capeImage as HTMLCanvasElement)
+		else activeEngine.clearCape()
+	} catch (error) {
+		console.error('Failed to apply skin to the preview:', error)
+		return
+	}
+	if (version !== skinSyncVersion || activeEngine !== engine) return
+
+	const player = activeEngine.player as unknown as EnginePlayer
+	mirrorEarsFeatures(root, player)
+	syncDamageFlashShader(player.skin, damageFlashIntensity.value)
+	if (skinImage) isEngineSkinLoaded.value = true
+}
+
+onMounted(() => {
+	const canvas = canvasElement.value
+	if (!canvas) return
+	try {
+		engine = new SkinViewEngine(canvas, {
+			transparent: true,
+			enableControls: false,
+			enableEffects: false,
+			autoDetectModel: false,
+			modelType: engineModelType(props.variant),
+			idleAnimation: new RigDrivenAnimation(onEngineFrame),
+		})
+	} catch (error) {
+		console.error('Failed to start the skin preview renderer:', error)
+		return
+	}
+	engine.threeScene.add(spotlightGroup)
+	engine.setOuterLayerVisible(!props.hideLayers)
+	engine.start()
+	void syncEngineSkin()
+})
+
+watch([scene, sceneRevision, () => props.variant], () => void syncEngineSkin())
+watch(
+	() => props.hideLayers,
+	(hide) => engine?.setOuterLayerVisible(!hide),
+)
 
 watch(hasSubtitle, () => nextTick(observeSubtitleElement), { flush: 'post' })
 watch(
@@ -437,6 +537,14 @@ watch(damageFlashIntensity, syncDamageFlashShaderMaterials)
 
 onUnmounted(() => {
 	subtitleResizeObserver?.disconnect()
+	skinSyncVersion++
+	if (engine) {
+		clearMirroredEars(engine.player as unknown as EnginePlayer)
+		engine.dispose()
+		engine = null
+	}
+	spotlightMesh.geometry.dispose()
+	spotlightMesh.material.dispose()
 })
 
 const { fontSize: nametagFontSize } = useDynamicFontSize({

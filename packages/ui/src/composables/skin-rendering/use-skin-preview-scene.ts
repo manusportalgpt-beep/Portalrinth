@@ -183,6 +183,7 @@ export function useSkinPreviewScene({
 	const isModelLoaded = ref(false)
 	const isTextureLoaded = ref(false)
 	const hasEarsFeatures = ref(false)
+	const revision = ref(0)
 	let modelLoadVersion = 0
 	let textureLoadVersion = 0
 	let earsTextureLoadVersion = 0
@@ -200,6 +201,7 @@ export function useSkinPreviewScene({
 		}
 
 		applyTexture(scene.value, texture.value)
+		revision.value++
 		const featureTextureSrc = earsTextureSrc.value
 		const featureTexture = featureTextureSrc ? earsTexture.value : texture.value
 		if (
@@ -222,6 +224,7 @@ export function useSkinPreviewScene({
 			loadedCapeSrc.value === capeSrc.value ? capeTexture.value : null,
 			transparentTexture,
 		)
+		revision.value++
 	}
 
 	async function loadModel(src: string) {
@@ -433,6 +436,7 @@ export function useSkinPreviewScene({
 		isTextureLoaded,
 		modelCenter,
 		modelSize,
+		revision,
 		scene,
 		visibleBounds,
 	}

@@ -21,10 +21,13 @@ export function createRadialSpotlightShader() {
 			shadowRadius: { value: 7 },
 		},
 		vertexShader: `
+    #include <common>
+    #include <logdepthbuf_pars_vertex>
     varying vec2 vUv;
     void main() {
       vUv = uv;
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      #include <logdepthbuf_vertex>
     }
   `,
 		fragmentShader: `
@@ -37,7 +40,10 @@ export function createRadialSpotlightShader() {
 
     varying vec2 vUv;
 
+    #include <logdepthbuf_pars_fragment>
+
     void main() {
+      #include <logdepthbuf_fragment>
       vec2 center = vec2(0.5, 0.5);
       float dist = distance(vUv, center) * 2.0;
 

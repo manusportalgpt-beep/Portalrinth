@@ -1,6 +1,6 @@
 import { ClassicPlayerModel, SlimPlayerModel } from '@modrinth/assets'
 import { loadSkinRendering } from '@modrinth/ui'
-import * as THREE from 'three'
+import type * as THREE from 'three'
 
 import type { Cape, Skin } from '../skins'
 import { determineModelType, get_normalized_skin_texture } from '../skins'
@@ -13,17 +13,18 @@ export interface RawRenderResult {
 	forwards: Blob
 }
 
+type SkinRendering = Awaited<ReturnType<typeof loadSkinRendering>>
+type SkinEngine = InstanceType<SkinRendering['SkinViewEngine']>
+type EnginePlayer = Parameters<SkinRendering['mirrorEarsFeatures']>[1]
+
 class BatchSkinRenderer {
-	private renderer: THREE.WebGLRenderer | null = null
-	private scene: THREE.Scene | null = null
-	private camera: THREE.PerspectiveCamera | null = null
-	private currentModel: THREE.Group | null = null
-	private transparentTexture: THREE.Texture | null = null
+	private engine: SkinEngine | null = null
+	private currentModel: THREE.Object3D | null = null
 	private readonly width: number
 	private readonly height: number
 
 	constructor(
-		private readonly rendering: Awaited<ReturnType<typeof loadSkinRendering>>,
+		private readonly rendering: SkinRendering,
 		width: number = 360,
 		height: number = 504,
 	) {
@@ -31,82 +32,63 @@ class BatchSkinRenderer {
 		this.height = height
 	}
 
-	private initializeRenderer(): void {
-		if (this.renderer) return
+	private initializeEngine(): SkinEngine {
+		if (this.engine) return this.engine
 
 		const canvas = document.createElement('canvas')
 		canvas.width = this.width
 		canvas.height = this.height
 
-		this.renderer = new THREE.WebGLRenderer({
-			canvas: canvas,
-			antialias: true,
-			alpha: true,
+		const engine = new this.rendering.SkinViewEngine(canvas, {
+			transparent: true,
+			enableControls: false,
+			enableEffects: false,
+			autoDetectModel: false,
+			autoResize: false,
+			idleAnimation: false,
 			preserveDrawingBuffer: true,
 		})
+		engine.setSize(this.width, this.height)
+		this.engine = engine
+		return engine
+	}
 
-		this.renderer.outputColorSpace = THREE.SRGBColorSpace
-		this.renderer.shadowMap.enabled = false
-		this.renderer.toneMapping = THREE.NoToneMapping
-		this.renderer.toneMappingExposure = 10.0
-		this.renderer.setClearColor(0x000000, 0)
-		this.renderer.setSize(this.width, this.height)
-
-		this.scene = new THREE.Scene()
-		this.camera = new THREE.PerspectiveCamera(20, this.width / this.height, 0.4, 1000)
-
-		const ambientLight = new THREE.AmbientLight(0xffffff, 2)
-		const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2)
-		directionalLight.castShadow = false
-		directionalLight.position.set(2, 4, 3)
-		this.scene.add(ambientLight)
-		this.scene.add(directionalLight)
+	private get player(): EnginePlayer {
+		return this.engine!.player as unknown as EnginePlayer
 	}
 
 	public async renderSkin(
 		textureUrl: string,
 		modelUrl: string,
+		variant: string,
 		capeUrl?: string,
 		earsTextureUrl?: string,
 	): Promise<RawRenderResult> {
-		this.initializeRenderer()
+		const engine = this.initializeEngine()
 
 		this.clearScene()
 
-		await this.setupModel(modelUrl, textureUrl, capeUrl, earsTextureUrl)
+		const model = await this.setupModel(modelUrl, textureUrl, capeUrl, earsTextureUrl)
+		const skinImage = this.rendering.readRigSkinImage(model)
+		if (!skinImage) {
+			throw new Error('Failed to read the skin texture.')
+		}
+		const capeImage = capeUrl ? this.rendering.readRigCapeImage(model) : null
 
-		const headPart = this.currentModel!.getObjectByName('Head')
-		let lookAtTarget: [number, number, number]
-
-		if (headPart) {
-			const headPosition = new THREE.Vector3()
-			headPart.getWorldPosition(headPosition)
-			lookAtTarget = [headPosition.x, headPosition.y - 0.3, headPosition.z]
+		engine.setModelType(this.rendering.engineModelType(variant))
+		await engine.setSkin(skinImage as HTMLCanvasElement)
+		if (capeImage) {
+			await engine.setCape(capeImage as HTMLCanvasElement)
 		} else {
-			throw new Error("Failed to find 'Head' object in model.")
+			engine.clearCape()
 		}
+		this.rendering.mirrorEarsFeatures(model, this.player)
 
-		const frontCameraPos: [number, number, number] = [-1.3, 1, 6.3]
-		const forwards = await this.renderView(frontCameraPos, lookAtTarget)
+		engine.fitPlayerToFrame({ fillY: 0.9 })
+		engine.renderFrame()
 
-		return { forwards }
-	}
-
-	private async renderView(
-		cameraPosition: [number, number, number],
-		lookAtPosition: [number, number, number],
-	): Promise<Blob> {
-		if (!this.camera || !this.renderer || !this.scene) {
-			throw new Error('Renderer not initialized')
-		}
-
-		this.camera.position.set(...cameraPosition)
-		this.camera.lookAt(...lookAtPosition)
-
-		this.renderer.render(this.scene, this.camera)
-
-		return await new Promise<Blob>((resolve, reject) => {
-			this.renderer!.domElement.toBlob(
+		const forwards = await new Promise<Blob>((resolve, reject) => {
+			engine.threeRenderer.domElement.toBlob(
 				(blob) => {
 					if (blob) {
 						resolve(blob)
@@ -118,6 +100,8 @@ class BatchSkinRenderer {
 				0.9,
 			)
 		})
+
+		return { forwards }
 	}
 
 	private async setupModel(
@@ -125,67 +109,33 @@ class BatchSkinRenderer {
 		textureUrl: string,
 		capeUrl?: string,
 		earsTextureUrl?: string,
-	): Promise<void> {
-		if (!this.scene) {
-			throw new Error('Renderer not initialized')
-		}
-
+	): Promise<THREE.Object3D> {
 		const [{ model }, earsTexture] = await Promise.all([
 			this.rendering.setupSkinModel(modelUrl, textureUrl, capeUrl),
 			earsTextureUrl ? this.rendering.loadTexture(earsTextureUrl) : Promise.resolve(null),
 		])
 
-		if (!capeUrl) {
-			this.rendering.applyCapeTexture(model, null, this.getTransparentTexture())
-		}
-
 		if (earsTexture) {
 			this.rendering.applyEarsMod(model, earsTexture)
 		}
 
-		const group = new THREE.Group()
-		group.add(model)
-		group.position.set(0, 0.3, 1.95)
-		group.scale.set(0.8, 0.8, 0.8)
-
-		this.scene.add(group)
-		this.currentModel = group
-	}
-
-	private getTransparentTexture(): THREE.Texture {
-		if (!this.transparentTexture) {
-			this.transparentTexture = this.rendering.createTransparentTexture()
-		}
-
-		return this.transparentTexture
+		this.currentModel = model
+		return model
 	}
 
 	private clearScene(): void {
-		if (!this.scene || !this.currentModel) return
+		if (this.engine) this.rendering.clearMirroredEars(this.player)
+		if (!this.currentModel) return
 
 		this.rendering.removeEarsMod(this.currentModel)
-		this.scene.remove(this.currentModel)
 		this.currentModel.clear()
 		this.currentModel = null
 	}
 
 	public dispose(): void {
 		this.clearScene()
-
-		if (this.transparentTexture) {
-			this.transparentTexture.dispose()
-			this.transparentTexture = null
-		}
-
-		if (this.renderer) {
-			this.renderer.dispose()
-			this.renderer.forceContextLoss()
-		}
-
-		this.renderer = null
-		this.scene = null
-		this.camera = null
-
+		this.engine?.dispose()
+		this.engine = null
 		this.rendering.disposeCaches()
 	}
 }
@@ -217,6 +167,7 @@ export async function renderSkinPreview(skin: Skin, capes: Cape[]): Promise<RawR
 	return sharedRenderer.renderSkin(
 		await get_normalized_skin_texture(skin),
 		getModelUrlForVariant(variant),
+		variant,
 		capes.find((cape) => cape.id === skin.cape_id)?.texture,
 		skin.texture,
 	)

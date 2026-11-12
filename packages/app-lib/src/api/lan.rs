@@ -527,79 +527,22 @@ async fn publish(process_uuid: Uuid) -> crate::Result<LanRelayInfo> {
     let bearer = relay_bearer(&state, &identity).await?;
 
     set_step(process_uuid, LanPublishStep::Session);
-    let session = relay_request(
+    let opened = open_session(
         &state,
-        reqwest::Method::POST,
-        "/sessions",
         &bearer,
-        Some(serde_json::json!({ "localPort": local_port })),
+        serde_json::json!({ "localPort": local_port }),
+        local_port,
+        || set_step(process_uuid, LanPublishStep::Tunnel),
     )
     .await?;
-
-    let field = |name: &str| -> crate::Result<String> {
-        session[name].as_str().map(String::from).ok_or_else(|| {
-            anyhow::anyhow!(format!("the relay did not return {name}"))
-        })
-    };
-
-    let session_id = field("sessionId")?;
-    let tunnel_token = field("tunnelToken")?;
-    let public_port = session["publicPort"].as_u64().ok_or_else(|| {
-        anyhow::anyhow!(
-            "the relay did not return a usable public port".to_string(),
-        )
-    })? as u16;
-    // The host the tunnel is carried over is the one a player is given; the
-    // relay names it `tunnelHost` and only sometimes repeats it as
-    // `publicHost`, so it is taken from whichever is there.
-    let public_host = session["publicHost"]
-        .as_str()
-        .or(session["tunnelHost"].as_str())
-        .map(String::from)
-        .unwrap_or_else(|| {
-            RELAY_BASE.trim_start_matches("https://").to_string()
-        });
-    let tunnel_host = session["tunnelHost"]
-        .as_str()
-        .unwrap_or(public_host.as_str())
-        .to_string();
-    let tunnel_port = session["tunnelPort"].as_u64().unwrap_or(25570) as u16;
-
-    // The control connection is opened here rather than in the background, so
-    // that a relay which will not take the session is said to be one instead
-    // of the world being reported as published when nobody can reach it.
-    set_step(process_uuid, LanPublishStep::Tunnel);
-    let control = match open_control(
-        &session_id,
-        &tunnel_token,
-        &tunnel_host,
-        tunnel_port,
-    )
-    .await
-    {
-        Ok(control) => control,
-        Err(error) => {
-            close_session(&state, &session_id, &bearer).await;
-            return Err(crate::Error::from(crate::ErrorKind::InputError(
-                error.to_string(),
-            )));
-        }
-    };
-
-    let tunnel_up = Arc::new(AtomicBool::new(true));
-    let reason = Arc::new(std::sync::Mutex::new(None));
-    let task = tokio::spawn(run_tunnel(
-        control,
-        Tunnel {
-            session_id: session_id.clone(),
-            token: tunnel_token,
-            host: tunnel_host,
-            port: tunnel_port,
-            local_port,
-        },
-        Arc::clone(&tunnel_up),
-        Arc::clone(&reason),
-    ));
+    let OpenSession {
+        session_id,
+        public_host,
+        public_port,
+        task,
+        tunnel_up,
+        reason,
+    } = opened;
 
     RELAYS.insert(
         process_uuid,
@@ -676,6 +619,218 @@ async fn close_session(state: &crate::State, session_id: &str, bearer: &str) {
         reqwest::Method::DELETE,
         &format!("/sessions/{session_id}"),
         bearer,
+        None,
+    )
+    .await;
+}
+
+/// A session the relay has opened, with the tunnel already carrying players.
+struct OpenSession {
+    session_id: String,
+    public_host: String,
+    public_port: u16,
+    task: JoinHandle<()>,
+    tunnel_up: Arc<AtomicBool>,
+    reason: Arc<std::sync::Mutex<Option<String>>>,
+}
+
+/// Asks the relay for a session on `local_port` and opens its tunnel.
+///
+/// `on_tunnel` is called once the session exists and the tunnel is about to
+/// be opened, for whoever is reporting the steps.
+async fn open_session(
+    state: &crate::State,
+    bearer: &str,
+    body: serde_json::Value,
+    local_port: u16,
+    on_tunnel: impl FnOnce(),
+) -> crate::Result<OpenSession> {
+    let session = relay_request(
+        state,
+        reqwest::Method::POST,
+        "/sessions",
+        bearer,
+        Some(body),
+    )
+    .await?;
+
+    let field = |name: &str| -> crate::Result<String> {
+        session[name].as_str().map(String::from).ok_or_else(|| {
+            anyhow::anyhow!(format!("the relay did not return {name}"))
+        })
+    };
+
+    let session_id = field("sessionId")?;
+    let tunnel_token = field("tunnelToken")?;
+    let public_port = session["publicPort"].as_u64().ok_or_else(|| {
+        anyhow::anyhow!(
+            "the relay did not return a usable public port".to_string(),
+        )
+    })? as u16;
+    // The host the tunnel is carried over is the one a player is given; the
+    // relay names it `tunnelHost` and only sometimes repeats it as
+    // `publicHost`, so it is taken from whichever is there.
+    let public_host = session["publicHost"]
+        .as_str()
+        .or(session["tunnelHost"].as_str())
+        .map(String::from)
+        .unwrap_or_else(|| {
+            RELAY_BASE.trim_start_matches("https://").to_string()
+        });
+    let tunnel_host = session["tunnelHost"]
+        .as_str()
+        .unwrap_or(public_host.as_str())
+        .to_string();
+    let tunnel_port = session["tunnelPort"].as_u64().unwrap_or(25570) as u16;
+
+    // The control connection is opened here rather than in the background, so
+    // that a relay which will not take the session is said to be one instead
+    // of the address being reported as published when nobody can reach it.
+    on_tunnel();
+    let control = match open_control(
+        &session_id,
+        &tunnel_token,
+        &tunnel_host,
+        tunnel_port,
+    )
+    .await
+    {
+        Ok(control) => control,
+        Err(error) => {
+            close_session(state, &session_id, bearer).await;
+            return Err(crate::Error::from(crate::ErrorKind::InputError(
+                error.to_string(),
+            )));
+        }
+    };
+
+    let tunnel_up = Arc::new(AtomicBool::new(true));
+    let reason = Arc::new(std::sync::Mutex::new(None));
+    let task = tokio::spawn(run_tunnel(
+        control,
+        Tunnel {
+            session_id: session_id.clone(),
+            token: tunnel_token,
+            host: tunnel_host,
+            port: tunnel_port,
+            local_port,
+        },
+        Arc::clone(&tunnel_up),
+        Arc::clone(&reason),
+    ));
+
+    Ok(OpenSession {
+        session_id,
+        public_host,
+        public_port,
+        task,
+        tunnel_up,
+        reason,
+    })
+}
+
+/// A port on this machine published through the relay for something that is
+/// not a running game: a server the launcher hosts itself.
+pub struct PortRelay {
+    session_id: String,
+    bearer: String,
+    pub public_host: String,
+    pub public_port: u16,
+    task: JoinHandle<()>,
+    tunnel_up: Arc<AtomicBool>,
+    reason: Arc<std::sync::Mutex<Option<String>>>,
+}
+
+impl PortRelay {
+    /// Whether the tunnel is still carrying players.
+    pub fn is_up(&self) -> bool {
+        self.tunnel_up.load(Ordering::Relaxed)
+    }
+
+    /// Why the tunnel stopped, once it has.
+    pub fn reason(&self) -> Option<String> {
+        self.reason.lock().ok().and_then(|reason| reason.clone())
+    }
+}
+
+/// The relay's token for whichever account the launcher has signed in, and
+/// the name it goes by.
+async fn signed_in_bearer(
+    state: &crate::State,
+) -> crate::Result<(String, String)> {
+    let identity = resolve_identity(state, "").await?;
+    let username = match &identity {
+        RelayIdentity::Online { username, .. }
+        | RelayIdentity::Nickname { username, .. } => username.clone(),
+    };
+    Ok((relay_bearer(state, &identity).await?, username))
+}
+
+/// Publishes a port the launcher's own server listens on.
+///
+/// The server's address is reserved first, so that it stays the same from one
+/// start to the next; a relay that will not reserve one still hands out a
+/// session, only at an address of its choosing.
+pub async fn publish_port(
+    local_port: u16,
+    server_id: &str,
+) -> crate::Result<PortRelay> {
+    let state = crate::State::get().await?;
+    let (bearer, username) = signed_in_bearer(&state).await?;
+
+    if let Err(error) = relay_request(
+        &state,
+        reqwest::Method::POST,
+        "/reservations",
+        &bearer,
+        Some(serde_json::json!({ "serverId": server_id, "nickname": username })),
+    )
+    .await
+    {
+        tracing::debug!("the relay did not reserve an address: {error}");
+    }
+
+    let opened = open_session(
+        &state,
+        &bearer,
+        serde_json::json!({ "localPort": local_port, "serverId": server_id }),
+        local_port,
+        || {},
+    )
+    .await?;
+
+    Ok(PortRelay {
+        session_id: opened.session_id,
+        bearer,
+        public_host: opened.public_host,
+        public_port: opened.public_port,
+        task: opened.task,
+        tunnel_up: opened.tunnel_up,
+        reason: opened.reason,
+    })
+}
+
+/// Takes a published port back down.
+pub async fn close_port(relay: PortRelay) {
+    relay.task.abort();
+    if let Ok(state) = crate::State::get().await {
+        close_session(&state, &relay.session_id, &relay.bearer).await;
+    }
+}
+
+/// Gives a deleted server's reserved address back to the relay.
+pub async fn release_reservation(server_id: &str) {
+    let Ok(state) = crate::State::get().await else {
+        return;
+    };
+    let Ok((bearer, _)) = signed_in_bearer(&state).await else {
+        return;
+    };
+    let _ = relay_request(
+        &state,
+        reqwest::Method::DELETE,
+        &format!("/reservations/{server_id}"),
+        &bearer,
         None,
     )
     .await;

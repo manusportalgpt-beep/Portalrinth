@@ -162,6 +162,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  skin3d>three: ^0.172.0
+
 packageExtensionsChecksum: sha256-GmICvIni5Nch5wyrJ+6StQ+BPUkvMjJcmw6K5FzXkg0=
 
 patchedDependencies:
@@ -924,6 +927,12 @@ importers:
       qrcode.vue:
         specifier: ^3.4.1
         version: 3.8.0(vue@3.5.43(typescript@5.9.3))
+      skin3d:
+        specifier: 0.1.3
+        version: 0.1.3
+      skinview-utils:
+        specifier: ^0.7.1
+        version: 0.7.1
       three:
         specifier: ^0.172.0
         version: 0.172.0
@@ -9062,6 +9071,12 @@ packages:
     engines: {node: '>=14.0.0', npm: '>=6.0.0'}
     hasBin: true
 
+  skin3d@0.1.3:
+    resolution: {integrity: sha512-9VXC/6bwcahl/VcxsmqrV7QjtnCpxOI3a92bPfTRNF3a7bHE13Kq2aw9+5QlZexhEj9dhenPzEgjv211kW/lbw==}
+
+  skinview-utils@0.7.1:
+    resolution: {integrity: sha512-4eLrMqR526ehlZbsd8SuZ/CHpS9GiH0xUMoV+PYlJVi95ZFz5HJu7Spt5XYa72DRS7wgt5qquvHZf0XZJgmu9Q==}
+
   slash@5.1.0:
     resolution: {integrity: sha512-ZA6oR3T/pEyuqwMgAKT0/hAv8oAXckzbkmR0UkUosQ+Mc4RxGoJkRmwHgHufaenlyAgE1Mxgpdcrf75y6XcnDg==}
     engines: {node: '>=14.16'}
@@ -10280,6 +10295,9 @@ packages:
 
   vue-component-type-helpers@3.3.11:
     resolution: {integrity: sha512-LwcxzeliO9fkQcpJG0PoX8X5kmAhKmH9wkpDLxNabwzkQ9Zeib2YVHwFV4pcWmMLfXVfjr/dSV+DaJ3cIPgSNA==}
+
+  vue-component-type-helpers@3.3.14:
+    resolution: {integrity: sha512-Pq3+OnbCiPCHk0R7KSZrx+j/XXaUn2kSQ1epxq60w8CPbByLjC1EJgV51n4WY851sTXUVzsNMuitywdkdVyKjA==}
 
   vue-confetti-explosion@1.0.2:
     resolution: {integrity: sha512-80OboM3/6BItIoZ6DpNcZFqGpF607kjIVc5af56oKgtFmt5yWehvJeoYhkzYlqxrqdBe0Ko4Ie3bWrmLau+dJw==}
@@ -12206,7 +12224,7 @@ snapshots:
       https-proxy-agent: 7.0.6(supports-color@10.2.2)
       node-fetch: 2.7.0
       nopt: 8.1.0
-      semver: 7.7.4
+      semver: 7.8.5
       tar: 7.5.7
     transitivePeerDependencies:
       - encoding
@@ -13514,7 +13532,7 @@ snapshots:
       storybook: 10.2.4(@testing-library/dom@10.4.1)(prettier@3.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       type-fest: 2.19.0
       vue: 3.5.43(typescript@5.9.3)
-      vue-component-type-helpers: 3.3.11
+      vue-component-type-helpers: 3.3.14
 
   '@stripe/stripe-js@7.9.0': {}
 
@@ -19907,6 +19925,13 @@ snapshots:
       arg: 5.0.2
       sax: 1.4.4
 
+  skin3d@0.1.3:
+    dependencies:
+      skinview-utils: 0.7.1
+      three: 0.172.0
+
+  skinview-utils@0.7.1: {}
+
   slash@5.1.0: {}
 
   smob@1.5.0: {}
@@ -20864,7 +20889,7 @@ snapshots:
       esbuild: 0.27.2
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
-      postcss: 8.5.6
+      postcss: 8.5.8
       rollup: 4.63.6
       tinyglobby: 0.2.17
     optionalDependencies:
@@ -21046,6 +21071,8 @@ snapshots:
   vue-component-type-helpers@2.2.12: {}
 
   vue-component-type-helpers@3.3.11: {}
+
+  vue-component-type-helpers@3.3.14: {}
 
   vue-confetti-explosion@1.0.2(vue@3.5.43(typescript@5.9.3)):
     dependencies:

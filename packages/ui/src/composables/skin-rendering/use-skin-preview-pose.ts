@@ -1,4 +1,3 @@
-import { useRenderLoop } from '@tresjs/core'
 import * as THREE from 'three'
 import type { Ref, ShallowRef } from 'vue'
 
@@ -87,8 +86,7 @@ export function useSkinPreviewPose(options: {
 		limb.applied = true
 	}
 
-	const { onLoop } = useRenderLoop()
-	onLoop(({ delta }) => {
+	function update(delta: number) {
 		const root = options.scene.value
 		if (root !== owner) bind(root)
 		if (!root) return
@@ -116,5 +114,7 @@ export function useSkinPreviewPose(options: {
 		pose('Left_Leg', swing)
 		// The cape swings out behind while walking, a little more while crouched.
 		pose('Cape', -0.25 * walkAmount - 0.2 * crouchAmount)
-	})
+	}
+
+	return { update }
 }

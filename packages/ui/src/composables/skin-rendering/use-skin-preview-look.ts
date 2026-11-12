@@ -1,4 +1,3 @@
-import { useRenderLoop } from '@tresjs/core'
 import * as THREE from 'three'
 import { onMounted, onUnmounted, type Ref, type ShallowRef } from 'vue'
 
@@ -96,8 +95,7 @@ export function useSkinPreviewLook(options: {
 		]
 	}
 
-	const { onLoop } = useRenderLoop()
-	onLoop(({ delta }) => {
+	function update(delta: number) {
 		const root = options.scene.value
 		if (root !== headOwner) {
 			headOwner = root
@@ -123,5 +121,7 @@ export function useSkinPreviewLook(options: {
 		head.quaternion.premultiply(turn.setFromEuler(euler))
 		lookedQuaternion.copy(head.quaternion)
 		looked = true
-	})
+	}
+
+	return { update }
 }

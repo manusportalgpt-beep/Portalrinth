@@ -1,4 +1,3 @@
-import { useRenderLoop } from '@tresjs/core'
 import * as THREE from 'three'
 import { computed, type ComputedRef, type Ref, ref, watch } from 'vue'
 
@@ -39,7 +38,6 @@ export function useSkinPreviewAnimation(
 ) {
 	const mixer = ref<THREE.AnimationMixer | null>(null)
 	const actions = ref<Record<string, THREE.AnimationAction>>({})
-	const clock = new THREE.Clock()
 	const currentAnimation = ref<string>('')
 	const randomAnimationTimer = ref<number | null>(null)
 	const lastRandomAnimation = ref<string>('')
@@ -67,7 +65,6 @@ export function useSkinPreviewAnimation(
 		}
 
 		mixer.value = new THREE.AnimationMixer(loadedScene)
-		clock.start()
 		actions.value = {}
 
 		clips.forEach((clip) => {
@@ -382,17 +379,14 @@ export function useSkinPreviewAnimation(
 		{ deep: true },
 	)
 
-	const { onLoop } = useRenderLoop()
-	onLoop(() => {
-		const delta = clock.getDelta()
-
+	function update(delta: number) {
 		if (mixer.value) {
 			mixer.value.update(delta)
 		}
 
 		updateClickImpulse(delta)
 		updateDamageFlash(delta)
-	})
+	}
 
 	return {
 		clickImpulseOffsetX,
@@ -407,5 +401,6 @@ export function useSkinPreviewAnimation(
 		playAnimation,
 		playClickInteraction,
 		stopAnimations,
+		update,
 	}
 }

@@ -16,7 +16,6 @@ import {
 	FileCodeIcon,
 	FileIcon,
 	FilePlusIcon,
-	GaugeIcon,
 	GlobeIcon,
 	HammerIcon,
 	HistoryIcon,
@@ -45,7 +44,8 @@ import { Avatar, Button, IconButton, Input, useVIntl } from '@modrinth/ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import AiProviderSettings from '@/components/ui/ai/AiProviderSettings.vue'
+import AiComposerMenu from '@/components/ui/ai/AiComposerMenu.vue'
+import AiModelPicker from '@/components/ui/ai/AiModelPicker.vue'
 import AiRichText from '@/components/ui/ai/AiRichText.vue'
 import AiSteps from '@/components/ui/ai/AiSteps.vue'
 import AiTaskCard from '@/components/ui/ai/AiTaskCard.vue'
@@ -79,8 +79,6 @@ import {
 	setSelectedBuild,
 	stopAgentRun,
 	stripLooseCommands,
-	zaiPeakHoursLabel,
-	zaiPeakHoursNow,
 } from '@/helpers/ai-assistant'
 import { highlightLine } from '@/helpers/ai-code-highlight'
 import { buildSitePreview } from '@/helpers/ai-launcher-tools'
@@ -185,8 +183,6 @@ const messages = {
 		defaultMessage: 'Файл не выбран',
 	},
 	models: { id: 'app.ai.models', defaultMessage: 'Модель' },
-	peakBusy: { id: 'app.ai.models.peak-busy', defaultMessage: 'Z.AI: часы пик' },
-	peakFree: { id: 'app.ai.models.peak-free', defaultMessage: 'Z.AI: свободно' },
 	commands: { id: 'app.ai.activity.commands', defaultMessage: 'команд' },
 	codeEdit: { id: 'app.ai.code.edit', defaultMessage: 'Редактировать' },
 	codeDone: { id: 'app.ai.code.done', defaultMessage: 'Готово' },
@@ -711,29 +707,6 @@ const activeFocus = computed(() =>
 
 function setFocus(focus: AiFocus) {
 	saveAiSettings({ focus })
-}
-
-// Effort: how hard reasoning models think before the first word. GLM ships
-// with 'high' - the player asked for it as the default, the slider moves it.
-const EFFORT_VALUES = ['low', 'medium', 'high'] as const
-type EffortValue = (typeof EFFORT_VALUES)[number]
-const effortIndex = computed(() => {
-	const index = EFFORT_VALUES.indexOf(aiSettings.value.effort as EffortValue)
-	return index < 0 ? 2 : index
-})
-const effortLabel = computed(() =>
-	formatMessage(
-		effortIndex.value === 0
-			? messages.effortLow
-			: effortIndex.value === 1
-				? messages.effortMedium
-				: messages.effortHigh,
-	),
-)
-
-function onEffortSlider(event: Event) {
-	const value = Number((event.target as HTMLInputElement).value)
-	saveAiSettings({ effort: EFFORT_VALUES[value] ?? 'high' })
 }
 
 // ---- Slash commands ----------------------------------------------------------
@@ -2216,98 +2189,16 @@ defineExpose({ send })
 						class="fixed inset-0 z-10 cursor-default"
 						@click="plusOpen = false"
 					/>
-					<div
-						v-if="plusOpen"
-						class="ai-menu absolute bottom-full left-0 z-20 mb-2 flex w-72 flex-col gap-1 rounded-xl border border-solid border-surface-5 bg-surface-2 p-1"
-					>
-						<div class="ai-mode-switch" role="radiogroup">
-							<button
-								v-tooltip="formatMessage(messages.modeAskHint)"
-								role="radio"
-								:aria-checked="aiSettings.mode === 'ask'"
-								class="ai-mode-option"
-								:class="{ 'ai-mode-option--on': aiSettings.mode === 'ask' }"
-								@click="setMode('ask')"
-							>
-								<MessagesSquareIcon class="size-4" />
-								{{ formatMessage(messages.modeAsk) }}
-							</button>
-							<button
-								v-tooltip="formatMessage(messages.modeBuildHint)"
-								role="radio"
-								:aria-checked="aiSettings.mode === 'build'"
-								class="ai-mode-option"
-								:class="{ 'ai-mode-option--on': aiSettings.mode === 'build' }"
-								@click="setMode('build')"
-							>
-								<HammerIcon class="size-4" />
-								{{ formatMessage(messages.modeBuild) }}
-							</button>
-						</div>
-						<p class="ai-menu-caption">{{ formatMessage(messages.focus) }}</p>
-						<div class="ai-focus-grid" role="radiogroup">
-							<button
-								v-for="option in FOCUS_OPTIONS"
-								:key="option.id"
-								role="radio"
-								:aria-checked="aiSettings.focus === option.id"
-								class="ai-focus-option"
-								:class="{ 'ai-focus-option--on': aiSettings.focus === option.id }"
-								@click="setFocus(option.id)"
-							>
-								<component :is="option.icon" class="size-3.5" />
-								{{ option.label }}
-							</button>
-						</div>
-						<div class="ai-menu-sep" />
-						<button class="ai-menu-item" @click="plusAttach">
-							<FileIcon class="size-4" />
-							{{ formatMessage(messages.plusAttach) }}
-						</button>
-						<div class="ai-menu-sep" />
-						<button
-							class="ai-menu-item"
-							role="switch"
-							:aria-checked="aiSettings.webSearch"
-							@click="toggleWebSearch"
-						>
-							<GlobeIcon class="size-4" />
-							<span class="grow text-left">Веб-поиск</span>
-							<span class="ai-switch" :class="{ 'ai-switch--on': aiSettings.webSearch }" />
-						</button>
-						<button
-							class="ai-menu-item"
-							role="switch"
-							:aria-checked="aiSettings.deepThink"
-							@click="toggleDeepThink"
-						>
-							<BrainCogIcon class="size-4" />
-							<span class="grow text-left">Глубокое мышление</span>
-							<span class="ai-switch" :class="{ 'ai-switch--on': aiSettings.deepThink }" />
-						</button>
-						<div class="ai-effort-row">
-							<GaugeIcon class="size-4" />
-							<span class="grow text-left">{{ formatMessage(messages.effort) }}</span>
-							<input
-								v-tooltip="effortLabel"
-								class="ai-effort-slider"
-								type="range"
-								min="0"
-								max="2"
-								step="1"
-								:aria-label="formatMessage(messages.effort)"
-								:value="effortIndex"
-								@input="onEffortSlider"
-							/>
-							<span class="ai-effort-value">{{ effortLabel }}</span>
-						</div>
-						<div class="ai-menu-sep" />
-						<button class="ai-menu-item" @click="openSlashFromMenu">
-							<TerminalSquareIcon class="size-4" />
-							<span class="grow text-left">Команды и навыки</span>
-							<kbd class="ai-kbd">/</kbd>
-						</button>
-					</div>
+					<Transition name="ai-pop">
+						<AiComposerMenu
+							v-if="plusOpen"
+							class="absolute bottom-full left-0 z-20 mb-2"
+							:focus-options="FOCUS_OPTIONS"
+							@attach="plusAttach"
+							@slash="openSlashFromMenu"
+							@close="plusOpen = false"
+						/>
+					</Transition>
 				</div>
 				<div
 					v-if="
@@ -2431,22 +2322,10 @@ defineExpose({ send })
 					<Transition name="ai-pop">
 						<div
 							v-if="modelsOpen"
-							class="ai-menu ai-model-menu absolute bottom-full right-0 z-20 mb-2 flex w-[26rem] flex-col rounded-2xl border border-solid border-surface-5 p-2"
+							class="ai-menu ai-model-menu absolute bottom-full right-0 z-20 mb-2 flex w-[36rem] max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-solid border-surface-5 p-2.5"
 						>
-							<div class="flex items-baseline justify-between gap-3 px-2 pb-2 pt-1">
-								<span class="text-sm font-semibold text-contrast">
-									{{ formatMessage(messages.models) }}
-								</span>
-								<span
-									v-if="aiSettings.provider === 'zai'"
-									class="ai-peak-note truncate text-xs"
-									:title="zaiPeakHoursLabel()"
-								>
-									{{ formatMessage(zaiPeakHoursNow() ? messages.peakBusy : messages.peakFree) }}
-								</span>
-							</div>
 							<div class="ai-model-menu-body">
-								<AiProviderSettings compact />
+								<AiModelPicker @picked="modelsOpen = false" />
 							</div>
 						</div>
 					</Transition>
@@ -2524,10 +2403,6 @@ defineExpose({ send })
 	overflow-wrap: anywhere;
 }
 
-.ai-peak-note {
-	color: var(--color-secondary);
-}
-
 .ai-build-item {
 	display: flex;
 	align-items: center;
@@ -2599,7 +2474,7 @@ defineExpose({ send })
 
 .ai-model-menu {
 	max-height: min(36rem, calc(100vh - 12rem));
-	background: var(--color-raised-bg);
+	background: color-mix(in srgb, var(--color-raised-bg) 84%, transparent);
 	backdrop-filter: blur(24px) saturate(1.2);
 	-webkit-backdrop-filter: blur(24px) saturate(1.2);
 	transform-origin: bottom right;
@@ -2607,8 +2482,6 @@ defineExpose({ send })
 
 .ai-model-menu-body {
 	min-height: 0;
-	overflow-y: auto;
-	padding: 0 0.25rem 0.25rem;
 }
 
 .ai-pop-enter-active,
@@ -2634,24 +2507,6 @@ defineExpose({ send })
 	.ai-pop-leave-to {
 		transform: none;
 	}
-}
-
-.ai-menu-item {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	border-radius: 0.5rem;
-	padding: 0.45rem 0.75rem;
-	font-size: 0.8125rem;
-	color: var(--color-primary);
-	text-align: left;
-	cursor: pointer;
-	background: transparent;
-	border: none;
-}
-
-.ai-menu-item:hover {
-	background: var(--color-button-bg);
 }
 
 .ai-model-chip {
@@ -3620,188 +3475,6 @@ defineExpose({ send })
 	border-color: color-mix(in srgb, var(--color-purple, #a78bfa) 40%, transparent);
 	background: color-mix(in srgb, var(--color-purple, #a78bfa) 14%, transparent);
 	color: var(--color-purple, #a78bfa);
-}
-
-.ai-menu-sep {
-	height: 1px;
-	margin: 0.15rem 0.25rem;
-	background: var(--surface-5);
-}
-
-.ai-mode-switch {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 0.25rem;
-	padding: 0.2rem;
-	border-radius: 0.6rem;
-	background: var(--color-button-bg);
-}
-
-.ai-mode-option,
-.ai-focus-option {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0.375rem;
-	border: 0;
-	border-radius: 0.45rem;
-	background: transparent;
-	color: var(--color-secondary);
-	font: inherit;
-	font-size: 0.8125rem;
-	cursor: pointer;
-	transition:
-		background-color 0.15s ease,
-		color 0.15s ease;
-}
-
-.ai-mode-option {
-	padding: 0.35rem 0.5rem;
-	font-weight: 600;
-}
-
-.ai-mode-option:hover,
-.ai-focus-option:hover {
-	color: var(--color-contrast);
-}
-
-.ai-mode-option--on {
-	background: var(--color-raised-bg);
-	color: var(--color-contrast);
-}
-
-.ai-menu-caption {
-	margin: 0.25rem 0.5rem 0;
-	font-size: 0.75rem;
-	color: var(--color-secondary);
-}
-
-.ai-focus-grid {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 0.25rem;
-	padding: 0 0.25rem;
-}
-
-.ai-focus-option {
-	justify-content: flex-start;
-	padding: 0.3rem 0.45rem;
-	font-size: 0.75rem;
-	white-space: nowrap;
-}
-
-.ai-focus-option--on {
-	background: color-mix(in srgb, var(--color-brand) 14%, transparent);
-	color: var(--color-brand);
-}
-
-/* Effort: how hard reasoning models think - a small slider in the "+" menu. */
-.ai-effort-row {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.4rem 0.5rem;
-	font-size: 0.8125rem;
-	color: var(--color-primary);
-}
-
-.ai-effort-slider {
-	width: 6.5rem;
-	height: 0.85rem;
-	appearance: none;
-	-webkit-appearance: none;
-	background: transparent;
-	cursor: pointer;
-}
-
-.ai-effort-slider::-webkit-slider-runnable-track {
-	height: 0.3rem;
-	border-radius: 999px;
-	background: linear-gradient(
-		90deg,
-		color-mix(in srgb, var(--color-brand) 55%, transparent),
-		var(--color-brand)
-	);
-}
-
-.ai-effort-slider::-webkit-slider-thumb {
-	appearance: none;
-	-webkit-appearance: none;
-	width: 0.85rem;
-	height: 0.85rem;
-	margin-top: -0.275rem;
-	border-radius: 999px;
-	background: var(--color-contrast);
-	border: 2px solid var(--color-brand);
-	transition: transform 0.15s ease;
-}
-
-.ai-effort-slider::-webkit-slider-thumb:hover {
-	transform: scale(1.15);
-}
-
-.ai-effort-slider::-moz-range-track {
-	height: 0.3rem;
-	border-radius: 999px;
-	background: linear-gradient(
-		90deg,
-		color-mix(in srgb, var(--color-brand) 55%, transparent),
-		var(--color-brand)
-	);
-}
-
-.ai-effort-slider::-moz-range-thumb {
-	width: 0.85rem;
-	height: 0.85rem;
-	border-radius: 999px;
-	background: var(--color-contrast);
-	border: 2px solid var(--color-brand);
-}
-
-.ai-effort-value {
-	min-width: 3.6rem;
-	text-align: right;
-	font-size: 0.75rem;
-	font-weight: 700;
-	color: var(--color-brand);
-}
-
-.ai-switch {
-	position: relative;
-	width: 1.9rem;
-	height: 1.1rem;
-	flex-shrink: 0;
-	border-radius: 999px;
-	background: var(--surface-5);
-	transition: background-color 0.18s ease;
-}
-
-.ai-switch::after {
-	content: '';
-	position: absolute;
-	top: 0.15rem;
-	left: 0.15rem;
-	width: 0.8rem;
-	height: 0.8rem;
-	border-radius: 50%;
-	background: #fff;
-	transition: transform 0.2s cubic-bezier(0.3, 0.9, 0.4, 1.2);
-}
-
-.ai-switch--on {
-	background: var(--color-brand);
-}
-
-.ai-switch--on::after {
-	transform: translateX(0.8rem);
-}
-
-.ai-kbd {
-	padding: 0 0.35rem;
-	border: 1px solid var(--surface-5);
-	border-radius: 0.3rem;
-	font-size: 0.6875rem;
-	color: var(--color-secondary);
 }
 
 .ai-code-diff {

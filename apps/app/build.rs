@@ -681,6 +681,35 @@ fn main() {
                     ),
             )
             .plugin(
+                "portalrinth-hosting",
+                InlinedPlugin::new()
+                    .commands(&[
+                        "hosting_list",
+                        "hosting_get",
+                        "hosting_create",
+                        "hosting_update",
+                        "hosting_remove",
+                        "hosting_start",
+                        "hosting_stop",
+                        "hosting_restart",
+                        "hosting_republish",
+                        "hosting_command",
+                        "hosting_log",
+                        "hosting_versions",
+                        "hosting_install_core",
+                        "hosting_plugins",
+                        "hosting_plugin_toggle",
+                        "hosting_plugin_remove",
+                        "hosting_plugin_import",
+                        "hosting_files",
+                        "hosting_file_delete",
+                        "hosting_file_import",
+                    ])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "portalrinth-bedrock",
                 InlinedPlugin::new()
                     .commands(&[

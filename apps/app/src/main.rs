@@ -556,6 +556,7 @@ fn main() {
         .plugin(api::portalrinth_crash::init())
         .plugin(api::portalrinth_curseforge::init())
         .plugin(api::portalrinth_lan::init())
+        .plugin(api::portalrinth_hosting::init())
         .plugin(api::portalrinth_bedrock::init())
         .plugin(api::portalrinth_fonts::init())
         .plugin(api::portalrinth_offline_auth::init())

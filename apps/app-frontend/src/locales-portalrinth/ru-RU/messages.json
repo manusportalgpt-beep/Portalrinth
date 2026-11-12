@@ -4130,5 +4130,464 @@
 	},
 	"noctrinth.settings.java-provider.mojang-mirror": {
 		"message": "Mojang через BMCLAPI (стороннее зеркало)"
+	},
+	"app.nav.server-hosting": {
+		"message": "Server Hosting"
+	},
+	"app.server-hosting.back": {
+		"message": "К серверам"
+	},
+	"app.server-hosting.console.copied": {
+		"message": "Лог скопирован"
+	},
+	"app.server-hosting.console.copy": {
+		"message": "Скопировать лог"
+	},
+	"app.server-hosting.console.empty": {
+		"message": "Консоль пока пуста"
+	},
+	"app.server-hosting.console.offline-placeholder": {
+		"message": "Запустите сервер, чтобы отправлять команды"
+	},
+	"app.server-hosting.console.placeholder": {
+		"message": "Введите команду, например: say Привет"
+	},
+	"app.server-hosting.console.send": {
+		"message": "Отправить"
+	},
+	"app.server-hosting.content.datapacks": {
+		"message": "Датапаки"
+	},
+	"app.server-hosting.content.empty": {
+		"message": "Пока ничего не установлено"
+	},
+	"app.server-hosting.content.empty-hint": {
+		"message": "Добавьте файлы с компьютера — они заработают после перезапуска."
+	},
+	"app.server-hosting.content.import": {
+		"message": "Добавить из файла"
+	},
+	"app.server-hosting.content.mods": {
+		"message": "Моды"
+	},
+	"app.server-hosting.content.open-folder": {
+		"message": "Открыть папку"
+	},
+	"app.server-hosting.content.plugins": {
+		"message": "Плагины"
+	},
+	"app.server-hosting.content.remove": {
+		"message": "Удалить"
+	},
+	"app.server-hosting.content.restart-hint": {
+		"message": "Изменения вступят в силу после перезапуска сервера."
+	},
+	"app.server-hosting.copied": {
+		"message": "Адрес скопирован"
+	},
+	"app.server-hosting.copy-address": {
+		"message": "Скопировать адрес"
+	},
+	"app.server-hosting.crashed": {
+		"message": "Сервер остановился с ошибкой"
+	},
+	"app.server-hosting.create": {
+		"message": "Создать сервер"
+	},
+	"app.server-hosting.create.header": {
+		"message": "Новый сервер"
+	},
+	"app.server-hosting.create.name": {
+		"message": "Название"
+	},
+	"app.server-hosting.create.name-placeholder": {
+		"message": "Мой сервер"
+	},
+	"app.server-hosting.create.software": {
+		"message": "Ядро"
+	},
+	"app.server-hosting.create.submit": {
+		"message": "Создать"
+	},
+	"app.server-hosting.create.version": {
+		"message": "Версия Minecraft"
+	},
+	"app.server-hosting.create.version-placeholder": {
+		"message": "Выберите версию"
+	},
+	"app.server-hosting.create.versions-failed": {
+		"message": "Не удалось загрузить версии для этого ядра"
+	},
+	"app.server-hosting.create.versions-loading": {
+		"message": "Загружаю версии…"
+	},
+	"app.server-hosting.description": {
+		"message": "Запускайте сервер Minecraft на этом компьютере — друзья зайдут откуда угодно по публичному адресу."
+	},
+	"app.server-hosting.difficulty.easy": {
+		"message": "Лёгкая"
+	},
+	"app.server-hosting.difficulty.hard": {
+		"message": "Сложная"
+	},
+	"app.server-hosting.difficulty.normal": {
+		"message": "Нормальная"
+	},
+	"app.server-hosting.difficulty.peaceful": {
+		"message": "Мирная"
+	},
+	"app.server-hosting.edit": {
+		"message": "Настроить сервер"
+	},
+	"app.server-hosting.empty-description": {
+		"message": "Создайте сервер — он будет работать прямо на этом компьютере."
+	},
+	"app.server-hosting.empty-heading": {
+		"message": "Серверов пока нет"
+	},
+	"app.server-hosting.error-heading": {
+		"message": "Не удалось прочитать ваши серверы"
+	},
+	"app.server-hosting.eula.accept": {
+		"message": "Согласен"
+	},
+	"app.server-hosting.eula.description": {
+		"message": "Чтобы запустить сервер Minecraft, нужно принять лицензионное соглашение Minecraft (EULA)."
+	},
+	"app.server-hosting.eula.header": {
+		"message": "Minecraft EULA"
+	},
+	"app.server-hosting.eula.read": {
+		"message": "Прочитать соглашение"
+	},
+	"app.server-hosting.files.confirm-remove": {
+		"message": "Удалить навсегда"
+	},
+	"app.server-hosting.files.empty": {
+		"message": "Эта папка пуста"
+	},
+	"app.server-hosting.files.open-folder": {
+		"message": "Открыть папку"
+	},
+	"app.server-hosting.files.refresh": {
+		"message": "Обновить"
+	},
+	"app.server-hosting.files.remove": {
+		"message": "Удалить"
+	},
+	"app.server-hosting.files.root": {
+		"message": "Сервер"
+	},
+	"app.server-hosting.files.up": {
+		"message": "На уровень выше"
+	},
+	"app.server-hosting.files.upload": {
+		"message": "Загрузить файлы"
+	},
+	"app.server-hosting.gamemode.adventure": {
+		"message": "Приключение"
+	},
+	"app.server-hosting.gamemode.creative": {
+		"message": "Творческий"
+	},
+	"app.server-hosting.gamemode.spectator": {
+		"message": "Наблюдатель"
+	},
+	"app.server-hosting.gamemode.survival": {
+		"message": "Выживание"
+	},
+	"app.server-hosting.heading": {
+		"message": "Server Hosting"
+	},
+	"app.server-hosting.installing-hint": {
+		"message": "Скачиваю ядро и Java — первый запуск может занять несколько минут…"
+	},
+	"app.server-hosting.local-address": {
+		"message": "localhost:{port}"
+	},
+	"app.server-hosting.no-address": {
+		"message": "Публичный адрес появится, когда сервер будет онлайн"
+	},
+	"app.server-hosting.not-found": {
+		"message": "Сервер не найден"
+	},
+	"app.server-hosting.overview.average": {
+		"message": "Средний онлайн"
+	},
+	"app.server-hosting.overview.average-hint": {
+		"message": "за период"
+	},
+	"app.server-hosting.overview.cpu": {
+		"message": "CPU"
+	},
+	"app.server-hosting.overview.min": {
+		"message": "Минимальный онлайн"
+	},
+	"app.server-hosting.overview.no-data": {
+		"message": "Запустите сервер — график заполнится сам"
+	},
+	"app.server-hosting.overview.now": {
+		"message": "Сейчас онлайн"
+	},
+	"app.server-hosting.overview.online": {
+		"message": "Игроков онлайн"
+	},
+	"app.server-hosting.overview.peak": {
+		"message": "Пиковый онлайн"
+	},
+	"app.server-hosting.overview.ram": {
+		"message": "RAM"
+	},
+	"app.server-hosting.overview.ram-value": {
+		"message": "{used} / {total} МБ"
+	},
+	"app.server-hosting.overview.range-24h": {
+		"message": "24ч"
+	},
+	"app.server-hosting.overview.range-30d": {
+		"message": "30д"
+	},
+	"app.server-hosting.overview.range-7d": {
+		"message": "7д"
+	},
+	"app.server-hosting.overview.uptime": {
+		"message": "Аптайм"
+	},
+	"app.server-hosting.overview.uptime-hours": {
+		"message": "{hours} ч {minutes} мин"
+	},
+	"app.server-hosting.overview.uptime-minutes": {
+		"message": "{minutes} мин"
+	},
+	"app.server-hosting.overview.usage": {
+		"message": "Нагрузка сервера"
+	},
+	"app.server-hosting.players.add": {
+		"message": "Добавить"
+	},
+	"app.server-hosting.players.ban": {
+		"message": "Забанить"
+	},
+	"app.server-hosting.players.heading": {
+		"message": "Сейчас онлайн"
+	},
+	"app.server-hosting.players.kick": {
+		"message": "Кикнуть"
+	},
+	"app.server-hosting.players.none": {
+		"message": "На сервере пока никого"
+	},
+	"app.server-hosting.players.offline": {
+		"message": "Сервер не запущен — на нём никого нет"
+	},
+	"app.server-hosting.players.op": {
+		"message": "Сделать оператором"
+	},
+	"app.server-hosting.players.sent": {
+		"message": "Команда отправлена: {command}"
+	},
+	"app.server-hosting.players.whitelist": {
+		"message": "Белый список"
+	},
+	"app.server-hosting.players.whitelist-hint": {
+		"message": "Добавьте игрока по нику. Сам белый список включается в настройках."
+	},
+	"app.server-hosting.players.whitelist-placeholder": {
+		"message": "Ник игрока"
+	},
+	"app.server-hosting.private": {
+		"message": "Только локально"
+	},
+	"app.server-hosting.public": {
+		"message": "Публичный"
+	},
+	"app.server-hosting.relay-failed": {
+		"message": "Не удалось открыть публичный адрес"
+	},
+	"app.server-hosting.removed": {
+		"message": "Сервер удалён"
+	},
+	"app.server-hosting.republish": {
+		"message": "Переподключить публичный адрес"
+	},
+	"app.server-hosting.restart": {
+		"message": "Перезапустить"
+	},
+	"app.server-hosting.saved": {
+		"message": "Настройки сохранены"
+	},
+	"app.server-hosting.self-hosted": {
+		"message": "Self-hosted"
+	},
+	"app.server-hosting.server-subtitle": {
+		"message": "{software} {version}"
+	},
+	"app.server-hosting.settings.allow-flight": {
+		"message": "Разрешить полёт"
+	},
+	"app.server-hosting.settings.command-blocks": {
+		"message": "Командные блоки"
+	},
+	"app.server-hosting.settings.confirm-remove": {
+		"message": "Удалить навсегда"
+	},
+	"app.server-hosting.settings.core": {
+		"message": "Ядро"
+	},
+	"app.server-hosting.settings.core-hint": {
+		"message": "Смена ядра или версии скачает его заново при следующем запуске"
+	},
+	"app.server-hosting.settings.core-locked": {
+		"message": "Остановите сервер, чтобы сменить ядро или версию"
+	},
+	"app.server-hosting.settings.danger": {
+		"message": "Удалить сервер"
+	},
+	"app.server-hosting.settings.danger-hint": {
+		"message": "Сервер, его мир и все файлы будут удалены с этого компьютера."
+	},
+	"app.server-hosting.settings.difficulty": {
+		"message": "Сложность"
+	},
+	"app.server-hosting.settings.eula": {
+		"message": "Я принимаю Minecraft EULA"
+	},
+	"app.server-hosting.settings.game": {
+		"message": "Игра"
+	},
+	"app.server-hosting.settings.gamemode": {
+		"message": "Режим игры"
+	},
+	"app.server-hosting.settings.general": {
+		"message": "Основное"
+	},
+	"app.server-hosting.settings.hardcore": {
+		"message": "Хардкор"
+	},
+	"app.server-hosting.settings.install-core": {
+		"message": "Скачать ядро"
+	},
+	"app.server-hosting.settings.java-path": {
+		"message": "Путь к Java"
+	},
+	"app.server-hosting.settings.java-path-hint": {
+		"message": "Оставьте пустым — Java {version} подберётся или установится автоматически"
+	},
+	"app.server-hosting.settings.jvm-args": {
+		"message": "Аргументы JVM"
+	},
+	"app.server-hosting.settings.level-name": {
+		"message": "Папка мира"
+	},
+	"app.server-hosting.settings.max-players": {
+		"message": "Слотов для игроков"
+	},
+	"app.server-hosting.settings.memory": {
+		"message": "Память"
+	},
+	"app.server-hosting.settings.motd": {
+		"message": "Описание (MOTD)"
+	},
+	"app.server-hosting.settings.motd-hint": {
+		"message": "Показывается под названием сервера в списке «Сетевая игра»"
+	},
+	"app.server-hosting.settings.name": {
+		"message": "Название"
+	},
+	"app.server-hosting.settings.network": {
+		"message": "Сеть"
+	},
+	"app.server-hosting.settings.online-mode": {
+		"message": "Только лицензионные аккаунты"
+	},
+	"app.server-hosting.settings.online-mode-hint": {
+		"message": "Выключите, чтобы пускать игроков с офлайн- и Ely.by-аккаунтами"
+	},
+	"app.server-hosting.settings.performance": {
+		"message": "Производительность"
+	},
+	"app.server-hosting.settings.port": {
+		"message": "Локальный порт"
+	},
+	"app.server-hosting.settings.public-relay": {
+		"message": "Публичный адрес"
+	},
+	"app.server-hosting.settings.public-relay-hint": {
+		"message": "Друзья заходят по публичному адресу без проброса портов на роутере"
+	},
+	"app.server-hosting.settings.pvp": {
+		"message": "PvP"
+	},
+	"app.server-hosting.settings.reinstall-core": {
+		"message": "Скачать заново"
+	},
+	"app.server-hosting.settings.remove": {
+		"message": "Удалить"
+	},
+	"app.server-hosting.settings.reset": {
+		"message": "Сбросить"
+	},
+	"app.server-hosting.settings.rules": {
+		"message": "Правила"
+	},
+	"app.server-hosting.settings.save": {
+		"message": "Сохранить"
+	},
+	"app.server-hosting.settings.unsaved": {
+		"message": "Есть несохранённые изменения"
+	},
+	"app.server-hosting.settings.version": {
+		"message": "Версия Minecraft"
+	},
+	"app.server-hosting.settings.view-distance": {
+		"message": "Дальность прорисовки"
+	},
+	"app.server-hosting.settings.white-list": {
+		"message": "Белый список"
+	},
+	"app.server-hosting.start": {
+		"message": "Запустить"
+	},
+	"app.server-hosting.status.crashed": {
+		"message": "Крашнулся"
+	},
+	"app.server-hosting.status.installing": {
+		"message": "Установка"
+	},
+	"app.server-hosting.status.running": {
+		"message": "Онлайн"
+	},
+	"app.server-hosting.status.starting": {
+		"message": "Запускается"
+	},
+	"app.server-hosting.status.stopped": {
+		"message": "Остановлен"
+	},
+	"app.server-hosting.status.stopping": {
+		"message": "Останавливается"
+	},
+	"app.server-hosting.stop": {
+		"message": "Остановить"
+	},
+	"app.server-hosting.tab.console": {
+		"message": "Консоль"
+	},
+	"app.server-hosting.tab.dashboard": {
+		"message": "Дашборд"
+	},
+	"app.server-hosting.tab.files": {
+		"message": "Файлы"
+	},
+	"app.server-hosting.tab.players": {
+		"message": "Игроки"
+	},
+	"app.server-hosting.tab.settings": {
+		"message": "Настройки"
+	},
+	"app.server-hosting.view.grid": {
+		"message": "Сетка"
+	},
+	"app.server-hosting.view.list": {
+		"message": "Список"
 	}
 }

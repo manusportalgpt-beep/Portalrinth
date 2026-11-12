@@ -12,6 +12,7 @@ pub mod ely_auth;
 pub mod friends;
 pub mod gpu;
 pub mod handler;
+pub mod hosted_servers;
 pub mod instance;
 pub mod instance_recovery;
 pub mod java_providers;
