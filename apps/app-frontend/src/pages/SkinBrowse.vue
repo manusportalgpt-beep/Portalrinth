@@ -951,7 +951,10 @@ async function loadSimilarToReference() {
 	hasMore.value = false
 	skins.value = []
 	try {
-		const found = await findSimilarLabySkins({ texture: reference.texture }, 48)
+		const found = await findSimilarLabySkins(
+			{ texture: reference.texture, variant: reference.variant },
+			48,
+		)
 		if (id !== requestId) return
 		skins.value = found
 		refocusQueue()
@@ -1077,7 +1080,12 @@ async function loadSimilar(skin: LabySkin, id: number) {
 	similarLoading.value = true
 	try {
 		const found = await findSimilarLabySkins(
-			{ hash: skin.image_hash, tags: labySkinTags(skin), texture: currentTexture.value },
+			{
+				hash: skin.image_hash,
+				tags: labySkinTags(skin),
+				texture: currentTexture.value,
+				variant: labySkinVariant(skin),
+			},
 			12,
 		)
 		if (id === viewerRequest) similar.value = found

@@ -1210,6 +1210,7 @@ export const AI_SKILLS_HINT = [
 	'- Датапаки: pack.mcmeta в корне + data/<namespace>/function/*.mcfunction и прочее.',
 	'- Любой другой код и файлы: сайты (html/css/js — потом <<site_preview|site/index.html>>), скрипты (Python, Lua, C#...), конфиги, картинки через <<gen_image|описание::файл.png>>.',
 	'Порядок работы над артефактом: папка проекта в песочнице → файлы (удобно через <<sandbox_bash|mkdir ... && ...>>) → компиляция/упаковка → <<install_to_instance|файл::тип>> → скажи игроку, что поставлено и куда.',
+	'ПРОЕКТ ЗА ОДИН ЗАХОД (так работают сильные инженеры): 1) одной строкой скажи игроку, что получится и из каких файлов; 2) в ОДНОМ ответе выдай ВСЕ файлы проекта подряд — несколько <<sandbox_write|путь::полный текст>> друг за другом (лимит ответа большой, не дроби на раунды и не перечитывай только что записанное); 3) сразу упаковка/компиляция и установка; 4) короткий итог: что сделано, где лежит, как проверить. Ошибка сборки — читай её текст, правь ровно тот файл и пересобирай, не начинай проект заново.',
 	'Большие проекты: сначала осмотрись (<<sandbox_bash|tree>> или ls), потом читай файлы по одному и частями (head/tail), план работ держи в memory_write — не пытайся прочитать всё сразу и ничего не теряй между шагами.',
 	'Если знаний не хватает (версии, форматы, API) — сначала web_search, потом пиши код. Не выдумывай несуществующие API: проверяй.',
 ].join('\n')
@@ -1829,10 +1830,10 @@ interface ChatMessagePayload {
 /** Порядок символов, который уходит в модель как история разговора, прежде
     чем длинная сессия начнёт душить провайдера: сотни тысяч символов старых
     ходов — это медленные ответы, отказы по контексту и потерянные ходы. */
-const HISTORY_CHAR_BUDGET = 60_000
+const HISTORY_CHAR_BUDGET = 480_000
 /** Сколько свежих сообщений остаются целиком, даже если бюджет исчерпан: у
     задачи «здесь и сейчас» всегда есть полный контекст. */
-const HISTORY_KEEP_MIN = 8
+const HISTORY_KEEP_MIN = 16
 
 /** Ранние ходы длинной сессии сжимаются в одну справку, свежие остаются
     целиком: агент не теряет нить («о чём вообще говорили») и не тащит всю
@@ -1866,7 +1867,7 @@ function fitHistory(messages: ChatMessagePayload[]): ChatMessagePayload[] {
 	return [
 		{
 			role: 'system',
-			content: `Начало разговора сжато (полные сообщения выше бюджета):\n${digest.slice(0, 6000)}`,
+			content: `Начало разговора сжато (полные сообщения выше бюджета):\n${digest.slice(0, 24000)}`,
 		},
 		...messages.slice(cut),
 	]
@@ -1898,6 +1899,9 @@ function normalizeAttemptError(
 	}
 	return error
 }
+
+const TOKEN_LIMIT_RE =
+	/max_tokens|max_completion_tokens|max_output_tokens|context.{0,12}length|maximum.{0,20}tokens|too many tokens|tokens?.{0,30}(exceed|limit)/i
 
 async function callProvider(
 	providerId: string,
@@ -1942,7 +1946,7 @@ async function callProvider(
 		// Small talk never needs a lecture back; real work keeps the headroom.
 		// Free reasoning models spend part of the budget thinking before the
 		// first visible word, so even a greeting gets room for that.
-		max_tokens: fastPath ? 1200 : settings.deepThink ? 12288 : 6144,
+		max_tokens: fastPath ? 1200 : settings.deepThink ? 32768 : 16384,
 		stream: Boolean(onDelta),
 	}
 	if (providerId === 'openrouter') {
@@ -1972,24 +1976,35 @@ async function callProvider(
 	const watchdog = createWatchdog(signal, attemptCeiling)
 	const attemptSignal = watchdog.signal
 	let response: Response
-	try {
-		response = await proxiedFetch(baseUrl, {
-			method: 'POST',
-			headers,
-			body: JSON.stringify(body),
-			signal: attemptSignal,
-		})
-	} catch (error) {
-		watchdog.dispose()
-		throw normalizeAttemptError(provider.label, error, signal, attemptCeiling)
-	}
-	if (!response.ok) {
-		let detail = ''
+	let detail = ''
+	for (;;) {
+		try {
+			response = await proxiedFetch(baseUrl, {
+				method: 'POST',
+				headers,
+				body: JSON.stringify(body),
+				signal: attemptSignal,
+			})
+		} catch (error) {
+			watchdog.dispose()
+			throw normalizeAttemptError(provider.label, error, signal, attemptCeiling)
+		}
+		if (response.ok) break
 		try {
 			detail = (await response.text()).slice(0, 300)
 		} catch {
 			/* the body may already be gone */
 		}
+		// A model with a smaller output window refuses the big budget: ask
+		// again with one every provider takes.
+		const asked = Number(body.max_tokens)
+		if (response.status === 400 && asked > 4096 && TOKEN_LIMIT_RE.test(detail)) {
+			body.max_tokens = asked > 8192 ? 8192 : 4096
+			continue
+		}
+		break
+	}
+	if (!response.ok) {
 		watchdog.dispose()
 		const error = new Error(
 			`${provider.label}: HTTP ${response.status}${detail ? ` — ${detail}` : ''}`,
@@ -2303,6 +2318,78 @@ async function callProviderWithRetry(
 		}
 	}
 	throw lastError
+}
+
+/**
+ * A provider slow to say its first word gets company: after a short wait the
+ * next one in the chain is asked the same thing, and whichever starts
+ * answering first is kept, the other is cancelled. A jammed free tier no
+ * longer costs the player its whole ceiling before the fallback even starts.
+ */
+function hedgedCall(
+	primary: string,
+	backup: string,
+	payload: ChatMessagePayload[],
+	signal: AbortSignal | undefined,
+	onDelta: ((chunk: string, full: string) => void) | undefined,
+	fastPath: boolean,
+	delayMs: number,
+	ceilingMs?: number,
+): Promise<{ text: string; provider: string }> {
+	return new Promise((resolve, reject) => {
+		const racers = new Map<string, AbortController>()
+		let winner: string | null = null
+		let started = 0
+		let failed = 0
+		let primaryError: unknown
+		const claim = (id: string) => {
+			if (winner === null) {
+				winner = id
+				clearTimeout(timer)
+				for (const [other, controller] of racers) if (other !== id) controller.abort()
+			}
+			return winner === id
+		}
+		const run = (id: string) => {
+			started++
+			const controller = new AbortController()
+			racers.set(id, controller)
+			const forward = () => controller.abort(signal?.reason)
+			signal?.addEventListener('abort', forward, { once: true })
+			const delta = onDelta
+				? (chunk: string, full: string) => {
+						if (full && claim(id)) onDelta(chunk, full)
+					}
+				: undefined
+			callProviderWithRetry(id, payload, controller.signal, delta, fastPath, ceilingMs)
+				.then((text) => {
+					if (claim(id)) resolve({ text, provider: id })
+				})
+				.catch((error) => {
+					if (winner === id) {
+						reject(error)
+						return
+					}
+					if (winner !== null) return
+					failed++
+					if (id === primary) {
+						primaryError = error
+						if (isPermanentRefusal(error)) blockProvider(id)
+						if (started === 1 && !signal?.aborted) {
+							clearTimeout(timer)
+							run(backup)
+							return
+						}
+					}
+					if (failed >= started) reject(primaryError ?? error)
+				})
+				.finally(() => signal?.removeEventListener('abort', forward))
+		}
+		run(primary)
+		const timer = setTimeout(() => {
+			if (winner === null && started === 1 && !signal?.aborted) run(backup)
+		}, delayMs)
+	})
 }
 
 /**
@@ -2753,7 +2840,8 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 			// потолок всё же оставлен — он честно останавливает зацикливание,
 			// а не обрывает живую работу.
 			const maxRounds = settings.deepThink ? 96 : 64
-			for (const providerId of chain) {
+			for (const chainId of chain) {
+				let providerId = chainId
 				if (turnAborted())
 					throw new Error('Быстрый ответ не уложился в 25 секунд — провайдеры молчат')
 				providerTried = providerId
@@ -2773,19 +2861,41 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 						let raw: string
 						try {
 							agentPhase.value = 'thinking'
-							raw = await callProviderWithRetry(
-								providerId,
-								payload,
-								turnSignal,
-								request.onDelta,
-								fastPath,
-								// Rounds after tools carry the search results in the
-								// payload and the model composes the answer from them:
-								// the default 30s ceiling kept killing these calls, and
-								// the next provider restarted the turn from scratch -
-								// the long silence after a search.
-								round > 0 ? 30000 : undefined,
-							)
+							// Rounds after tools carry the search results in the
+							// payload and the model composes the answer from them:
+							// the default 30s ceiling kept killing these calls.
+							const ceiling = round > 0 ? 30000 : undefined
+							const backup = chain[chain.indexOf(chainId) + 1]
+							if (backup && backup !== providerId && !hasImages) {
+								const answer = await hedgedCall(
+									providerId,
+									backup,
+									payload,
+									turnSignal,
+									request.onDelta,
+									fastPath,
+									fastPath ? 3500 : round > 0 ? 12000 : 8000,
+									ceiling,
+								)
+								raw = answer.text
+								if (answer.provider !== providerId) {
+									if (!failedProviderLabel) {
+										failedProviderLabel = providerById(providerId)?.label ?? providerId
+										failedDetail = 'отвечал слишком медленно'
+									}
+									providerId = answer.provider
+									providerTried = providerId
+								}
+							} else {
+								raw = await callProviderWithRetry(
+									providerId,
+									payload,
+									turnSignal,
+									request.onDelta,
+									fastPath,
+									ceiling,
+								)
+							}
 						} catch (error) {
 							// A model without vision answers 400 to image parts: drop them
 							// once and answer from the text alone.
@@ -2911,7 +3021,7 @@ export async function aiComplete(request: AiRequest): Promise<AiResult> {
 									.join(' ')}`,
 							)
 						}
-						for (let cursor = 0; cursor < batch.length;) {
+						for (let cursor = 0; cursor < batch.length; ) {
 							if (playerTookOver()) {
 								notes.push(
 									'Игрок сам перешёл на другой экран - он передумал. Немедленно прекрати действия по этому запросу и попрощайся.',
@@ -4782,7 +4892,7 @@ async function runAgentTurn(text: string, files: AttachedFile[]): Promise<void> 
 
 	const payload = aiHistory.value
 		.filter((message) => message.role !== 'note')
-		.slice(-30)
+		.slice(-80)
 		.map((message) => ({
 			role: message.role === 'assistant' ? ('assistant' as const) : ('user' as const),
 			content: message.content,

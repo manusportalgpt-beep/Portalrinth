@@ -3,14 +3,13 @@
 import type { SkinObject } from "skin3d";
 import {
   BoxGeometry,
-  BufferAttribute,
+  BufferGeometry,
+  Float32BufferAttribute,
   Group,
   Mesh,
   MeshStandardMaterial,
-  type BufferGeometry,
   type Texture,
 } from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const TEX = 64;
 /** Как isPresent в моде: любой ненулевой alpha после sanitize */
@@ -85,11 +84,7 @@ export class OuterVoxelLayers {
     this._material = (skin.head.innerLayer as Mesh).material as MeshStandardMaterial;
 
     for (const spec of partSpecs(slim)) {
-      const geos = buildPartVoxels(img.data, width, height, scale, spec);
-      if (geos.length === 0) continue;
-
-      const merged = mergeGeometries(geos, false);
-      for (const g of geos) g.dispose();
+      const [merged] = buildPartVoxels(img.data, width, height, scale, spec);
       if (!merged) continue;
 
       this._geometries.push(merged);
@@ -183,7 +178,41 @@ function applyShellScale(group: Group, outer: Mesh, w: number, h: number, d: num
   }
 }
 
-/** Один воксель на каждый непрозрачный тексель грани (как addPixel в моде) */
+/** Внешняя нормаль сетки грани в осях three (см. modToThreeCenter) */
+const FACE_NORMAL: Record<McDir, [number, number, number]> = {
+  down: [0, 1, 0],
+  up: [0, -1, 0],
+  north: [0, 0, 1],
+  south: [0, 0, -1],
+  west: [-1, 0, 0],
+  east: [1, 0, 0],
+};
+
+/** Грань куба: нормаль и касательные (u × v = n), чтобы обход был против часовой снаружи */
+const CUBE_FACES: { n: [number, number, number]; u: [number, number, number]; v: [number, number, number] }[] = [
+  { n: [1, 0, 0], u: [0, 1, 0], v: [0, 0, 1] },
+  { n: [-1, 0, 0], u: [0, 0, 1], v: [0, 1, 0] },
+  { n: [0, 1, 0], u: [0, 0, 1], v: [1, 0, 0] },
+  { n: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1] },
+  { n: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0] },
+  { n: [0, 0, -1], u: [0, 1, 0], v: [1, 0, 0] },
+];
+
+interface Voxel {
+  mx: number;
+  my: number;
+  mz: number;
+  /** Тексель по направлению внешней нормали сетки, из которой пришёл воксель */
+  texels: Map<string, [number, number]>;
+  primary: [number, number];
+}
+
+/**
+ * Воксели outer-слоя одной геометрией: угловые пиксели соседних граней
+ * сливаются в один куб (без z-fighting двойников), а грани, прижатые к
+ * соседнему вокселю или к телу, не рисуются — без «разрезов» и в разы
+ * меньше треугольников.
+ */
 function buildPartVoxels(
   data: Uint8ClampedArray,
   imgW: number,
@@ -192,33 +221,83 @@ function buildPartVoxels(
   spec: PartSpec,
 ): BufferGeometry[] {
   const { u, v, w, h, d } = spec;
-  const geos: BufferGeometry[] = [];
   const dims = { w, h, d };
+  const voxels = new Map<number, Voxel>();
+  const keyOf = (mx: number, my: number, mz: number) => (mx * 64 + my) * 64 + mz;
 
   const faces: McDir[] = ["down", "up", "north", "south", "west", "east"];
-
   for (const face of faces) {
     const [fuMax, fvMax] = faceSize(dims, face);
+    const normalKey = FACE_NORMAL[face].join(",");
     for (let fu = 0; fu < fuMax; fu++) {
       for (let fv = 0; fv < fvMax; fv++) {
         const [tu, tv] = onTextureUV(u, v, dims, face, fu, fv);
         if (!isPresent(data, imgW, imgH, scale, tu, tv)) continue;
-
         const [mx, my, mz] = uvToModXYZ(dims, face, fu, fv);
-        const [x, y, z] = modToThreeCenter(mx, my, mz, w, h, d);
-
-        // Слегка увеличиваем воксель (1.002), чтобы они накладывались друг на друга.
-        // Это полностью устраняет прозрачные швы (rasterization gaps) на Linux,
-        // где драйвер может терять пиксели на стыке идеально прилегающих полигонов.
-        const geo = new BoxGeometry(1.002, 1.002, 1.002);
-        geo.translate(x, y, z);
-        paintBoxUvToTexel(geo, tu, tv);
-        geos.push(geo);
+        const key = keyOf(mx, my, mz);
+        let voxel = voxels.get(key);
+        if (!voxel) {
+          voxel = { mx, my, mz, texels: new Map(), primary: [tu, tv] };
+          voxels.set(key, voxel);
+        }
+        voxel.texels.set(normalKey, [tu, tv]);
       }
     }
   }
+  if (voxels.size === 0) return [];
 
-  return geos;
+  const inside = (mx: number, my: number, mz: number) =>
+    mx >= 0 && my >= 0 && mz >= 0 && mx < w && my < h && mz < d;
+  const onShell = (mx: number, my: number, mz: number) =>
+    mx === 0 || my === 0 || mz === 0 || mx === w - 1 || my === h - 1 || mz === d - 1;
+
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  const INSET = 0.02;
+
+  for (const voxel of voxels.values()) {
+    const [cx, cy, cz] = modToThreeCenter(voxel.mx, voxel.my, voxel.mz, w, h, d);
+    for (const { n, u: fu, v: fv } of CUBE_FACES) {
+      // three → mod: x тот же, y и z развёрнуты
+      const nx = voxel.mx + n[0];
+      const ny = voxel.my - n[1];
+      const nz = voxel.mz - n[2];
+      if (inside(nx, ny, nz) && (voxels.has(keyOf(nx, ny, nz)) || !onShell(nx, ny, nz))) continue;
+
+      const [tu, tv] = voxel.texels.get(n.join(",")) ?? voxel.primary;
+      const u0 = (tu + INSET) / TEX;
+      const u1 = (tu + 1 - INSET) / TEX;
+      const v0 = 1 - (tv + 1 - INSET) / TEX;
+      const v1 = 1 - (tv + INSET) / TEX;
+
+      const base = positions.length / 3;
+      for (const [su, sv] of [
+        [-1, -1],
+        [1, -1],
+        [1, 1],
+        [-1, 1],
+      ]) {
+        positions.push(
+          cx + (n[0] + su * fu[0] + sv * fv[0]) * 0.5,
+          cy + (n[1] + su * fu[1] + sv * fv[1]) * 0.5,
+          cz + (n[2] + su * fu[2] + sv * fv[2]) * 0.5,
+        );
+        normals.push(n[0], n[1], n[2]);
+      }
+      uvs.push(u0, v0, u1, v0, u1, v1, u0, v1);
+      indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    }
+  }
+
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("normal", new Float32BufferAttribute(normals, 3));
+  geometry.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeBoundingSphere();
+  return [geometry];
 }
 
 function faceSize(dims: { w: number; h: number; d: number }, face: McDir): [number, number] {
@@ -308,25 +387,4 @@ function isPresent(
   const y = Math.min(imgH - 1, Math.floor(tv * scale));
   if (x < 0 || y < 0 || tu < 0 || tv < 0) return false;
   return data[(y * imgW + x) * 4 + 3]! >= ALPHA_PRESENT;
-}
-
-/** Все грани куба → один тексель атласа (NearestFilter) */
-function paintBoxUvToTexel(geo: BufferGeometry, tu: number, tv: number): void {
-  const uv = geo.attributes.uv as BufferAttribute;
-  if (!uv) return;
-  // Делаем микро-отступ (inset) внутрь пикселя, чтобы избежать артефактов на стыке
-  // (texture bleeding) из-за погрешности float-вычислений на некоторых GPU Linux.
-  const INSET = 0.01;
-  const u0 = (tu + INSET) / TEX;
-  const u1 = (tu + 1 - INSET) / TEX;
-  // V в three: 0 снизу; атлас скина — v сверху
-  const v0 = 1 - (tv + 1 - INSET) / TEX;
-  const v1 = 1 - (tv + INSET) / TEX;
-  for (let i = 0; i < uv.count; i += 4) {
-    uv.setXY(i, u0, v1);
-    uv.setXY(i + 1, u1, v1);
-    uv.setXY(i + 2, u0, v0);
-    uv.setXY(i + 3, u1, v0);
-  }
-  uv.needsUpdate = true;
 }

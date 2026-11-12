@@ -7,7 +7,6 @@ import {
 	PowerIcon,
 	RefreshCwIcon,
 	ServerStackIcon,
-	SpinnerIcon,
 } from '@modrinth/assets'
 import {
 	Admonition,
@@ -22,10 +21,12 @@ import { useQuery } from '@tanstack/vue-query'
 import { computed, ref, toRef, useTemplateRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { hostedAddress, isHostedActive } from '@/helpers/hosting'
+import { hostedAddress, isHostedActive, toHostedServer } from '@/helpers/hosting'
 
+import BootProgress from './boot-progress.vue'
 import ConsoleTab from './console-tab.vue'
 import { contentKind, contentMessages } from './content-kind'
+import CrashCard from './crash-card.vue'
 import EulaModal from './eula-modal.vue'
 import FilesTab from './files-tab.vue'
 import { hostingMessages, softwareLabels } from './messages'
@@ -50,14 +51,9 @@ const messages = defineMessages({
 	tabPlayers: { id: 'app.server-hosting.tab.players', defaultMessage: 'Players' },
 	tabFiles: { id: 'app.server-hosting.tab.files', defaultMessage: 'Files' },
 	tabSettings: { id: 'app.server-hosting.tab.settings', defaultMessage: 'Settings' },
-	crashed: { id: 'app.server-hosting.crashed', defaultMessage: 'The server stopped with an error' },
 	relayFailed: {
 		id: 'app.server-hosting.relay-failed',
 		defaultMessage: 'The public address could not be opened',
-	},
-	installingHint: {
-		id: 'app.server-hosting.installing-hint',
-		defaultMessage: 'Downloading the core and Java, the first start can take a few minutes…',
 	},
 })
 
@@ -99,6 +95,15 @@ const shownAddress = computed(() => {
 function power() {
 	if (!server.value) return
 	void actions.power(server.value, () => eulaModal.value?.ask() ?? Promise.resolve(false))
+}
+
+async function useRightJava() {
+	if (!server.value) return
+	const saved = await actions.save(server.value.id, {
+		...toHostedServer(server.value),
+		java_path: '',
+	})
+	if (saved) power()
 }
 
 function copy() {
@@ -217,13 +222,15 @@ function back() {
 					</div>
 				</header>
 
-				<Admonition
-					v-if="server.status === 'crashed' && server.error"
-					type="critical"
-					:header="formatMessage(messages.crashed)"
-				>
-					{{ server.error }}
-				</Admonition>
+				<CrashCard
+					v-if="server.status === 'crashed' && (server.error || server.crash_reason)"
+					:server="server"
+					:busy="actions.isPending(server.id)"
+					@retry="power"
+					@console="tab = 'console'"
+					@settings="tab = 'settings'"
+					@reset-java="useRightJava"
+				/>
 				<Admonition
 					v-else-if="server.relay_error && server.public_relay"
 					type="warning"
@@ -231,10 +238,12 @@ function back() {
 				>
 					{{ server.relay_error }}
 				</Admonition>
-				<div v-if="server.status === 'installing'" class="hosting-installing">
-					<SpinnerIcon class="shrink-0 animate-spin" />
-					{{ formatMessage(messages.installingHint) }}
-				</div>
+				<Transition name="hosting-boot">
+					<BootProgress
+						v-if="server.status === 'installing' || server.status === 'starting'"
+						:server="server"
+					/>
+				</Transition>
 
 				<nav class="hosting-tabs" role="tablist">
 					<button
@@ -359,16 +368,17 @@ function back() {
 	}
 }
 
-.hosting-installing {
-	display: flex;
-	align-items: center;
-	gap: 0.625rem;
-	padding: 0.75rem 1rem;
-	border-radius: var(--radius-md, 0.5rem);
-	border: 1px solid var(--color-orange);
-	background: color-mix(in srgb, var(--color-orange) 10%, transparent);
-	color: var(--color-orange);
-	font-size: 0.875rem;
+.hosting-boot-enter-active,
+.hosting-boot-leave-active {
+	transition:
+		opacity 0.25s ease,
+		transform 0.25s ease;
+}
+
+.hosting-boot-enter-from,
+.hosting-boot-leave-to {
+	opacity: 0;
+	transform: translateY(-4px);
 }
 
 .hosting-tabs {

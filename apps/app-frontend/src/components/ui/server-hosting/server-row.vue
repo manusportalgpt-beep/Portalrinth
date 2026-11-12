@@ -5,7 +5,7 @@ import { computed } from 'vue'
 
 import { hostedAddress, type HostedServerView, isHostedActive } from '@/helpers/hosting'
 
-import { hostingMessages, softwareLabels } from './messages'
+import { crashMessages, hostingMessages, softwareLabels } from './messages'
 import StatusPill from './status-pill.vue'
 
 const props = defineProps<{
@@ -22,8 +22,18 @@ const emit = defineEmits<{
 const { formatMessage } = useVIntl()
 
 const active = computed(() => isHostedActive(props.server.status))
+const crashTitle = computed(() =>
+	props.server.status === 'crashed' && props.server.crash_reason
+		? formatMessage(crashMessages[`${props.server.crash_reason}Title`], {
+				port: props.server.port,
+				version: props.server.game_version,
+				need: props.server.java_need,
+			})
+		: null,
+)
 const subtitle = computed(
 	() =>
+		crashTitle.value ??
 		hostedAddress(props.server) ??
 		formatMessage(hostingMessages.serverSubtitle, {
 			software: softwareLabels[props.server.software] ?? props.server.software,
@@ -47,7 +57,9 @@ const subtitle = computed(
 		</div>
 		<div class="flex min-w-0 flex-1 flex-col">
 			<span class="truncate text-base font-bold text-contrast">{{ server.name }}</span>
-			<span class="truncate text-sm text-secondary">{{ subtitle }}</span>
+			<span class="truncate text-sm" :class="crashTitle ? 'text-red' : 'text-secondary'">
+				{{ subtitle }}
+			</span>
 		</div>
 		<div class="hosting-row-actions">
 			<StatusPill :status="server.status" />

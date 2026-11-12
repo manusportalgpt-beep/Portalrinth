@@ -14,7 +14,7 @@ let renderQueue: Promise<unknown> = Promise.resolve()
 let pendingRenders = 0
 
 export function getSkinPreviewKey(skin: Skin): string {
-	return `mine3d-1+${skin.texture_key}+${skin.variant}+${skin.cape_id ?? 'no-cape'}`
+	return `mine3d-2+${skin.texture_key}+${skin.variant}+${skin.cape_id ?? 'no-cape'}`
 }
 
 export function acquireSkinPreview(skin: Skin, capes: Cape[]) {

@@ -120,6 +120,13 @@ pub struct HostedServerView {
     pub core_ready: bool,
     pub java_need: u32,
     pub dir: String,
+    /// Why the last start failed, as a short code the app explains.
+    pub crash_reason: Option<String>,
+    /// The console line that gave the failure away.
+    pub crash_line: Option<String>,
+    /// 1 core, 2 Java, 3 world, 4 done; 0 while it is not starting.
+    pub boot_step: u8,
+    pub boot_progress: Option<u8>,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -146,6 +153,10 @@ struct Runtime {
     cpu_percent: f32,
     ram_used_mb: u64,
     started_at: Option<i64>,
+    crash_reason: Option<String>,
+    crash_line: Option<String>,
+    boot_step: u8,
+    boot_progress: Option<u8>,
     pid: Option<u32>,
     stdin: Option<Arc<Mutex<ChildStdin>>>,
     kill: Option<Arc<Notify>>,
@@ -157,6 +168,9 @@ static RUNTIME: LazyLock<DashMap<String, Runtime>> =
 
 /// Held while `servers.json` is read and written back.
 static STORE: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
+/// Servers whose core refused `--nogui`; they are started without it.
+static NO_NOGUI: LazyLock<DashMap<String, ()>> = LazyLock::new(DashMap::new);
 
 fn input_error(message: impl Into<String>) -> crate::Error {
     crate::Error::from(crate::ErrorKind::InputError(message.into()))
@@ -293,6 +307,10 @@ async fn view_of(server: HostedServer) -> crate::Result<HostedServerView> {
         core_ready,
         java_need,
         dir: dir.to_string_lossy().to_string(),
+        crash_reason: None,
+        crash_line: None,
+        boot_step: 0,
+        boot_progress: None,
         server,
     };
     if let Some(run) = RUNTIME.get(&view.server.id) {
@@ -303,6 +321,10 @@ async fn view_of(server: HostedServer) -> crate::Result<HostedServerView> {
         view.cpu_percent = run.cpu_percent;
         view.ram_used_mb = run.ram_used_mb;
         view.started_at = run.started_at;
+        view.crash_reason.clone_from(&run.crash_reason);
+        view.crash_line.clone_from(&run.crash_line);
+        view.boot_step = run.boot_step;
+        view.boot_progress = run.boot_progress;
         if let Some(relay) = &run.relay {
             if relay.is_up() {
                 view.public_host = Some(relay.public_host.clone());
@@ -327,6 +349,108 @@ fn set_status(id: &str, status: HostedStatus, error: Option<String>) {
     let mut run = RUNTIME.entry(id.to_string()).or_default();
     run.status = status;
     run.error = error;
+    match status {
+        HostedStatus::Installing => run.boot_step = 1,
+        HostedStatus::Starting => run.boot_step = run.boot_step.max(1),
+        HostedStatus::Running => {
+            run.boot_step = 4;
+            run.boot_progress = None;
+        }
+        _ => {
+            run.boot_step = 0;
+            run.boot_progress = None;
+        }
+    }
+}
+
+/// Whether the core is Bukkit's, whose option parser rejected `--nogui`
+/// before 1.14.
+fn takes_nogui(server: &HostedServer) -> bool {
+    if NO_NOGUI.contains_key(&server.id) {
+        return false;
+    }
+    if !matches!(server.software.as_str(), "paper" | "purpur" | "folia") {
+        return true;
+    }
+    let mut parts = server.game_version.split(['.', '-']);
+    let major: u32 = parts.next().and_then(|p| p.parse().ok()).unwrap_or(1);
+    let minor: u32 = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
+    major > 1 || minor >= 14
+}
+
+/// The console java next to a `javaw`, which has no console of its own.
+fn console_java(path: PathBuf) -> PathBuf {
+    let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+        return path;
+    };
+    if !name.eq_ignore_ascii_case("javaw.exe") {
+        return path;
+    }
+    let java = path.with_file_name("java.exe");
+    if java.exists() { java } else { path }
+}
+
+/// What a dead server's console says went wrong: a code and the line.
+fn diagnose(logs: &VecDeque<String>) -> (String, Option<String>) {
+    const RULES: [(&str, &[&str]); 9] = [
+        ("bad_option", &["is not a recognized option"]),
+        (
+            "java_version",
+            &[
+                "UnsupportedClassVersionError",
+                "compiled by a more recent version",
+                "Unsupported class file major version",
+                "requires Java",
+            ],
+        ),
+        (
+            "memory",
+            &[
+                "OutOfMemoryError",
+                "Could not reserve enough space",
+                "Invalid maximum heap size",
+                "Invalid initial heap size",
+            ],
+        ),
+        (
+            "port_in_use",
+            &["FAILED TO BIND TO PORT", "Address already in use", "BindException"],
+        ),
+        ("eula", &["You need to agree to the EULA"]),
+        (
+            "mods",
+            &[
+                "Incompatible mod set",
+                "Mod resolution failed",
+                "Missing or unsupported mandatory dependencies",
+                "requires any version of",
+            ],
+        ),
+        ("plugin", &["Could not load 'plugins", "Error occurred while enabling"]),
+        ("world", &["Failed to load level", "Exception reading"]),
+        (
+            "jvm",
+            &["Could not create the Java Virtual Machine", "Unrecognized option"],
+        ),
+    ];
+    for (code, needles) in RULES {
+        if let Some(line) = logs
+            .iter()
+            .find(|line| needles.iter().any(|needle| line.contains(needle)))
+        {
+            return (code.to_string(), Some(line.trim().to_string()));
+        }
+    }
+    let line = logs
+        .iter()
+        .rev()
+        .find(|line| {
+            ["ERROR", "SEVERE", "FATAL", "Exception", "Error:"]
+                .iter()
+                .any(|needle| line.contains(needle))
+        })
+        .map(|line| line.trim().to_string());
+    ("unknown".to_string(), line)
 }
 
 fn is_active(id: &str) -> bool {
@@ -811,6 +935,9 @@ pub async fn start(id: &str) -> crate::Result<HostedServerView> {
     if let Err(error) = &result {
         push_log(id, error.to_string());
         set_status(id, HostedStatus::Crashed, Some(error.to_string()));
+        let mut run = RUNTIME.entry(id.to_string()).or_default();
+        run.crash_reason = Some("launch".to_string());
+        run.crash_line = Some(error.to_string());
     }
     result?;
     get(id).await
@@ -829,6 +956,10 @@ async fn launch(id: &str) -> crate::Result<()> {
         run.status = HostedStatus::Starting;
         run.error = None;
         run.relay_error = None;
+        run.crash_reason = None;
+        run.crash_line = None;
+        run.boot_step = 1;
+        run.boot_progress = None;
         run.players.clear();
         run.logs.clear();
     }
@@ -841,9 +972,52 @@ async fn launch(id: &str) -> crate::Result<()> {
     write_properties(&server, &dir).await?;
     tokio::fs::write(dir.join("eula.txt"), "eula=true\n").await?;
 
-    let java = resolve_java(&server).await?;
+    let java = console_java(resolve_java(&server).await?);
     push_log(id, format!("Java: {}", java.display()));
 
+    let mut child = spawn_server(id, &server, &dir, &java)?;
+    let id = id.to_string();
+    tokio::spawn(async move {
+        loop {
+            let Some(kill) = RUNTIME.get(&id).and_then(|run| run.kill.clone())
+            else {
+                break;
+            };
+            let exited = tokio::select! {
+                status = child.wait() => Some(status.ok()),
+                () = kill.notified() => None,
+            };
+            let status = match exited {
+                Some(status) => status,
+                None => {
+                    let _ = child.kill().await;
+                    child.wait().await.ok()
+                }
+            };
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            if !on_exit(&id, status).await {
+                break;
+            }
+            match spawn_server(&id, &server, &dir, &java) {
+                Ok(next) => child = next,
+                Err(error) => {
+                    push_log(&id, error.to_string());
+                    set_status(&id, HostedStatus::Crashed, Some(error.to_string()));
+                    break;
+                }
+            }
+        }
+    });
+    Ok(())
+}
+
+/// Starts the server's Java and wires its console up.
+fn spawn_server(
+    id: &str,
+    server: &HostedServer,
+    dir: &Path,
+    java: &Path,
+) -> crate::Result<tokio::process::Child> {
     let mut args = vec![
         format!("-Xms{}M", server.memory_mb.min(1024)),
         format!("-Xmx{}M", server.memory_mb),
@@ -852,12 +1026,15 @@ async fn launch(id: &str) -> crate::Result<()> {
         !arg.starts_with("-Xms") && !arg.starts_with("-Xmx")
     }));
     args.push("-Dfile.encoding=UTF-8".to_string());
-    args.extend(["-jar", "server.jar", "--nogui"].map(String::from));
+    args.extend(["-jar", "server.jar"].map(String::from));
+    if takes_nogui(server) {
+        args.push("--nogui".to_string());
+    }
 
-    let mut command = tokio::process::Command::new(&java);
+    let mut command = tokio::process::Command::new(java);
     command
         .args(&args)
-        .current_dir(&dir)
+        .current_dir(dir)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
@@ -867,14 +1044,14 @@ async fn launch(id: &str) -> crate::Result<()> {
 
     let mut child = command.spawn()?;
     let stdin = child.stdin.take().map(|stdin| Arc::new(Mutex::new(stdin)));
-    let kill = Arc::new(Notify::new());
     let pid = child.id();
     {
         let mut run = RUNTIME.entry(id.to_string()).or_default();
         run.stdin = stdin;
-        run.kill = Some(Arc::clone(&kill));
+        run.kill = Some(Arc::new(Notify::new()));
         run.pid = pid;
         run.started_at = Some(now_ms());
+        run.boot_step = run.boot_step.max(2);
     }
 
     if let Some(stdout) = child.stdout.take() {
@@ -886,31 +1063,30 @@ async fn launch(id: &str) -> crate::Result<()> {
     if let Some(pid) = pid {
         tokio::spawn(sample_usage(id.to_string(), pid));
     }
-
-    let id = id.to_string();
-    tokio::spawn(async move {
-        let exited = tokio::select! {
-            status = child.wait() => Some(status.ok()),
-            () = kill.notified() => None,
-        };
-        let status = match exited {
-            Some(status) => status,
-            None => {
-                let _ = child.kill().await;
-                child.wait().await.ok()
-            }
-        };
-        on_exit(&id, status).await;
-    });
-    Ok(())
+    Ok(child)
 }
 
-async fn on_exit(id: &str, status: Option<std::process::ExitStatus>) {
+/// Settles a server whose process ended; `true` when it should be started again.
+async fn on_exit(id: &str, status: Option<std::process::ExitStatus>) -> bool {
+    let mut retry = false;
     let relay = {
         let mut run = RUNTIME.entry(id.to_string()).or_default();
         let asked = run.status == HostedStatus::Stopping;
+        let was_up = run.boot_step >= 4;
         let clean = status.is_some_and(|status| status.success());
-        if asked || clean {
+        let (reason, line) = diagnose(&run.logs);
+        if !asked
+            && reason == "bad_option"
+            && line.as_deref().is_some_and(|line| line.contains("nogui"))
+            && !NO_NOGUI.contains_key(id)
+        {
+            NO_NOGUI.insert(id.to_string(), ());
+            retry = true;
+        }
+        if retry {
+            run.status = HostedStatus::Starting;
+            run.error = None;
+        } else if asked || (clean && was_up) {
             run.status = HostedStatus::Stopped;
             run.error = None;
         } else {
@@ -919,7 +1095,11 @@ async fn on_exit(id: &str, status: Option<std::process::ExitStatus>) {
                 Some(code) => format!("the server exited with code {code}"),
                 None => "the server stopped unexpectedly".to_string(),
             });
+            run.crash_reason = Some(reason);
+            run.crash_line = line;
         }
+        run.boot_step = 0;
+        run.boot_progress = None;
         run.stdin = None;
         run.kill = None;
         run.pid = None;
@@ -933,7 +1113,19 @@ async fn on_exit(id: &str, status: Option<std::process::ExitStatus>) {
     if let Some(relay) = relay {
         lan::close_port(relay).await;
     }
+    if retry {
+        let mut run = RUNTIME.entry(id.to_string()).or_default();
+        run.logs.clear();
+        run.boot_step = 2;
+        drop(run);
+        push_log(id, "Starting again without --nogui…");
+    }
+    retry
 }
+
+static SPAWN_PROGRESS: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"Preparing spawn area: (\d{1,3})%").expect("valid regex")
+});
 
 static JOIN_LEAVE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"\]: (?:\[[^\]]*\] )?([A-Za-z0-9_.]{1,32}) (joined|left) the game")
@@ -949,6 +1141,18 @@ async fn read_output(
     while let Ok(Some(line)) = lines.next_line().await {
         if line.trim().is_empty() {
             continue;
+        }
+        if line.contains("Preparing level")
+            || line.contains("Preparing start region")
+            || line.contains("Loading dimension")
+        {
+            let mut run = RUNTIME.entry(id.clone()).or_default();
+            run.boot_step = run.boot_step.max(3);
+        }
+        if let Some(found) = SPAWN_PROGRESS.captures(&line) {
+            let mut run = RUNTIME.entry(id.clone()).or_default();
+            run.boot_step = run.boot_step.max(3);
+            run.boot_progress = found[1].parse::<u8>().ok().map(|p| p.min(100));
         }
         if line.contains("Done (") && line.contains(')') {
             let starting = RUNTIME

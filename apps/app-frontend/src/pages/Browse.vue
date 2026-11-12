@@ -41,6 +41,7 @@ import {
 	injectNotificationManager,
 	preferencesDiffer,
 	provideBrowseManager,
+	registerTagIconUrls,
 	requestInstall,
 	resolveInstallPlan,
 	stripServerRuntimeInstallFilters,
@@ -824,6 +825,12 @@ const curseforgeCategoriesQuery = useQuery(
 // CurseForge's own categories, with their own names and pictures, in the
 // shape the sidebar draws Modrinth's in.
 const curseforgeCategories = computed(() => curseforgeCategoriesQuery.data.value ?? [])
+watch(
+	curseforgeCategories,
+	(categories) =>
+		registerTagIconUrls(categories.map((category) => [category.name, category.iconUrl])),
+	{ immediate: true },
+)
 const browseTags: Ref<Tags> = computed(() =>
 	isCurseforge.value
 		? {

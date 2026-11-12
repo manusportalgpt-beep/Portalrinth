@@ -44,6 +44,7 @@ import { Avatar, Button, IconButton, Input, useVIntl } from '@modrinth/ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import AiActivity from '@/components/ui/ai/AiActivity.vue'
 import AiComposerMenu from '@/components/ui/ai/AiComposerMenu.vue'
 import AiModelPicker from '@/components/ui/ai/AiModelPicker.vue'
 import AiRichText from '@/components/ui/ai/AiRichText.vue'
@@ -2043,10 +2044,12 @@ defineExpose({ send })
 
 			<div v-if="sending" class="mb-3 flex justify-start">
 				<div
-					class="ai-bubble ai-bubble-assistant ai-process ai-live-bubble rounded-2xl px-3 py-2.5"
+					class="ai-bubble ai-bubble-assistant ai-process rounded-2xl px-3 py-2.5"
+					:class="{ 'ai-live-bubble': agentTurn.steps.length > 0 || agentTurn.task }"
 				>
 					<AiTaskCard v-if="agentTurn.task" :task="agentTurn.task" live class="mb-2" />
 					<AiSteps
+						v-if="agentTurn.steps.length > 0"
 						:steps="agentTurn.steps"
 						live
 						:phase="phaseLabel"
@@ -2054,6 +2057,7 @@ defineExpose({ send })
 						@open-link="openLink"
 						@zoom="(src) => openImageViewer(src)"
 					/>
+					<AiActivity v-else-if="!streaming" :phase="agentPhase" />
 					<div v-if="streaming" class="ai-live-text px-1">
 						<AiRichText :text="streaming" @open="openLink" />
 					</div>

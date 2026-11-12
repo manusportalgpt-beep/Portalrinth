@@ -44,11 +44,11 @@ export const DEFAULT_KEY_DISTANCE = 55;
 export const DEFAULT_LIGHT_SETTINGS: LightSettings = {
   keyAzimuthDeg: DEFAULT_KEY_AZIMUTH_DEG,
   keyElevationDeg: DEFAULT_KEY_ELEVATION_DEG,
-  keyIntensity: 1.35,
-  ambientIntensity: 0.68,
-  fillIntensity: 0.64,
+  keyIntensity: 1.6,
+  ambientIntensity: 0.95,
+  fillIntensity: 0.82,
   shadowRadius: 16,
-  shadowIntensity: 0.24,
+  shadowIntensity: 0.14,
   castShadows: true,
 };
 
@@ -63,15 +63,15 @@ const SKIN_METALNESS_OUTER = 0.03;
 const SKIN_ENV_MAP_INTENSITY_OUTER = 0.2;
 /** IBL для сочности белых/цветных пикселей */
 const SCENE_ENV_INTENSITY = 0.2;
-const HEMI_INTENSITY = 0.78;
-const RIM_INTENSITY = 0.28;
+const HEMI_INTENSITY = 0.92;
+const RIM_INTENSITY = 0.34;
 
 /** Shadow map + ACES */
 export function configureProductRenderer(renderer: WebGLRenderer): void {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFSoftShadowMap;
   renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.3;
   renderer.outputColorSpace = SRGBColorSpace;
 }
 
@@ -90,7 +90,7 @@ function configureKeyLightShadow(
   shadowRadius: number,
   shadowIntensity: number,
 ): void {
-  key.shadow.mapSize.set(4096, 4096);
+  key.shadow.mapSize.set(2048, 2048);
   key.shadow.camera.near = 0.5;
   key.shadow.camera.far = 120;
   // Frustum под skin3d в px (~32 units): ноги FLOOR_Y (−16) … макушка (~+16), руки ±~10

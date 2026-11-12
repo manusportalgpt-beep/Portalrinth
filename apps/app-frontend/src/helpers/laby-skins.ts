@@ -610,6 +610,7 @@ interface Fingerprint {
         colours: string[]
         /** Mean colour of the head, torso, arms and legs, front on. */
         regions: number[]
+        face: number[]
 }
 
 /** Front faces of each part (x, y, w, h) on the 64×64 net, outer layer first. */
@@ -743,7 +744,7 @@ function fingerprint(pixels: Uint8ClampedArray): Fingerprint {
                 .sort((a, b) => b[1] - a[1])
                 .slice(0, 2)
                 .map(([name]) => name)
-        return { histogram, colours, regions: regionColours(pixels) }
+        return { histogram, colours, regions: regionColours(pixels), face: faceOf(pixels) }
 }
 
 function likeness(a: Histogram, b: Histogram) {
@@ -768,6 +769,159 @@ function tagLikeness(referenceTags: string[] | undefined, candidateTags: string)
         return hits / wanted.length
 }
 
+const COLOUR_TAGS = new Set([
+        'black',
+        'white',
+        'gray',
+        'grey',
+        'red',
+        'orange',
+        'yellow',
+        'green',
+        'blue',
+        'purple',
+        'pink',
+        'brown',
+])
+
+/** A pixel of the 64×64 net with the outer layer laid over the inner one. */
+function composite(pixels: Uint8ClampedArray, x: number, y: number, ox: number, oy: number) {
+        const outer = (oy * 64 + ox) * 4
+        const i = pixels[outer + 3] >= 128 ? outer : (y * 64 + x) * 4
+        return [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]] as const
+}
+
+function hsl(r: number, g: number, b: number) {
+        const max = Math.max(r, g, b)
+        const min = Math.min(r, g, b)
+        const l = (max + min) / 2 / 255
+        const s = max === min ? 0 : (max - min) / (255 - Math.abs(max + min - 255))
+        let h = 0
+        if (max !== min) {
+                if (max === r) h = ((g - b) / (max - min)) % 6
+                else if (max === g) h = (b - r) / (max - min) + 2
+                else h = (r - g) / (max - min) + 4
+                h = (h * 60 + 360) % 360
+        }
+        return { h, s, l }
+}
+
+function isSkinTone(r: number, g: number, b: number) {
+        const { h, s, l } = hsl(r, g, b)
+        return r >= g && g >= b * 0.85 && h <= 45 && s >= 0.12 && s <= 0.8 && l >= 0.22 && l <= 0.88
+}
+
+/** The face as the game shows it: 8×8 colours, the hat layer on top. */
+function faceOf(pixels: Uint8ClampedArray): number[] {
+        const out: number[] = []
+        for (let y = 0; y < 8; y++) {
+                for (let x = 0; x < 8; x++) {
+                        const [r, g, b] = composite(pixels, 8 + x, 8 + y, 40 + x, 8 + y)
+                        out.push(r, g, b)
+                }
+        }
+        return out
+}
+
+/** How alike two faces are pixel by pixel: the face says what a character is. */
+function faceLikeness(a: number[], b: number[]) {
+        let total = 0
+        for (let i = 0; i < a.length; i += 3) {
+                const dr = a[i] - b[i]
+                const dg = a[i + 1] - b[i + 1]
+                const db = a[i + 2] - b[i + 2]
+                total += Math.sqrt(dr * dr + dg * dg + db * db) / 441.7
+        }
+        return 1 - total / (a.length / 3)
+}
+
+function opaqueShare(pixels: Uint8ClampedArray, rx: number, ry: number, rw: number, rh: number) {
+        let n = 0
+        for (let y = ry; y < ry + rh; y++) {
+                for (let x = rx; x < rx + rw; x++) if (pixels[(y * 64 + x) * 4 + 3] >= 128) n++
+        }
+        return n / (rw * rh)
+}
+
+/**
+ * What the skin shows, in laby.net tags: a knight in armour, a hooded
+ * assassin, a demon with glowing eyes, a boy in a hoodie. Read from where the
+ * colours sit - the face, the hat layer, the torso - so a black knight finds
+ * knights, not just anything black.
+ */
+function describeSkin(pixels: Uint8ClampedArray, variant?: SkinModel): string[] {
+        const face = faceOf(pixels)
+        let skin = 0
+        let dark = 0
+        let glow = 0
+        let glowRed = 0
+        let lightness = 0
+        for (let i = 0; i < face.length; i += 3) {
+                const [r, g, b] = [face[i], face[i + 1], face[i + 2]]
+                const c = hsl(r, g, b)
+                lightness += c.l
+                if (isSkinTone(r, g, b)) skin++
+                if (c.l < 0.2) dark++
+                if (c.s > 0.55 && c.l > 0.35) {
+                        glow++
+                        if (c.h < 20 || c.h > 330) glowRed++
+                }
+        }
+        const cells = face.length / 3
+        const skinShare = skin / cells
+        const darkShare = dark / cells
+        lightness /= cells
+
+        let metal = 0
+        let counted = 0
+        for (const [rx, ry, rw, rh] of [
+                [8, 8, 8, 8],
+                [20, 20, 8, 12],
+                [44, 20, 4, 12],
+                [4, 20, 4, 12],
+        ]) {
+                for (let y = ry; y < ry + rh; y++) {
+                        for (let x = rx; x < rx + rw; x++) {
+                                const i = (y * 64 + x) * 4
+                                if (pixels[i + 3] < 128) continue
+                                const c = hsl(pixels[i], pixels[i + 1], pixels[i + 2])
+                                counted++
+                                if (c.s < 0.16 && c.l > 0.28 && c.l < 0.86) metal++
+                        }
+                }
+        }
+        const metalShare = counted ? metal / counted : 0
+
+        const hatSides = (opaqueShare(pixels, 32, 8, 8, 8) + opaqueShare(pixels, 48, 8, 8, 8)) / 2
+        const hatTopRow = opaqueShare(pixels, 40, 8, 8, 2)
+        const jacket = (opaqueShare(pixels, 20, 36, 8, 12) + opaqueShare(pixels, 44, 36, 4, 12)) / 2
+
+        let shirt = 0
+        let sides = 0
+        for (let y = 21; y < 32; y++) {
+                const [cr, cg, cb] = composite(pixels, 23, y, 23, y + 16)
+                const [sr, sg, sb] = composite(pixels, 20, y, 20, y + 16)
+                if (hsl(cr, cg, cb).l > 0.7) shirt++
+                if (hsl(sr, sg, sb).l < 0.3) sides++
+        }
+        const suit = shirt >= 5 && sides >= 7
+
+        const tags: string[] = []
+        if (skinShare < 0.2 && metalShare > 0.45) tags.push('Knight', 'Armor', 'Warrior')
+        else if (darkShare > 0.6 && glow > 0 && glow <= 12)
+                tags.push(glowRed > 0 ? 'Demon' : 'Shadow', 'Monster')
+        else if (skinShare < 0.2 && hatSides > 0.6 && hatTopRow > 0.6)
+                tags.push('Assassin', 'Hood', 'Ninja')
+        else if (skinShare < 0.12 && lightness < 0.3) tags.push('Shadow', 'Ninja')
+        else if (skinShare < 0.12) tags.push(metalShare > 0.3 ? 'Robot' : 'Monster', 'Mask')
+        else if (skinShare >= 0.3) {
+                tags.push(variant === 'SLIM' ? 'Girl' : 'Boy')
+                if (suit) tags.push('Suit')
+                else if (jacket > 0.55) tags.push('Hoodie')
+        }
+        return tags
+}
+
 async function inBatches<T, R>(items: T[], size: number, run: (item: T) => Promise<R>) {
         const results: R[] = []
         for (let i = 0; i < items.length; i += size) {
@@ -781,19 +935,26 @@ async function inBatches<T, R>(items: T[], size: number, run: (item: T) => Promi
  * or any texture (a data URL or a URL), such as the one on the account.
  */
 export async function findSimilarLabySkins(
-        reference: { hash?: string; tags?: string[]; texture: string | Uint8Array },
+        reference: { hash?: string; tags?: string[]; texture: string | Uint8Array; variant?: SkinModel },
         limit = 24,
 ): Promise<LabySkin[]> {
         const pixels = await pixelsOf(reference.texture)
         if (!pixels) return []
         const own = fingerprint(pixels)
 
-        // A skin without laby.net tags - the player's own among them - is filed
-        // under the category its palette points to, so the same tag search runs
-        // for it as for any library skin.
-        similarSkinCategory.value =
-            reference.tags && reference.tags.length > 0 ? reference.tags.slice(0, 3) : own.colours
-        const queries = [...similarSkinCategory.value, ...own.colours]
+        // What the skin is (a knight, a boy, a demon) leads; its own laby.net
+        // tags follow, and the palette only fills in when nothing else is known.
+        const concepts = describeSkin(pixels, reference.variant)
+        const ownTags = (reference.tags ?? []).filter((tag) => !COLOUR_TAGS.has(tag.toLowerCase()))
+        const words = [...new Set([...concepts, ...ownTags])].slice(0, 4)
+        similarSkinCategory.value = words.length > 0 ? words.slice(0, 3) : own.colours
+        const wanted = words.length > 0 ? words : (reference.tags ?? own.colours)
+        const queries = [
+                ...new Set([
+                        ...wanted,
+                        ...(words.length > 0 ? [`${wanted[0]},${own.colours[0]}`] : own.colours),
+                ]),
+        ]
         const candidates = new Map<string, LabySkin>()
         const pages = await Promise.all(queries.map((query) => searchLabySkins(query).catch(() => [])))
         for (const page of pages) {
@@ -804,7 +965,7 @@ export async function findSimilarLabySkins(
                 }
         }
 
-        const pool = [...candidates.values()].sort((a, b) => b.use_count - a.use_count).slice(0, 48)
+        const pool = [...candidates.values()].sort((a, b) => b.use_count - a.use_count).slice(0, 64)
         const withDeadline = (hash: string) =>
                 Promise.race([
                         labySkinTexture(hash),
@@ -824,9 +985,10 @@ export async function findSimilarLabySkins(
                 if (!candidatePixels) return { skin, score: -1 }
                 const other = fingerprint(candidatePixels)
                 const score =
-                        0.35 * likeness(own.histogram, other.histogram) +
-                        0.45 * regionLikeness(own.regions, other.regions) +
-                        0.2 * tagLikeness(reference.tags, skin.tags)
+                        0.2 * likeness(own.histogram, other.histogram) +
+                        0.3 * regionLikeness(own.regions, other.regions) +
+                        0.25 * faceLikeness(own.face, other.face) +
+                        0.25 * tagLikeness(wanted, skin.tags)
                 // A pixel-for-pixel copy of the reference is not a look-alike.
                 return { skin, score: score > 0.995 ? -2 : score }
         })

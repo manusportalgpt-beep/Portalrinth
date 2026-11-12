@@ -4589,5 +4589,113 @@
 	},
 	"app.server-hosting.view.list": {
 		"message": "Список"
+	},
+	"app.server-hosting.crash.bad-option.title": {
+		"message": "Ядро не поняло параметр запуска"
+	},
+	"app.server-hosting.crash.bad-option.hint": {
+		"message": "Старые ядра не принимают некоторые параметры. Лаунчер уже запускает этот сервер без них — просто нажмите «Запустить» ещё раз. Если вы добавляли свои аргументы Java, проверьте их в настройках."
+	},
+	"app.server-hosting.crash.java.title": {
+		"message": "Эта Java не подходит серверу"
+	},
+	"app.server-hosting.crash.java.hint": {
+		"message": "Minecraft {version} нужна Java {need}. Сбросьте свой путь к Java — лаунчер сам подберёт и скачает нужную."
+	},
+	"app.server-hosting.crash.memory.title": {
+		"message": "Не хватает памяти"
+	},
+	"app.server-hosting.crash.memory.hint": {
+		"message": "Java не смогла выделить столько памяти. Уменьшите память в настройках или закройте тяжёлые программы и попробуйте снова."
+	},
+	"app.server-hosting.crash.port.title": {
+		"message": "Порт {port} уже занят"
+	},
+	"app.server-hosting.crash.port.hint": {
+		"message": "Этот порт слушает другой сервер или программа. Остановите её или выберите другой порт в настройках."
+	},
+	"app.server-hosting.crash.eula.title": {
+		"message": "EULA Minecraft не принята"
+	},
+	"app.server-hosting.crash.eula.hint": {
+		"message": "Нажмите «Запустить» и примите EULA — без неё сервер не работает."
+	},
+	"app.server-hosting.crash.mods.title": {
+		"message": "Моды не уживаются"
+	},
+	"app.server-hosting.crash.mods.hint": {
+		"message": "Моду не хватает зависимости или он не подходит к этой версии. В строке ниже указано какой — удалите или обновите его."
+	},
+	"app.server-hosting.crash.plugin.title": {
+		"message": "Плагин не загрузился"
+	},
+	"app.server-hosting.crash.plugin.hint": {
+		"message": "Отключите плагин из строки ниже или поставьте сборку для этой версии сервера."
+	},
+	"app.server-hosting.crash.world.title": {
+		"message": "Мир не загрузился"
+	},
+	"app.server-hosting.crash.world.hint": {
+		"message": "Мир мог повредиться или создан более новой версией. Укажите другое имя мира в настройках, чтобы начать новый."
+	},
+	"app.server-hosting.crash.jvm.title": {
+		"message": "Java не запустилась"
+	},
+	"app.server-hosting.crash.jvm.hint": {
+		"message": "Проверьте аргументы Java и объём памяти в настройках."
+	},
+	"app.server-hosting.crash.launch.title": {
+		"message": "Сервер не удалось запустить"
+	},
+	"app.server-hosting.crash.launch.hint": {
+		"message": "Что-то пошло не так ещё до старта Minecraft. Проверьте интернет и попробуйте снова."
+	},
+	"app.server-hosting.crash.unknown.title": {
+		"message": "Сервер остановился с ошибкой"
+	},
+	"app.server-hosting.crash.unknown.hint": {
+		"message": "В консоли видно, что случилось перед остановкой. Откройте её, чтобы увидеть всё целиком."
+	},
+	"app.server-hosting.crash.what-happened": {
+		"message": "Что сказал сервер"
+	},
+	"app.server-hosting.crash.try-again": {
+		"message": "Запустить снова"
+	},
+	"app.server-hosting.crash.open-console": {
+		"message": "Открыть консоль"
+	},
+	"app.server-hosting.crash.open-settings": {
+		"message": "Настройки"
+	},
+	"app.server-hosting.crash.reset-java": {
+		"message": "Подобрать нужную Java"
+	},
+	"app.server-hosting.crash.copy-line": {
+		"message": "Копировать"
+	},
+	"app.server-hosting.boot.core": {
+		"message": "Ядро"
+	},
+	"app.server-hosting.boot.java": {
+		"message": "Java"
+	},
+	"app.server-hosting.boot.world": {
+		"message": "Мир"
+	},
+	"app.server-hosting.boot.done": {
+		"message": "В сети"
+	},
+	"app.server-hosting.boot.core-hint": {
+		"message": "Скачиваю ядро сервера, первый запуск займёт минуту-две…"
+	},
+	"app.server-hosting.boot.java-hint": {
+		"message": "Java прогревается и загружает сервер…"
+	},
+	"app.server-hosting.boot.world-hint": {
+		"message": "Готовлю мир…"
+	},
+	"app.server-hosting.boot.world-progress": {
+		"message": "Готовлю мир — {percent}%"
 	}
 }

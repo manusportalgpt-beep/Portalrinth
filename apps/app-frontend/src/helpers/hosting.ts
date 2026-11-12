@@ -58,7 +58,24 @@ export interface HostedServerView extends HostedServer {
 	core_ready: boolean
 	java_need: number
 	dir: string
+	crash_reason: HostedCrashReason | null
+	crash_line: string | null
+	boot_step: number
+	boot_progress: number | null
 }
+
+export type HostedCrashReason =
+	| 'bad_option'
+	| 'java_version'
+	| 'memory'
+	| 'port_in_use'
+	| 'eula'
+	| 'mods'
+	| 'plugin'
+	| 'world'
+	| 'jvm'
+	| 'launch'
+	| 'unknown'
 
 export interface HostedPlugin {
 	name: string

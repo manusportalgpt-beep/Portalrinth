@@ -380,8 +380,15 @@ const totalTime = computed(() => {
 	return seconds(last - first)
 })
 
+const runningStep = computed(() =>
+	props.live ? [...props.steps].reverse().find((step) => step.status === 'running') : undefined,
+)
+
 const headline = computed(() => {
-	if (props.live) return props.phase || 'Работаю'
+	if (props.live) {
+		if (runningStep.value) return `${metaOf(runningStep.value).title}…`
+		return props.phase || 'Работаю'
+	}
 	const count = toolSteps.value.length
 	return count > 0
 		? `Выполнено ${count} ${plural(count, 'шаг', 'шага', 'шагов')}`
@@ -407,10 +414,21 @@ async function copy(key: string, text: string) {
 	<div class="ai-steps" :class="{ 'ai-steps--live': live }">
 		<button type="button" class="ai-steps-head" :aria-expanded="open" @click="open = !open">
 			<span class="ai-steps-badge" :class="{ 'ai-steps-badge--live': live }">
-				<BrainCircuitIcon v-if="live" class="size-4" />
-				<CheckIcon v-else class="size-4" />
+				<Transition name="ai-badge-swap" mode="out-in">
+					<component
+						:is="runningStep ? metaOf(runningStep).icon : BrainCircuitIcon"
+						v-if="live"
+						:key="runningStep?.id ?? 'idle'"
+						class="size-4"
+					/>
+					<CheckIcon v-else class="size-4" />
+				</Transition>
 			</span>
-			<span class="ai-steps-headline" :class="{ 'ai-shimmer': live }">{{ headline }}</span>
+			<Transition name="ai-badge-swap" mode="out-in">
+				<span :key="headline" class="ai-steps-headline" :class="{ 'ai-shimmer': live }">
+					{{ headline }}
+				</span>
+			</Transition>
 			<span class="ai-steps-stats">
 				<span v-for="stat in stats" :key="stat.key" class="ai-steps-stat">
 					<component :is="stat.icon" class="size-3.5" />
@@ -680,8 +698,29 @@ async function copy(key: string, text: string) {
 }
 
 .ai-steps-headline {
-	flex-shrink: 0;
+	flex-shrink: 1;
+	min-width: 0;
+	overflow: hidden;
 	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ai-badge-swap-enter-active,
+.ai-badge-swap-leave-active {
+	transition:
+		opacity 0.18s ease,
+		transform 0.18s ease;
+}
+
+.ai-badge-swap-enter-from {
+	opacity: 0;
+	transform: translateY(4px) scale(0.9);
+}
+
+.ai-badge-swap-leave-to {
+	opacity: 0;
+	transform: translateY(-4px) scale(0.9);
 }
 
 .ai-steps-stats {

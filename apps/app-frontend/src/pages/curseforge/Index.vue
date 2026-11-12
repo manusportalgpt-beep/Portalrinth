@@ -37,6 +37,7 @@ import {
 	ProjectSidebarCreators,
 	ProjectSidebarLinks,
 	ProjectSidebarTags,
+	registerTagIconUrls,
 	TeleportOverflowMenu,
 	useFormatDateTime,
 	useRelativeTime,
@@ -274,6 +275,9 @@ const categoryIconUrls = computed(() => {
 		if (category.icon_url && !icons[category.name]) icons[category.name] = category.icon_url
 	}
 	return icons
+})
+watch(categoryIconUrls, (icons) => registerTagIconUrls(Object.entries(icons)), {
+	immediate: true,
 })
 
 /** The project in the shape the shared header reads. */
