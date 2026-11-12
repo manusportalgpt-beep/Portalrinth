@@ -86,6 +86,7 @@ const props = defineProps<{
 	readOnly?: boolean
 	/** Hides the add tile for sources that have nowhere to add a skin to. */
 	hideAddSkin?: boolean
+	compact?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -113,7 +114,7 @@ let isUnmounted = false
 const { width: listWidth } = useElementSize(listContainer)
 const { width: windowWidth } = useWindowSize()
 
-const columnCount = computed(() => {
+const baseColumnCount = computed(() => {
 	if (windowWidth.value >= 2050) {
 		return 6
 	}
@@ -128,6 +129,12 @@ const columnCount = computed(() => {
 
 	return 3
 })
+
+const columnCount = computed(() => baseColumnCount.value + (props.compact ? 2 : 0))
+
+const gridStyle = computed(() => ({
+	gridTemplateColumns: `repeat(${columnCount.value}, minmax(0, 1fr))`,
+}))
 
 const cardWidth = computed(() => {
 	if (listWidth.value <= 0) {
@@ -408,7 +415,8 @@ defineExpose({ getAddSkinButtonElement })
 				<Draggable
 					v-if="section.kind === 'saved'"
 					:list="draggableSavedSkins"
-					class="grid w-full grid-cols-3 gap-3 min-[1300px]:grid-cols-4 min-[1750px]:grid-cols-5 min-[2050px]:grid-cols-6"
+					class="grid w-full gap-3"
+					:style="gridStyle"
 					:item-key="savedSkinKey"
 					:disabled="readOnly || !canReorderSavedSkins"
 					:animation="250"
@@ -442,7 +450,9 @@ defineExpose({ getAddSkinButtonElement })
 								<PlusIcon class="size-8" />
 							</template>
 							{{ formatMessage(messages.addSkinButton) }}
-							<template #subtitle>{{ formatMessage(messages.dragAndDropSubtitle) }}</template>
+							<template v-if="!compact" #subtitle>{{
+								formatMessage(messages.dragAndDropSubtitle)
+							}}</template>
 						</SkinLikeTextButton>
 					</template>
 
@@ -469,7 +479,10 @@ defineExpose({ getAddSkinButtonElement })
 										class="pointer-events-auto"
 										@click.stop="(event: MouseEvent) => emit('edit', skin, event)"
 									>
-										<EditIcon /> {{ formatMessage(commonMessages.editButton) }}
+										<EditIcon />
+										<template v-if="!compact">{{
+											formatMessage(commonMessages.editButton)
+										}}</template>
 									</Button>
 									<IconButton
 										v-show="!skin.is_equipped"
@@ -511,7 +524,10 @@ defineExpose({ getAddSkinButtonElement })
 										class="pointer-events-auto"
 										@click.stop="(event: MouseEvent) => emit('edit', skin, event)"
 									>
-										<EditIcon /> {{ formatMessage(commonMessages.editButton) }}
+										<EditIcon />
+										<template v-if="!compact">{{
+											formatMessage(commonMessages.editButton)
+										}}</template>
 									</Button>
 									<IconButton
 										v-show="!skin.is_equipped"
@@ -530,10 +546,7 @@ defineExpose({ getAddSkinButtonElement })
 					</template>
 				</Draggable>
 
-				<div
-					v-else
-					class="grid w-full grid-cols-3 gap-3 min-[1300px]:grid-cols-4 min-[1750px]:grid-cols-5 min-[2050px]:grid-cols-6"
-				>
+				<div v-else class="grid w-full gap-3" :style="gridStyle">
 					<BakedSkinButton
 						v-for="skin in section.skins"
 						:key="skinKey(skin, section.key)"
@@ -555,7 +568,8 @@ defineExpose({ getAddSkinButtonElement })
 								class="pointer-events-auto"
 								@click.stop="(event: MouseEvent) => emit('edit', skin, event)"
 							>
-								<EditIcon /> {{ formatMessage(commonMessages.editButton) }}
+								<EditIcon />
+								<template v-if="!compact">{{ formatMessage(commonMessages.editButton) }}</template>
 							</Button>
 						</template>
 					</BakedSkinButton>

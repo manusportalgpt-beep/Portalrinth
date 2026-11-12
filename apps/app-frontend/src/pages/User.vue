@@ -3,6 +3,7 @@
 		<UserProfilePageLayout
 			:user-id="userId"
 			:project-type="projectType"
+			:display-mode="layoutFor('user')"
 			variant="app"
 			site-url="https://modrinth.com"
 			project-link-mode="app"
@@ -53,6 +54,7 @@ import { computed, ref, watch } from 'vue'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 
 import { injectSettingsActions } from '@/features/settings/settings-actions'
+import { layoutFor } from '@/helpers/portalrinth-layouts.ts'
 import {
 	block_user,
 	change_user_avatar,

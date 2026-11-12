@@ -48,6 +48,7 @@ import {
 import { type ColorTheme, isDarkTheme, useTheme } from '@/composables/use-theme.ts'
 import { injectAppSettingsModal } from '@/features/settings/app-settings-modal/context'
 import PortalrinthBackgroundSettings from '@/features/settings/display/PortalrinthBackgroundSettings.vue'
+import PortalrinthComponentLayouts from '@/features/settings/display/PortalrinthComponentLayouts.vue'
 import type { ThemeAccent } from '@/helpers/portalrinth-themes'
 import { type AppSettings, get, set } from '@/helpers/settings.ts'
 
@@ -749,6 +750,8 @@ provideAppearanceSettings({
 		}"
 		@apply-accent="applyThemeAccent"
 	/>
+
+	<PortalrinthComponentLayouts />
 </template>
 
 <style scoped>

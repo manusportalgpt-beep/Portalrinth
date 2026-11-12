@@ -1628,7 +1628,7 @@ const modrinthAccountMenuOptions = computed(() => [
                 id: 'settings',
                 label: formatMessage(messages.accountSettings),
                 icon: SettingsIcon,
-                action: () => openUrl('https://modrinth.com/settings'),
+                action: () => settingsActions.openProfile(),
         },
         {
                 type: 'divider',

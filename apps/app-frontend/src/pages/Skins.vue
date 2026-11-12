@@ -55,6 +55,7 @@ import {
 	wearElySkin,
 } from '@/helpers/ely_skins'
 import { offline_player_cape, type PlayerCapeSource } from '@/helpers/offline_auth'
+import { componentLayouts } from '@/helpers/portalrinth-layouts.ts'
 import { playSoundEffect } from '@/helpers/portalrinth-sfx'
 import { cleanupUnusedPreviews } from '@/helpers/rendering/skin-previews'
 import type { Cape, Skin, SkinModel, SkinTextureUrl } from '@/helpers/skins.ts'
@@ -2015,6 +2016,7 @@ async function checkUserChanges() {
 		<div class="pt-3 px-3 pb-3">
 			<VirtualSkinSectionList
 				ref="skinSectionList"
+				:compact="componentLayouts.skins === 'list'"
 				:saved-skins="savedSkins"
 				:default-skin-sections="defaultSkinSections"
 				:capes="capes"
@@ -2114,6 +2116,7 @@ async function checkUserChanges() {
 				</p>
 				<VirtualSkinSectionList
 					ref="elySkinSectionList"
+					:compact="componentLayouts.skins === 'list'"
 					:saved-skins="elySkinsAsSkins"
 					:default-skin-sections="[]"
 					:capes="[]"

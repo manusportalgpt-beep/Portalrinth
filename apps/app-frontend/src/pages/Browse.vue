@@ -98,6 +98,7 @@ import {
 	browsePageSize,
 	browseScrollScope,
 } from '@/helpers/portalrinth-browse.ts'
+import { layoutFor } from '@/helpers/portalrinth-layouts.ts'
 import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import { get_instance_worlds } from '@/helpers/worlds'
@@ -1782,6 +1783,7 @@ const searchState = useBrowseSearch({
 	// Whether the list is one long scroll, and how many are on a page.
 	infiniteScroll: browseInfiniteScroll,
 	maxResultsOptions: browsePageSizeOptions,
+	displayMode: computed(() => layoutFor(projectType.value)),
 	persistentQueryParams: ['i', 'ai', 'shi', 'sid', 'wid', 'from', 'src'],
 	getExtraQueryParams: () => ({
 		src: sourceQuery(browseSource.value),

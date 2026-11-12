@@ -5252,5 +5252,59 @@
 	},
 	"app.browse.install-on-hosted-server": {
 		"message": "Установить на сервер"
+	},
+	"app.settings.layouts.title": {
+		"message": "Компоненты"
+	},
+	"app.settings.layouts.description": {
+		"message": "Выберите вид проектов, профилей и скинов для каждой страницы."
+	},
+	"app.settings.layouts.button": {
+		"message": "Компоненты"
+	},
+	"app.settings.layouts.modal-header": {
+		"message": "Вид страниц"
+	},
+	"app.settings.layouts.modal-description": {
+		"message": "Выберите вид для каждой страницы с проектами."
+	},
+	"app.settings.layouts.list": {
+		"message": "Список"
+	},
+	"app.settings.layouts.grid": {
+		"message": "Сетка"
+	},
+	"app.settings.layouts.compact": {
+		"message": "Компактно"
+	},
+	"app.settings.layouts.large": {
+		"message": "Крупно"
+	},
+	"app.settings.layouts.page.mod": {
+		"message": "Страница модов"
+	},
+	"app.settings.layouts.page.plugin": {
+		"message": "Страница плагинов"
+	},
+	"app.settings.layouts.page.datapack": {
+		"message": "Страница наборов данных"
+	},
+	"app.settings.layouts.page.shader": {
+		"message": "Страница шейдеров"
+	},
+	"app.settings.layouts.page.resourcepack": {
+		"message": "Страница наборов ресурсов"
+	},
+	"app.settings.layouts.page.modpack": {
+		"message": "Страница сборок"
+	},
+	"app.settings.layouts.page.server": {
+		"message": "Страница серверов"
+	},
+	"app.settings.layouts.page.user": {
+		"message": "Страницы пользователей"
+	},
+	"app.settings.layouts.page.skins": {
+		"message": "Страница скинов"
 	}
 }
