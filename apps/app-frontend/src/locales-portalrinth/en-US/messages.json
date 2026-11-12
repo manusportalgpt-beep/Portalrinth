@@ -3272,5 +3272,140 @@
 	},
 	"app.account.revenue": {
 		"message": "Revenue"
+	},
+	"app.features.notes-popup.title": {
+		"message": "Notes before launch"
+	},
+	"app.features.notes-popup.description": {
+		"message": "An instance's note pops up when the game launches. Turning this on also brings back the ones hidden with “Don't remind me again”."
+	},
+	"app.features.notes-popup.restore": {
+		"message": "Restore hidden ({count})"
+	},
+	"app.settings.connections.title": {
+		"message": "Connections"
+	},
+	"app.settings.connections.description": {
+		"message": "Where the launcher goes: every network request — to which server or CDN, when, with what response and how long it took. The list lives from the moment of launch."
+	},
+	"app.settings.connections.empty": {
+		"message": "All quiet — no requests yet."
+	},
+	"app.settings.connections.clear": {
+		"message": "Clear"
+	},
+	"app.settings.connections.copy": {
+		"message": "Copy the list"
+	},
+	"app.settings.connections.copied": {
+		"message": "Copied!"
+	},
+	"noctrinth.settings.curseforge.description": {
+		"message": "Search and install from CurseForge, recognize its files in instances and update them. When off, the launcher asks CurseForge for nothing."
+	},
+	"noctrinth.settings.curseforge.no-key": {
+		"message": "This build of the launcher has no CurseForge API key. Add your own below to use CurseForge."
+	},
+	"noctrinth.settings.curseforge.section.discover": {
+		"message": "Discover"
+	},
+	"noctrinth.settings.curseforge.default-source": {
+		"message": "Discover opens on"
+	},
+	"noctrinth.settings.curseforge.default-source.description": {
+		"message": "Which catalog to show first. The switch above the results changes it at any time."
+	},
+	"noctrinth.settings.curseforge.section.files": {
+		"message": "Files and updates"
+	},
+	"noctrinth.settings.curseforge.recognize-files.title": {
+		"message": "Recognize files"
+	},
+	"noctrinth.settings.curseforge.recognize-files": {
+		"message": "Identify mods added by hand or from other launchers by their file fingerprint"
+	},
+	"noctrinth.settings.curseforge.check-updates.title": {
+		"message": "Check for updates"
+	},
+	"noctrinth.settings.curseforge.check-updates": {
+		"message": "Check CurseForge for updates to its mods and modpacks"
+	},
+	"noctrinth.settings.curseforge.release-type": {
+		"message": "Update to"
+	},
+	"noctrinth.settings.curseforge.release-type.description": {
+		"message": "Which files count as an update."
+	},
+	"noctrinth.settings.curseforge.release-type.release": {
+		"message": "Releases only"
+	},
+	"noctrinth.settings.curseforge.release-type.beta": {
+		"message": "Releases and betas"
+	},
+	"noctrinth.settings.curseforge.release-type.alpha": {
+		"message": "Any files, alphas included"
+	},
+	"noctrinth.settings.curseforge.section.restricted": {
+		"message": "Files launchers can't download"
+	},
+	"noctrinth.settings.curseforge.search-other-launchers.title": {
+		"message": "Search other launchers"
+	},
+	"noctrinth.settings.curseforge.search-other-launchers": {
+		"message": "Look for files launchers can't download in other launchers' instances, not only in Downloads"
+	},
+	"noctrinth.settings.curseforge.own-key": {
+		"message": "Your own API key"
+	},
+	"noctrinth.settings.curseforge.own-key.hint": {
+		"message": "Used instead of the built-in one and stored only on this computer. Sign in to the CurseForge console and copy the key from the API keys page:"
+	},
+	"noctrinth.settings.curseforge.own-key.placeholder": {
+		"message": "Your key is saved"
+	},
+	"noctrinth.settings.curseforge.own-key.check": {
+		"message": "Check"
+	},
+	"noctrinth.settings.curseforge.own-key.check-and-save": {
+		"message": "Check and save"
+	},
+	"noctrinth.settings.curseforge.own-key.forget": {
+		"message": "Forget my key"
+	},
+	"noctrinth.settings.curseforge.own-key.ok": {
+		"message": "CurseForge accepts the key"
+	},
+	"noctrinth.settings.curseforge.own-key.saved": {
+		"message": "CurseForge accepts the key, it is saved"
+	},
+	"noctrinth.settings.curseforge.own-key.invalid": {
+		"message": "CurseForge does not accept this key"
+	},
+	"noctrinth.settings.curseforge.own-key.check-failed": {
+		"message": "Could not reach CurseForge to check the key"
+	},
+	"noctrinth.settings.curseforge.cache.title": {
+		"message": "Cache"
+	},
+	"noctrinth.settings.curseforge.clear-cache": {
+		"message": "Reset CurseForge answers"
+	},
+	"noctrinth.settings.curseforge.clear-cache-hint": {
+		"message": "They are kept for five minutes; the button asks again right now."
+	},
+	"noctrinth.settings.curseforge.cleared": {
+		"message": "Reset"
+	},
+	"app.settings.tabs.changes": {
+		"message": "Changes"
+	},
+	"app.skin-browse.profile-account": {
+		"message": "Account"
+	},
+	"app.project.load-error.title": {
+		"message": "Project page is unavailable"
+	},
+	"app.project.load-error.retry": {
+		"message": "Try again"
 	}
 }

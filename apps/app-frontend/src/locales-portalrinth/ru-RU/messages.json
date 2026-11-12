@@ -5306,5 +5306,647 @@
 	},
 	"app.settings.layouts.page.skins": {
 		"message": "Страница скинов"
+	},
+	"app.ai.attach": {
+		"message": "Прикрепить файлы"
+	},
+	"app.ai.builds": {
+		"message": "Сборка для работы"
+	},
+	"app.ai.builds.none": {
+		"message": "Без сборки"
+	},
+	"app.ai.builds.none-hint": {
+		"message": "Как со сборкой, но не только с ней — агент сам уточняет, куда ставить"
+	},
+	"app.ai.cards.skin-install": {
+		"message": "Поставить"
+	},
+	"app.ai.cards.skin-installed": {
+		"message": "Надет"
+	},
+	"app.ai.cards.skins": {
+		"message": "Скины"
+	},
+	"app.ai.catalog.name.auto": {
+		"message": "Авто"
+	},
+	"app.ai.catalog.name.custom": {
+		"message": "Свой сервер"
+	},
+	"app.ai.catalog.name.custom-model": {
+		"message": "Своя модель"
+	},
+	"app.ai.catalog.name.gpt-fast": {
+		"message": "GPT быстрый"
+	},
+	"app.ai.catalog.note.custom": {
+		"message": "Локальные модели (LM Studio, Ollama) — бесплатно, всё считается на твоём компьютере."
+	},
+	"app.ai.catalog.note.genapi": {
+		"message": "РФ-агрегатор в формате OpenAI: новый аккаунт получает бесплатные пробные генерации («Попробовать бесплатно»), дальше копейки за запрос. В списке — только бюджетные текстовые модели."
+	},
+	"app.ai.catalog.note.image-pollinations": {
+		"message": "Бесплатно и без ключа."
+	},
+	"app.ai.catalog.note.image-zai": {
+		"message": "CogView-3-Flash — бесплатный; подходит тот же ключ Z.AI, что и для чата."
+	},
+	"app.ai.catalog.note.kilo": {
+		"message": "Ключ не нужен — бесплатные модели работают сразу. Хороший запасной мозг, если у GLM час пик."
+	},
+	"app.ai.catalog.note.llm7": {
+		"message": "Ключ не нужен — бесплатный тариф «turbo» отвечает сразу (если сервис попросит токен, слово unused проходит как ключ). Запасной мозг без регистрации."
+	},
+	"app.ai.catalog.note.nvidia": {
+		"message": "DeepSeek, Kimi, GLM 5 и MiniMax бесплатно по ключу NVIDIA (build.nvidia.com). Регистрация из России может попросить VPN — сами запросы обычно проходят."
+	},
+	"app.ai.catalog.note.openrouter": {
+		"message": "Бесплатные модели под одним ключом — состав меняется, актуальные всегда с суффиксом :free. Обычно доступен из России."
+	},
+	"app.ai.catalog.note.ovh": {
+		"message": "Без ключа — анонимно, но с лимитом запросов в минуту; бесплатный токен OVH снимает лимит (необязательно)."
+	},
+	"app.ai.catalog.note.pollinations": {
+		"message": "Ключ не нужен — работает сразу. Анонимный лимит: 1 ответ в 30 секунд на IP, так что это запасной вариант, а не основной."
+	},
+	"app.ai.catalog.note.zai": {
+		"message": "Бесплатные GLM-модели, работают из России. У 4.5 Flash размышления отключены, 4.7 Flash думает всегда, но умнее; 4.6V Flash смотрит картинки (включается сама, когда ты прикрепил изображение). Ключ — бесплатно на z.ai/model-api."
+	},
+	"app.ai.catalog.tag.best-free": {
+		"message": "лучшая бесплатная"
+	},
+	"app.ai.catalog.tag.cheapest": {
+		"message": "самая дешёвая"
+	},
+	"app.ai.catalog.tag.code": {
+		"message": "код"
+	},
+	"app.ai.catalog.tag.context": {
+		"message": "контекст {size}"
+	},
+	"app.ai.catalog.tag.fast": {
+		"message": "быстрая"
+	},
+	"app.ai.catalog.tag.fastest": {
+		"message": "самая быстрая"
+	},
+	"app.ai.catalog.tag.no-key": {
+		"message": "без ключа"
+	},
+	"app.ai.catalog.tag.smart": {
+		"message": "умная"
+	},
+	"app.ai.catalog.tag.smarter": {
+		"message": "умнее"
+	},
+	"app.ai.catalog.tag.vision": {
+		"message": "видит картинки"
+	},
+	"app.ai.chat.delete": {
+		"message": "Удалить чат навсегда"
+	},
+	"app.ai.composer.attach": {
+		"message": "Файл"
+	},
+	"app.ai.composer.attach-hint": {
+		"message": "Картинка, лог, конфиг"
+	},
+	"app.ai.composer.commands": {
+		"message": "Команды"
+	},
+	"app.ai.composer.commands-hint": {
+		"message": "Задачи и навыки"
+	},
+	"app.ai.composer.deep": {
+		"message": "Глубокое мышление"
+	},
+	"app.ai.composer.deep-hint": {
+		"message": "Умнее и внимательнее, но дольше"
+	},
+	"app.ai.composer.effort": {
+		"message": "Раздумье"
+	},
+	"app.ai.composer.effort.high": {
+		"message": "Высокое"
+	},
+	"app.ai.composer.effort.low": {
+		"message": "Низкое"
+	},
+	"app.ai.composer.effort.medium": {
+		"message": "Среднее"
+	},
+	"app.ai.composer.focus": {
+		"message": "Где искать"
+	},
+	"app.ai.composer.mode.ask-hint": {
+		"message": "Только отвечает и ищет, ничего не меняет в лаунчере"
+	},
+	"app.ai.composer.mode.build-hint": {
+		"message": "Отвечает на вопросы и сам выполняет задачи в лаунчере"
+	},
+	"app.ai.composer.tools": {
+		"message": "Возможности"
+	},
+	"app.ai.composer.web": {
+		"message": "Веб-поиск"
+	},
+	"app.ai.composer.web-hint": {
+		"message": "Свежие данные из интернета"
+	},
+	"app.ai.picker.active": {
+		"message": "Сейчас отвечает"
+	},
+	"app.ai.picker.all-off": {
+		"message": "Все модели скрыты — включите нужные в управлении."
+	},
+	"app.ai.picker.custom-base": {
+		"message": "Адрес (OpenAI-совместимый)"
+	},
+	"app.ai.picker.custom-in-use": {
+		"message": "Используется"
+	},
+	"app.ai.picker.custom-model": {
+		"message": "Имя модели"
+	},
+	"app.ai.picker.custom-use": {
+		"message": "Использовать свой сервер"
+	},
+	"app.ai.picker.get-key": {
+		"message": "Получить на {domain}"
+	},
+	"app.ai.picker.hide-key": {
+		"message": "Скрыть ключ"
+	},
+	"app.ai.picker.key": {
+		"message": "API-ключ"
+	},
+	"app.ai.picker.key.missing": {
+		"message": "Без ключа модели этого провайдера не отвечают."
+	},
+	"app.ai.picker.key.placeholder": {
+		"message": "Вставьте ключ"
+	},
+	"app.ai.picker.manage": {
+		"message": "Управление"
+	},
+	"app.ai.picker.manage-done": {
+		"message": "Готово"
+	},
+	"app.ai.picker.manage-hint": {
+		"message": "Выключенные модели не показываются в выборе"
+	},
+	"app.ai.picker.models": {
+		"message": "Модели"
+	},
+	"app.ai.picker.need-key": {
+		"message": "нужен ключ"
+	},
+	"app.ai.picker.nothing": {
+		"message": "Ничего не нашлось"
+	},
+	"app.ai.picker.peak-busy": {
+		"message": "Z.AI: часы пик"
+	},
+	"app.ai.picker.peak-free": {
+		"message": "Z.AI: свободно"
+	},
+	"app.ai.picker.providers": {
+		"message": "Провайдеры"
+	},
+	"app.ai.picker.russia": {
+		"message": "РФ"
+	},
+	"app.ai.picker.search": {
+		"message": "Найти модель"
+	},
+	"app.ai.picker.show-key": {
+		"message": "Показать ключ"
+	},
+	"app.ai.picker.test": {
+		"message": "Проверить связь"
+	},
+	"app.ai.picker.test.fail": {
+		"message": "Не отвечает"
+	},
+	"app.ai.picker.test.running": {
+		"message": "Проверяю…"
+	},
+	"app.features.notes-popup.description": {
+		"message": "Заметка сборки всплывает при запуске игры. Включение возвращает и те, что были скрыты кнопкой «Больше не напоминать»."
+	},
+	"app.features.notes-popup.restore": {
+		"message": "Вернуть скрытые ({count})"
+	},
+	"app.features.notes-popup.title": {
+		"message": "Заметки перед запуском"
+	},
+	"app.settings.connections.clear": {
+		"message": "Очистить"
+	},
+	"app.settings.connections.copied": {
+		"message": "Скопировано!"
+	},
+	"app.settings.connections.copy": {
+		"message": "Скопировать список"
+	},
+	"app.settings.connections.description": {
+		"message": "Куда ходит лаунчер: каждый сетевой запрос — к какому серверу или CDN, когда, с каким ответом и за сколько. Список живёт с момента запуска."
+	},
+	"app.settings.connections.empty": {
+		"message": "Пока тихо — запросов ещё не было."
+	},
+	"app.settings.connections.title": {
+		"message": "Подключения"
+	},
+	"app.settings.resource-management.skin-services.nmsr": {
+		"message": "NMSR — эталонный рендер, принимает любой хеш"
+	},
+	"app.settings.resource-management.skin-services.skinrender": {
+		"message": "SkinRender.dev — свой 3D-движок, принимает любой хеш"
+	},
+	"app.settings.resource-management.skin-services.vzge": {
+		"message": "vzge.me — быстрый 3D-рендер с CDN, принимает любой хеш (по умолчанию)"
+	},
+	"app.skin-browse.profile-account": {
+		"message": "Учётная запись"
+	},
+	"noctrinth.settings.curseforge.cache.title": {
+		"message": "Кэш"
+	},
+	"noctrinth.settings.curseforge.check-updates": {
+		"message": "Проверять на CurseForge обновления его модов и сборок"
+	},
+	"noctrinth.settings.curseforge.check-updates.title": {
+		"message": "Проверять обновления"
+	},
+	"noctrinth.settings.curseforge.clear-cache": {
+		"message": "Сбросить ответы CurseForge"
+	},
+	"noctrinth.settings.curseforge.clear-cache-hint": {
+		"message": "Они хранятся пять минут; кнопка запросит заново прямо сейчас."
+	},
+	"noctrinth.settings.curseforge.cleared": {
+		"message": "Сброшено"
+	},
+	"noctrinth.settings.curseforge.default-source": {
+		"message": "Обзор открывается на"
+	},
+	"noctrinth.settings.curseforge.default-source.description": {
+		"message": "Какой каталог показывать первым. Переключатель над результатами меняет его в любой момент."
+	},
+	"noctrinth.settings.curseforge.description": {
+		"message": "Поиск и установка с CurseForge, распознавание его файлов в сборках и их обновление. Если выключено — лаунчер ничего не запрашивает у CurseForge."
+	},
+	"noctrinth.settings.curseforge.no-key": {
+		"message": "В этой сборке лаунчера нет ключа API CurseForge. Добавьте свой ниже, чтобы пользоваться CurseForge."
+	},
+	"noctrinth.settings.curseforge.own-key": {
+		"message": "Свой ключ API"
+	},
+	"noctrinth.settings.curseforge.own-key.check": {
+		"message": "Проверить"
+	},
+	"noctrinth.settings.curseforge.own-key.check-and-save": {
+		"message": "Проверить и сохранить"
+	},
+	"noctrinth.settings.curseforge.own-key.check-failed": {
+		"message": "Не удалось связаться с CurseForge для проверки ключа"
+	},
+	"noctrinth.settings.curseforge.own-key.forget": {
+		"message": "Забыть мой ключ"
+	},
+	"noctrinth.settings.curseforge.own-key.hint": {
+		"message": "Используется вместо встроенного и хранится только на этом компьютере. Войдите в консоль CurseForge и скопируйте ключ на странице API keys:"
+	},
+	"noctrinth.settings.curseforge.own-key.invalid": {
+		"message": "CurseForge не принимает этот ключ"
+	},
+	"noctrinth.settings.curseforge.own-key.ok": {
+		"message": "CurseForge принимает ключ"
+	},
+	"noctrinth.settings.curseforge.own-key.placeholder": {
+		"message": "Ваш ключ сохранён"
+	},
+	"noctrinth.settings.curseforge.own-key.saved": {
+		"message": "CurseForge принимает ключ, он сохранён"
+	},
+	"noctrinth.settings.curseforge.recognize-files": {
+		"message": "Узнавать моды, добавленные вручную или из других лаунчеров, по отпечатку файла"
+	},
+	"noctrinth.settings.curseforge.recognize-files.title": {
+		"message": "Распознавать файлы"
+	},
+	"noctrinth.settings.curseforge.release-type": {
+		"message": "Обновлять до"
+	},
+	"noctrinth.settings.curseforge.release-type.alpha": {
+		"message": "Любые файлы, включая альфы"
+	},
+	"noctrinth.settings.curseforge.release-type.beta": {
+		"message": "Релизы и беты"
+	},
+	"noctrinth.settings.curseforge.release-type.description": {
+		"message": "Какие файлы считать обновлением."
+	},
+	"noctrinth.settings.curseforge.release-type.release": {
+		"message": "Только релизы"
+	},
+	"noctrinth.settings.curseforge.search-other-launchers": {
+		"message": "Искать недоступные лаунчерам файлы в сборках других лаунчеров, а не только в «Загрузках»"
+	},
+	"noctrinth.settings.curseforge.search-other-launchers.title": {
+		"message": "Искать в других лаунчерах"
+	},
+	"noctrinth.settings.curseforge.section.discover": {
+		"message": "Обзор"
+	},
+	"noctrinth.settings.curseforge.section.files": {
+		"message": "Файлы и обновления"
+	},
+	"noctrinth.settings.curseforge.section.restricted": {
+		"message": "Файлы, недоступные лаунчерам"
+	},
+	"app.ai.composer.mode.ask": {
+		"message": "Ask"
+	},
+	"app.ai.composer.mode.build": {
+		"message": "Build"
+	},
+	"app.ai.picker.free": {
+		"message": "бесплатно"
+	},
+	"app.appearance-settings.accent.blood": {
+		"message": "Кровавый"
+	},
+	"app.appearance-settings.accent.crimson": {
+		"message": "Багровый"
+	},
+	"app.appearance-settings.accent.custom.brightness": {
+		"message": "Яркость"
+	},
+	"app.appearance-settings.accent.custom.hex": {
+		"message": "HEX-цвет"
+	},
+	"app.appearance-settings.accent.custom.wheel": {
+		"message": "Оттенок и насыщенность"
+	},
+	"app.appearance-settings.accent.moss": {
+		"message": "Мох"
+	},
+	"app.appearance-settings.accent.sunset": {
+		"message": "Закат"
+	},
+	"app.clock.action-close": {
+		"message": "Закрыть игру"
+	},
+	"app.clock.action-none": {
+		"message": "Ничего"
+	},
+	"app.clock.action-open": {
+		"message": "Открыть игру"
+	},
+	"app.clock.stopwatch": {
+		"message": "Секундомер"
+	},
+	"app.clock.time": {
+		"message": "Время"
+	},
+	"app.clock.timer": {
+		"message": "Таймер"
+	},
+	"app.content-install.curseforge.missing-dependencies.text": {
+		"message": "Для этой сборки у них нет версии, их нужно добавить другим способом: {names}"
+	},
+	"app.content-install.curseforge.missing-dependencies.title": {
+		"message": "Установлено без части зависимостей"
+	},
+	"app.curseforge.pending.all-done": {
+		"message": "Всё установлено"
+	},
+	"app.curseforge.pending.description": {
+		"message": "{count, plural, one {Автор этого файла не разрешает} other {Авторы этих файлов не разрешают}} лаунчерам скачивать {count, plural, one {его} other {их}}. Скачайте {count, plural, one {его} other {каждый}} с CurseForge — лаунчер сам подхватит {count, plural, one {файл} other {файлы}} из папки «Загрузки»."
+	},
+	"app.curseforge.pending.done": {
+		"message": "Готово"
+	},
+	"app.curseforge.pending.found": {
+		"message": "Установлен"
+	},
+	"app.curseforge.pending.header": {
+		"message": "Скачать вручную"
+	},
+	"app.curseforge.pending.open-all": {
+		"message": "Открыть страницы загрузки"
+	},
+	"app.curseforge.pending.open-downloads": {
+		"message": "Открыть папку «Загрузки»"
+	},
+	"app.curseforge.pending.open-page": {
+		"message": "Скачать"
+	},
+	"app.curseforge.pending.skip": {
+		"message": "Обойтись без него"
+	},
+	"app.curseforge.pending.waiting": {
+		"message": "Слежу за папкой «Загрузки»…"
+	},
+	"app.curseforge.project.add-favorite": {
+		"message": "В избранное"
+	},
+	"app.curseforge.project.load-error": {
+		"message": "Не удалось загрузить этот проект CurseForge."
+	},
+	"app.curseforge.project.open-on-curseforge": {
+		"message": "Открыть на CurseForge"
+	},
+	"app.curseforge.project.remove-favorite": {
+		"message": "Убрать из избранного"
+	},
+	"app.download-manager.rate-limited": {
+		"message": "Modrinth просит притормозить, продолжим через {seconds, plural, one {# секунду} few {# секунды} many {# секунд} other {# секунды}}"
+	},
+	"app.features.ai-links.description": {
+		"message": "Внешние ссылки из чата Порталуса открываются в окне лаунчера, а не в системном браузере (по умолчанию выключено)."
+	},
+	"app.features.ai-links.title": {
+		"message": "Ссылки ИИ во встроенном браузере"
+	},
+	"app.instance.content.curseforge-pending.action": {
+		"message": "Скачать"
+	},
+	"app.instance.content.curseforge-pending.body": {
+		"message": "Их авторы не разрешают лаунчерам скачивать их, и на этом компьютере они не нашлись."
+	},
+	"app.instance.content.curseforge-pending.header": {
+		"message": "{count, plural, one {# файл нужно} few {# файла нужно} many {# файлов нужно} other {# файла нужно}} скачать вручную"
+	},
+	"app.settings.browser.clear": {
+		"message": "Очистить историю"
+	},
+	"app.settings.browser.error": {
+		"message": "Поиск не ответил"
+	},
+	"app.settings.browser.history": {
+		"message": "Недавние запросы"
+	},
+	"app.settings.browser.note": {
+		"message": "Страницы открываются в отдельном окне лаунчера — настоящий браузер, только внутри Portalrinth."
+	},
+	"app.settings.browser.nothing": {
+		"message": "Ничего не нашлось — попробуйте другой запрос"
+	},
+	"app.settings.browser.open": {
+		"message": "Открыть"
+	},
+	"app.settings.browser.opening": {
+		"message": "Открываю…"
+	},
+	"app.settings.browser.placeholder": {
+		"message": "Поиск в интернете или адрес…"
+	},
+	"app.settings.browser.search": {
+		"message": "Найти"
+	},
+	"app.settings.browser.searching": {
+		"message": "Ищу…"
+	},
+	"app.settings.browser.title": {
+		"message": "Браузер"
+	},
+	"app.settings.tabs.browser": {
+		"message": "Браузер"
+	},
+	"app.settings.tabs.curseforge": {
+		"message": "CurseForge"
+	},
+	"app.settings.tabs.updates": {
+		"message": "Обновления"
+	},
+	"app.settings.updates.available": {
+		"message": "Доступно обновление"
+	},
+	"app.settings.updates.current": {
+		"message": "Установленная версия"
+	},
+	"app.settings.updates.downloading": {
+		"message": "Скачиваю…"
+	},
+	"app.settings.updates.fail": {
+		"message": "Не отвечает"
+	},
+	"app.settings.updates.launcher": {
+		"message": "Лаунчер"
+	},
+	"app.settings.updates.no-releases": {
+		"message": "Релизов нет или они недоступны"
+	},
+	"app.settings.updates.note": {
+		"message": "Свежие заметки о выпусках Modrinth App, Noctrinth и Portalrinth — с переводом на ваш язык."
+	},
+	"app.settings.updates.refresh": {
+		"message": "Обновить"
+	},
+	"app.settings.updates.release-page": {
+		"message": "Страница релиза"
+	},
+	"app.settings.updates.running": {
+		"message": "Установщик запущен — дальше он сам"
+	},
+	"app.settings.updates.title": {
+		"message": "Обновления"
+	},
+	"app.settings.updates.translate": {
+		"message": "Перевести"
+	},
+	"app.settings.updates.translated": {
+		"message": "Оригинал"
+	},
+	"app.settings.updates.translated-note": {
+		"message": "Переведено встроенным переводчиком Google"
+	},
+	"app.settings.updates.up-to-date": {
+		"message": "У вас последняя версия"
+	},
+	"app.settings.updates.update": {
+		"message": "Обновить (.exe)"
+	},
+	"app.sidebar.friends": {
+		"message": "Друзья"
+	},
+	"button.switch-version": {
+		"message": "Сменить версию"
+	},
+	"noctrinth.settings.curseforge.source.curseforge": {
+		"message": "CurseForge"
+	},
+	"noctrinth.settings.curseforge.source.modrinth": {
+		"message": "Modrinth"
+	},
+	"noctrinth.settings.curseforge.title": {
+		"message": "CurseForge"
+	},
+	"pack-manifest.all": {
+		"message": "Все"
+	},
+	"pack-manifest.cancel": {
+		"message": "Отмена"
+	},
+	"pack-manifest.confirm": {
+		"message": "Установить выбранное"
+	},
+	"pack-manifest.counts": {
+		"message": "Будет установлено {kept} из {total}"
+	},
+	"pack-manifest.empty": {
+		"message": "В этой сборке ничего не подходит."
+	},
+	"pack-manifest.enable": {
+		"message": "Установить"
+	},
+	"pack-manifest.install-all": {
+		"message": "Установить всё"
+	},
+	"pack-manifest.install-none": {
+		"message": "Ничего не ставить"
+	},
+	"pack-manifest.kind.data-pack": {
+		"message": "Наборы данных"
+	},
+	"pack-manifest.kind.mod": {
+		"message": "Моды"
+	},
+	"pack-manifest.kind.other": {
+		"message": "Другие файлы"
+	},
+	"pack-manifest.kind.resource-pack": {
+		"message": "Наборы ресурсов"
+	},
+	"pack-manifest.kind.shader": {
+		"message": "Шейдеры"
+	},
+	"pack-manifest.open-page": {
+		"message": "Открыть страницу проекта"
+	},
+	"pack-manifest.reading": {
+		"message": "Читаю манифест"
+	},
+	"pack-manifest.remove": {
+		"message": "Убрать"
+	},
+	"pack-manifest.search": {
+		"message": "Поиск по названию, автору или версии"
+	},
+	"pack-manifest.search-label": {
+		"message": "Поиск по содержимому"
+	},
+	"pack-manifest.title": {
+		"message": "Что внутри сборки"
+	},
+	"app.project.load-error.title": {
+		"message": "Страница проекта недоступна"
+	},
+	"app.project.load-error.retry": {
+		"message": "Повторить"
 	}
 }

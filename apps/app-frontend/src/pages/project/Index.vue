@@ -137,55 +137,59 @@
 								</Button>
 							</Transition>
 							<InstallProgressPopover :active="installing">
-							<Button
-								v-if="showSwitchVersion && onVersionsPage"
-								v-tooltip="formatMessage(messages.alreadyInstalled)"
-								size="xl"
-								native-type="button"
-								disabled
-							>
-								<CheckIcon />
-								{{ formatMessage(commonMessages.installedLabel) }}
-							</Button>
-							<Button
-								v-else-if="showSwitchVersion"
-								size="xl"
-								native-type="button"
-								@click="goToVersions"
-							>
-								<SwapIcon />
-								{{ formatMessage(messages.switchVersion) }}
-							</Button>
-							<Button
-								v-else
-								v-tooltip="
-									installButtonInstalled && !serverProjectInstallContext
-										? formatMessage(messages.installedHint)
-										: installButtonInstalled
-											? formatMessage(messages.alreadyInstalled)
-											: undefined
-								"
-								type="colored"
-								color="brand"
-								size="xl"
-								native-type="button"
-								:disabled="installButtonLoading || (installButtonInstalled && serverProjectInstallContext)"
-						:class="installButtonInstalled && !serverProjectInstallContext ? 'installed-quiet' : ''"
-								@click="handleInstallClick"
-							>
-								<component :is="installButtonIcon" :class="installButtonIconClass" />
-								{{
-									installButtonInstalled
-										? formatMessage(commonMessages.installedLabel)
-										: installButtonValidating
-											? formatMessage(commonMessages.validatingLabel)
-											: installButtonLoading
-												? formatMessage(commonMessages.installingLabel)
-												: serverProjectSelected
-													? formatMessage(commonMessages.selectedLabel)
-													: formatMessage(commonMessages.installButton)
-								}}
-							</Button>
+								<Button
+									v-if="showSwitchVersion && onVersionsPage"
+									v-tooltip="formatMessage(messages.alreadyInstalled)"
+									size="xl"
+									native-type="button"
+									disabled
+								>
+									<CheckIcon />
+									{{ formatMessage(commonMessages.installedLabel) }}
+								</Button>
+								<Button
+									v-else-if="showSwitchVersion"
+									size="xl"
+									native-type="button"
+									@click="goToVersions"
+								>
+									<SwapIcon />
+									{{ formatMessage(messages.switchVersion) }}
+								</Button>
+								<Button
+									v-else
+									v-tooltip="
+										installButtonInstalled && !serverProjectInstallContext
+											? formatMessage(messages.installedHint)
+											: installButtonInstalled
+												? formatMessage(messages.alreadyInstalled)
+												: undefined
+									"
+									type="colored"
+									color="brand"
+									size="xl"
+									native-type="button"
+									:disabled="
+										installButtonLoading || (installButtonInstalled && serverProjectInstallContext)
+									"
+									:class="
+										installButtonInstalled && !serverProjectInstallContext ? 'installed-quiet' : ''
+									"
+									@click="handleInstallClick"
+								>
+									<component :is="installButtonIcon" :class="installButtonIconClass" />
+									{{
+										installButtonInstalled
+											? formatMessage(commonMessages.installedLabel)
+											: installButtonValidating
+												? formatMessage(commonMessages.validatingLabel)
+												: installButtonLoading
+													? formatMessage(commonMessages.installingLabel)
+													: serverProjectSelected
+														? formatMessage(commonMessages.selectedLabel)
+														: formatMessage(commonMessages.installButton)
+									}}
+								</Button>
 							</InstallProgressPopover>
 							<IconButton
 								v-tooltip="
@@ -278,6 +282,17 @@
 			@create="serverInstallContent.handleServerModpackFlowCreate"
 		/>
 	</div>
+	<div v-else class="project-load-failed">
+		<div class="project-load-failed__card">
+			<h2>{{ formatMessage(messages.loadErrorTitle) }}</h2>
+			<p>{{ formatMessage(messages.loadError) }}</p>
+			<Button :disabled="retryingLoad" @click="retryLoad">
+				<SpinnerIcon v-if="retryingLoad" class="animate-spin" />
+				<UpdatedIcon v-else />
+				{{ formatMessage(messages.retryLoad) }}
+			</Button>
+		</div>
+	</div>
 </template>
 
 <script setup>
@@ -295,6 +310,7 @@ import {
 	SpinnerIcon,
 	StopCircleIcon,
 	TrashIcon,
+	UpdatedIcon,
 } from '@modrinth/assets'
 import {
 	BrowseInstallHeader,
@@ -342,6 +358,7 @@ import {
 	get_organization,
 	get_project,
 	get_project_v3,
+	get_project_versions,
 	get_team,
 	get_version,
 	get_version_many,
@@ -409,6 +426,11 @@ const messages = defineMessages({
 		id: 'app.project.load-error',
 		defaultMessage: 'Project data could not be loaded.',
 	},
+	loadErrorTitle: {
+		id: 'app.project.load-error.title',
+		defaultMessage: 'Project page is unavailable',
+	},
+	retryLoad: { id: 'app.project.load-error.retry', defaultMessage: 'Try again' },
 	comingSoon: { id: 'app.project.coming-soon', defaultMessage: 'Coming soon' },
 	backToBrowse: {
 		id: 'app.project.install-context.back-to-browse',
@@ -848,8 +870,8 @@ async function fetchProjectData() {
 	projectBreadcrumbLabel.value = project.title
 	;[versions.value, members.value, categories.value, instance.value, instanceProjects.value] =
 		await Promise.all([
-			get_version_many(project.versions, 'must_revalidate').catch(handleError),
-			get_team(project.team).catch(handleError),
+			get_version_many(project.versions ?? [], 'must_revalidate').catch(handleError),
+			project.team ? get_team(project.team).catch(() => []) : Promise.resolve([]),
 			get_categories().catch(handleError),
 			route.query.i ? getInstance(route.query.i).catch(handleError) : Promise.resolve(),
 			route.query.i ? getInstanceProjects(route.query.i).catch(handleError) : Promise.resolve(),
@@ -857,8 +879,17 @@ async function fetchProjectData() {
 	if (String(route.params.id ?? '') !== requestedId) {
 		return
 	}
+	if (!Array.isArray(versions.value) || (!versions.value.length && project.versions?.length)) {
+		versions.value = await get_project_versions(project.id, 'must_revalidate').catch(() => [])
+		if (String(route.params.id ?? '') !== requestedId) {
+			return
+		}
+	}
+	versions.value = Array.isArray(versions.value) ? versions.value.filter(Boolean) : []
+	members.value = Array.isArray(members.value) ? members.value.filter((m) => m?.user) : []
+	categories.value = Array.isArray(categories.value) ? categories.value : []
 
-	for (const member of members.value ?? []) {
+	for (const member of members.value) {
 		for (const identifier of [member.user.id, member.user.username]) {
 			if (identifier) {
 				queryClient.setQueryData(['users', 'summary', identifier], member.user)
@@ -877,7 +908,7 @@ async function fetchProjectData() {
 	installedVersion.value = installedFile?.metadata.version_id ?? null
 
 	if (project.organization) {
-		organization.value = await get_organization(project.organization).catch(handleError)
+		organization.value = (await get_organization(project.organization).catch(() => null)) ?? null
 	} else {
 		organization.value = null
 	}
@@ -957,7 +988,26 @@ function fetchDeferredServerData(project) {
 	updateServerPlayState()
 }
 
-await fetchProjectData()
+async function loadProjectData() {
+	try {
+		await fetchProjectData()
+	} catch (error) {
+		console.error('Failed to load project page:', error)
+	}
+}
+
+const retryingLoad = ref(false)
+async function retryLoad() {
+	retryingLoad.value = true
+	try {
+		await loadProjectData()
+		refreshFollowState()
+	} finally {
+		retryingLoad.value = false
+	}
+}
+
+await loadProjectData()
 refreshFollowState()
 
 useAppEvent('process', (e) => {
@@ -974,7 +1024,7 @@ watch(
 	() => route.params.id,
 	async () => {
 		if (route.params.id && route.path.startsWith('/project')) {
-			await fetchProjectData()
+			await loadProjectData()
 			refreshFollowState()
 		}
 	},
@@ -1124,6 +1174,42 @@ const handleRightClick = (event) => {
 </script>
 
 <style scoped lang="scss">
+.project-load-failed {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 60vh;
+	padding: 1.5rem;
+}
+
+.project-load-failed__card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	max-width: 26rem;
+	padding: 1.5rem 2rem;
+	text-align: center;
+	border-radius: var(--radius-xl);
+	border: 1px solid color-mix(in srgb, var(--surface-5) 80%, transparent);
+	background-color: color-mix(in srgb, var(--surface-2, var(--color-bg)) 74%, transparent);
+	backdrop-filter: blur(18px) saturate(1.15);
+	box-shadow: var(--shadow-card, 0 8px 32px rgb(0 0 0 / 18%));
+
+	h2 {
+		margin: 0;
+		font-size: 1.25rem;
+		color: var(--color-contrast);
+		overflow-wrap: anywhere;
+	}
+
+	p {
+		margin: 0;
+		color: var(--color-secondary);
+		overflow-wrap: anywhere;
+	}
+}
+
 .install-remove-slide-enter-active,
 .install-remove-slide-leave-active {
 	transition:

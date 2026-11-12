@@ -23,6 +23,7 @@ const FIRST_PORT: u16 = 25566;
 const LAST_PORT: u16 = 26000;
 const MAX_LOG_LINES: usize = 2000;
 const MIN_JAR_BYTES: u64 = 500_000;
+const MIN_LAUNCHER_BYTES: u64 = 20_000;
 const USER_AGENT: &str = "Portalrinth";
 const STOP_GRACE: std::time::Duration = std::time::Duration::from_secs(20);
 
@@ -284,15 +285,42 @@ pub fn java_major_for(version: &str) -> u32 {
     }
 }
 
-async fn core_ready(dir: &Path) -> bool {
-    tokio::fs::metadata(dir.join("server.jar"))
+/// The jar Java is started with; Fabric and Quilt start through a small
+/// launcher that loads the vanilla `server.jar` next to it.
+fn launch_jar(software: &str) -> &'static str {
+    match software {
+        "fabric" => "fabric-server-launch.jar",
+        "quilt" => "quilt-server-launch.jar",
+        _ => "server.jar",
+    }
+}
+
+fn min_jar_bytes(software: &str) -> u64 {
+    match software {
+        "fabric" | "quilt" => MIN_LAUNCHER_BYTES,
+        _ => MIN_JAR_BYTES,
+    }
+}
+
+async fn core_ready(dir: &Path, software: &str) -> bool {
+    tokio::fs::metadata(dir.join(launch_jar(software)))
         .await
-        .is_ok_and(|meta| meta.len() > MIN_JAR_BYTES)
+        .is_ok_and(|meta| meta.len() >= min_jar_bytes(software))
+}
+
+async fn remove_core(dir: &Path) {
+    for name in [
+        "server.jar",
+        "fabric-server-launch.jar",
+        "quilt-server-launch.jar",
+    ] {
+        let _ = tokio::fs::remove_file(dir.join(name)).await;
+    }
 }
 
 async fn view_of(server: HostedServer) -> crate::Result<HostedServerView> {
     let dir = server_dir(&server.id).await?;
-    let core_ready = core_ready(&dir).await;
+    let core_ready = core_ready(&dir, &server.software).await;
     let java_need = java_major_for(&server.game_version);
     let mut view = HostedServerView {
         status: HostedStatus::Stopped,
@@ -539,9 +567,7 @@ pub async fn update(
     patch.created_at = previous.created_at;
     sanitize(&mut patch);
     if core_changed {
-        let _ =
-            tokio::fs::remove_file(server_dir(id).await?.join("server.jar"))
-                .await;
+        remove_core(&server_dir(id).await?).await;
     }
     list[index] = patch.clone();
     save_all(&list).await?;
@@ -729,14 +755,14 @@ async fn jar_url(server: &HostedServer) -> crate::Result<String> {
             }
         }
         "quilt" => {
-            let loader = first_stable_version(
-                &get_json("https://meta.quiltmc.org/v3/versions/loader")
-                    .await?,
-            )
-            .ok_or_else(|| input_error("Quilt did not list its versions"))?;
-            Ok(format!(
-                "https://meta.quiltmc.org/v3/versions/loader/{version}/{loader}/server/jar"
-            ))
+            let installers =
+                get_json("https://meta.quiltmc.org/v3/versions/installer")
+                    .await?;
+            installers
+                .as_array()
+                .and_then(|rows| rows.first())
+                .and_then(|row| row["url"].as_str().map(String::from))
+                .ok_or_else(|| input_error("Quilt did not list its installer"))
         }
         _ => {
             let manifest = get_json(MOJANG_MANIFEST).await?;
@@ -791,6 +817,7 @@ async fn download_core(server: &HostedServer) -> crate::Result<()> {
             server.software, server.game_version
         ),
     );
+    remove_core(&dir).await;
     let url = jar_url(server).await?;
     let mut response = crate::util::fetch::REQWEST_CLIENT
         .get(&url)
@@ -804,7 +831,12 @@ async fn download_core(server: &HostedServer) -> crate::Result<()> {
         )));
     }
     let total = response.content_length().unwrap_or(0);
-    let part = dir.join("server.jar.part");
+    let target = if server.software == "quilt" {
+        "quilt-installer.jar"
+    } else {
+        launch_jar(&server.software)
+    };
+    let part = dir.join(format!("{target}.part"));
     let mut file = tokio::fs::File::create(&part).await?;
     let mut loaded: u64 = 0;
     let mut last_report = std::time::Instant::now();
@@ -826,11 +858,52 @@ async fn download_core(server: &HostedServer) -> crate::Result<()> {
     }
     file.flush().await?;
     drop(file);
-    if loaded < MIN_JAR_BYTES {
+    if loaded < min_jar_bytes(&server.software) {
         let _ = tokio::fs::remove_file(&part).await;
         return Err(input_error("the server software did not download whole"));
     }
-    tokio::fs::rename(&part, dir.join("server.jar")).await?;
+    tokio::fs::rename(&part, dir.join(target)).await?;
+    if server.software == "quilt" {
+        let result = install_quilt(server, &dir).await;
+        let _ = tokio::fs::remove_file(dir.join("quilt-installer.jar")).await;
+        result?;
+    }
+    Ok(())
+}
+
+/// Runs the Quilt installer, which lays out the launcher, its libraries and
+/// the vanilla server next to each other.
+async fn install_quilt(server: &HostedServer, dir: &Path) -> crate::Result<()> {
+    push_log(&server.id, "Installing Quilt…");
+    let java = console_java(resolve_java(server).await?);
+    let mut command = tokio::process::Command::new(java);
+    command
+        .args([
+            "-jar",
+            "quilt-installer.jar",
+            "install",
+            "server",
+            server.game_version.as_str(),
+            "--download-server",
+            "--install-dir=.",
+        ])
+        .current_dir(dir)
+        .stdin(std::process::Stdio::null())
+        .kill_on_drop(true);
+    #[cfg(windows)]
+    command.creation_flags(0x0800_0000);
+    let output = command.output().await?;
+    for line in String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .chain(String::from_utf8_lossy(&output.stderr).lines())
+    {
+        if !line.trim().is_empty() {
+            push_log(&server.id, line.to_string());
+        }
+    }
+    if !output.status.success() || !core_ready(dir, "quilt").await {
+        return Err(input_error("the Quilt installer did not finish"));
+    }
     Ok(())
 }
 
@@ -964,7 +1037,7 @@ async fn launch(id: &str) -> crate::Result<()> {
         run.logs.clear();
     }
     tokio::fs::create_dir_all(&dir).await?;
-    if !core_ready(&dir).await {
+    if !core_ready(&dir, &server.software).await {
         set_status(id, HostedStatus::Installing, None);
         download_core(&server).await?;
         set_status(id, HostedStatus::Starting, None);
@@ -1026,7 +1099,10 @@ fn spawn_server(
         !arg.starts_with("-Xms") && !arg.starts_with("-Xmx")
     }));
     args.push("-Dfile.encoding=UTF-8".to_string());
-    args.extend(["-jar", "server.jar"].map(String::from));
+    args.push("-Dstdout.encoding=UTF-8".to_string());
+    args.push("-Dstderr.encoding=UTF-8".to_string());
+    args.push("-jar".to_string());
+    args.push(launch_jar(&server.software).to_string());
     if takes_nogui(server) {
         args.push("--nogui".to_string());
     }
@@ -1143,13 +1219,33 @@ static JOIN_LEAVE: LazyLock<regex::Regex> = LazyLock::new(|| {
         .expect("valid regex")
 });
 
+/// A console line as text, whatever code page the JVM wrote it in.
+fn decode_line(bytes: &[u8]) -> String {
+    let bytes = bytes.strip_suffix(b"\n").unwrap_or(bytes);
+    let bytes = bytes.strip_suffix(b"\r").unwrap_or(bytes);
+    match std::str::from_utf8(bytes) {
+        Ok(text) => text.to_string(),
+        Err(_) => {
+            let (text, _, _) = encoding_rs::WINDOWS_1251.decode(bytes);
+            text.into_owned()
+        }
+    }
+}
+
 async fn read_output(
     id: String,
     server: HostedServer,
     output: impl tokio::io::AsyncRead + Unpin,
 ) {
-    let mut lines = BufReader::new(output).lines();
-    while let Ok(Some(line)) = lines.next_line().await {
+    let mut reader = BufReader::new(output);
+    let mut buffer = Vec::new();
+    loop {
+        buffer.clear();
+        match reader.read_until(b'\n', &mut buffer).await {
+            Ok(0) | Err(_) => break,
+            Ok(_) => {}
+        }
+        let line = decode_line(&buffer);
         if line.trim().is_empty() {
             continue;
         }

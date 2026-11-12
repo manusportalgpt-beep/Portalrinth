@@ -1,7 +1,7 @@
 use crate::ErrorKind;
 use crate::state::{EmbeddedContentMetadata, ProjectType};
 use crate::util::fetch::{FetchSemaphore, fetch_json};
-use anyhow::{Context, bail};
+use anyhow::Context;
 use chrono::{DateTime, Utc};
 use dashmap::DashSet;
 use reqwest::Method;
@@ -641,8 +641,11 @@ pub enum DependencyType {
 pub struct TeamMember {
     pub team_id: String,
     pub user: User,
+    #[serde(default)]
     pub is_owner: bool,
+    #[serde(default)]
     pub role: String,
+    #[serde(default)]
     pub ordering: i64,
 }
 
@@ -652,7 +655,9 @@ pub struct User {
     pub username: String,
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
+    #[serde(default)]
     pub created: DateTime<Utc>,
+    #[serde(default)]
     pub role: String,
     #[serde(default)]
     pub badges: u32,
@@ -1058,10 +1063,21 @@ impl CachedEntry {
 
             let now = Utc::now().timestamp();
             for row in query {
-                let parsed_data = if let Some(data) = row.data {
-                    Some(Self::deserialize_cache_value(type_, data, &row.id)?)
-                } else {
-                    None
+                let parsed_data = match row.data {
+                    Some(data) => match Self::deserialize_cache_value(
+                        type_, data, &row.id,
+                    ) {
+                        Ok(value) => Some(value),
+                        Err(_) => {
+                            tracing::warn!(
+                                "Unreadable cache {:?} entry {}, refetching",
+                                type_,
+                                row.id
+                            );
+                            continue;
+                        }
+                    },
+                    None => None,
                 };
 
                 if row.expires <= now {
@@ -1087,12 +1103,7 @@ impl CachedEntry {
 
                 if let Some(data) = parsed_data {
                     if data.get_type() != type_ {
-                        bail!(
-                            "cache type mismatch for id {} (expected {:?}, got {:?})",
-                            row.id,
-                            type_,
-                            data.get_type()
-                        );
+                        continue;
                     }
 
                     remaining_keys.retain(remove_matching_key);

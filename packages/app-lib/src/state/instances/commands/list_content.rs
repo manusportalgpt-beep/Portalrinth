@@ -551,8 +551,8 @@ pub(crate) async fn get_linked_modpack_info(
         )
         .await?;
         team.and_then(|team| {
-            team.into_iter()
-                .find(|member| member.is_owner)
+            team_owner(&team)
+                .cloned()
                 .map(|member| ContentItemOwner {
                     id: member.user.id,
                     name: member.user.username,
@@ -1332,6 +1332,13 @@ fn resolve_environment(
         .and_then(|version| version.environment)
 }
 
+fn team_owner(team: &[TeamMember]) -> Option<&TeamMember> {
+    team.iter()
+        .find(|member| member.is_owner)
+        .or_else(|| team.iter().find(|member| member.role == "Owner"))
+        .or_else(|| team.iter().min_by_key(|member| member.ordering))
+}
+
 fn resolve_owner(
     project: &Project,
     teams: &[Vec<TeamMember>],
@@ -1355,7 +1362,7 @@ fn resolve_owner(
                 team.first()
                     .is_some_and(|member| member.team_id == project.team)
             })
-            .and_then(|team| team.iter().find(|member| member.is_owner))
+            .and_then(|team| team_owner(team.as_slice()))
             .map(|member| ContentItemOwner {
                 id: member.user.id.clone(),
                 name: member.user.username.clone(),
