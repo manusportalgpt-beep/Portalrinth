@@ -1,12 +1,10 @@
 /**
  * Portalus's launcher hands beyond search-and-install: describe a build, start
- * and stop the game, open the world to friends (LAN), update mods, create a
- * build or a modpack, read a guide on a wiki, preview a site built in the
- * sandbox. Registered once from App.vue; every result is a short plain text
- * the model can act on, cards ride along as markers.
+ * and stop the game, update mods, create a build or a modpack, read a guide
+ * on a wiki, preview a site built in the sandbox. Registered once from
+ * App.vue; every result is a short plain text the model can act on, cards ride
+ * along as markers.
  */
-import './ai-hosting-tools'
-
 import type { ContentItem } from '@modrinth/ui'
 import { invoke } from '@tauri-apps/api/core'
 import * as fs from '@tauri-apps/plugin-fs'
@@ -40,7 +38,6 @@ import {
 	run,
 	toggle_disable_project,
 } from './instance'
-import { list_lan_relays, start_lan_relay, stop_lan_relay } from './lan'
 import { proxiedFetch } from './proxy-fetch'
 import type { InstanceLoader } from './types'
 
@@ -638,7 +635,7 @@ registerAiToolHandler(async (tool, args) => {
 					}
 				}
 				await run(build.id)
-				return `Запустил «${build.name}» — игра загружается. Для игры с друзьями: в игре Esc → «Открыть для сети», потом <<lan_publish|${build.id}>>.`
+				return `Запустил «${build.name}» — игра загружается.`
 			} catch (error) {
 				return `Не запустилась «${build.name}»: ${String(error).slice(0, 300)}`
 			}
@@ -651,60 +648,6 @@ registerAiToolHandler(async (tool, args) => {
 				return `Закрыл игру «${build.name}».`
 			} catch (error) {
 				return `Не получилось закрыть: ${String(error).slice(0, 200)}`
-			}
-		}
-		case 'lan_status': {
-			const relays = await list_lan_relays().catch(() => [])
-			if (relays.length === 0)
-				return 'Ни одна сборка сейчас не запущена — LAN открывать нечему. Сначала <<launch_instance|id>>.'
-			return relays
-				.map((relay) => {
-					const state =
-						relay.state === 'live'
-							? `открыт для друзей, адрес \`${relay.public_host}:${relay.public_port}\``
-							: relay.state === 'ready'
-								? `мир открыт в игре (порт ${relay.local_port}) — можно опубликовать: <<lan_publish|${relay.instance_id}>>`
-								: relay.state === 'lost'
-									? `связь потеряна${relay.error ? `: ${relay.error}` : ''}`
-									: 'мир для сети ещё не открыт — в игре Esc → «Открыть для сети»'
-					const players = relay.players.length ? `; в мире: ${relay.players.join(', ')}` : ''
-					return `- «${relay.instance_name}» (${relay.account_name}): ${state}${players}`
-				})
-				.join('\n')
-		}
-		case 'lan_publish':
-		case 'lan_stop': {
-			const relays = await list_lan_relays().catch(() => [])
-			const wanted = args.trim().toLowerCase()
-			const relay =
-				relays.find(
-					(item) =>
-						!wanted ||
-						item.instance_id === args.trim() ||
-						item.process_uuid === args.trim() ||
-						item.instance_name.toLowerCase().includes(wanted),
-				) ?? (relays.length === 1 ? relays[0] : undefined)
-			if (!relay) {
-				return relays.length === 0
-					? 'Игра не запущена. Запусти сборку (<<launch_instance|id>>), открой мир, Esc → «Открыть для сети», и снова <<lan_publish|>>.'
-					: `Какую? Запущены: ${relays.map((item) => `«${item.instance_name}» (${item.instance_id})`).join(', ')}`
-			}
-			if (tool === 'lan_stop') {
-				await stop_lan_relay(relay.process_uuid).catch(() => {})
-				return `Закрыл мир «${relay.instance_name}» для друзей.`
-			}
-			if (relay.state === 'live')
-				return `Уже открыт. Адрес для друзей: \`${relay.public_host}:${relay.public_port}\` (дай его игроку именно так, в обратных кавычках — в чате он копируется кликом). Экран: [LAN](/lan)`
-			if (relay.state === 'closed') {
-				return 'Мир ещё не открыт в самой игре: зайди в мир, Esc → «Открыть для сети» → «Открыть мир», потом скажи — опубликую.'
-			}
-			try {
-				const live = await start_lan_relay(relay.process_uuid)
-				return live.public_host
-					? `Готово, мир открыт для друзей. Адрес: \`${live.public_host}:${live.public_port}\` — пусть добавят его как сервер (дай адрес игроку в обратных кавычках — он копируется кликом). Экран: [LAN](/lan)`
-					: `Публикую мир «${relay.instance_name}»… Адрес появится на экране [LAN](/lan) через пару секунд — потом снова <<lan_status|>>.`
-			} catch (error) {
-				return `Не удалось открыть мир: ${String(error).slice(0, 300)}. Экран /lan покажет подробности.`
 			}
 		}
 		case 'update_mods': {

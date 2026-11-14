@@ -1835,114 +1835,6 @@
   "app.java-selector.test-installation": {
     "message": "Test Java installation"
   },
-  "app.lan.action.copy": {
-    "message": "Copy the address"
-  },
-  "app.lan.action.more": {
-    "message": "More"
-  },
-  "app.lan.action.open-in-game": {
-    "message": "Open LAN"
-  },
-  "app.lan.action.open-in-game.hint": {
-    "message": "In Minecraft, open the world to the network: E, then \"Open to LAN\". This page finds it by itself."
-  },
-  "app.lan.action.publish": {
-    "message": "Open LAN"
-  },
-  "app.lan.action.unpublish": {
-    "message": "Stop"
-  },
-  "app.lan.copied": {
-    "message": "Address copied"
-  },
-  "app.lan.description": {
-    "message": "Open a world to LAN in Minecraft, then publish it from here."
-  },
-  "app.lan.details.data-packs": {
-    "message": "Data packs"
-  },
-  "app.lan.details.download-done": {
-    "message": "The modpack was saved"
-  },
-  "app.lan.details.empty": {
-    "message": "Nothing is in it"
-  },
-  "app.lan.details.header": {
-    "message": "What is in this world"
-  },
-  "app.lan.details.join": {
-    "message": "Join the world"
-  },
-  "app.lan.details.loader": {
-    "message": "{loader} {loaderVersion}"
-  },
-  "app.lan.details.loading": {
-    "message": "Reading the world..."
-  },
-  "app.lan.details.mods": {
-    "message": "Mods"
-  },
-  "app.lan.details.other": {
-    "message": "Other"
-  },
-  "app.lan.details.resource-packs": {
-    "message": "Resource packs"
-  },
-  "app.lan.details.shaders": {
-    "message": "Shaders"
-  },
-  "app.lan.details.version": {
-    "message": "Minecraft {version}"
-  },
-  "app.lan.details.world": {
-    "message": "The world is at"
-  },
-  "app.lan.details.world-closed": {
-    "message": "not open to the network yet"
-  },
-  "app.lan.empty-description": {
-    "message": "Start an instance and it will show up here."
-  },
-  "app.lan.empty-heading": {
-    "message": "Nothing is running"
-  },
-  "app.lan.error-heading": {
-    "message": "Failed to read running instances"
-  },
-  "app.lan.heading": {
-    "message": "LAN"
-  },
-  "app.lan.hint": {
-    "message": "Open LAN"
-  },
-  "app.lan.players": {
-    "message": "In the world"
-  },
-  "app.lan.players.none": {
-    "message": "Nobody is in the world yet"
-  },
-  "app.lan.published": {
-    "message": "Published at {address}"
-  },
-  "app.lan.state.closed": {
-    "message": "No world is open to the network"
-  },
-  "app.lan.state.live": {
-    "message": "In the network"
-  },
-  "app.lan.state.lost": {
-    "message": "The relay stopped carrying players"
-  },
-  "app.lan.state.not-live": {
-    "message": "Not in the network"
-  },
-  "app.lan.state.ready": {
-    "message": "The world is open to the network, on port {port}"
-  },
-  "app.lan.stopped": {
-    "message": "No longer published"
-  },
   "app.library.actions.label": {
     "message": "Library actions"
   },
@@ -2647,9 +2539,6 @@
   },
   "app.nav.home": {
     "message": "Home"
-  },
-  "app.nav.lan": {
-    "message": "LAN"
   },
   "app.nav.loading-profile": {
     "message": "Loading profile..."
@@ -6258,7 +6147,7 @@
     "message": "3 to 16 letters, digits or underscores — what a server will accept."
   },
   "offline-account.limitation-body": {
-    "message": "Servers in online mode ask Mojang whether the session is real, and there is none here. Everything else — worlds on this machine, LAN, and servers running in offline mode — works as it always did."
+    "message": "Servers in online mode ask Mojang whether the session is real, and there is none here. Everything else — worlds on this machine, worlds opened to the network, and servers running in offline mode — works as it always did."
   },
   "offline-account.limitation-header": {
     "message": "Singleplayer and offline servers only"

@@ -144,7 +144,7 @@ const messages = defineMessages({
 	limitationBody: {
 		id: 'offline-account.limitation-body',
 		defaultMessage:
-			'Servers in online mode ask Mojang whether the session is real, and there is none here. Everything else — worlds on this machine, LAN, and servers running in offline mode — works as it always did.',
+			'Servers in online mode ask Mojang whether the session is real, and there is none here. Everything else — worlds on this machine, worlds opened to the network, and servers running in offline mode — works as it always did.',
 	},
 	add: { id: 'offline-account.add', defaultMessage: 'Add account' },
 })

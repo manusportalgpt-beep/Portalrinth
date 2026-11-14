@@ -582,11 +582,6 @@ impl ProcessManager {
 
     fn remove(&self, id: Uuid) {
         self.processes.remove(&id);
-
-        // The world this copy had open is gone with it, and so is the port it
-        // was on and anything published from it.
-        crate::state::lan::forget_process(&id.to_string());
-        crate::api::lan::detach_process(id);
     }
 }
 
@@ -895,19 +890,6 @@ impl Process {
                                             tracing::error!("Failed to handle server join logging: {e}");
                                         }
                                     }
-                                    // The same line the plain output gives:
-                                    // this is where a world opened to the
-                                    // network is noticed, in either shape the
-                                    // game's output arrives in.
-                                    crate::state::lan::note_log_line(
-                                        process_uuid,
-                                        current_event
-                                            .message
-                                            .as_deref()
-                                            .unwrap_or("")
-                                            .trim(),
-                                    );
-
                                     Self::emit_log4j_event(
                                         instance_id,
                                         process_uuid,
@@ -981,15 +963,6 @@ impl Process {
                             "Failed to handle old server join logging: {e}"
                         );
                     }
-                    // Every line the game writes goes past here, so this is
-                    // where the world being opened to the network is noticed.
-                    // Without it, the port was only ever found by reading the
-                    // log file afterwards, and a world that was opened while
-                    // the launcher was not looking was never seen at all.
-                    crate::state::lan::note_log_line(
-                        process_uuid,
-                        line.trim_ascii_end(),
-                    );
                 }
 
                 line.clear();
@@ -1064,7 +1037,6 @@ impl Process {
 
         if let Some(formatted) = Self::format_log4j_entry(event) {
             let formatted = formatted.trim_end().to_string();
-            crate::state::lan::note_log_line(process_uuid, &formatted);
             push_log_line(process_uuid, formatted);
         }
         if let Some(ref throwable) = event.throwable {
@@ -1091,7 +1063,6 @@ impl Process {
     fn emit_legacy_log(instance_id: &str, process_uuid: &str, message: &str) {
         let message = crate::api::logs::censor_session_ids(message.to_string());
 
-        crate::state::lan::note_log_line(process_uuid, &message);
         push_log_line(process_uuid, message.clone());
 
         #[cfg(feature = "tauri")]

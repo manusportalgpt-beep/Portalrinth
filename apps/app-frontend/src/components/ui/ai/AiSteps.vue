@@ -48,7 +48,6 @@ import {
 	PlayIcon,
 	ScanEyeIcon,
 	SearchIcon,
-	ServerIcon,
 	ShirtIcon,
 	SparklesIcon,
 	StopCircleIcon,
@@ -149,18 +148,6 @@ const TOOLS: Record<string, ToolMeta> = {
 	instance_info: { title: 'Сборка', icon: BoxIcon },
 	launch_instance: { title: 'Запуск игры', icon: PlayIcon },
 	stop_instance: { title: 'Закрытие игры', icon: StopCircleIcon },
-	lan_status: { title: 'LAN', icon: GlobeIcon },
-	lan_publish: { title: 'Мир для друзей', icon: GlobeIcon },
-	lan_stop: { title: 'Закрытие LAN', icon: GlobeIcon },
-	hosting_list: { title: 'Мои серверы', icon: ServerIcon },
-	hosting_status: { title: 'Состояние сервера', icon: ServerIcon },
-	hosting_power: { title: 'Питание сервера', icon: ServerIcon },
-	hosting_console: { title: 'Консоль сервера', icon: TerminalSquareIcon },
-	hosting_cmd: { title: 'Команда серверу', icon: TerminalSquareIcon },
-	hosting_build: { title: 'Стройка на сервере', icon: HammerIcon },
-	hosting_player: { title: 'Игрок на сервере', icon: ScanEyeIcon },
-	hosting_chest: { title: 'Содержимое сундука', icon: PackageOpenIcon },
-	hosting_install: { title: 'Плагин на сервер', icon: BoxPlusIcon },
 }
 
 function metaOf(step: AiStep): ToolMeta {
@@ -308,9 +295,7 @@ const ROUTES: [string, string][] = [
 	['/library', 'Библиотека'],
 	['/skins', 'Скины'],
 	['/screenshots', 'Скриншоты'],
-	['/server-hosting', 'Self-Hosted'],
 	['/hosting', 'Modrinth Hosting'],
-	['/lan', 'LAN'],
 	['/dashboard', 'Панель'],
 	['/user/', 'Профиль'],
 	['/ai', 'Portalus'],
@@ -334,14 +319,6 @@ function peekOf(step: AiStep): Peek | null {
 			return isUrl(head(args)) ? { kind: 'link', url: head(args) } : null
 		case 'navigate':
 			return args ? { kind: 'route', path: args, label: routeLabel(args) } : null
-		case 'hosting_cmd':
-		case 'hosting_build': {
-			const commands = rest(args)
-				.split(/;;|\n/)
-				.map((command) => command.trim().replace(/^\//, ''))
-				.filter(Boolean)
-			return commands.length ? { kind: 'console', server: head(args), commands } : null
-		}
 		default:
 			return null
 	}

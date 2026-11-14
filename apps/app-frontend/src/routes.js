@@ -22,21 +22,6 @@ export default new createRouter({
 			component: () => import('@/pages/Ai.vue'),
 		},
 		{
-			path: '/lan',
-			name: 'LAN',
-			component: () => import('@/pages/Lan.vue'),
-		},
-		{
-			path: '/server-hosting',
-			name: 'ServerHosting',
-			component: () => import('@/pages/ServerHosting.vue'),
-		},
-		{
-			path: '/server-hosting/:id',
-			name: 'ServerHostingServer',
-			component: () => import('@/pages/ServerHostingServer.vue'),
-		},
-		{
 			path: '/hosting/manage/',
 			name: 'Servers',
 			component: () => import('@/pages/Servers.vue'),

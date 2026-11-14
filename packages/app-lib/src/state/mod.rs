@@ -35,7 +35,6 @@ pub use self::onboarding_checklist::*;
 mod process;
 pub use self::process::*;
 
-pub mod lan;
 
 mod java_globals;
 pub use self::java_globals::*;

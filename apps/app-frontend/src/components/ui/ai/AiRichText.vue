@@ -6,7 +6,7 @@
  *
  * Links open through the chat's own handler (launcher pages, the reader,
  * the browser) and carry a copy button that shows on hover; inline code
- * copies itself on click - handy for a LAN address or a command.
+ * copies itself on click - handy for a server address or a command.
  */
 import { CheckIcon, CopyIcon, ExternalIcon } from '@modrinth/assets'
 import { defineComponent, h, ref, type VNode } from 'vue'
@@ -78,10 +78,12 @@ function parsePlainInline(text: string, depth: number): Inline[] {
 		if (match[2] !== undefined) out.push({ kind: 'code', text: match[2].trim() })
 		else if (match[3] !== undefined)
 			out.push({ kind: 'link', url: match[4], children: parseInline(match[3], depth + 1) })
-		else if (match[5] !== undefined) out.push({ kind: 'link', url: match[5], children: [{ kind: 'text', text: match[5] }] })
+		else if (match[5] !== undefined)
+			out.push({ kind: 'link', url: match[5], children: [{ kind: 'text', text: match[5] }] })
 		else if (match[6] !== undefined || match[7] !== undefined)
 			out.push({ kind: 'strong', children: parseInline(match[6] ?? match[7], depth + 1) })
-		else if (match[8] !== undefined) out.push({ kind: 'del', children: parseInline(match[8], depth + 1) })
+		else if (match[8] !== undefined)
+			out.push({ kind: 'del', children: parseInline(match[8], depth + 1) })
 		else out.push({ kind: 'em', children: parseInline(match[9] ?? match[10], depth + 1) })
 		cursor = match.index + match[0].length
 		match = re.exec(text)
@@ -221,7 +223,8 @@ const MODRINTH_PATH = /^\/(project|mod|modpack|resourcepack|shader|datapack|plug
 /** What the copy button puts on the clipboard: a link anyone can open. */
 function shareableUrl(url: string): string {
 	if (MODRINTH_PATH.test(url)) return `https://modrinth.com${url}`
-	if (/^\/curseforge\/\d+/.test(url)) return `https://www.curseforge.com/projects/${url.split('/')[2]}`
+	if (/^\/curseforge\/\d+/.test(url))
+		return `https://www.curseforge.com/projects/${url.split('/')[2]}`
 	return url
 }
 
@@ -321,7 +324,11 @@ export default defineComponent({
 		function block(item: Block, index: number): VNode {
 			switch (item.kind) {
 				case 'h':
-					return h(`h${item.level + 1}`, { key: index, class: `ai-md-h ai-md-h${item.level}` }, inline(parseInline(item.text)))
+					return h(
+						`h${item.level + 1}`,
+						{ key: index, class: `ai-md-h ai-md-h${item.level}` },
+						inline(parseInline(item.text)),
+					)
 				case 'hr':
 					return h('hr', { key: index, class: 'ai-md-hr' })
 				case 'quote':
@@ -351,7 +358,11 @@ export default defineComponent({
 								h(
 									'tr',
 									item.head.map((cell, cellIndex) =>
-										h('th', { style: { textAlign: item.align[cellIndex] || undefined } }, inline(parseInline(cell))),
+										h(
+											'th',
+											{ style: { textAlign: item.align[cellIndex] || undefined } },
+											inline(parseInline(cell)),
+										),
 									),
 								),
 							),

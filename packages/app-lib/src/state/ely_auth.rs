@@ -249,7 +249,7 @@ impl ElyCredentials {
     }
 
     /// Tokens worth offering a service that checks this account with Ely.by
-    /// itself (the LAN relay's messenger), freshest first.
+    /// itself, freshest first.
     ///
     /// The stored token may be a day old: an OAuth access token runs out long
     /// before its refresh token does, and nothing renews it until the next

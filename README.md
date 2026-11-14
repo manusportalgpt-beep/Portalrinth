@@ -8,7 +8,7 @@
 
 **English** · [Русский](README.ru.md)
 
-**A Minecraft launcher based on Modrinth App: Modrinth and CurseForge in one list, skins, LAN over the internet, an AI assistant, and Microsoft, Ely.by and offline accounts.**
+**A Minecraft launcher based on Modrinth App: Modrinth and CurseForge in one list, skins, an AI assistant, and Microsoft, Ely.by and offline accounts.**
 
 <a href="https://github.com/manusportalgpt-beep/Portalrinth/releases/latest"><img src=".github/assets/readme/download-windows.svg" alt="Download for Windows" height="56"/></a>
 <a href="https://github.com/manusportalgpt-beep/Portalrinth/releases/latest"><img src=".github/assets/readme/download-macos.svg" alt="Download for macOS" height="56"/></a>
@@ -55,17 +55,6 @@ Portalrinth is a desktop Minecraft launcher. It is built on Modrinth App and its
 - Apply a skin to your account in one click.
 - Microsoft, Ely.by and offline accounts. On offline-mode servers the launcher finds player skins by nickname on Ely.by and Mojang.
 
-## LAN over the internet
-
-<div align="center">
-<img src=".github/assets/screenshots/lan.png" alt="LAN page" width="100%"/>
-<br/><sub>LAN: a world opened to LAN in game becomes reachable for friends over the internet</sub>
-</div>
-
-- Share a world opened to LAN with friends over the internet, without port forwarding.
-- See who is connected and which game mode is running.
-- Ely.by account tokens are refreshed automatically.
-
 ## AI assistant
 
 <div align="center">
@@ -73,7 +62,7 @@ Portalrinth is a desktop Minecraft launcher. It is built on Modrinth App and its
 <br/><sub>The AI assistant works inside the launcher</sub>
 </div>
 
-- Answers questions about mods, modpacks, skins and errors, and performs actions itself: finds and installs mods into the selected instance (compatible versions only, with dependencies), creates instances, installs modpacks, updates mods, launches the game and opens LAN.
+- Answers questions about mods, modpacks, skins and errors, and performs actions itself: finds and installs mods into the selected instance (compatible versions only, with dependencies), creates instances, installs modpacks, updates mods and launches the game.
 - Sees the whole instance: Minecraft version, loader and its version, source and available updates.
 - Shows Fandom and Minecraft Wiki guides as cards, writes code and builds websites with a live preview.
 - Slash commands, "Web search" and "Deep thinking" modes, image input.

@@ -72,7 +72,6 @@ const TOOL_LABELS: Record<string, string> = {
         install_modpack: 'ставлю модпак',
         create_instance: 'создаю сборку',
         launch_instance: 'запускаю игру',
-        lan_publish: 'открываю мир',
         update_mods: 'обновляю моды',
         navigate: 'открываю экран',
         gen_image: 'рисую',

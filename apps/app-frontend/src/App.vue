@@ -17,11 +17,9 @@ import {
         OrganizationIcon,
         PlayIcon,
         PlusIcon,
-        RadioTowerIcon,
         RefreshCwIcon,
         ReportIcon,
         ServerIcon,
-        ServerStackIcon,
         SettingsIcon,
         ShirtIcon,
         SparklesIcon,
@@ -40,7 +38,6 @@ import {
         commonSettingsMessages,
         ContentInstallModal,
         ContentUpdaterModal,
-        ContextMenu,
         CreationFlowModal,
         defineMessages,
         I18nDebugPanel,
@@ -73,7 +70,6 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { type } from '@tauri-apps/plugin-os'
 import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state'
-import { useStorage } from '@vueuse/core'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 
@@ -784,25 +780,9 @@ const messages = defineMessages({
                 id: 'app.nav.ai',
                 defaultMessage: 'AI assistant',
         },
-        lan: {
-                id: 'app.nav.lan',
-                defaultMessage: 'LAN',
-        },
-        lanFree: {
-                id: 'app.nav.lan-free',
-                defaultMessage: 'LAN',
-        },
-        hostingPaid: {
-                id: 'app.nav.hosting-paid',
-                defaultMessage: 'Modrinth Hosting',
-        },
         hostingTab: {
                 id: 'app.nav.modrinth-hosting',
                 defaultMessage: 'Modrinth Hosting',
-        },
-        serverHosting: {
-                id: 'app.nav.server-hosting',
-                defaultMessage: 'Server Hosting',
         },
         screenshots: {
                 id: 'app.nav.screenshots',
@@ -1802,8 +1782,7 @@ onMounted(() => {
                         скины: '/skins',
                         screenshots: '/screenshots',
                         скриншоты: '/screenshots',
-                        lan: '/lan',
-                        лан: '/lan',
+                        hosting: '/hosting/manage/',
                         ai: '/ai',
                         browse: '/browse/mod',
                         settings: 'settings',
@@ -1834,7 +1813,7 @@ onMounted(() => {
                         if (!target) return 'Нужен путь внутри лаунчера, например /browse/mod?q=jei'
                         const resolved = router.resolve(target)
                         if (resolved.matched.length === 0) {
-                                return `Экрана ${target} нет. Есть: /, /browse/mod, /browse/modpack, /browse/resourcepack, /browse/shader, /browse/skin, /skins, /screenshots, /lan, /project/<id>, /curseforge/<id>, /instance/<id>`
+                                return `Экрана ${target} нет. Есть: /, /browse/mod, /browse/modpack, /browse/resourcepack, /browse/shader, /browse/skin, /skins, /screenshots, /hosting/manage/, /project/<id>, /curseforge/<id>, /instance/<id>`
                         }
                         noteAgentNavigation()
                         await router.push(target).catch(() => {})
@@ -2723,47 +2702,6 @@ function handleContextMenu(event) {
         event.preventDefault()
 }
 
-// Какая вкладка открывается кнопкой сети слева: LAN, Modrinth Hosting или
-// Server Hosting (свой сервер на этом ПК). Режим запоминается; правый клик
-// предлагает все варианты — вкладка, тултип и иконка следуют за выбранным.
-const netMode = useStorage('portalrinth-net-mode', 'lan')
-const NET_TARGETS = { lan: '/lan', hosting: '/hosting/manage/', server: '/server-hosting' }
-const netTarget = computed(() => NET_TARGETS[netMode.value] ?? '/lan')
-const netPrefix = computed(() =>
-        netMode.value === 'hosting' ? '/hosting' : netMode.value === 'server' ? '/server-hosting' : null,
-)
-function switchNetMode(mode) {
-        netMode.value = mode
-        void router.push(NET_TARGETS[mode] ?? '/lan')
-}
-const lanMenu = ref()
-
-function openLanMenu(event) {
-        lanMenu.value?.open(event, [
-                {
-                        id: 'lan',
-                        label: formatMessage(messages.lanFree),
-                        icon: RadioTowerIcon,
-                        tone: netMode.value === 'lan' ? 'brand' : 'default',
-                        action: () => switchNetMode('lan'),
-                },
-                {
-                        id: 'hosting',
-                        label: formatMessage(messages.hostingPaid),
-                        icon: ServerIcon,
-                        tone: netMode.value === 'hosting' ? 'brand' : 'default',
-                        action: () => switchNetMode('hosting'),
-                },
-                {
-                        id: 'server-hosting',
-                        label: formatMessage(messages.serverHosting),
-                        icon: ServerStackIcon,
-                        tone: netMode.value === 'server' ? 'brand' : 'default',
-                        action: () => switchNetMode('server'),
-                },
-        ])
-}
-
 provideAppUpdateDownloadProgress(appUpdateDownload)
 </script>
 
@@ -2887,25 +2825,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
                                 <SparklesIcon />
                         </NavButton>
                         <NavButton
-                                v-tooltip.right="
-                                        formatMessage(
-                                                netMode === 'hosting'
-                                                        ? messages.hostingTab
-                                                        : netMode === 'server'
-                                                                ? messages.serverHosting
-                                                                : messages.lan,
-                                        )
-                                "
-                                :to="netTarget"
-                                :is-primary="(r) => r.path === netTarget"
-                                :is-subpage="(r) => !!netPrefix && r.path.startsWith(netPrefix)"
-                                @contextmenu.prevent.stop="openLanMenu"
+                                v-tooltip.right="formatMessage(messages.hostingTab)"
+                                to="/hosting/manage/"
+                                :is-primary="(r) => r.path === '/hosting/manage/'"
+                                :is-subpage="(r) => r.path.startsWith('/hosting')"
                         >
-                                <ServerIcon v-if="netMode === 'hosting'" />
-                                <ServerStackIcon v-else-if="netMode === 'server'" />
-                                <RadioTowerIcon v-else />
+                                <ServerIcon />
                         </NavButton>
-                        <ContextMenu ref="lanMenu" :label="formatMessage(messages.lan)" />
                         <suspense>
                                 <QuickInstanceSwitcher>
                                         <NavButton

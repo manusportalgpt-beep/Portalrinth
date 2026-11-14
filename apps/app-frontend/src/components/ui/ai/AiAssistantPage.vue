@@ -31,7 +31,6 @@ import {
 	PlusIcon,
 	RefreshCwIcon,
 	SearchIcon,
-	ServerIcon,
 	SparklesIcon,
 	StopCircleIcon,
 	SunIcon,
@@ -781,14 +780,6 @@ const builtInCommands = computed<SlashCommand[]>(() => [
 		send: true,
 	},
 	{
-		id: 'лан',
-		label: 'лан',
-		hint: 'сервер для друзей (LAN)',
-		icon: ServerIcon,
-		text: 'Запусти мою сборку и открой мир для друзей (LAN).',
-		send: true,
-	},
-	{
 		id: 'вики',
 		label: 'вики',
 		hint: 'гайд с Fandom / Minecraft Wiki',
@@ -1173,7 +1164,7 @@ async function resolveCurseforgeProject(slug: string, projectType: string): Prom
  */
 async function openLink(url: string) {
 	try {
-		// Launcher paths ([Сборка](/instance/…), [LAN](/lan)) open right here.
+		// Launcher paths ([Сборка](/instance/…), [Скины](/skins)) open right here.
 		if (url.startsWith('/')) {
 			await router.push(url)
 			return
