@@ -386,6 +386,13 @@ async fn run_credentials(
     }
 
     crate::minecraft_skins::flush_pending_skin_change().await?;
+    let instance_running =
+        state.process_manager.get_all().iter().any(|process| {
+            process.instance_path == context.instance.path
+        });
+    if !instance_running {
+        crate::api::config_guard::protect(&context.instance.path).await;
+    }
     crate::launcher::launch_minecraft(
         &java_args,
         &launch_env_args,

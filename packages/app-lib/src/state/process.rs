@@ -532,6 +532,37 @@ impl ProcessManager {
             .get(&id)
             .and_then(|process| process.child.id());
 
+        // Asked to close first, the way its own window's close button does:
+        // a game ended outright while it writes a config or a world leaves
+        // that file empty. Only one that has not closed in time is ended.
+        if let Some(pid) = pid
+            && close_process_tree(pid).await
+        {
+            tokio::spawn(async move {
+                let deadline = Instant::now() + STOP_GRACE;
+                while Instant::now() < deadline {
+                    tokio::time::sleep(std::time::Duration::from_millis(100))
+                        .await;
+                    let Ok(state) = crate::State::get().await else {
+                        return;
+                    };
+                    let running = state.process_manager.try_wait(id);
+                    if !matches!(running, Ok(Some(None))) {
+                        return;
+                    }
+                }
+                if let Ok(state) = crate::State::get().await {
+                    state.process_manager.force_stop(id, Some(pid)).await;
+                }
+            });
+            return Ok(());
+        }
+
+        self.force_stop(id, pid).await;
+        Ok(())
+    }
+
+    async fn force_stop(&self, id: Uuid, pid: Option<u32>) {
         // The game is not always the process that was started: a wrapper
         // command, or a Java that hands off to a child of its own, leaves the
         // window open when only the first one is ended. The whole tree goes.
@@ -547,8 +578,6 @@ impl ProcessManager {
                 tracing::warn!("Could not stop process {id}: {error}");
             }
         }
-
-        Ok(())
     }
 
     fn remove(&self, id: Uuid) {
@@ -559,6 +588,37 @@ impl ProcessManager {
         crate::state::lan::forget_process(&id.to_string());
         crate::api::lan::detach_process(id);
     }
+}
+
+/// How long a game asked to close gets before it is ended outright.
+const STOP_GRACE: std::time::Duration = std::time::Duration::from_secs(8);
+
+/// Asks a process and everything it started to close.
+///
+/// False when nothing could be asked, a game with no window yet for one: that
+/// one is ended outright straight away instead of waited on.
+async fn close_process_tree(pid: u32) -> bool {
+    #[cfg(windows)]
+    let mut command = {
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let mut command = Command::new("taskkill");
+        command
+            .args(["/PID", &pid.to_string(), "/T"])
+            .creation_flags(CREATE_NO_WINDOW);
+        command
+    };
+    #[cfg(not(windows))]
+    let mut command = {
+        let mut command = Command::new("kill");
+        command.args(["-TERM", &pid.to_string()]);
+        command
+    };
+    command
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .await
+        .is_ok_and(|status| status.success())
 }
 
 /// Ends a process and everything it started.
@@ -1255,6 +1315,25 @@ impl Process {
         // about this run the moment it is, and reads how it ended from here.
         let logs_folder = state.directories.instance_logs_dir(&instance_path);
         let log_path = logs_folder.join(LAUNCHER_LOG_PATH);
+
+        let instance_running =
+            state.process_manager.get_all().iter().any(|process| {
+                process.instance_path == instance_path
+            });
+        let restored = if instance_running {
+            Vec::new()
+        } else {
+            crate::api::config_guard::protect(&instance_path).await
+        };
+        for file in restored {
+            let _ = Process::append_to_log_file(
+                &log_path,
+                &format!(
+                    "\n# Portalrinth: {file} was left empty, \
+                     the last good copy was restored\n"
+                ),
+            );
+        }
 
         if log_path.exists()
             && let Err(e) = Process::append_to_log_file(

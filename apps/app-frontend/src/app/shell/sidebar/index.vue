@@ -331,7 +331,12 @@ const messages = defineMessages({
 						:aria-label="friend.username"
 						@click="openProfile(friend.username)"
 					>
-						<UserAvatar :src="friend.avatar" size="24px" :badge="friend.online" />
+						<UserAvatar
+							:src="friend.avatar"
+							:tint-by="friend.username"
+							size="32px"
+							:badge="friend.online"
+						/>
 					</button>
 					<div class="h-0.5 w-6 rounded-full bg-red-500" />
 				</template>
@@ -344,7 +349,12 @@ const messages = defineMessages({
 					:aria-label="friend.username"
 					@click="openProfile(friend.username)"
 				>
-					<UserAvatar :src="friend.avatar" size="24px" :grayscale="friend.accepted" />
+					<UserAvatar
+						:src="friend.avatar"
+						:tint-by="friend.username"
+						size="32px"
+						class="rail-friend--away"
+					/>
 				</button>
 			</div>
 		</div>
@@ -371,6 +381,16 @@ const messages = defineMessages({
 </template>
 
 <style scoped>
+.rail-friend--away {
+	opacity: 0.8;
+	transition: opacity 0.15s ease;
+}
+
+button:hover > .rail-friend--away,
+button:focus-visible > .rail-friend--away {
+	opacity: 1;
+}
+
 .app-sidebar {
 	/* Glass: nothing painted behind the list, so what shows through is the
 	   window's own background blurred once rather than a second, darker copy of

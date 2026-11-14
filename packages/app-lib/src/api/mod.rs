@@ -1,6 +1,7 @@
 //! API for interacting with Theseus
 pub mod bedrock;
 pub mod cache;
+pub mod config_guard;
 pub mod crash_analysis;
 pub mod crash_culprits;
 pub mod curseforge_blocked;

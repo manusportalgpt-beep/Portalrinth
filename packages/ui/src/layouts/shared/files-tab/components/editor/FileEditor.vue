@@ -117,6 +117,7 @@ const originalContent = ref('')
 const isEditingImage = ref(false)
 const imagePreview = ref<Blob | null>(null)
 const isLoading = ref(false)
+let loadToken = 0
 const editorInstance = ref<Ace.Editor | null>(null)
 const editorContainer = ref<HTMLElement | null>(null)
 const editorHeight = ref('300px')
@@ -169,6 +170,7 @@ watch(
 )
 
 async function loadFileContent(file: { name: string; path: string }) {
+	const token = ++loadToken
 	isLoading.value = true
 	try {
 		window.scrollTo(0, 0)
@@ -177,15 +179,18 @@ async function loadFileContent(file: { name: string; path: string }) {
 
 		if (isImageFile(extension)) {
 			const content = await ctx.readFileAsBlob(normalizedPath)
+			if (token !== loadToken) return
 			isEditingImage.value = true
 			imagePreview.value = content
 		} else {
 			isEditingImage.value = false
 			const content = await ctx.readFile(normalizedPath)
+			if (token !== loadToken) return
 			fileContent.value = content
 			originalContent.value = content
 		}
 	} catch (error) {
+		if (token !== loadToken) return
 		console.error('Error fetching file content:', error)
 		addNotification({
 			title: formatMessage(messages.failedToOpenTitle),
@@ -194,7 +199,7 @@ async function loadFileContent(file: { name: string; path: string }) {
 		})
 		emit('close')
 	} finally {
-		isLoading.value = false
+		if (token === loadToken) isLoading.value = false
 	}
 }
 
@@ -207,6 +212,8 @@ function revertChanges() {
 }
 
 function resetState() {
+	loadToken++
+	isLoading.value = false
 	fileContent.value = ''
 	originalContent.value = ''
 	isEditingImage.value = false
@@ -241,7 +248,7 @@ function onEditorInit(editor: Ace.Editor) {
 }
 
 async function saveFileContent(exit: boolean = false) {
-	if (!props.file) return
+	if (!props.file || isLoading.value || isEditingImage.value) return
 	if (isEditorReadOnly.value) return
 
 	try {

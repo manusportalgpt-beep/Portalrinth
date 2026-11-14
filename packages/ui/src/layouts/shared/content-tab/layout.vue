@@ -828,6 +828,7 @@ async function bulkToggleFreeze() {
 	freezing.value = true
 	try {
 		await ctx.bulkFreezeItems(items, frozen)
+		clearSelection()
 	} finally {
 		freezing.value = false
 	}

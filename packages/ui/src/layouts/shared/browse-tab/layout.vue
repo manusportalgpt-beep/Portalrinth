@@ -119,6 +119,27 @@ function cardInstallProgress(result: Labrinth.Search.v3.ResultSearchProject) {
 	return action ? (action.installProgress ?? null) : undefined
 }
 
+/**
+ * A card's buttons in drawing order. The «Remove» an installed card reveals
+ * sits on the side the card has room on: before «Installed» in a list row,
+ * after it on a grid tile, so it slides out to the right there.
+ */
+function cardActionsFor(result: Labrinth.Search.v3.ResultSearchProject) {
+	const actions = ctx.getCardActions?.(result, ctx.projectType.value) ?? []
+	if (ctx.effectiveLayout.value !== 'grid') return actions
+	return [
+		...actions.filter((action) => action.key !== 'remove'),
+		...actions.filter((action) => action.key === 'remove'),
+	]
+}
+
+function cardRevealClass(action: CardAction) {
+	if (action.key !== 'remove') return undefined
+	return ctx.effectiveLayout.value === 'grid'
+		? 'browse-card-reveal browse-card-reveal--right'
+		: 'browse-card-reveal browse-card-reveal--left'
+}
+
 function cardActionType(action: CardAction) {
 	if (action.type === 'transparent') return 'quiet'
 	if (action.type === 'outlined') return 'outlined'
@@ -380,35 +401,32 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 					<template v-if="ctx.getCardActions?.(result, ctx.projectType.value)?.length" #actions>
 						<div class="flex flex-col gap-1">
 							<div class="flex gap-2">
-							<template
-								v-for="action in ctx.getCardActions(result, ctx.projectType.value)"
-								:key="action.key"
-							>
-								<IconButton
-									v-if="action.circular"
-									v-tooltip="action.tooltip"
-									:type="cardActionType(action)"
-									:color="cardActionColor(action)"
-									:class="cardActionClass(action)"
-									:label="action.label || action.tooltip || action.key"
-									:disabled="action.disabled"
-									@click.stop="action.onClick"
-								>
-									<component :is="action.icon" :class="action.iconClass" />
-								</IconButton>
-								<Button
-									v-else
-									v-tooltip="action.tooltip"
-									:type="cardActionType(action)"
-									:color="cardActionColor(action)"
-									:class="cardActionClass(action)"
-									:disabled="action.disabled"
-									@click.stop="action.onClick"
-								>
-									<component :is="action.icon" :class="action.iconClass" />
-									{{ action.label }}
-								</Button>
-							</template>
+								<template v-for="action in cardActionsFor(result)" :key="action.key">
+									<IconButton
+										v-if="action.circular"
+										v-tooltip="action.tooltip"
+										:type="cardActionType(action)"
+										:color="cardActionColor(action)"
+										:class="[cardActionClass(action), cardRevealClass(action)]"
+										:label="action.label || action.tooltip || action.key"
+										:disabled="action.disabled"
+										@click.stop="action.onClick"
+									>
+										<component :is="action.icon" :class="action.iconClass" />
+									</IconButton>
+									<Button
+										v-else
+										v-tooltip="action.tooltip"
+										:type="cardActionType(action)"
+										:color="cardActionColor(action)"
+										:class="[cardActionClass(action), cardRevealClass(action)]"
+										:disabled="action.disabled"
+										@click.stop="action.onClick"
+									>
+										<component :is="action.icon" :class="action.iconClass" />
+										{{ action.label }}
+									</Button>
+								</template>
 							</div>
 							<div
 								v-if="cardInstallProgress(result) !== undefined"
@@ -476,39 +494,36 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 					<template v-if="ctx.getCardActions?.(result, ctx.projectType.value)?.length" #actions>
 						<div class="flex flex-col gap-1">
 							<div class="flex gap-2">
-							<CardSourcePicker
-								v-if="ctx.getCardSources?.(result)"
-								:sources="ctx.getCardSources(result)!"
-							/>
-							<template
-								v-for="action in ctx.getCardActions(result, ctx.projectType.value)"
-								:key="action.key"
-							>
-								<IconButton
-									v-if="action.circular"
-									v-tooltip="action.tooltip"
-									:type="cardActionType(action)"
-									:color="cardActionColor(action)"
-									:class="cardActionClass(action)"
-									:label="action.label || action.tooltip || action.key"
-									:disabled="action.disabled"
-									@click.stop="action.onClick"
-								>
-									<component :is="action.icon" :class="action.iconClass" />
-								</IconButton>
-								<Button
-									v-else
-									v-tooltip="action.tooltip"
-									:type="cardActionType(action)"
-									:color="cardActionColor(action)"
-									:class="cardActionClass(action)"
-									:disabled="action.disabled"
-									@click.stop="action.onClick"
-								>
-									<component :is="action.icon" :class="action.iconClass" />
-									{{ action.label }}
-								</Button>
-							</template>
+								<CardSourcePicker
+									v-if="ctx.getCardSources?.(result)"
+									:sources="ctx.getCardSources(result)!"
+								/>
+								<template v-for="action in cardActionsFor(result)" :key="action.key">
+									<IconButton
+										v-if="action.circular"
+										v-tooltip="action.tooltip"
+										:type="cardActionType(action)"
+										:color="cardActionColor(action)"
+										:class="[cardActionClass(action), cardRevealClass(action)]"
+										:label="action.label || action.tooltip || action.key"
+										:disabled="action.disabled"
+										@click.stop="action.onClick"
+									>
+										<component :is="action.icon" :class="action.iconClass" />
+									</IconButton>
+									<Button
+										v-else
+										v-tooltip="action.tooltip"
+										:type="cardActionType(action)"
+										:color="cardActionColor(action)"
+										:class="[cardActionClass(action), cardRevealClass(action)]"
+										:disabled="action.disabled"
+										@click.stop="action.onClick"
+									>
+										<component :is="action.icon" :class="action.iconClass" />
+										{{ action.label }}
+									</Button>
+								</template>
 							</div>
 							<div
 								v-if="cardInstallProgress(result) !== undefined"
@@ -557,6 +572,31 @@ function getProjectCardTags(result: Labrinth.Search.v3.ResultSearchProject, disp
 	<slot name="after" />
 </template>
 <style scoped>
+.browse-card-reveal {
+	animation: browse-card-reveal 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.browse-card-reveal--left {
+	--browse-card-reveal-from: 0.5rem;
+}
+
+.browse-card-reveal--right {
+	--browse-card-reveal-from: -0.5rem;
+}
+
+@keyframes browse-card-reveal {
+	from {
+		opacity: 0;
+		transform: translateX(var(--browse-card-reveal-from, 0));
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.browse-card-reveal {
+		animation: none;
+	}
+}
+
 .browse-card-progress {
 	flex: none;
 	height: 0.25rem;
