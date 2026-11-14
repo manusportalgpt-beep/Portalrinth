@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import {
 	ArrowLeftIcon,
+	BoxIcon,
 	CopyIcon,
+	DashboardIcon,
 	EditIcon,
+	FolderOpenIcon,
 	GlobeIcon,
 	PowerIcon,
 	RefreshCwIcon,
 	ServerStackIcon,
+	SettingsIcon,
+	TerminalSquareIcon,
+	UsersIcon,
 } from '@modrinth/assets'
 import {
 	Admonition,
@@ -74,15 +80,16 @@ watch(
 )
 
 const tabs = computed(() => [
-	{ id: 'dashboard' as const, label: formatMessage(messages.tabDashboard) },
-	{ id: 'console' as const, label: formatMessage(messages.tabConsole) },
-	{ id: 'players' as const, label: formatMessage(messages.tabPlayers) },
+	{ id: 'dashboard' as const, icon: DashboardIcon, label: formatMessage(messages.tabDashboard) },
+	{ id: 'console' as const, icon: TerminalSquareIcon, label: formatMessage(messages.tabConsole) },
+	{ id: 'players' as const, icon: UsersIcon, label: formatMessage(messages.tabPlayers) },
 	{
 		id: 'plugins' as const,
+		icon: BoxIcon,
 		label: formatMessage(contentMessages[server.value ? contentKind(server.value) : 'plugins']),
 	},
-	{ id: 'files' as const, label: formatMessage(messages.tabFiles) },
-	{ id: 'settings' as const, label: formatMessage(messages.tabSettings) },
+	{ id: 'files' as const, icon: FolderOpenIcon, label: formatMessage(messages.tabFiles) },
+	{ id: 'settings' as const, icon: SettingsIcon, label: formatMessage(messages.tabSettings) },
 ])
 
 const active = computed(() => (server.value ? isHostedActive(server.value.status) : false))
@@ -255,7 +262,8 @@ function back() {
 						:class="{ 'is-active': tab === item.id }"
 						@click="tab = item.id"
 					>
-						{{ item.label }}
+						<component :is="item.icon" aria-hidden="true" />
+						<span>{{ item.label }}</span>
 					</button>
 				</nav>
 
@@ -395,6 +403,9 @@ function back() {
 	backdrop-filter: blur(14px) saturate(1.2);
 
 	button {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
 		flex-shrink: 0;
 		padding: 0.375rem 0.875rem;
 		border: none;
@@ -408,8 +419,19 @@ function back() {
 			color 0.15s ease,
 			background-color 0.15s ease;
 
+		svg {
+			width: 1rem;
+			height: 1rem;
+			flex-shrink: 0;
+			opacity: 0.85;
+		}
+
 		&:hover {
 			color: var(--color-contrast);
+		}
+
+		&.is-active svg {
+			opacity: 1;
 		}
 
 		&.is-active {

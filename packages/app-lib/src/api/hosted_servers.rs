@@ -1048,6 +1048,7 @@ async fn launch(id: &str) -> crate::Result<()> {
     let java = console_java(resolve_java(&server).await?);
     push_log(id, format!("Java: {}", java.display()));
 
+    stop_leftovers(id, &dir).await;
     let mut child = spawn_server(id, &server, &dir, &java)?;
     let id = id.to_string();
     tokio::spawn(async move {
@@ -1071,6 +1072,7 @@ async fn launch(id: &str) -> crate::Result<()> {
             if !on_exit(&id, status).await {
                 break;
             }
+            stop_leftovers(&id, &dir).await;
             match spawn_server(&id, &server, &dir, &java) {
                 Ok(next) => child = next,
                 Err(error) => {
@@ -1082,6 +1084,73 @@ async fn launch(id: &str) -> crate::Result<()> {
         }
     });
     Ok(())
+}
+
+/// Ends Java servers an earlier launcher run left in this folder: they
+/// keep `session.lock` and the new server cannot open its world.
+async fn stop_leftovers(id: &str, dir: &Path) {
+    use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
+    let dir = tokio::fs::canonicalize(dir)
+        .await
+        .unwrap_or_else(|_| dir.to_path_buf());
+    let key = dir_key(&dir);
+    let own = std::process::id();
+    let mut system = System::new();
+    system.refresh_processes_specifics(
+        ProcessesToUpdate::All,
+        true,
+        ProcessRefreshKind::nothing().with_cwd(UpdateKind::Always),
+    );
+    let leftovers = system
+        .processes()
+        .iter()
+        .filter(|(pid, process)| {
+            pid.as_u32() != own
+                && process
+                    .name()
+                    .to_string_lossy()
+                    .to_lowercase()
+                    .contains("java")
+                && process.cwd().is_some_and(|cwd| dir_key(cwd) == key)
+        })
+        .map(|(pid, _)| *pid)
+        .collect::<Vec<_>>();
+    if leftovers.is_empty() {
+        return;
+    }
+    for pid in &leftovers {
+        if let Some(process) = system.process(*pid) {
+            push_log(
+                id,
+                format!("Stopping a server left running earlier (PID {pid})"),
+            );
+            let _ = process.kill();
+        }
+    }
+    for _ in 0..25 {
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        system.refresh_processes_specifics(
+            ProcessesToUpdate::Some(&leftovers),
+            true,
+            ProcessRefreshKind::nothing(),
+        );
+        if leftovers.iter().all(|pid| system.process(*pid).is_none()) {
+            break;
+        }
+    }
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+}
+
+/// A folder path that compares equal however the OS spelled it.
+fn dir_key(path: &Path) -> String {
+    let text = path.to_string_lossy();
+    let text = text.strip_prefix(r"\\?\").unwrap_or(&text);
+    let text = text.trim_end_matches(['\\', '/']);
+    if cfg!(windows) {
+        text.replace('/', "\\").to_lowercase()
+    } else {
+        text.to_string()
+    }
 }
 
 /// Starts the server's Java and wires its console up.
