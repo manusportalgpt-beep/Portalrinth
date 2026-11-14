@@ -34,6 +34,7 @@ type MirrorItem = {
 	label: string
 	svg: string | null
 	img: string | null
+	badge: boolean
 	active: boolean
 	el: HTMLElement
 }
@@ -120,6 +121,49 @@ function groupOf(el: HTMLElement, root: HTMLElement) {
 	return last
 }
 
+/**
+ * The copy's gradients and masks get ids of their own: the originals sit in the
+ * folded panel, and a fill pointing into a hidden subtree is drawn as nothing,
+ * which left a profile's badges as grey silhouettes.
+ */
+function copySvg(icon: SVGElement, key: number) {
+	const copy = icon.cloneNode(true) as SVGElement
+	const renamed = new Map<string, string>()
+	for (const node of copy.querySelectorAll<Element>('[id]')) {
+		const next = `${node.id}-rail${key}`
+		renamed.set(node.id, next)
+		node.id = next
+	}
+	if (renamed.size === 0) return copy.outerHTML
+	const pattern = /url\(\s*['"]?#([^'")\s]+)['"]?\s*\)/g
+	for (const node of [copy, ...copy.querySelectorAll<Element>('*')]) {
+		for (const attr of [...node.attributes]) {
+			if (attr.name === 'id') continue
+			let value = attr.value
+			if (value.includes('url(')) {
+				value = value.replace(pattern, (match, id: string) =>
+					renamed.has(id) ? `url(#${renamed.get(id)})` : match,
+				)
+			} else if ((attr.name === 'href' || attr.name === 'xlink:href') && value.startsWith('#')) {
+				const id = renamed.get(value.slice(1))
+				if (id) value = `#${id}`
+			}
+			if (value !== attr.value) node.setAttribute(attr.name, value)
+		}
+	}
+	return copy.outerHTML
+}
+
+/** A picture of its own (a profile badge), not an icon drawn in the text colour. */
+function isBadge(el: HTMLElement, icon: SVGElement | null) {
+	if (!icon || el.getAttribute('role') !== 'img') return false
+	return icon.querySelector('[fill^="url("], [fill^="#"], linearGradient, radialGradient') !== null
+}
+
+function iconClass(item: MirrorItem) {
+	return item.badge ? 'rail-mirror__icon rail-mirror__icon--badge' : 'rail-mirror__icon'
+}
+
 function collect() {
 	frame = 0
 	const root = target()
@@ -178,11 +222,13 @@ function collect() {
 		if (!label) continue
 		const group = groupOf(el, root)
 		const list = byGroup.get(group) ?? []
+		const id = idOf(el)
 		list.push({
-			id: idOf(el),
+			id,
 			label,
-			svg: icon ? icon.outerHTML : null,
+			svg: icon ? copySvg(icon, id) : null,
 			img: img?.src ?? null,
+			badge: isBadge(el, icon),
 			active: isActive(el),
 			el,
 		})
@@ -314,7 +360,7 @@ function resetFilters() {
 					@click="press(item)"
 				>
 					<!-- eslint-disable-next-line vue/no-v-html -->
-					<span v-if="item.svg" class="rail-mirror__icon" v-html="item.svg" />
+					<span v-if="item.svg" :class="iconClass(item)" v-html="item.svg" />
 					<img
 						v-else-if="item.img"
 						:src="item.img"
@@ -440,6 +486,12 @@ function resetFilters() {
 .rail-mirror__icon :deep(svg) {
 	width: 100%;
 	height: 100%;
+}
+
+.rail-mirror__icon--badge {
+	width: 2rem;
+	height: 2rem;
+	filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
 }
 
 .rail-mirror__img {
