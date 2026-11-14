@@ -1,12 +1,13 @@
-name: Portalrinth Windows build
+name: PortalrinthS
 
 # Builds one Windows x64 installer and leaves it in the run's artifacts.
 #
 # The release workflows already build Windows, but they do it as a side effect
 # of a tagged release: they need the updater signing key, they create a release
 # (draft or not), and they run for all three platforms. None of that is wanted
-# when the question is simply "what does the current `main` look like on
-# Windows", which is what this is for.
+# when the question is simply "what does the current `PortalrinthS` look like
+# on Windows", which is what this is for. `PortalrinthS` is `main` plus
+# Self-Hosted and LAN; only this branch builds it.
 #
 # Because nothing is signed, the installer cannot update itself and is not
 # published anywhere — it is a build to try, not a release. Use
@@ -21,13 +22,13 @@ name: Portalrinth Windows build
 #
 # HOW TO RUN IT
 #   Push the branch this workflow watches:
-#     git checkout -b windows-build main
-#     git push origin windows-build
+#     git checkout PortalrinthS
+#     git push origin PortalrinthS
 #   or press "Run workflow" on the Actions page.
 
 on:
   push:
-    branches: [windows-build]
+    branches: [PortalrinthS]
   workflow_dispatch:
 
 concurrency:
