@@ -105,6 +105,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Releases ship from main only. PortalrinthS is a private build for
+      # testing among friends and must never reach GitHub Releases or the
+      # updater, so a tag on any commit main does not contain stops here.
+      - name: Only from main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA=$(gh api "repos/$REPO/commits/$TAG" --jq .sha)
+          STATUS=$(gh api "repos/$REPO/compare/main...$SHA" --jq .status)
+          if [ "$STATUS" != "identical" ] && [ "$STATUS" != "behind" ]; then
+            echo "::error::$TAG ($SHA) is not on main; releases ship from main only"
+            exit 1
+          fi
+
       - name: Plan
         id: plan
         env:
