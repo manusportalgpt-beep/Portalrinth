@@ -105,13 +105,12 @@
 				v-model="selectedLoader"
 				:items="effectiveLoaders"
 				:format-label="formatLoaderLabel"
-				:format-icon="getLoaderIcon"
 				:never-empty="false"
 			/>
 		</div>
 
-		<!-- Game version (Bedrock follows the Microsoft Store build, nothing to pick) -->
-		<div v-if="!ctx.isBedrock.value" class="flex flex-col gap-2">
+		<!-- Game version -->
+		<div class="flex flex-col gap-2">
 			<span class="font-semibold text-contrast">{{
 				formatMessage(commonMessages.gameVersionLabel)
 			}}</span>
@@ -219,7 +218,6 @@ import type { Paper } from '@modrinth/api-client'
 import {
 	EyeIcon,
 	EyeOffIcon,
-	getLoaderIcon,
 	PaletteIcon,
 	RefreshCwIcon,
 	SpinnerIcon,
@@ -353,8 +351,7 @@ const effectiveLoaders = computed(() => {
 		return ctx.projectInstall.value.compatibleLoaders
 	}
 	if (ctx.flowType === 'instance') {
-		const loaders = ['vanilla', ...ctx.availableLoaders.filter((l) => l !== 'vanilla')]
-		return ctx.bedrockAvailable.value ? [...loaders, 'bedrock'] : loaders
+		return ['vanilla', ...ctx.availableLoaders.filter((l) => l !== 'vanilla')]
 	}
 	if (ctx.flowType === 'server-onboarding' || ctx.flowType === 'reset-server') {
 		return ctx.availableLoaders.filter((l) => l !== 'vanilla')
@@ -625,7 +622,7 @@ function getLoaderVersionsForGameVersion(
 watch(
 	() => selectedLoader.value,
 	async (loader) => {
-		if (ctx.projectInstall.value) return
+		if (ctx.projectInstall.value && ctx.flowType === 'instance') return
 		await fetchLoaderMetadata(loader)
 	},
 	{ immediate: true },
@@ -641,8 +638,8 @@ watch(
 		loaderVersionsData.value = []
 		selectedLoaderVersion.value = null
 
-		if (ctx.projectInstall.value) return
-		if (!loader || !gameVersion || loader === 'vanilla' || loader === 'bedrock') return
+		if (ctx.projectInstall.value && ctx.flowType === 'instance') return
+		if (!loader || !gameVersion || loader === 'vanilla') return
 
 		loaderVersionsLoading.value = true
 
@@ -686,6 +683,7 @@ watch(
 		// Auto-select based on loaderVersionType
 		autoSelectLoaderVersion()
 	},
+	{ immediate: true },
 )
 
 watch(

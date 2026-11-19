@@ -3,13 +3,13 @@ use crate::event::InstancePayloadType;
 use crate::event::emit::emit_instance;
 use crate::install::{
     InstallJobSnapshot, SharedInstanceExternalFileData,
-    SharedInstanceInstallData,
+    SharedInstanceInstallData, SharedInstanceRemovedFile,
 };
 use crate::state::instances::{InstanceLink, SharedInstanceAttachment};
 use crate::state::{
     AppliedContentSetPatch, CacheBehaviour, CachedEntry, ContentSetSyncStatus,
-    ContentSourceKind, EditInstance, ModLoader, ModrinthCredentials,
-    ProjectType, SharedInstanceRole, State,
+    ContentSourceKind, EditInstance, IconConfig, ModLoader,
+    ModrinthCredentials, ProjectType, SharedInstanceRole, State,
 };
 use crate::util::fetch::{
     INSECURE_NO_TIMEOUT_REQWEST_CLIENT, INSECURE_REQWEST_CLIENT,
@@ -37,8 +37,11 @@ pub(crate) const CONFIG_BUNDLE_FILE_TYPE: &str = "configs";
 pub(crate) const CONFIG_FILE_TYPE: &str = "config";
 pub(crate) const CONFIG_SYNC_ENABLED: bool = true;
 pub(crate) const CONFIG_DIRECTORY: &str = "config";
-pub(crate) const MAX_SHARED_FILES: usize = 4096;
-pub(crate) const MAX_SHARED_FILES_TOTAL_SIZE: u64 = 500 * 1024 * 1024;
+/// Number of shared files in a version, when publishing and downloading.
+pub(crate) const MAX_SHARED_FILES: usize = 16384;
+/// Total size of a version's shared files when publishing and downloading,
+/// matching the backend's per-version external file limit.
+pub(crate) const MAX_SHARED_FILES_TOTAL_SIZE: u64 = 2 * 1024 * 1024 * 1024;
 pub(crate) const MAX_CONFIG_BUNDLE_ENTRIES: usize = 4096;
 pub(crate) const MAX_CONFIG_BUNDLE_FILE_SIZE: u64 = 512 * 1024 * 1024;
 pub(crate) const MAX_CONFIG_BUNDLE_TOTAL_SIZE: u64 = 512 * 1024 * 1024;
@@ -125,8 +128,7 @@ pub(super) fn is_shareable_directory(path: &str) -> bool {
 }
 
 fn is_shareable_path(path: &str) -> bool {
-    !path.split('/').any(|part| part.starts_with('.'))
-        && super::export_mrpack::is_exportable_path(path)
+    super::export_mrpack::is_exportable_path(path)
 }
 
 fn is_content_folder(path: &str) -> bool {
@@ -177,19 +179,31 @@ pub(crate) fn read_bounded_config_bundle_entry(
 mod client;
 mod content;
 mod diff;
+mod icons;
 mod install;
 mod invites;
+mod library;
 mod publish;
+mod relink;
 mod report;
 mod types;
 
-pub(crate) use self::install::check_shared_instance_availability_before_launch;
+pub(crate) use self::content::shared_modpack_files;
+pub use self::icons::cache_shared_instance_server_icon;
+pub(crate) use self::install::{
+    check_shared_instance_availability_before_launch,
+    shared_instance_update_data,
+};
 pub(crate) use self::publish::sync_shared_instance_icon;
 
 pub use self::install::{
     accept_shared_instance_invite_for_install,
-    get_shared_instance_install_preview, get_shared_instance_update_preview,
-    install_shared_instance, update_shared_instance,
+    dismiss_shared_instance_restored_notice,
+    get_shared_instance_install_preview,
+    get_shared_instance_invite_install_preview,
+    get_shared_instance_update_preview, install_shared_instance,
+    refresh_shared_instance_lock, refresh_shared_instance_locks,
+    update_shared_instance,
 };
 pub use self::invites::{
     accept_pending_shared_instance_invite, create_shared_instance_invite_link,
@@ -197,16 +211,25 @@ pub use self::invites::{
     get_shared_instance_users, invite_shared_instance_users,
     remove_shared_instance_users, revoke_shared_instance_invite,
 };
+pub use self::library::{
+    cache_shared_instance_library, get_cached_shared_instance_library,
+};
 pub use self::publish::{
-    get_shared_instance_publish_preview, publish_shared_instance,
-    unlink_shared_instance, unpublish_shared_instance,
+    get_shared_instance_publish_preview, leave_remote_shared_instance,
+    publish_shared_instance, unlink_shared_instance,
+    unpublish_remote_shared_instance, unpublish_shared_instance,
+};
+pub use self::relink::{
+    get_shared_instance_relink_preview, relink_shared_instance,
 };
 pub use self::report::get_shared_instance_publish_support_details;
 pub use self::types::{
     SharedInstanceExternalFilePreview, SharedInstanceInstallPreview,
-    SharedInstanceInvite, SharedInstanceInviteInstallPreview,
-    SharedInstanceInviteLink, SharedInstanceJoinType,
+    SharedInstanceInvite, SharedInstanceInviteCreator,
+    SharedInstanceInviteInstallPreview, SharedInstanceInviteLink,
+    SharedInstanceJoinType, SharedInstanceLockStatus,
     SharedInstancePublishFile, SharedInstancePublishPreview,
+    SharedInstanceRelinkBlocker, SharedInstanceRelinkPreview,
     SharedInstanceUpdateDiff, SharedInstanceUpdateDiffType,
     SharedInstanceUpdatePreview, SharedInstanceUser, SharedInstanceUsers,
 };

@@ -14,7 +14,7 @@ const managedSourceKinds = new Set([
 export function useManagedContentPolicy(instance: Ref<GameInstance>) {
 	const { formatMessage } = useVIntl()
 	const isManagedModpack = computed(() => instance.value.shared_instance?.role === 'member')
-	const isQuarantined = computed(() => instance.value.quarantined)
+	const isContentLocked = computed(() => instance.value.content_locked)
 	const canUnpublish = computed(() => instance.value.shared_instance?.role === 'owner')
 	const canUnlink = computed(() => instance.value.shared_instance?.role === 'member')
 	const managedModpackWarning = computed(() => ({
@@ -25,7 +25,7 @@ export function useManagedContentPolicy(instance: Ref<GameInstance>) {
 
 	function isManagedContent(item: ContentItem) {
 		return (
-			isQuarantined.value ||
+			isContentLocked.value ||
 			(isManagedModpack.value && !!item.source_kind && managedSourceKinds.has(item.source_kind))
 		)
 	}
@@ -70,7 +70,7 @@ export function useManagedContentPolicy(instance: Ref<GameInstance>) {
 
 	return {
 		isManagedModpack,
-		isQuarantined,
+		isContentLocked,
 		canUnpublish,
 		canUnlink,
 		managedModpackWarning,

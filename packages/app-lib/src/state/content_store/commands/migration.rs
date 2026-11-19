@@ -116,8 +116,12 @@ pub(crate) async fn migrate(state: &State) -> crate::Result<()> {
             store.release("rollback", &owner).await?;
         }
     }
-    store.remove_abandoned_staging().await?;
-    store.recover_unregistered_files().await?;
+    if let Err(error) = store.remove_abandoned_staging().await {
+        tracing::warn!("Abandoned staging cleanup deferred: {error}");
+    }
+    if let Err(error) = store.recover_unregistered_files().await {
+        tracing::warn!("Unregistered content recovery deferred: {error}");
+    }
     Ok(())
 }
 
@@ -208,7 +212,6 @@ async fn migrate_file_copy(
     let prepared = prepare_copy(&original_path).await?;
     let copy_ms = started.elapsed().as_millis() as u64;
     let waiting = Instant::now();
-    let _turn = store.legacy_migration_priority.read().await;
     let _instance = state.instance_locks.lock_content(&instance.id).await;
     let _files = store.files_lock.lock().await;
     let lock_wait_ms = waiting.elapsed().as_millis() as u64;
@@ -342,9 +345,9 @@ fn replace_file_copy(
     temporary: tempfile::TempPath,
     destination: &std::path::Path,
 ) -> std::io::Result<()> {
-    let mut temporary = tempfile::TempPath::from_path(
+    let mut temporary = tempfile::TempPath::try_from_path(
         temporary.keep().map_err(|error| error.error)?,
-    );
+    )?;
     #[cfg(windows)]
     let original = {
         use std::os::windows::fs::OpenOptionsExt;

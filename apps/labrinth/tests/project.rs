@@ -146,7 +146,7 @@ async fn project_redirect_cache_respects_visibility() {
             Some(ADMIN_USER_ID_PARSED),
         ] {
             let user = if let Some(user_id) = user_id {
-                Some(labrinth::models::users::User::from(
+                let user = labrinth::models::users::User::from(
                     labrinth::database::models::DBUser::get_id(
                         labrinth::database::models::DBUserId(user_id),
                         &*env.db.pool,
@@ -155,7 +155,9 @@ async fn project_redirect_cache_respects_visibility() {
                     .await
                     .unwrap()
                     .unwrap(),
-                ))
+                );
+                let scopes = Scopes::staff_for_role(&user.role);
+                Some(labrinth::auth::UserWithScopes { user, scopes })
             } else {
                 None
             };
@@ -381,7 +383,7 @@ async fn project_redirect_accepts_literal_and_encoded_plus() {
             r#"INSERT INTO project_redirects (slug, target_project_id)
 			VALUES ('redirect+alias', {target}), ('redirect%2balias', {percent_target})"#
         );
-        sqlx::raw_sql(&fixture_sql)
+        sqlx::raw_sql(sqlx::AssertSqlSafe(fixture_sql))
             .execute(&env.db.pool)
             .await
             .unwrap();
@@ -464,7 +466,8 @@ async fn project_redirect_cache_preserves_case_sensitive_ids() {
             r#"INSERT INTO project_redirects (slug, target_project_id)
 			VALUES ('{alias}', {target})"#
         );
-        sqlx::raw_sql(&fixture_sql)
+        assert!(alias.bytes().all(|byte| byte.is_ascii_alphanumeric()));
+        sqlx::raw_sql(sqlx::AssertSqlSafe(fixture_sql))
             .execute(&env.db.pool)
             .await
             .unwrap();

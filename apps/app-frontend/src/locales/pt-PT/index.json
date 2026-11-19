@@ -17,9 +17,6 @@
   "app.action-bar.install.copied-details": {
     "message": "Copiado"
   },
-  "app.action-bar.install.copy-details": {
-    "message": "Copiar detalhes"
-  },
   "app.action-bar.install.dismiss": {
     "message": "Dispensar"
   },
@@ -329,17 +326,11 @@
   "app.download-manager.duplicated-instance": {
     "message": "Instância duplicada"
   },
-  "app.download-manager.empty": {
-    "message": "Não há tarefas de instalação"
-  },
   "app.download-manager.estimated-rate": {
     "message": "Velocidade de transferência estimada"
   },
   "app.download-manager.eta": {
     "message": "Tempo estimado restante para este download"
-  },
-  "app.download-manager.hide": {
-    "message": "Ocultar tarefas de instalação"
   },
   "app.download-manager.imported-instance": {
     "message": "Instância importada"
@@ -374,17 +365,11 @@
   "app.download-manager.shared-instance-update": {
     "message": "Atualização da instância compartilhada"
   },
-  "app.download-manager.show": {
-    "message": "Mostrar tarefas de instalação"
-  },
   "app.download-manager.tasks": {
     "message": "Tarefas"
   },
   "app.download-manager.title": {
     "message": "Gestor de transferências"
-  },
-  "app.download-manager.verifying": {
-    "message": "A verificar"
   },
   "app.error.state-init.open-backups-folder": {
     "message": "Abrir a pasta de cópias de segurança"
@@ -812,26 +797,17 @@
   "app.java-detection.columns.path": {
     "message": "Caminho"
   },
-  "app.java-selector.already-installed": {
-    "message": "Já instalado"
-  },
   "app.java-selector.browse": {
     "message": "Navegar"
   },
   "app.java-selector.detect": {
     "message": "Detetar"
   },
-  "app.java-selector.install-recommended": {
-    "message": "Recomenda-se a instalação"
-  },
   "app.java-selector.installing": {
     "message": "A instalar..."
   },
   "app.java-selector.path.placeholder": {
     "message": "/caminho/para/java"
-  },
-  "app.java-selector.test-installation": {
-    "message": "Testar a instalação do Java"
   },
   "app.library.actions.label": {
     "message": "Ações da biblioteca"
@@ -1160,12 +1136,6 @@
   "app.settings.resource-management.app-database-backups.title": {
     "message": "Cópias de segurança da base de dados das aplicações"
   },
-  "app.settings.resource-management.app-directory.browse": {
-    "message": "Procurar um diretório de aplicações"
-  },
-  "app.settings.resource-management.app-directory.description": {
-    "message": "Local onde a aplicação Modrinth armazena instâncias e outros ficheiros. As alterações entram em vigor após o reinício da aplicação."
-  },
   "app.settings.resource-management.app-directory.title": {
     "message": "Diretório de aplicações"
   },
@@ -1207,12 +1177,6 @@
   },
   "app.settings.resource-management.store.nothing-to-clear": {
     "message": "Não há conteúdo não utilizado para eliminar."
-  },
-  "app.settings.resource-management.store.repair": {
-    "message": "Verificar e reparar"
-  },
-  "app.settings.resource-management.store.repairing": {
-    "message": "A verificar e a reparar…"
   },
   "app.settings.resource-management.store.shared.label": {
     "message": "Partilhado"
@@ -1357,12 +1321,6 @@
   },
   "app.skins.title": {
     "message": "Seletor de cor de pele"
-  },
-  "app.sync-instances-update.choose-source.all": {
-    "message": "Escolha de que instância pretende copiar as definições do jogo, os pacotes de recursos, o histórico de comandos, as barras de atalhos do modo criativo e os servidores multijogador. Estas definições são utilizadas apenas para a sincronização inicial e, posteriormente, poderá editá-las a partir de qualquer instância."
-  },
-  "app.sync-instances-update.description": {
-    "message": "Agora já podes sincronizar opções como definições do jogo, servidores, pacotes de recursos e muito mais entre as tuas instâncias, para que tudo permaneça igual sempre que jogares!"
   },
   "app.synced-content.delete.override-description": {
     "message": "Pode removê-lo apenas desta instância ou de todas as instâncias sincronizadas. Se o remover apenas desta instância, as substituições serão ativadas e esta instância deixará de receber as alterações sincronizadas para estes tipos de conteúdo."
@@ -1535,12 +1493,6 @@
   "instance.server-modal.resource-pack": {
     "message": "Pacote de recursos"
   },
-  "instance.settings.sharing.active-invites.actions": {
-    "message": "Ações"
-  },
-  "instance.settings.sharing.active-invites.uses": {
-    "message": "Usos"
-  },
   "instance.settings.tabs.general": {
     "message": "Geral"
   },
@@ -1678,9 +1630,6 @@
   },
   "instance.settings.tabs.window.width.enter": {
     "message": "Inserir largura..."
-  },
-  "instance.shared-instance.publish-review.added-label": {
-    "message": "Adicionado"
   },
   "instance.worlds.a_minecraft_server": {
     "message": "Um Servidor de Minecraft"

@@ -55,7 +55,8 @@
 					<Avatar :src="displayedAvatarUrl" size="md" circle :alt="auth.user.value.username" />
 					<div class="flex flex-col gap-2">
 						<FileButton
-							:max-size="20971520"
+							:disabled="!globals?.max_user_icon_size"
+							:max-size="globals?.max_user_icon_size"
 							:prompt="formatMessage(commonMessages.uploadImageButton)"
 							accept="image/png,image/jpeg,image/gif,image/webp"
 							size="md"
@@ -89,24 +90,41 @@
 				<h2 class="m-0 text-lg font-semibold text-contrast">
 					{{ formatMessage(commonMessages.usernameLabel) }}
 				</h2>
-				<div class="flex items-center gap-2">
-					<Input
-						id="username-field"
-						v-model="current.username"
-						class="w-full max-w-md"
-						:error="current.username.length > 39"
-					/>
-					<span
-						v-if="current.username.length >= 30"
-						class="shrink-0 text-secondary"
-						:class="{ 'text-red': current.username.length > 39 }"
+				<div v-if="changeUsername" class="flex flex-wrap gap-2">
+					<Button native-type="button" size="md" @click="changeUsername()">
+						<UserPenIcon aria-hidden="true" />
+						{{ formatMessage(messages.changeUsername) }}
+					</Button>
+					<Button
+						native-type="button"
+						size="md"
+						:disabled="refreshing || refreshCooldown || hasChanges"
+						@click="refreshProfile"
 					>
-						{{ current.username.length }}/39
-					</span>
+						<RefreshCwIcon aria-hidden="true" />
+						{{ formatMessage(messages.refreshProfile) }}
+					</Button>
 				</div>
-				<p class="m-0 text-secondary">
-					{{ formatMessage(messages.usernameDescription) }}
-				</p>
+				<template v-else>
+					<div class="flex items-center gap-2">
+						<Input
+							id="username-field"
+							v-model="current.username"
+							class="w-full max-w-md"
+							:error="current.username.length > 39"
+						/>
+						<span
+							v-if="current.username.length >= 30"
+							class="shrink-0 text-secondary"
+							:class="{ 'text-red': current.username.length > 39 }"
+						>
+							{{ current.username.length }}/39
+						</span>
+					</div>
+					<p class="m-0 text-secondary">
+						{{ formatMessage(messages.usernameDescription) }}
+					</p>
+				</template>
 			</div>
 
 			<div class="flex flex-col gap-2.5">
@@ -126,7 +144,15 @@
 </template>
 
 <script setup lang="ts">
-import { LogInIcon, ThinkingRinthbot, TrashIcon, UndoIcon, UploadIcon } from '@modrinth/assets'
+import {
+	LogInIcon,
+	RefreshCwIcon,
+	ThinkingRinthbot,
+	TrashIcon,
+	UndoIcon,
+	UploadIcon,
+	UserPenIcon,
+} from '@modrinth/assets'
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 
@@ -136,7 +162,7 @@ import EmptyState from '#ui/components/base/EmptyState.vue'
 import Input from '#ui/components/base/inputs/Input.vue'
 import Textarea from '#ui/components/base/inputs/Textarea.vue'
 import IntlFormatted from '#ui/components/base/IntlFormatted.vue'
-import { defineMessages, useVIntl } from '#ui/composables'
+import { defineMessages, useGlobals, useVIntl } from '#ui/composables'
 import { type AuthUser, injectAuth, injectNotificationManager } from '#ui/providers'
 import { commonMessages } from '#ui/utils'
 
@@ -145,6 +171,8 @@ type ProfileFields = {
 	bio: string
 }
 
+const { data: globals } = useGlobals()
+
 const props = withDefaults(
 	defineProps<{
 		patchUser: (userId: string, patch: Partial<ProfileFields>) => Promise<void>
@@ -152,6 +180,7 @@ const props = withDefaults(
 		deleteAvatar: (userId: string) => Promise<void>
 		getAuthenticatedUser: () => Promise<AuthUser>
 		disclaimerPosition?: 'top' | 'bottom'
+		changeUsername?: () => void
 	}>(),
 	{
 		disclaimerPosition: 'top',
@@ -165,14 +194,6 @@ const auth = injectAuth()
 const notificationManager = injectNotificationManager()
 const { formatMessage } = useVIntl()
 
-/** Matches the cap Modrinth enforces on `PATCH /user/:id/icon`. */
-const MAX_AVATAR_BYTES = 524288
-/** Generous enough to stay sharp — the server rescales to 96px anyway. */
-const MAX_AVATAR_DIMENSION = 512
-/** Image formats the API will accept an extension for. */
-const UPLOADABLE_EXTENSIONS = new Set(['png', 'jpeg', 'jpg', 'gif', 'webp', 'bmp'])
-const RECOMPRESS_QUALITIES = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4]
-
 const activeUserId = ref<string | null>(null)
 const original = ref<ProfileFields>({ username: '', bio: '' })
 const current = ref<ProfileFields>({ username: '', bio: '' })
@@ -181,6 +202,9 @@ const avatarFile = shallowRef<File | null>(null)
 const previewImageUrl = ref<string | null>(null)
 const pendingAvatarDeletion = ref(false)
 const saving = ref(false)
+const refreshing = ref(false)
+const refreshCooldown = ref(false)
+let refreshCooldownTimer: ReturnType<typeof setTimeout> | undefined
 
 const displayedAvatarUrl = computed(() => {
 	if (previewImageUrl.value) return previewImageUrl.value
@@ -200,7 +224,7 @@ const modifiedState = computed(() => ({
 }))
 const hasChanges = computed(
 	() =>
-		current.value.username !== original.value.username ||
+		(!props.changeUsername && current.value.username !== original.value.username) ||
 		current.value.bio !== original.value.bio ||
 		Boolean(avatarFile.value || pendingAvatarDeletion.value),
 )
@@ -257,6 +281,38 @@ function resetAvatar(): void {
 	pendingAvatarDeletion.value = false
 }
 
+function startRefreshCooldown(): void {
+	refreshCooldown.value = true
+	clearTimeout(refreshCooldownTimer)
+	refreshCooldownTimer = setTimeout(() => {
+		refreshCooldown.value = false
+	}, 30_000)
+}
+
+async function refreshProfile(): Promise<void> {
+	if (refreshing.value || refreshCooldown.value || saving.value || hasChanges.value) {
+		return
+	}
+	refreshing.value = true
+	try {
+		const user = await props.getAuthenticatedUser()
+		auth.user.value = user
+		syncFromUser(user)
+		startRefreshCooldown()
+	} catch (error) {
+		if (error instanceof Error && error.name === 'ReauthCancelled') {
+			return
+		}
+		notificationManager.addNotification({
+			type: 'error',
+			title: formatMessage(messages.saveError),
+			text: formatMessage(messages.saveErrorDescription),
+		})
+	} finally {
+		refreshing.value = false
+	}
+}
+
 function reset(): void {
 	current.value = { ...original.value }
 	resetAvatar()
@@ -276,53 +332,6 @@ function handleProfileLinkClick(
 	}
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null> {
-	return new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', quality))
-}
-
-/**
- * Returns the bytes to upload for the picked file.
- *
- * Anything already small enough and in a format the API knows goes up as-is.
- * Everything else is rescaled and re-encoded until it fits, so an ordinary
- * phone photo can be used as an avatar instead of being rejected — the server
- * scales the icon down to 96px regardless of what it receives.
- */
-async function prepareAvatar(file: File): Promise<{ blob: Blob; extension: string }> {
-	const nativeExtension = file.type.split('/').at(-1)?.toLowerCase()
-
-	if (
-		file.size <= MAX_AVATAR_BYTES &&
-		nativeExtension &&
-		UPLOADABLE_EXTENSIONS.has(nativeExtension)
-	) {
-		return { blob: file, extension: nativeExtension }
-	}
-
-	const bitmap = await createImageBitmap(file)
-	try {
-		const scale = Math.min(1, MAX_AVATAR_DIMENSION / Math.max(bitmap.width, bitmap.height))
-		const canvas = document.createElement('canvas')
-		canvas.width = Math.max(1, Math.round(bitmap.width * scale))
-		canvas.height = Math.max(1, Math.round(bitmap.height * scale))
-
-		const context = canvas.getContext('2d')
-		if (!context) throw new Error('Could not prepare the image for upload.')
-		context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-
-		for (const quality of RECOMPRESS_QUALITIES) {
-			const blob = await canvasToBlob(canvas, quality)
-			if (blob && blob.size <= MAX_AVATAR_BYTES) {
-				return { blob, extension: 'webp' }
-			}
-		}
-
-		throw new Error('The selected image could not be compressed enough to upload.')
-	} finally {
-		bitmap.close()
-	}
-}
-
 async function save(): Promise<void> {
 	const user = auth.user.value
 	if (!user || saving.value) return
@@ -330,7 +339,7 @@ async function save(): Promise<void> {
 	saving.value = true
 	try {
 		const patch: Partial<ProfileFields> = {}
-		if (current.value.username !== original.value.username) {
+		if (!props.changeUsername && current.value.username !== original.value.username) {
 			patch.username = current.value.username
 		}
 		if (current.value.bio !== original.value.bio) {
@@ -343,31 +352,32 @@ async function save(): Promise<void> {
 		if (pendingAvatarDeletion.value) {
 			await props.deleteAvatar(user.id)
 		} else if (avatarFile.value) {
-			const { blob, extension } = await prepareAvatar(avatarFile.value)
-			await props.changeAvatar(user.id, blob, extension)
+			const extension = avatarFile.value.type.split('/').at(-1)
+			if (!extension) throw new Error('The selected image does not have a valid file type.')
+			await props.changeAvatar(user.id, avatarFile.value, extension)
 		}
 
 		const refreshedUser = await props.getAuthenticatedUser()
 		auth.user.value = refreshedUser
 		syncFromUser(refreshedUser)
 	} catch (error) {
-		// Carry the underlying reason through: without it every failure —
-		// oversized image, rejected username, dropped connection — looked
-		// identical and left nothing to act on.
-		const reason = error instanceof Error ? error.message : String(error)
+		if (error instanceof Error && error.name === 'ReauthCancelled') {
+			return
+		}
 		notificationManager.addNotification({
 			type: 'error',
 			title: formatMessage(messages.saveError),
-			text: reason
-				? `${formatMessage(messages.saveErrorDescription)} ${reason}`
-				: formatMessage(messages.saveErrorDescription),
+			text: error instanceof Error ? error.message : formatMessage(messages.saveErrorDescription),
 		})
 	} finally {
 		saving.value = false
 	}
 }
 
-onBeforeUnmount(revokePreviewImage)
+onBeforeUnmount(() => {
+	revokePreviewImage()
+	clearTimeout(refreshCooldownTimer)
+})
 
 defineExpose({
 	originalState,
@@ -391,6 +401,14 @@ const messages = defineMessages({
 	usernameDescription: {
 		id: 'settings.profile.username.description',
 		defaultMessage: 'A unique case-insensitive name to identify your profile.',
+	},
+	changeUsername: {
+		id: 'settings.profile.username.change',
+		defaultMessage: 'Change username',
+	},
+	refreshProfile: {
+		id: 'settings.profile.refresh',
+		defaultMessage: 'Refresh profile',
 	},
 	bioTitle: {
 		id: 'settings.profile.bio.title',

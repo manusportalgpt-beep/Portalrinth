@@ -689,6 +689,7 @@ const previewItems = computed(() =>
 
 const deleteMutation = useMutation({
 	mutationFn: (keys: ScreenshotKey[]) => delete_screenshots(keys),
+	networkMode: 'always',
 	onSuccess: async (_, keys) => {
 		await invalidateScreenshots(keys.map((key) => key.instance_id))
 	},
@@ -696,10 +697,12 @@ const deleteMutation = useMutation({
 const exportMutation = useMutation({
 	mutationFn: ({ keys, path }: { keys: ScreenshotKey[]; path: string }) =>
 		export_screenshots(keys, path),
+	networkMode: 'always',
 })
 const moveMutation = useMutation({
 	mutationFn: ({ keys, targetInstanceId }: { keys: ScreenshotKey[]; targetInstanceId: string }) =>
 		move_screenshots(keys, targetInstanceId),
+	networkMode: 'always',
 	onSuccess: async (_, variables) => {
 		await invalidateScreenshots([
 			...variables.keys.map((key) => key.instance_id),
@@ -715,6 +718,7 @@ const saveEditMutation = useMutation({
 		mode: 'create_copy' | 'replace_edit'
 	}) =>
 		save_edited_screenshot(getScreenshotKey(payload.screenshot), payload.pngBytes, payload.mode),
+	networkMode: 'always',
 	onSuccess: async (saved) => {
 		await invalidateScreenshots([saved.instance_id])
 		await imageViewer.value?.markSavedAndView(getSelectionKey(saved))

@@ -28,7 +28,7 @@ pub struct InstallProgressReporter {
 struct InstallProgressReporterState {
     job: InstallJobState,
     last_emitted_at: Instant,
-    last_persisted_at: Instant,
+    last_row_write_at: Instant,
     last_emitted_progress: Option<(InstallPhaseId, u64)>,
 }
 
@@ -46,7 +46,7 @@ impl InstallProgressReporter {
             state: Arc::new(Mutex::new(InstallProgressReporterState {
                 job: state,
                 last_emitted_at: Instant::now(),
-                last_persisted_at: Instant::now(),
+                last_row_write_at: Instant::now(),
                 last_emitted_progress: None,
             })),
         }
@@ -96,6 +96,7 @@ impl InstallProgressReporter {
 
         let record =
             store::update_state(self.job_id, &state.job, &self.pool).await?;
+        state.last_row_write_at = Instant::now();
         state.mark_emitted();
         emit_install_job(&record.snapshot()).await
     }
@@ -159,7 +160,7 @@ impl InstallProgressReporter {
         // interface and the stuck-job detector read the row's `modified` as
         // the worker's pulse, so it must not go stale while the worker lives.
         let heartbeat_due =
-            state.last_persisted_at.elapsed() >= PROGRESS_HEARTBEAT_INTERVAL;
+            state.last_row_write_at.elapsed() >= PROGRESS_HEARTBEAT_INTERVAL;
         if !persist && !heartbeat_due {
             if !state.should_emit() {
                 return Ok(());
@@ -174,8 +175,8 @@ impl InstallProgressReporter {
 
         let record =
             store::update_state(self.job_id, &state.job, &self.pool).await?;
+        state.last_row_write_at = Instant::now();
         state.mark_emitted();
-        state.last_persisted_at = Instant::now();
         emit_install_job(&record.snapshot()).await
     }
 }

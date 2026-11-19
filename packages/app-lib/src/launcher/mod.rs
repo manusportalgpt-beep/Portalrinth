@@ -152,6 +152,13 @@ pub fn required_java_major(
     })
 }
 
+pub fn get_recommended_java_major_version(version_info: &VersionInfo) -> u32 {
+    version_info
+        .java_version
+        .as_ref()
+        .map_or(8, |it| it.major_version)
+}
+
 pub async fn get_java_version_from_launch_context(
     context: &InstanceLaunchContext,
     java_major: u32,

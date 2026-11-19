@@ -83,6 +83,13 @@ mod assets {
 }
 
 mod png_util;
+mod render_cache;
+mod rendering;
+
+pub use rendering::{
+    SkinEars, get_skin_ears, prewarm_skin_previews, render_skin_head,
+    render_skin_preview,
+};
 
 const SKIN_CHANGE_DEBOUNCE: Duration = Duration::from_secs(10);
 
@@ -1478,7 +1485,12 @@ fn get_fallback_default_skin() -> crate::Result<&'static Skin> {
 }
 
 fn local_skin_texture_key(texture_blob: &[u8]) -> Arc<str> {
-    Arc::from(format!("local-{:x}", sha2::Sha256::digest(texture_blob)))
+    Arc::from(format!(
+        "local-{}",
+        crate::util::content_hash::encode_hex(
+            sha2::Sha256::digest(texture_blob).as_slice(),
+        ),
+    ))
 }
 
 #[derive(Debug, PartialEq, Eq)]

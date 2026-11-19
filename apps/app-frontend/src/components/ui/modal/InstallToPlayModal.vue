@@ -7,10 +7,6 @@
 		width="544px"
 	>
 		<div v-if="requiredContentProject" class="flex w-full flex-col gap-6">
-			<p class="m-0 text-primary">
-				{{ formatMessage(messages.inviteWarning) }}
-			</p>
-
 			<div class="flex flex-col gap-2.5">
 				<div class="flex items-center justify-between">
 					<span class="font-semibold text-contrast">
@@ -318,7 +314,7 @@ async function openViewContents() {
 		const projectMap = new Map(projects.map((p: Labrinth.Projects.v2.Project) => [p.id, p]))
 
 		const contentItems: ContentItem[] = deps.map(
-			(dep: Labrinth.Versions.v2.Dependency): ContentItem => {
+			(dep: Labrinth.Versions.v2.Dependency, index: number): ContentItem => {
 				const depProject = dep.project_id ? projectMap.get(dep.project_id) : null
 				// @ts-expect-error - version_id is missing from the type for some reason
 				const depVersion = dep.version_id
@@ -327,6 +323,7 @@ async function openViewContents() {
 					: null
 
 				return {
+					id: dep.project_id ?? dep.file_name ?? `dependency-${index}`,
 					file_name: dep.file_name ?? depProject?.title ?? 'Unknown',
 					project_type: depProject?.project_type ?? 'mod',
 					has_update: false,
@@ -400,11 +397,6 @@ const messages = defineMessages({
 	installToPlay: {
 		id: 'app.modal.install-to-play.header',
 		defaultMessage: 'Install to play',
-	},
-	inviteWarning: {
-		id: 'app.modal.install-to-play.invite-warning',
-		defaultMessage:
-			'This invite was created by another Modrinth user, not Modrinth. Only accept invites from people you trust.',
 	},
 	sharedInstance: {
 		id: 'app.modal.install-to-play.shared-instance',

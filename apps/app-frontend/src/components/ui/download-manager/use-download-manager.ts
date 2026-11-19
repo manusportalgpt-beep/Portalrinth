@@ -17,12 +17,18 @@ import {
 	install_job_pause,
 	install_job_resume,
 	install_job_retry,
-	install_job_support_details,
 	installJobInstanceId,
 	type InstallJobSnapshot,
 } from '@/helpers/install'
 import { get_many as getInstances } from '@/helpers/instance'
+import {
+	getInstallJobSupportDetails,
+	getInstallJobSupportPasteUrl,
+	setInstallJobSupportPasteUrl,
+} from '@/platform/app-lib/install/commands'
+import { openExternalUrl } from '@/platform/external-links'
 import { injectAppEvents } from '@/providers/app-events'
+import { useCopyAsPaste } from '@/shared/composables/use-copy-as-paste'
 
 import { debugInfoExports, type DebugInfoExportTask } from './debug-info-export'
 import { createDownloadTransferTracker } from './download-transfer'
@@ -37,7 +43,6 @@ import {
 	sharedInstancePublishes,
 	type SharedInstancePublishTask,
 } from './shared-instance-publishes'
-import { storeVerificationTask } from './store-verification'
 import { useInstallJobDisplay } from './use-install-job-display'
 
 export interface DownloadManagerJob {
@@ -66,19 +71,6 @@ export interface DownloadManagerJob {
 	copied: boolean
 	busy: boolean
 }
-
-const verificationMessages = defineMessages({
-	verifying: { id: 'app.download-manager.verifying', defaultMessage: 'Verifying' },
-	title: { id: 'app.settings.resource-management.store.title', defaultMessage: 'Content storage' },
-	complete: {
-		id: 'app.settings.resource-management.store.verified',
-		defaultMessage: 'Verification complete',
-	},
-	failed: {
-		id: 'app.settings.resource-management.store.attention',
-		defaultMessage: 'Some files still need attention',
-	},
-})
 
 const fileMessages = defineMessages({
 	preparing: { id: 'app.file-download.preparing', defaultMessage: 'Preparing download…' },
@@ -123,6 +115,7 @@ export function useDownloadManager() {
 	const events = injectAppEvents()
 	const { handleError } = injectNotificationManager()
 	const appSettings = useAppSettings()
+	const copyAsPaste = useCopyAsPaste()
 	const display = useInstallJobDisplay()
 	const { formatMessage } = useVIntl()
 	const formatBytes = useFormatBytes()
@@ -197,10 +190,6 @@ export function useDownloadManager() {
 		}),
 	)
 
-	const verificationRows = computed(() => {
-		const task = storeVerificationTask.value
-		return task ? [buildVerificationRow(task)] : []
-	})
 	const fileRows = computed(() => [...externalFileDownloads.value.values()].map(buildFileRow))
 	const debugExportRows = computed(() =>
 		[...debugInfoExports.value.values()].map(buildDebugExportRow),
@@ -210,7 +199,6 @@ export function useDownloadManager() {
 	)
 	const allRows = computed(() => [
 		...rows.value,
-		...verificationRows.value,
 		...fileRows.value,
 		...debugExportRows.value,
 		...publishRows.value,
@@ -401,44 +389,6 @@ export function useDownloadManager() {
 		}
 	}
 
-	function buildVerificationRow(
-		task: NonNullable<typeof storeVerificationTask.value>,
-	): DownloadManagerJob {
-		const progress = task.total ? Math.min(0.99, task.current / task.total) : 0
-		const rate = task.status === 'running' && now.value - task.lastRead < 2000 ? task.rate : 0
-
-		return {
-			id: task.id,
-			instanceId: null,
-			status: task.status,
-			paused: false,
-			canceling: false,
-			canPause: false,
-			canCancel: false,
-			canRetry: false,
-			title: formatMessage(verificationMessages.title),
-			iconUrl: null,
-			text: formatMessage(
-				task.status === 'running'
-					? verificationMessages.verifying
-					: task.status === 'succeeded'
-						? verificationMessages.complete
-						: verificationMessages.failed,
-			),
-			progress,
-			overallProgress: task.status === 'succeeded' ? 1 : progress,
-			progressLabel:
-				task.status === 'running'
-					? `${formatBytes(task.current)} / ${formatBytes(task.total)} · ${display.formatRate(rate) || '0 B/s'}`
-					: '',
-			waiting: task.total === 0 || task.current >= task.total,
-			eta: '',
-			canCopyDetails: false,
-			copied: false,
-			busy: false,
-		}
-	}
-
 	function newestFirst(a: DownloadManagerJob, b: DownloadManagerJob) {
 		return (b.finishedAt ?? '').localeCompare(a.finishedAt ?? '')
 	}
@@ -573,10 +523,6 @@ export function useDownloadManager() {
 			if (publish.status !== 'running') sharedInstancePublishes.value.delete(id)
 			return
 		}
-		if (storeVerificationTask.value?.id === id) {
-			if (storeVerificationTask.value.status !== 'running') storeVerificationTask.value = null
-			return
-		}
 		const job = jobs.value.get(id)
 		if (!job || job.status === 'queued' || job.status === 'running') return
 		await runAction(id, async () => {
@@ -592,18 +538,31 @@ export function useDownloadManager() {
 		await Promise.all(completedJobs.value.map((job) => dismiss(job.id)))
 	}
 
+	async function copyInstallJobDetails(id: string) {
+		const cached = await getInstallJobSupportPasteUrl(id)
+		if (cached) {
+			await navigator.clipboard.writeText(cached)
+			return cached
+		}
+		const { details, finished_modified } = await getInstallJobSupportDetails(id)
+		const url = await copyAsPaste(details)
+		if (url && finished_modified !== null) {
+			await setInstallJobSupportPasteUrl(id, url, finished_modified)
+		}
+		return url
+	}
+
 	async function copyDetails(id: string) {
 		await runAction(id, async () => {
 			const publish = sharedInstancePublishes.value.get(id)
 			const file = externalFileDownloads.value.get(id) ?? debugInfoExports.value.get(id)
-			const details = publish
-				? (publish.details ?? publish.error ?? '')
+			const url = publish
+				? await copyAsPaste(publish.details ?? publish.error ?? '')
 				: file
-					? (file.error ?? '')
-					: await install_job_support_details(id)
+					? await copyAsPaste(file.error ?? '')
+					: await copyInstallJobDetails(id)
 			if (disposed) return
-			await navigator.clipboard.writeText(details)
-			if (disposed) return
+			if (url) await openExternalUrl(url)
 			copiedJobs.value.add(id)
 			clearTimeout(copiedTimeouts.get(id))
 			copiedTimeouts.set(

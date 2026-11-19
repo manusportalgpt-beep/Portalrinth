@@ -29,6 +29,7 @@ export interface FileManagerContext {
 	renameItem: (path: string, newName: string) => Promise<void>
 	moveItem: (source: string, destination: string) => Promise<void>
 	deleteItem: (path: string, recursive: boolean) => Promise<void>
+	deleteItems?: (items: FileItem[]) => Promise<boolean>
 
 	/** The instance these files belong to, for transfers between instances. */
 	instanceId?: Ref<string> | ComputedRef<string>
@@ -75,6 +76,8 @@ export interface FileManagerContext {
 	/** What a file is, for the row to draw instead of a bare file name. */
 	describeItem?: (item: FileItem) => FileItemDescription | undefined
 	readOnlyReason?: Ref<string> | ComputedRef<string>
+	browseOnly?: boolean
+	hideTimestamps?: boolean
 
 	extractFile?: (
 		path: string,

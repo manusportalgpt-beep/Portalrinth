@@ -548,14 +548,23 @@
   "app-marketing.download.download-appimage": {
     "message": "下载 AppImage"
   },
+  "app-marketing.download.download-appimage-arm64": {
+    "message": "下载 AppImage (ARM64)"
+  },
   "app-marketing.download.download-beta": {
     "message": "下载 beta 版"
   },
   "app-marketing.download.download-deb": {
     "message": "下载 DEB"
   },
+  "app-marketing.download.download-deb-arm64": {
+    "message": "下载 DEB (ARM64)"
+  },
   "app-marketing.download.download-rpm": {
     "message": "下载 RPM"
+  },
+  "app-marketing.download.download-rpm-arm64": {
+    "message": "下载 RPM (ARM64)"
   },
   "app-marketing.download.flathub": {
     "message": "在 Flathub 上获取"
@@ -812,6 +821,12 @@
   "auth.create-account.username.placeholder": {
     "message": "请输入用户名"
   },
+  "auth.oauth.opening.description": {
+    "message": "在 {provider} 完成你的登录"
+  },
+  "auth.oauth.opening.title": {
+    "message": "正在打开 {provider}……"
+  },
   "auth.reauthenticate.2fa.description": {
     "message": "请输入验证器应用生成的 6 位验证码，或使用backup code。"
   },
@@ -883,6 +898,9 @@
   },
   "auth.sign-in.choose-existing-account": {
     "message": "使用一个现有账户"
+  },
+  "auth.sign-in.code-failed": {
+    "message": "此登录链接无效或已过期，请重试。"
   },
   "auth.sign-in.continue-with-email": {
     "message": "使用邮箱继续"
@@ -1610,6 +1628,12 @@
   "dashboard.creator-withdraw-modal.fee-breakdown-usd-equivalent": {
     "message": "等值美元"
   },
+  "dashboard.creator-withdraw-modal.kyc.blocked-region-body": {
+    "message": "受到合规性限制，我们无法向 {region} 汇款。"
+  },
+  "dashboard.creator-withdraw-modal.kyc.blocked-region-header": {
+    "message": "此区域不支持提款"
+  },
   "dashboard.creator-withdraw-modal.kyc.business-entity": {
     "message": "企业实体"
   },
@@ -2226,7 +2250,7 @@
     "message": "此内容类型无法从 Discover 安装到服务器上。"
   },
   "discover.install.heading.reset-modpack": {
-    "message": "重置后选择要安装的 modpack"
+    "message": "重置后选择要安装的内容"
   },
   "discover.seo.description": {
     "message": "使用Modrinth即时、准确搜索数千个Minecraft {projectType}，并通过我们的过滤器帮助您快速找到最好的Minecraft {projectType}。"
@@ -2741,9 +2765,6 @@
   "layout.action.review-projects": {
     "message": "项目审查"
   },
-  "layout.action.tech-review": {
-    "message": "技术审查"
-  },
   "layout.action.user-lookup": {
     "message": "用户查找"
   },
@@ -2996,6 +3017,9 @@
   "layout.nav.upgrade-to-modrinth-plus": {
     "message": "升级至 Modrinth+"
   },
+  "layout.nav.use-signed-out": {
+    "message": "使用登出的"
+  },
   "layout.publish.email-verification-required.description": {
     "message": "您必须先验证您的电子邮箱才能在 Modrinth 上发布内容。"
   },
@@ -3061,6 +3085,9 @@
   },
   "moderation.appearance.import-help": {
     "message": "粘贴主题 JSON 或选择 JSON 文件，然后应用它预览你的外观。"
+  },
+  "moderation.appearance.invalid": {
+    "message": "无效主题。请使用版本1的评论外观导出文件，包含全部七个值、有效的十六进制颜色、0–100的不透明度，以及0–8的边框宽度。"
   },
   "moderation.appearance.json": {
     "message": "主题 JSON"
@@ -3170,8 +3197,17 @@
   "moderation.keybinds.transfer.import": {
     "message": "导入按键绑定"
   },
+  "moderation.keybinds.transfer.import-help": {
+    "message": "粘贴键位绑定JSON或选择一个 JSON 文件。应用将替换您的键位绑定；留空的动作将使用默认值。"
+  },
+  "moderation.keybinds.transfer.invalid": {
+    "message": "无效按键绑定。请使用版本1的按键绑定导出文件，其中包含已知的操作 ID、按键定义数组，以及布尔类型的修饰键。"
+  },
   "moderation.keybinds.transfer.json": {
     "message": "按键绑定 JSON"
+  },
+  "moderation.keybinds.transfer.too-large": {
+    "message": "这些按键绑定超出了你已保存的审核设置中的可用空间。请减少自定义绑定的数量后重试。"
   },
   "moderation.moderate": {
     "message": "审核"
@@ -3191,9 +3227,6 @@
   "moderation.page.reports": {
     "message": "举报"
   },
-  "moderation.page.technicalReview": {
-    "message": "技术审查"
-  },
   "moderation.project-review.approvedCount": {
     "message": "通过了 {count} 项"
   },
@@ -3203,17 +3236,44 @@
   "moderation.project-review.draftCount": {
     "message": "{count} 个草稿"
   },
-  "moderation.settings.appearance": {
-    "message": "外观"
+  "moderation.project-review.privateCount": {
+    "message": "{count} 条私密"
   },
-  "moderation.settings.debug": {
-    "message": "调试设置"
+  "moderation.project-review.processingCount": {
+    "message": "{count} 条审核中"
+  },
+  "moderation.project-review.rejectedCount": {
+    "message": "{count} 条已拒绝"
+  },
+  "moderation.project-review.scheduledCount": {
+    "message": "{count} 条已排期"
+  },
+  "moderation.project-review.techReviewFailedCount": {
+    "message": "{count} 条未通过技术审核"
+  },
+  "moderation.project-review.unknownCount": {
+    "message": "{count} 条未知"
+  },
+  "moderation.project-review.unlistedCount": {
+    "message": "{count} 条未列出"
+  },
+  "moderation.project-review.withheldCount": {
+    "message": "{count} 条被扣留"
+  },
+  "moderation.settings.control-label": {
+    "message": "{section}: {setting}"
   },
   "moderation.settings.default-value-styled": {
     "message": "默认值: <value></value>"
   },
   "moderation.settings.floating-panel-preview": {
     "message": "浮动面板预览"
+  },
+  "moderation.settings.floating-panel-section": {
+    "message": "悬浮审核面板"
+  },
+  "moderation.settings.highlight-preview": {
+    "message": "审核高亮预览"
   },
   "moderation.settings.highlight-preview.incorrect-formatting": {
     "message": "格式错误"
@@ -3227,11 +3287,14 @@
   "moderation.settings.highlights-section": {
     "message": "高亮"
   },
+  "moderation.settings.issue-toggle-preview": {
+    "message": "问题切换预览"
+  },
+  "moderation.settings.issue-toggles-section": {
+    "message": "问题切换开关"
+  },
   "moderation.settings.no-results": {
     "message": "没有符合搜索结果的设置项目。"
-  },
-  "moderation.settings.none": {
-    "message": "无"
   },
   "moderation.settings.off": {
     "message": "关闭"
@@ -3239,11 +3302,11 @@
   "moderation.settings.on": {
     "message": "开启"
   },
-  "moderation.settings.panels": {
-    "message": "面板"
-  },
   "moderation.settings.reset": {
     "message": "重置为默认设置"
+  },
+  "moderation.settings.review-panel-appearance": {
+    "message": "审核面板外观"
   },
   "moderation.settings.search": {
     "message": "在设置中搜索..."
@@ -3253,21 +3316,6 @@
   },
   "moderation.settings.theme-default": {
     "message": "橘色主题"
-  },
-  "moderation.settings.title": {
-    "message": "常规设置"
-  },
-  "moderation.tech-review.file.download": {
-    "message": "下载"
-  },
-  "moderation.tech-review.file.download-file": {
-    "message": "下载{filename}({size})"
-  },
-  "moderation.tech-review.file.manual": {
-    "message": "人工审核"
-  },
-  "moderation.tech-review.file.view-version": {
-    "message": "浏览版本"
   },
   "modpack-scan-modal.batch.label": {
     "message": "每批 {amount}"
@@ -3328,6 +3376,18 @@
   },
   "muralpay.account-type.savings": {
     "message": "储蓄账户"
+  },
+  "muralpay.blocked-region.crimea": {
+    "message": "克里米亚"
+  },
+  "muralpay.blocked-region.donetsk": {
+    "message": "顿涅茨克"
+  },
+  "muralpay.blocked-region.luhansk": {
+    "message": "卢汉斯克"
+  },
+  "muralpay.blocked-region.sevastopol": {
+    "message": "塞瓦斯托波尔"
   },
   "muralpay.country.at": {
     "message": "奥地利"
@@ -3774,7 +3834,7 @@
     "message": "编辑项目"
   },
   "project.actions.open-in-modview": {
-    "message": "在模块视图中打开"
+    "message": "Modview"
   },
   "project.actions.project-page": {
     "message": "项目页"
@@ -3818,8 +3878,26 @@
   "project.description.title": {
     "message": "描述"
   },
+  "project.disclosures.load-error": {
+    "message": "无法加载披露信息。"
+  },
+  "project.disclosures.loading": {
+    "message": "正在加载披露信息……"
+  },
   "project.disclosures.lock-status.cannot-disable": {
     "message": "无法禁用"
+  },
+  "project.disclosures.lock-status.change": {
+    "message": "更改锁定状态"
+  },
+  "project.disclosures.lock-status.fully-locked": {
+    "message": "完全锁定"
+  },
+  "project.disclosures.lock-status.label": {
+    "message": "锁定状态"
+  },
+  "project.disclosures.lock-status.unlocked": {
+    "message": "已解锁"
   },
   "project.disclosures.retry": {
     "message": "重试"
@@ -4391,8 +4469,14 @@
   "project.settings.license.custom": {
     "message": "自定义"
   },
+  "project.settings.license.custom-name-invalid": {
+    "message": "自定义许可证名称只能包含字母、数字、句点和连字符。"
+  },
   "project.settings.license.custom-name-required": {
     "message": "为你的自定义许可证输入名称。"
+  },
+  "project.settings.license.custom-url-description": {
+    "message": "完整许可证文本的网址。由于这是自定义许可证，你必须提供一个链接。"
   },
   "project.settings.license.intro": {
     "message": "为你的 {type} 选择合适的许可证非常重要。你可以从我们的列表中选择一项，也可以提供自定义许可证。你还可以为你选择的许可证提供一个自定义 URL；否则，将显示许可证文本。更多信息请参阅我们的 <guide>许可指南</guide> 。"
@@ -4552,6 +4636,9 @@
   },
   "project.settings.permissions.attention-needed.title": {
     "message": "未知的外部内容"
+  },
+  "project.settings.permissions.awaiting-review-count": {
+    "message": "{count, plural, =0 {无待审核项} other {# 项待审核}}"
   },
   "project.settings.permissions.bad-proof.description": {
     "message": "Modrinth的管理团队已拒绝了你为外部内容提供的权限信息，请查看被拒绝的外部内容，并提供有效的证明或删除内容。"
@@ -5231,6 +5318,24 @@
   "servers.purchase.step.plan.per-month-billing": {
     "message": "/ 月{interval, select, monthly {} other {，按{interval, select, quarterly {季度计费} yearly {年计费} other {{interval}计费}}}}"
   },
+  "servers.sharing-update.notification.description": {
+    "message": "邀请朋友加入由你的服务器所管理的实例。"
+  },
+  "servers.sharing-update.notification.dismiss": {
+    "message": "忽略"
+  },
+  "servers.sharing-update.notification.purchase-description": {
+    "message": "获取服务器并邀请朋友加入由它管理的实例。"
+  },
+  "servers.sharing-update.notification.title": {
+    "message": "与好友共享服务器"
+  },
+  "servers.sharing-update.notification.view-update": {
+    "message": "查看更新"
+  },
+  "servers.sharing-update.web-description": {
+    "message": "您现在可以直接与朋友共享您的服务器。当他们在 Modrinth 应用程序中接受时，我们将为他们创建一个由您的服务器管理的实例。"
+  },
   "settings.account.button.complete-setup": {
     "message": "完成设置"
   },
@@ -5539,6 +5644,12 @@
   },
   "settings.applications.description.intro": {
     "message": "应用程序可用于通过你的产品验证 Modrinth 用户身份。更多信息请参阅<docs-link> Modrinth 的 API 文档</docs-link>。"
+  },
+  "settings.applications.empty-state.description": {
+    "message": "你创建的应用将显示在这里。"
+  },
+  "settings.applications.empty-state.heading": {
+    "message": "无应用"
   },
   "settings.applications.field.description": {
     "message": "描述"
@@ -5867,6 +5978,9 @@
   "settings.pats.modal.revoke.action": {
     "message": "撤销该令牌"
   },
+  "settings.pats.modal.revoke.description": {
+    "message": "此令牌将立即失效，你使用它设置的所有内容都将停止工作。此操作无法撤销。"
+  },
   "settings.pats.modal.revoke.title": {
     "message": "您确定要撤销此令牌吗？"
   },
@@ -5878,6 +5992,9 @@
   },
   "settings.pats.token.action.revoke": {
     "message": "撤销该令牌"
+  },
+  "settings.pats.token.disclaimer": {
+    "message": "请立即保存此令牌。你只能查看它一次。离开此页面后，你将无法再次看到它。"
   },
   "settings.pats.token.expired-ago": {
     "message": "{ago}过期"
@@ -5891,11 +6008,29 @@
   "settings.pats.token.never-used": {
     "message": "从未使用"
   },
+  "settings.pats.token.no-permissions": {
+    "message": "无权限"
+  },
   "settings.sessions.action.revoke-session": {
     "message": "登出设备"
   },
+  "settings.sessions.created-ago": {
+    "message": "登录于 {ago}"
+  },
   "settings.sessions.current-session": {
     "message": "当前会话"
+  },
+  "settings.sessions.description.1": {
+    "message": "这些是当前使用你的 Modrinth 账号登录的所有设备。你可以通过撤销会话来逐一登出每个设备。如果你不认识某台设备，请登出该设备并立即更改你的 Modrinth 账号密码。"
+  },
+  "settings.sessions.description.2": {
+    "message": "列出的位置可能是近似位置，因为它们是基于 IP 地址判定的。VPN 和部分互联网服务提供商可能会掩盖实际位置。"
+  },
+  "settings.sessions.empty-state.description": {
+    "message": "登录你账号的设备将显示在这里。"
+  },
+  "settings.sessions.empty-state.heading": {
+    "message": "没有活跃会话"
   },
   "settings.sessions.ip": {
     "message": "IP地址: {ip}"
@@ -5948,6 +6083,33 @@
   "shared-instance.invite.unavailable.title": {
     "message": "此邀请不可用"
   },
+  "thread-issues.address-failed": {
+    "message": "无法将问题标记为已解决"
+  },
+  "thread-issues.address-requirements-unchanged": {
+    "message": "在将此问题标记为已解决之前，请先进行所要求的更改。"
+  },
+  "thread-issues.address-save-failed": {
+    "message": "你的更改无法保存。在将此问题标记为已解决之前，请先修复验证错误。"
+  },
+  "thread-issues.addressed": {
+    "message": "已标记为已解决"
+  },
+  "thread-issues.addressed-progress": {
+    "message": "已解决 {completed, number} / {total, number}"
+  },
+  "thread-issues.addressed-progress-tooltip": {
+    "message": "此问题涉及的 {completed, number}/{total, number} 个部分已处理"
+  },
+  "thread-issues.change-facet-first": {
+    "message": "在将其标记为已处理之前，请先进行所要求的更改。"
+  },
+  "thread-issues.facet.acknowledge-checkbox": {
+    "message": "确认此情求"
+  },
+  "thread-issues.facet.acknowledge-reply": {
+    "message": "在回复中解释你的更改"
+  },
   "thread-issues.facet.version.changelog": {
     "message": "更改版本更新日志"
   },
@@ -5966,14 +6128,86 @@
   "thread-issues.facet.version.remove": {
     "message": "移除此版本"
   },
+  "thread-issues.facet.version.remove-files": {
+    "message": "请求删除附加的文件"
+  },
+  "thread-issues.hide-addressed": {
+    "message": "隐藏地址"
+  },
+  "thread-issues.hide-issue": {
+    "message": "隐藏议题"
+  },
+  "thread-issues.hide-resolved": {
+    "message": "隐藏已解决的"
+  },
+  "thread-issues.mark-addressed": {
+    "message": "标记为地址"
+  },
+  "thread-issues.mark-addressed-progress": {
+    "message": "标记为地址 {completed,number}/{total,number}"
+  },
+  "thread-issues.mark-resolved": {
+    "message": "标记为已解决"
+  },
+  "thread-issues.mark-unresolved": {
+    "message": "标记为未解决"
+  },
+  "thread-issues.more-actions": {
+    "message": "需要更多操作"
+  },
+  "thread-issues.options": {
+    "message": "议题选项"
+  },
+  "thread-issues.reply-to-address": {
+    "message": "回复至地址"
+  },
+  "thread-issues.resolve-failed": {
+    "message": "无法将议题标记为已解决"
+  },
+  "thread-issues.resolved": {
+    "message": "已解决"
+  },
+  "thread-issues.show-addressed": {
+    "message": "显示地址"
+  },
+  "thread-issues.show-issue": {
+    "message": "显示议题"
+  },
+  "thread-issues.show-resolved": {
+    "message": "显示已解决"
+  },
   "thread-issues.target.edit-name": {
     "message": "编辑名称"
+  },
+  "thread-issues.target.edit-summary": {
+    "message": "编辑简介"
   },
   "thread-issues.target.edit-url": {
     "message": "编辑URL"
   },
+  "thread-issues.unresolve-failed": {
+    "message": "无法将议题标记为已解决"
+  },
+  "thread.issue-history.flagged": {
+    "message": "标记 {count,plural,one{#议题}other{#个议题}}"
+  },
+  "thread.issue-history.private-note": {
+    "message": "仅对管理员可见"
+  },
+  "thread.message.auto-approval": {
+    "message": "已解决所有问题，项目状态已自动变更为<status>已通过</status>。"
+  },
   "thread.message.delete": {
     "message": "删除"
+  },
+  "thread.message.deleted-message": {
+    "message": "发布了一条已被删除的消息。"
+  },
+  "thread.message.legacy-project-message": {
+    "message": "该项目在审核讨论帖机制出现之前就已发布在 Modrinth 上，因此可能缺失审核记录。"
+  },
+  "thread.message.moderator": {
+    "message": "管理员"
   },
   "thread.message.modrinth-team": {
     "message": "Modtinth团队"
@@ -5987,8 +6221,23 @@
   "thread.message.preview": {
     "message": "预览"
   },
+  "thread.message.private-message": {
+    "message": "仅对管理员可见"
+  },
   "thread.message.project-owner": {
     "message": "项目所有者"
+  },
+  "thread.message.reporter": {
+    "message": "报告者"
+  },
+  "thread.message.reverted-to-draft": {
+    "message": "将此项目恢复到 <status>。</status>"
+  },
+  "thread.message.review": {
+    "message": "审核了该项目并设置状态为<status>状态</status>。"
+  },
+  "thread.message.review-with-issues": {
+    "message": "审核了该项目并设置状态为<status>状态</status> 与 {count, plural, one {# 一个问题} other {# 个问题}}。"
   },
   "thread.message.sent-image": {
     "message": "发送了一张图片"
@@ -5996,8 +6245,35 @@
   "thread.message.sent-message": {
     "message": "发送了一条消息"
   },
+  "thread.message.status-changed": {
+    "message": "将项目状态由<old-status>状态</old-status>切换至<status>。</status>"
+  },
+  "thread.message.submitted-for-review": {
+    "message": "已提交项目审查。"
+  },
   "thread.message.system": {
     "message": "Modrinth"
+  },
+  "thread.message.tech-review-completed": {
+    "message": "完成了技术审核并标记项目为<status>。</status>"
+  },
+  "thread.message.tech-review-entered": {
+    "message": "该项目已进入技术审核队列。"
+  },
+  "thread.message.tech-review-exit-file-deleted": {
+    "message": "该项目已离开技术审查队列，因为所有待审查文件均已被用户删除。"
+  },
+  "thread.message.tech-review-exited": {
+    "message": "该项目已离开技术审查队列，因为所有待处理的痕迹均已解决。"
+  },
+  "thread.message.tech-review-passed": {
+    "message": "完成了技术审核并将项目标记为通过，并已通过{safe, plural, one {# 一个安全问题} other {# 个安全问题}}。"
+  },
+  "thread.message.thread-closed": {
+    "message": "关闭了对话消息。"
+  },
+  "thread.message.thread-reopened": {
+    "message": "重新打开了对话消息。"
   },
   "ui.latest-news-row.latest-news": {
     "message": "Modrinth 的最新消息"
@@ -6049,6 +6325,9 @@
   },
   "version.download.download-dependency": {
     "message": "选择要下载的版本"
+  },
+  "version.download.more-options": {
+    "message": "更多下载选项"
   },
   "version.download.no-primary-file": {
     "message": "错误：找不到主文件"

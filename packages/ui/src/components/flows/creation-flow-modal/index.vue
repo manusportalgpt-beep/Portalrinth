@@ -4,8 +4,12 @@
 		:stages="ctx.stageConfigs"
 		:context="ctx"
 		:fade="fade"
+		:animate-stages="type === 'server-onboarding'"
+		:disable-close="ctx.navigating.value"
 		disable-progress
 		@hide="handleHide"
+		@after-hide="emit('after-hide')"
+		@after-show="emit('after-show')"
 	/>
 </template>
 
@@ -18,6 +22,7 @@ import {
 	type BedrockInstanceCreateData,
 	createCreationFlowContext,
 	type CreationFlowContextValue,
+	type CurseForgeTarget,
 	type FlowType,
 	type LoaderManifestResolver,
 	type ProjectInstallCreateData,
@@ -36,7 +41,8 @@ const props = withDefaults(
 		initialLoader?: string
 		initialGameVersion?: string
 		fetchExistingInstanceNames?: () => Promise<string[]>
-		onBack?: (() => void) | null
+		onBack?: (() => boolean | void) | null
+		browseModpacks?: () => Promise<void>
 		fade?: 'standard' | 'warning' | 'danger'
 		searchProjects?: (query: string, limit?: number) => Promise<ProjectSearchResult>
 		prepareProjectInstall?: (
@@ -46,6 +52,7 @@ const props = withDefaults(
 		createProjectInstall?: (data: ProjectInstallCreateData) => Promise<void>
 		getProjectVersions?: (projectId: string) => Promise<{ id: string }[]>
 		getLoaderManifest?: LoaderManifestResolver
+		getCurseForgeTarget?: () => Promise<CurseForgeTarget>
 		randomizeInstanceIcon?: () => Promise<{ path: string; previewUrl: string } | null>
 		customizeInstanceIcon?: () => void
 		finishDisabled?: boolean
@@ -63,13 +70,14 @@ const props = withDefaults(
 		initialGameVersion: undefined,
 		fetchExistingInstanceNames: undefined,
 		onBack: null,
+		browseModpacks: undefined,
 		randomizeInstanceIcon: undefined,
 		customizeInstanceIcon: undefined,
 	},
 )
 
 const emit = defineEmits<{
-	(e: 'hide' | 'browse-modpacks'): void
+	(e: 'hide' | 'after-hide' | 'after-show' | 'browse-modpacks'): void
 	(e: 'create', config: CreationFlowContextValue): void
 }>()
 
@@ -91,11 +99,13 @@ const ctx = createCreationFlowContext(
 		initialGameVersion: props.initialGameVersion,
 		fetchExistingInstanceNames: props.fetchExistingInstanceNames,
 		onBack: props.onBack ?? undefined,
+		browseModpacks: props.browseModpacks,
 		searchProjects: props.searchProjects,
 		prepareProjectInstall: props.prepareProjectInstall,
 		createProjectInstall: props.createProjectInstall,
 		getProjectVersions: props.getProjectVersions,
 		getLoaderManifest: props.getLoaderManifest,
+		getCurseForgeTarget: props.getCurseForgeTarget,
 		randomizeInstanceIcon: props.randomizeInstanceIcon,
 		customizeInstanceIcon: props.customizeInstanceIcon,
 		finishDisabled: computed(() => props.finishDisabled ?? false),
@@ -106,10 +116,11 @@ const ctx = createCreationFlowContext(
 )
 provideCreationFlowContext(ctx)
 
-async function show() {
+async function show(prepare?: (context: CreationFlowContextValue) => void | Promise<void>) {
 	await ctx.reset()
 	void ctx.prefetchLoaderMetadata()
 	modal.value?.setStage(0)
+	await prepare?.(ctx)
 	modal.value?.show()
 }
 

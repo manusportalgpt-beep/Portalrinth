@@ -2,10 +2,11 @@
 import {
 	BoxIcon,
 	CheckIcon,
-	CopyIcon,
 	DownloadIcon,
+	MinecraftServerIcon,
 	PauseIcon,
 	PlayIcon,
+	TextSearchIcon,
 	TrashIcon,
 	UpdatedIcon,
 	UploadIcon,
@@ -20,7 +21,9 @@ import {
 	IconButton,
 	ProgressBar,
 	truncatedTooltip,
+	useGeneratedIconSrc,
 	useRelativeTime,
+	useServerIcon,
 	useVIntl,
 } from '@modrinth/ui'
 import { computed, useTemplateRef } from 'vue'
@@ -29,6 +32,14 @@ import { RouterLink } from 'vue-router'
 import type { DownloadManagerJob } from './use-download-manager'
 
 const props = defineProps<{ job: DownloadManagerJob }>()
+const { config: serverIconConfig, image: serverIconImage } = useServerIcon(
+	() => props.job.serverId ?? '',
+)
+const serverIconGeneratedSrc = useGeneratedIconSrc(serverIconConfig)
+const serverIcon = computed(() => serverIconGeneratedSrc.value ?? serverIconImage.value)
+const displayIcon = computed(() =>
+	props.job.serverId ? (serverIcon.value ?? MinecraftServerIcon) : props.job.iconUrl,
+)
 defineEmits<{
 	retry: [id: string]
 	cancel: [id: string]
@@ -46,7 +57,10 @@ const messages = defineMessages({
 	pause: { id: 'app.download-manager.pause', defaultMessage: 'Pause installation' },
 	resume: { id: 'app.download-manager.resume', defaultMessage: 'Resume installation' },
 	retry: { id: 'app.action-bar.install.retry', defaultMessage: 'Retry' },
-	copyDetails: { id: 'app.action-bar.install.copy-details', defaultMessage: 'Copy details' },
+	inspectDetails: {
+		id: 'app.action-bar.install.inspect-details',
+		defaultMessage: 'Inspect details',
+	},
 	copied: { id: 'app.action-bar.install.copied-details', defaultMessage: 'Copied' },
 	dismiss: { id: 'app.action-bar.install.dismiss', defaultMessage: 'Dismiss' },
 	cancel: { id: 'app.download-manager.cancel', defaultMessage: 'Cancel installation' },
@@ -95,8 +109,8 @@ const instanceLink = computed(() =>
 				@click="instanceLink && $emit('open')"
 			>
 				<Avatar
-					v-if="job.iconUrl"
-					:src="job.iconUrl"
+					v-if="displayIcon"
+					:src="displayIcon"
 					size="36px"
 					no-shadow
 					class="!rounded-xl border border-solid border-surface-5"
@@ -126,7 +140,7 @@ const instanceLink = computed(() =>
 						{{ job.title }}
 					</span>
 					<span
-						v-if="job.taskType && job.taskType !== job.text"
+						v-if="job.kind !== 'external-file' && job.taskType && job.taskType !== job.text"
 						class="truncate text-xs font-medium leading-4 text-primary"
 					>
 						{{ job.taskType }}
@@ -141,6 +155,12 @@ const instanceLink = computed(() =>
 								: 'text-primary'
 						"
 					>
+						<template
+							v-if="job.kind === 'external-file' && job.taskType && job.taskType !== job.text"
+						>
+							<span class="min-w-0 truncate text-primary">{{ job.taskType }}</span>
+							<BulletDivider class="shrink-0 text-primary" />
+						</template>
 						<template v-if="complete && job.finishedAt">
 							<time :datetime="job.finishedAt" class="shrink-0">
 								{{ formatRelativeTime(job.finishedAt) }}
@@ -219,8 +239,8 @@ const instanceLink = computed(() =>
 				@click="$emit('copyDetails', job.id)"
 			>
 				<CheckIcon v-if="job.copied" />
-				<CopyIcon v-else />
-				{{ formatMessage(job.copied ? messages.copied : messages.copyDetails) }}
+				<TextSearchIcon v-else />
+				{{ formatMessage(job.copied ? messages.copied : messages.inspectDetails) }}
 			</Button>
 			<Button
 				v-if="job.canRetry"

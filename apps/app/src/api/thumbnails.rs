@@ -68,7 +68,12 @@ fn create_thumbnail(
     hash.update(metadata.len().to_le_bytes());
     hash.update(modified.as_nanos().to_le_bytes());
     hash.update(size.to_le_bytes());
-    let target = cache.join(format!("{:x}.png", hash.finalize()));
+    let hash: String = hash
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    let target = cache.join(format!("{hash}.png"));
     if target.is_file() {
         return Ok(target);
     }
@@ -83,13 +88,10 @@ fn create_thumbnail(
     }
 
     std::fs::create_dir_all(cache)?;
-    let mut reader = image::ImageReader::open(path)?.with_guessed_format()?;
-    let mut limits = image::Limits::default();
-    limits.max_alloc = Some(256 * 1024 * 1024);
-    limits.max_image_width = Some(16384);
-    limits.max_image_height = Some(16384);
-    reader.limits(limits);
-    let image = reader.decode().map_err(std::io::Error::other)?;
+    let image = image::ImageReader::open(path)?
+        .with_guessed_format()?
+        .decode()
+        .map_err(std::io::Error::other)?;
     let thumbnail = image.thumbnail(size, size);
     drop(image);
     let temporary = target.with_extension("tmp");

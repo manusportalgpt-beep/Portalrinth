@@ -2,10 +2,8 @@ use crate::ErrorKind;
 use crate::event::InstancePayloadType;
 use crate::event::emit::emit_instance;
 use crate::state::instances::adapters::sqlite::instance_rows;
-use crate::state::{
-    EditInstance, InstanceIconBackground, InstanceIconConfig, State,
-};
-use crate::util::fetch::{sha1_async, write};
+use crate::state::{EditInstance, IconConfig, State};
+use crate::util::fetch::{sha1_async, write_atomic};
 use crate::util::io;
 use anyhow::{Context, bail};
 use bytes::Bytes;
@@ -15,14 +13,16 @@ use image::{
     AnimationDecoder, DynamicImage, ImageDecoder, ImageFormat, ImageReader,
     Rgba, RgbaImage,
 };
+use modrinth_content_management::icons::ValidatedIconBackground;
 use std::fs::File as StdFile;
 use std::io::{BufRead, BufReader, Cursor, Read, Seek};
 use std::path::{Path, PathBuf};
 
 const INSTANCE_ICON_MAX_BYTES: usize = 4 * 1024 * 1024;
 const INSTANCE_ICON_MAX_DIMENSION: u32 = 512;
-const INSTANCE_ICON_MAX_SOURCE_DIMENSION: u32 = 8_192;
-const INSTANCE_ICON_MAX_DECODE_BYTES: u64 = 64 * 1024 * 1024;
+const INSTANCE_ICON_MAX_DECODE_BYTES: u64 = 256 * 1024 * 1024;
+static INSTANCE_ICON_DECODES: tokio::sync::Semaphore =
+    tokio::sync::Semaphore::const_new(2);
 const GENERATED_ICON_SIZE: u32 = 256;
 /// Portalrinth's own: what an icon that was kept animated is stored as.
 const ANIMATED_EXTENSION: &str = "gif";
@@ -30,19 +30,16 @@ const MAX_ICON_CONFIG_ID_LENGTH: usize = 64;
 const MAX_SYMBOL_BYTES: usize = 4 * 1024 * 1024;
 const MAX_SYMBOL_DIMENSION: u32 = 4096;
 
+const REMOTE_ICON_MAX_BYTES: usize = 4 * 1024 * 1024;
+const REMOTE_ICON_MAX_AGE: std::time::Duration =
+    std::time::Duration::from_secs(24 * 60 * 60);
+static REMOTE_ICON_DOWNLOADS: tokio::sync::Semaphore =
+    tokio::sync::Semaphore::const_new(4);
+
 enum LegacyIconAction {
     Keep,
     Normalize,
     Remove,
-}
-
-#[derive(Debug, Eq, PartialEq)]
-enum ValidatedIconBackground {
-    Color([u8; 3]),
-    LinearTopDownGradient {
-        top_color: [u8; 3],
-        bottom_color: [u8; 3],
-    },
 }
 
 pub async fn edit_icon(
@@ -64,9 +61,109 @@ pub async fn edit_icon(
     apply_instance_icon(instance_id, icon_path, None, &state).await
 }
 
+pub async fn cache_icon_bytes(icon_bytes: Vec<u8>) -> crate::Result<String> {
+    let state = State::get().await?;
+    let icon_path = cache_icon(Bytes::from(icon_bytes), &state).await?;
+    Ok(icon_path.to_string_lossy().to_string())
+}
+
+pub async fn cache_remote_icon(source: &str) -> crate::Result<PathBuf> {
+    if !source.starts_with("https://") {
+        bail!(ErrorKind::InputError(
+            "remote icons must use https".to_string(),
+        ));
+    }
+    let state = State::get().await?;
+    let icons = state.directories.caches_dir().join("icons");
+    let source_hash =
+        sha1_async(Bytes::copy_from_slice(source.as_bytes())).await?;
+    let mapping = icons.join(format!("remote-{source_hash}.txt"));
+    if let Ok(metadata) = tokio::fs::metadata(&mapping).await
+        && let Ok(filename) = tokio::fs::read_to_string(&mapping).await
+        && is_cached_icon_filename(&filename)
+    {
+        let path = icons.join(filename);
+        if tokio::fs::try_exists(&path).await? {
+            let fresh = metadata
+                .modified()
+                .ok()
+                .and_then(|modified| modified.elapsed().ok())
+                .is_some_and(|age| age < REMOTE_ICON_MAX_AGE);
+            if !fresh {
+                let source = source.to_string();
+                tokio::spawn(async move {
+                    if let Err(error) =
+                        refresh_remote_icon(&source, &mapping).await
+                    {
+                        tracing::warn!(
+                            source,
+                            %error,
+                            "Could not refresh cached icon"
+                        );
+                    }
+                });
+            }
+            return Ok(io::canonicalize(path)?);
+        }
+    }
+
+    refresh_remote_icon(source, &mapping).await
+}
+
+async fn refresh_remote_icon(
+    source: &str,
+    mapping: &Path,
+) -> crate::Result<PathBuf> {
+    let state = State::get().await?;
+    let _permit = REMOTE_ICON_DOWNLOADS.acquire().await?;
+    let bytes = download_remote_icon(source).await?;
+    let path = cache_icon(bytes, &state).await?;
+    let filename = path
+        .file_name()
+        .ok_or(ErrorKind::InputError(
+            "cached icon has no filename".to_string(),
+        ))?
+        .to_string_lossy();
+    write_atomic(mapping, filename.as_bytes(), &state.io_semaphore).await?;
+    Ok(path)
+}
+
+async fn download_remote_icon(source: &str) -> crate::Result<Bytes> {
+    let mut response = crate::util::fetch::REQWEST_CLIENT
+        .get(source)
+        .timeout(std::time::Duration::from_secs(15))
+        .send()
+        .await?
+        .error_for_status()?;
+    if response
+        .content_length()
+        .is_some_and(|length| length > REMOTE_ICON_MAX_BYTES as u64)
+    {
+        bail!(ErrorKind::InputError(
+            "remote icons must be at most 4 MiB".to_string(),
+        ));
+    }
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response.chunk().await? {
+        if bytes.len() + chunk.len() > REMOTE_ICON_MAX_BYTES {
+            bail!(ErrorKind::InputError(
+                "remote icons must be at most 4 MiB".to_string(),
+            ));
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(Bytes::from(bytes))
+}
+
+fn is_cached_icon_filename(filename: &str) -> bool {
+    filename.strip_suffix(".png").is_some_and(|hash| {
+        hash.len() == 40 && hash.bytes().all(|byte| byte.is_ascii_hexdigit())
+    })
+}
+
 pub async fn edit_generated_icon(
     instance_id: &str,
-    config: InstanceIconConfig,
+    config: IconConfig,
     symbol_bytes: Vec<u8>,
 ) -> crate::Result<String> {
     let state = State::get().await?;
@@ -87,7 +184,7 @@ pub async fn edit_generated_icon(
 
 pub async fn edit_generated_icon_if_empty(
     instance_id: &str,
-    config: InstanceIconConfig,
+    config: IconConfig,
     symbol_bytes: Vec<u8>,
 ) -> crate::Result<Option<String>> {
     let state = State::get().await?;
@@ -113,6 +210,7 @@ pub async fn edit_generated_icon_if_empty(
     if let Err(error) = super::shared::sync_shared_instance_icon(
         instance_id,
         Some(&icon_path),
+        Some(&config),
         &state,
     )
     .await
@@ -130,7 +228,7 @@ pub async fn edit_generated_icon_if_empty(
 }
 
 pub async fn cache_generated_icon(
-    config: InstanceIconConfig,
+    config: IconConfig,
     symbol_bytes: Vec<u8>,
     add_to_recents: bool,
 ) -> crate::Result<String> {
@@ -149,14 +247,13 @@ pub async fn cache_generated_icon(
     Ok(icon_path)
 }
 
-pub async fn get_recent_icon_configs() -> crate::Result<Vec<InstanceIconConfig>>
-{
+pub async fn get_recent_icon_configs() -> crate::Result<Vec<IconConfig>> {
     let state = State::get().await?;
     instance_rows::get_recent_instance_icon_configs(&state.pool).await
 }
 
 async fn cache_generated_icon_with_state(
-    config: InstanceIconConfig,
+    config: IconConfig,
     symbol_bytes: Vec<u8>,
     state: &State,
 ) -> crate::Result<String> {
@@ -174,7 +271,9 @@ pub(crate) async fn cache_icon(
     bytes: Bytes,
     state: &State,
 ) -> crate::Result<PathBuf> {
+    let permit = INSTANCE_ICON_DECODES.acquire().await?;
     let (bytes, animated) = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
         if looks_like_svg(&bytes) {
             return Err(svg_not_supported_error());
         }
@@ -200,7 +299,9 @@ pub(crate) async fn cache_icon_from_path(
     state: &State,
 ) -> crate::Result<PathBuf> {
     let icon_path = icon_path.to_path_buf();
+    let permit = INSTANCE_ICON_DECODES.acquire().await?;
     let (bytes, animated) = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
         let file = StdFile::open(&icon_path).context(ErrorKind::InputError(
             format!("could not open instance icon {}", icon_path.display()),
         ))?;
@@ -321,7 +422,7 @@ pub(crate) async fn migrate_legacy_icons() -> crate::Result<()> {
 async fn apply_instance_icon(
     instance_id: &str,
     icon_path: Option<String>,
-    icon_config: Option<InstanceIconConfig>,
+    icon_config: Option<IconConfig>,
     state: &State,
 ) -> crate::Result<()> {
     let instance =
@@ -332,7 +433,7 @@ async fn apply_instance_icon(
         instance_id,
         EditInstance {
             icon_path: Some(icon_path.clone()),
-            icon_config: Some(icon_config),
+            icon_config: Some(icon_config.clone()),
             ..EditInstance::default()
         },
         state,
@@ -342,6 +443,7 @@ async fn apply_instance_icon(
     if let Err(error) = super::shared::sync_shared_instance_icon(
         instance_id,
         icon_path.as_deref(),
+        icon_config.as_ref(),
         state,
     )
     .await
@@ -385,7 +487,12 @@ async fn write_cached_icon_as(
         .caches_dir()
         .join("icons")
         .join(format!("{hash}.{extension}"));
-    write(&path, &bytes, &state.io_semaphore).await?;
+    let already_cached = tokio::fs::metadata(&path)
+        .await
+        .is_ok_and(|metadata| metadata.len() == bytes.len() as u64);
+    if !already_cached {
+        write_atomic(&path, &bytes, &state.io_semaphore).await?;
+    }
 
     Ok(io::canonicalize(path)?)
 }
@@ -440,8 +547,6 @@ where
             "could not identify instance icon format".to_string(),
         ))?;
     let mut limits = image::Limits::default();
-    limits.max_image_width = Some(INSTANCE_ICON_MAX_SOURCE_DIMENSION);
-    limits.max_image_height = Some(INSTANCE_ICON_MAX_SOURCE_DIMENSION);
     limits.max_alloc = Some(INSTANCE_ICON_MAX_DECODE_BYTES);
     reader.limits(limits);
 
@@ -454,7 +559,7 @@ where
         image.resize(
             INSTANCE_ICON_MAX_DIMENSION,
             INSTANCE_ICON_MAX_DIMENSION,
-            image::imageops::FilterType::Lanczos3,
+            FilterType::Lanczos3,
         )
     } else {
         image
@@ -488,8 +593,16 @@ fn inspect_legacy_icon(icon_path: &Path) -> crate::Result<LegacyIconAction> {
     }
     let format = image::guess_format(bytes).ok();
 
-    if metadata.len() < INSTANCE_ICON_MAX_BYTES as u64
-        && format == Some(ImageFormat::Png)
+    let is_png =
+        image::guess_format(bytes).ok() == Some(image::ImageFormat::Png);
+    if is_png
+        && metadata.len() < INSTANCE_ICON_MAX_BYTES as u64
+        && ImageReader::with_format(reader, ImageFormat::Png)
+            .into_dimensions()
+            .is_ok_and(|(width, height)| {
+                width <= INSTANCE_ICON_MAX_DIMENSION
+                    && height <= INSTANCE_ICON_MAX_DIMENSION
+            })
     {
         return Ok(LegacyIconAction::Keep);
     }
@@ -520,62 +633,17 @@ fn validate_normalized_icon(normalized: Vec<u8>) -> crate::Result<Bytes> {
 }
 
 fn validate_icon_config(
-    config: &InstanceIconConfig,
+    config: &IconConfig,
 ) -> crate::Result<ValidatedIconBackground> {
-    let background = match &config.background {
-        InstanceIconBackground::Color { value } => {
-            ValidatedIconBackground::Color(parse_background_color(value)?)
-        }
-        InstanceIconBackground::LinearTopDownGradient {
-            top_color,
-            bottom_color,
-        } => ValidatedIconBackground::LinearTopDownGradient {
-            top_color: parse_background_color(top_color)?,
-            bottom_color: parse_background_color(bottom_color)?,
-        },
-    };
-    validate_icon_config_id("symbol", &config.symbol)?;
-    Ok(background)
+    config
+        .validate()
+        .map_err(|error| ErrorKind::InputError(error.to_string()).into())
 }
 
 pub(crate) fn validate_generated_icon_config(
-    config: &InstanceIconConfig,
+    config: &IconConfig,
 ) -> crate::Result<()> {
     validate_icon_config(config).map(drop)
-}
-
-fn parse_background_color(value: &str) -> crate::Result<[u8; 3]> {
-    if value.len() != 7 || !value.starts_with('#') {
-        bail!(ErrorKind::InputError(
-            "instance icon background must be a hexadecimal color".to_string(),
-        ));
-    }
-
-    let color =
-        u32::from_str_radix(&value[1..], 16).context(ErrorKind::InputError(
-            "instance icon background must be a hexadecimal color".to_string(),
-        ))?;
-
-    Ok([
-        ((color >> 16) & 0xff) as u8,
-        ((color >> 8) & 0xff) as u8,
-        (color & 0xff) as u8,
-    ])
-}
-
-fn validate_icon_config_id(kind: &str, value: &str) -> crate::Result<()> {
-    if value.is_empty()
-        || value.len() > MAX_ICON_CONFIG_ID_LENGTH
-        || !value.bytes().all(|byte| {
-            byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_'
-        })
-    {
-        bail!(ErrorKind::InputError(format!(
-            "instance icon {kind} ID is invalid"
-        )));
-    }
-
-    Ok(())
 }
 
 fn render_generated_icon(
@@ -688,9 +756,9 @@ fn svg_not_supported_error() -> crate::Error {
 #[cfg(test)]
 mod tests {
     use super::{
-        GENERATED_ICON_SIZE, INSTANCE_ICON_MAX_DIMENSION,
-        InstanceIconBackground, InstanceIconConfig, ValidatedIconBackground,
-        keep_as_animated_gif, render_generated_icon, validate_icon_config,
+        GENERATED_ICON_SIZE, INSTANCE_ICON_MAX_DIMENSION, IconBackground,
+        IconConfig, ValidatedIconBackground, keep_as_animated_gif,
+        render_generated_icon, validate_icon_config,
     };
     use image::codecs::gif::GifEncoder;
     use image::{Delay, DynamicImage, Frame, ImageFormat, Rgba, RgbaImage};
@@ -780,11 +848,12 @@ mod tests {
         );
     }
 
+
     #[test]
     fn generated_icon_config_validates_color_and_symbol_id() {
         assert_eq!(
-            validate_icon_config(&InstanceIconConfig {
-                background: InstanceIconBackground::Color {
+            validate_icon_config(&IconConfig {
+                background: IconBackground::Color {
                     value: "#c78aff".to_string(),
                 },
                 symbol: "dusk_block".to_string(),
@@ -793,8 +862,8 @@ mod tests {
             ValidatedIconBackground::Color([199, 138, 255])
         );
         assert!(
-            validate_icon_config(&InstanceIconConfig {
-                background: InstanceIconBackground::Color {
+            validate_icon_config(&IconConfig {
+                background: IconBackground::Color {
                     value: "purple".to_string(),
                 },
                 symbol: "dusk_block".to_string(),
@@ -802,8 +871,8 @@ mod tests {
             .is_err()
         );
         assert!(
-            validate_icon_config(&InstanceIconConfig {
-                background: InstanceIconBackground::Color {
+            validate_icon_config(&IconConfig {
+                background: IconBackground::Color {
                     value: "#c78aff".to_string(),
                 },
                 symbol: "dusk-block".to_string(),
@@ -847,4 +916,5 @@ mod tests {
         assert!(!keep_as_animated_gif(b"GIF89a not really"));
         assert!(!keep_as_animated_gif(&[]));
     }
+
 }

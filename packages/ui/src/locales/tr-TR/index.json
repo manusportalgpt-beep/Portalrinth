@@ -8,6 +8,24 @@
   "app.appearance-settings.native-decorations.title": {
     "defaultMessage": "Sistem pencere çerçevesi"
   },
+  "app.instance.admonitions.shared-instance.changes-header": {
+    "defaultMessage": "Değişiklikler henüz paylaşılmadı"
+  },
+  "app.instance.admonitions.shared-instance.publish-button": {
+    "defaultMessage": "Güncellemeyi yayınla"
+  },
+  "app.instance.admonitions.shared-instance.publishing-button": {
+    "defaultMessage": "Yayınlıyor..."
+  },
+  "app.instance.admonitions.shared-instance.reviewing-button": {
+    "defaultMessage": "İnceleniyor..."
+  },
+  "app.instance.share.members.empty": {
+    "defaultMessage": "Henüz katılan kullanıcı yok"
+  },
+  "app.instance.share.members.no-filter-results": {
+    "defaultMessage": "Filtrelerinizle eşleşen kullanıcı yok."
+  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "Sunucu ayarları yüklenemedi"
   },
@@ -26,11 +44,26 @@
   "badge.release": {
     "defaultMessage": "Sürüm"
   },
+  "billing.resubscribe-modal.add-payment-method": {
+    "defaultMessage": "Ödeme yöntemi ekle"
+  },
   "billing.resubscribe-modal.cancel": {
     "defaultMessage": "İptal"
   },
+  "billing.resubscribe-modal.change-payment-method": {
+    "defaultMessage": "Değiştir"
+  },
+  "billing.resubscribe-modal.charged-now": {
+    "defaultMessage": "Sizden bugün {total}, ardından iptal edene kadar {period} ödeme alınacaktır. İstediğiniz zaman ayarlar sayfasından iptal edebilirsiniz."
+  },
+  "billing.resubscribe-modal.charged-on-date": {
+    "defaultMessage": "Sizden  <charge-date>{date}</charge-date> tarihinde {total},  ardından iptal edene kadar {period} ödeme alınacaktır. İstediğiniz zaman ayarlar sayfasından iptal edebilirsiniz."
+  },
   "billing.resubscribe-modal.description": {
     "defaultMessage": "Şu anda <server-name>{serverName}</server-name> için yeniden abonelik işlemini başlatmak üzeresiniz. Aboneliğiniz tekrar etkinleştirilecek ve sunucunuz kesintisiz olarak çalışmaya devam edecektir."
+  },
+  "billing.resubscribe-modal.error.payment-method": {
+    "defaultMessage": "Ödeme yönteminiz değiştirilemedi."
   },
   "billing.resubscribe-modal.error.text": {
     "defaultMessage": "Yeniden abone olunamıyor, abonelik ayrıntıları yüklenemedi."
@@ -41,11 +74,32 @@
   "billing.resubscribe-modal.failed-load": {
     "defaultMessage": "Abonelik detayları yüklenemedi."
   },
+  "billing.resubscribe-modal.no-payment-method": {
+    "defaultMessage": "Ödeme yöntemi seçilmedi"
+  },
+  "billing.resubscribe-modal.plan.custom": {
+    "defaultMessage": "Özel Seçim"
+  },
+  "billing.resubscribe-modal.plan.large": {
+    "defaultMessage": "Büyük"
+  },
+  "billing.resubscribe-modal.plan.medium": {
+    "defaultMessage": "Orta"
+  },
+  "billing.resubscribe-modal.plan.small": {
+    "defaultMessage": "Küçük"
+  },
+  "billing.resubscribe-modal.preview-error": {
+    "defaultMessage": "Yeniden abonelik ücreti hesaplanamadı. Ödeme yönteminizde tanımlı bir fatura adresi olduğundan emin olun ve tekrar deneyin."
+  },
   "billing.resubscribe-modal.resubscribe": {
     "defaultMessage": "Yeniden abone ol"
   },
+  "billing.resubscribe-modal.tax-item": {
+    "defaultMessage": "Vergi"
+  },
   "billing.resubscribe-modal.title": {
-    "defaultMessage": "Sunucuya Yeniden Abone Ol"
+    "defaultMessage": "Modrinth Hosting'e Yeniden Abone Ol"
   },
   "browse.advanced-filters.apply-saved-preferences": {
     "defaultMessage": "Keydedilen tercihleri uygula"
@@ -118,6 +172,9 @@
   },
   "button.close": {
     "defaultMessage": "Kapat"
+  },
+  "button.confirm": {
+    "defaultMessage": "Onayla"
   },
   "button.continue": {
     "defaultMessage": "Devam"
@@ -329,8 +386,14 @@
   "content-type.item.lowercase": {
     "defaultMessage": "{count, plural, one {item} other {items}}"
   },
+  "content.card.external-file": {
+    "defaultMessage": "Harici dosya"
+  },
   "content.card.frozen": {
     "defaultMessage": "Bu proje, dondurulması kaldırılana kadar mevcut sürümüne kilitlenmiştir."
+  },
+  "content.card.override-file": {
+    "defaultMessage": "Dosyaların üstüne yaz"
   },
   "content.card.select-project": {
     "defaultMessage": "{project} seçin"
@@ -343,6 +406,9 @@
   },
   "content.card.uploaded": {
     "defaultMessage": "Yüklendi"
+  },
+  "content.card.uploaded-file": {
+    "defaultMessage": "Yüklenen dosya"
   },
   "content.confirm-bulk-update.admonition-body": {
     "defaultMessage": "{count, plural, one {# projeyi} other {# projeyi}} en yeni uyumlu sürümüne güncellemek istediğinden emin misin? İçeriklerin tek tek güncellenmesi önerilir."
@@ -373,6 +439,18 @@
   },
   "content.confirm-disable.header": {
     "defaultMessage": "{itemType} öğesini sil"
+  },
+  "content.confirm-environment.admonition-title": {
+    "defaultMessage": "Bu içerik uyumsuz olabilir"
+  },
+  "content.confirm-environment.disable-player-title": {
+    "defaultMessage": "Oyuncular için devredışı bırakılsınmı?"
+  },
+  "content.confirm-environment.disable-server-title": {
+    "defaultMessage": "Sunucun için devredışı bırakılsınmı?"
+  },
+  "content.confirm-environment.performance-admonition-title": {
+    "defaultMessage": "Performans uyarısı"
   },
   "content.confirm-modpack-update.admonition-header": {
     "defaultMessage": "{action, select, downgrade {Sürüm Düşürme} other {Güncelleme}} uyarısı"
@@ -512,6 +590,30 @@
   "content.diff-modal.updated-count": {
     "defaultMessage": "{count} güncellendi"
   },
+  "content.enabled-for.label": {
+    "defaultMessage": "Şunun için etkinleştir"
+  },
+  "content.enabled-for.player": {
+    "defaultMessage": "Oyuncu"
+  },
+  "content.enabled-for.player-only-filter": {
+    "defaultMessage": "Sadece-oyuncu"
+  },
+  "content.enabled-for.please-wait": {
+    "defaultMessage": "Lütfen bekleyin"
+  },
+  "content.enabled-for.server": {
+    "defaultMessage": "Sunucu"
+  },
+  "content.enabled-for.server-and-player": {
+    "defaultMessage": "Sunucu ve oyuncu"
+  },
+  "content.enabled-for.server-only-filter": {
+    "defaultMessage": "Sadece-sunucu"
+  },
+  "content.enabled-for.server-tooltip": {
+    "defaultMessage": "İçeriği sunucun için indir."
+  },
   "content.filter.disabled": {
     "defaultMessage": "Devre dışı"
   },
@@ -631,6 +733,9 @@
   },
   "content.metadata-filter.warning.client-retained": {
     "defaultMessage": "İstemci dosyası korundu"
+  },
+  "content.metadata-filter.warning.compatibility-unknown": {
+    "defaultMessage": "Uyumluluk bilinmiyor"
   },
   "content.metadata-filter.warning.none": {
     "defaultMessage": "Uyarı yok"
@@ -2002,6 +2107,9 @@
   },
   "hosting.loader.reset-to-onboarding-success-title": {
     "defaultMessage": "Sunucu, yeni başlayanlar için ayarlanmıştır."
+  },
+  "hosting.settings.properties.motd-profanity": {
+    "defaultMessage": "Minecraft Kullanım Yönergeleri gereğince sunucunuzun MOTD'si küfür içeremez. Tespit edilen: “{value}”."
   },
   "hosting.specs.burst": {
     "defaultMessage": "{cpus} CPUya kadar çıkar"

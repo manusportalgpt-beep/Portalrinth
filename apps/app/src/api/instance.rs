@@ -50,8 +50,10 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_get_linked_modpack_content,
             instance_get_optimal_jre_key,
             instance_get_modern_java_status,
+            instance_get_recommended_java_version,
             instance_install_modern_java,
             instance_remove_modern_java,
+            instance_get_recommended_java_version,
             instance_get_full_path,
             instance_get_mod_full_path,
             instance_list_screenshots,
@@ -113,6 +115,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_kill,
             instance_edit,
             instance_edit_icon,
+            instance_cache_icon,
             instance_edit_generated_icon,
             instance_cache_generated_icon,
             instance_get_recent_icon_configs,
@@ -127,7 +130,18 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             instance_share_publish,
             instance_share_publish_support_details,
             instance_share_unlink,
+            instance_share_get_relink_preview,
+            instance_share_relink,
             instance_share_unpublish,
+            instance_share_unpublish_remote,
+            instance_share_leave_remote,
+            instance_share_get_cached_library,
+            instance_share_cache_library,
+            instance_get_hidden_ids,
+            instance_set_hidden,
+            instance_share_dismiss_restored_notice,
+            instance_share_refresh_lock,
+            instance_share_refresh_locks,
             instance_export_mrpack,
             instance_get_pack_export_candidates,
         ])
@@ -142,7 +156,7 @@ pub struct Instance {
     pub launcher_feature_version: String,
     pub name: String,
     pub icon_path: Option<String>,
-    pub icon_config: Option<theseus::data::InstanceIconConfig>,
+    pub icon_config: Option<theseus::data::IconConfig>,
     pub game_version: String,
     pub protocol_version: Option<u32>,
     pub loader: ModLoader,
@@ -152,6 +166,8 @@ pub struct Instance {
     pub link: Option<InstanceLink>,
     pub shared_instance: Option<SharedInstanceAttachment>,
     pub quarantined: bool,
+    pub launch_blocked: bool,
+    pub content_locked: bool,
     pub update_channel: ReleaseChannel,
     pub created: chrono::DateTime<chrono::Utc>,
     pub modified: chrono::DateTime<chrono::Utc>,
@@ -227,6 +243,7 @@ pub struct SharedInstanceAttachment {
     pub status: String,
     pub applied_version: Option<i32>,
     pub latest_version: Option<i32>,
+    pub restored_from_remote: bool,
 }
 
 impl From<CoreSharedInstanceAttachment> for SharedInstanceAttachment {
@@ -241,6 +258,7 @@ impl From<CoreSharedInstanceAttachment> for SharedInstanceAttachment {
             status: attachment.status.as_str().to_string(),
             applied_version: attachment.applied_version,
             latest_version: attachment.latest_version,
+            restored_from_remote: attachment.restored_from_remote,
         }
     }
 }
@@ -332,6 +350,8 @@ impl From<InstanceMetadata> for Instance {
             link: InstanceLink::from_core(metadata.link),
             shared_instance: metadata.shared_instance.map(Into::into),
             quarantined: metadata.quarantined,
+            launch_blocked: metadata.launch_blocked,
+            content_locked: metadata.content_locked,
             update_channel: metadata.instance.update_channel,
             created: metadata.instance.created,
             modified: metadata.instance.modified,
@@ -1150,6 +1170,7 @@ pub async fn instance_get_optimal_jre_key(
 }
 
 #[tauri::command]
+
 pub async fn instance_get_modern_java_status(
     instance_id: &str,
 ) -> Result<ModernJavaStatus> {
@@ -1168,6 +1189,13 @@ pub async fn instance_remove_modern_java(
     instance_id: &str,
 ) -> Result<ModernJavaStatus> {
     Ok(theseus::instance::remove_modern_java(instance_id).await?)
+
+pub async fn instance_get_recommended_java_version(
+    instance_id: &str,
+) -> Result<u32> {
+    Ok(theseus::instance::get_recommended_java_version(instance_id).await?)
+
+
 }
 
 #[tauri::command]
@@ -1398,9 +1426,14 @@ pub async fn instance_edit_icon(
 }
 
 #[tauri::command]
+pub async fn instance_cache_icon(icon_bytes: Vec<u8>) -> Result<String> {
+    Ok(theseus::instance::cache_icon_bytes(icon_bytes).await?)
+}
+
+#[tauri::command]
 pub async fn instance_edit_generated_icon(
     instance_id: &str,
-    config: theseus::data::InstanceIconConfig,
+    config: theseus::data::IconConfig,
     symbol_bytes: Vec<u8>,
     only_if_empty: Option<bool>,
 ) -> Result<Option<String>> {
@@ -1425,7 +1458,7 @@ pub async fn instance_edit_generated_icon(
 
 #[tauri::command]
 pub async fn instance_cache_generated_icon(
-    config: theseus::data::InstanceIconConfig,
+    config: theseus::data::IconConfig,
     symbol_bytes: Vec<u8>,
     add_to_recents: bool,
 ) -> Result<String> {
@@ -1439,7 +1472,7 @@ pub async fn instance_cache_generated_icon(
 
 #[tauri::command]
 pub async fn instance_get_recent_icon_configs()
--> Result<Vec<theseus::data::InstanceIconConfig>> {
+-> Result<Vec<theseus::data::IconConfig>> {
     Ok(theseus::instance::get_recent_icon_configs().await?)
 }
 
@@ -1563,7 +1596,96 @@ pub async fn instance_share_unlink(instance_id: &str) -> Result<()> {
 }
 
 #[tauri::command]
+pub async fn instance_share_get_relink_preview(
+    instance_id: &str,
+    input: &str,
+) -> Result<theseus::instance::SharedInstanceRelinkPreview> {
+    Ok(theseus::instance::get_shared_instance_relink_preview(
+        instance_id,
+        input,
+    )
+    .await?)
+}
+
+#[tauri::command]
+pub async fn instance_share_relink(
+    instance_id: &str,
+    shared_instance_id: &str,
+) -> Result<()> {
+    theseus::instance::relink_shared_instance(instance_id, shared_instance_id)
+        .await?;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn instance_share_unpublish(instance_id: &str) -> Result<()> {
     theseus::instance::unpublish_shared_instance(instance_id).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn instance_share_unpublish_remote(
+    shared_instance_id: &str,
+) -> Result<()> {
+    theseus::instance::unpublish_remote_shared_instance(shared_instance_id)
+        .await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn instance_share_get_cached_library()
+-> Result<Vec<theseus::data::CachedSharedInstanceSummary>> {
+    Ok(theseus::instance::get_cached_shared_instance_library().await?)
+}
+
+#[tauri::command]
+pub async fn instance_share_cache_library(
+    instances: Vec<theseus::data::CachedSharedInstanceSummary>,
+) -> Result<()> {
+    theseus::instance::cache_shared_instance_library(instances).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn instance_get_hidden_ids() -> Result<Vec<String>> {
+    Ok(theseus::instance::get_hidden_instance_ids().await?)
+}
+
+#[tauri::command]
+pub async fn instance_set_hidden(
+    instance_id: &str,
+    hidden: bool,
+) -> Result<()> {
+    theseus::instance::set_instance_hidden(instance_id, hidden).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn instance_share_refresh_lock(
+    instance_id: &str,
+) -> Result<theseus::instance::SharedInstanceLockStatus> {
+    Ok(theseus::instance::refresh_shared_instance_lock(instance_id).await?)
+}
+
+#[tauri::command]
+pub async fn instance_share_refresh_locks() -> Result<()> {
+    theseus::instance::refresh_shared_instance_locks().await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn instance_share_dismiss_restored_notice(
+    instance_id: &str,
+) -> Result<()> {
+    theseus::instance::dismiss_shared_instance_restored_notice(instance_id)
+        .await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn instance_share_leave_remote(
+    shared_instance_id: &str,
+) -> Result<()> {
+    theseus::instance::leave_remote_shared_instance(shared_instance_id).await?;
     Ok(())
 }

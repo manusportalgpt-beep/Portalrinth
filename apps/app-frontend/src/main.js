@@ -3,7 +3,8 @@ import '@/assets/stylesheets/portalrinth-motion.css'
 import '@/assets/stylesheets/portalrinth-themes.css'
 
 import { installTooltipDirective } from '@modrinth/ui'
-import { VueQueryPlugin } from '@tanstack/vue-query'
+import { focusManager, VueQueryPlugin } from '@tanstack/vue-query'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { createApp } from 'vue'
 
 import App from '@/App.vue'

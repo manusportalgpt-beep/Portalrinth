@@ -94,6 +94,13 @@ fn inspect_content_archive<R: Read + Seek>(
 fn infer_project_type<R: Read + Seek>(
     archive: &mut ZipArchive<R>,
 ) -> crate::Result<ProjectType> {
+    let mut has_data = false;
+    let mut has_shaders = false;
+    for name in archive.file_names() {
+        let name = name?;
+        has_data |= name.starts_with("data/");
+        has_shaders |= name.starts_with("shaders/");
+    }
     if has_entry(archive, "fabric.mod.json")
         || has_entry(archive, "quilt.mod.json")
         || has_entry(archive, "META-INF/neoforge.mods.toml")
@@ -102,15 +109,12 @@ fn infer_project_type<R: Read + Seek>(
     {
         Ok(ProjectType::Mod)
     } else if has_entry(archive, "pack.mcmeta") {
-        if archive.file_names().any(|name| name.starts_with("data/")) {
+        if has_data {
             Ok(ProjectType::DataPack)
         } else {
             Ok(ProjectType::ResourcePack)
         }
-    } else if archive
-        .file_names()
-        .any(|name| name.starts_with("shaders/"))
-    {
+    } else if has_shaders {
         Ok(ProjectType::ShaderPack)
     } else {
         Err(ErrorKind::InputError(
@@ -280,10 +284,13 @@ fn parse_toml_metadata<R: Read + Seek>(
         .and_then(toml_scalar_string)
         .and_then(|value| resolve_toml_value(&value, &root, manifest))
         .and_then(|value| clean_string(&value, MAX_VERSION_CHARS));
-    let icon = mod_table
-        .get("logoFile")
-        .and_then(TomlValue::as_str)
-        .and_then(safe_archive_path);
+    // NeoForge's iconFile is the square mod icon, logoFile is a wide banner
+    let icon = ["iconFile", "logoFile"].into_iter().find_map(|key| {
+        mod_table
+            .get(key)
+            .and_then(TomlValue::as_str)
+            .and_then(safe_archive_path)
+    });
 
     Some((
         EmbeddedContentMetadata {

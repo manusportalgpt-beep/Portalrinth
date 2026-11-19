@@ -32,17 +32,19 @@ pub use util::fetch::DownloadReason;
 
 /// Installs `ring` as the process-wide rustls crypto provider.
 ///
-/// Must be called before any TLS connection is made: when both `ring` and
-/// `aws-lc-rs` end up in the dependency tree, rustls refuses to pick one
-/// implicitly, and anything building a rustls config without a provider
-/// panics until a process default is installed.
+/// Must be called before any TLS connection is made: reqwest is built with
+/// `rustls-no-provider` and the friends socket relies on the process default.
 pub fn install_crypto_provider() {
     let _ = rustls::crypto::ring::default_provider().install_default();
 }
 
 pub fn launcher_user_agent() -> String {
     const LAUNCHER_BASE_USER_AGENT: &str =
-        concat!("portalrinth/", env!("CARGO_PKG_VERSION"),);
+        concat!("modrinth/theseus/", env!("CARGO_PKG_VERSION"),);
 
-    format!("{} ({})", LAUNCHER_BASE_USER_AGENT, std::env::consts::OS)
+    format!(
+        "{} ({}; support@modrinth.com)",
+        LAUNCHER_BASE_USER_AGENT,
+        std::env::consts::OS
+    )
 }

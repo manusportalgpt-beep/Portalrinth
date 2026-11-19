@@ -2,11 +2,11 @@ import { AbstractModrinthClient } from '../core/abstract-client'
 import { ModrinthApiError } from '../core/errors'
 import type { RequestContext } from '../types/request'
 import {
+	type FileUploadMetadata,
 	isLocalFile,
 	type LocalFile,
 	type UploadHandle,
 	type UploadMetadata,
-	type FileUploadMetadata,
 	type UploadProgress,
 	type UploadRequestOptions,
 } from '../types/upload'
@@ -204,7 +204,7 @@ export abstract class XHRUploadClient extends AbstractModrinthClient {
 			url: appendRequestParams(context.url, context.options.params),
 			headers: context.options.headers ?? {},
 			file,
-			multipartField: (context.metadata as FileUploadMetadata | undefined)?.multipartField,
+			multipartField: (context.metadata as FileUploadMetadata).multipartField,
 			signal: abortController.signal,
 			onProgress: (progress) => progressCallbacks.forEach((cb) => cb(progress)),
 		})

@@ -488,6 +488,9 @@
   "app.file-download.waiting": {
     "message": "กำลังรอเซิร์ฟเวอร์…"
   },
+  "app.instance.action.add-content": {
+    "message": "เพิ่มทรัพยากร"
+  },
   "app.instance.action.copy-path": {
     "message": "คัดลอกเส้นทาง"
   },

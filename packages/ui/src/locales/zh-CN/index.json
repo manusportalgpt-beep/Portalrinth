@@ -8,6 +8,24 @@
   "app.appearance-settings.native-decorations.title": {
     "defaultMessage": "系统窗口框架"
   },
+  "app.instance.admonitions.shared-instance.changes-header": {
+    "defaultMessage": "本地更改尚未发布分享"
+  },
+  "app.instance.admonitions.shared-instance.publish-button": {
+    "defaultMessage": "推送更新"
+  },
+  "app.instance.admonitions.shared-instance.publishing-button": {
+    "defaultMessage": "推送中..."
+  },
+  "app.instance.admonitions.shared-instance.reviewing-button": {
+    "defaultMessage": "正在审查……"
+  },
+  "app.instance.share.members.empty": {
+    "defaultMessage": "暂无用户加入"
+  },
+  "app.instance.share.members.no-filter-results": {
+    "defaultMessage": "没有符合筛选条件的用户。"
+  },
   "app.server-settings.failed-to-load-server": {
     "defaultMessage": "服务器设置加载失败"
   },
@@ -26,11 +44,26 @@
   "badge.release": {
     "defaultMessage": "正式版"
   },
+  "billing.resubscribe-modal.add-payment-method": {
+    "defaultMessage": "添加支付方式"
+  },
   "billing.resubscribe-modal.cancel": {
     "defaultMessage": "取消操作"
   },
+  "billing.resubscribe-modal.change-payment-method": {
+    "defaultMessage": "更改"
+  },
+  "billing.resubscribe-modal.charged-now": {
+    "defaultMessage": "今天将向您收取 {total} 美元，之后每 {period} 收取一次，直至您取消订阅。您可以随时在设置页面取消订阅。"
+  },
+  "billing.resubscribe-modal.charged-on-date": {
+    "defaultMessage": "将于<charge-date>{date}</charge-date>收取您{total}美元，之后每{period}收取一次，直至您取消订阅。您可以随时在设置页面取消订阅。"
+  },
   "billing.resubscribe-modal.description": {
     "defaultMessage": "你即将重新订阅 <server-name>{serverName}</server-name>。你的订阅将会重新启用，且服务器将持续运行。"
+  },
+  "billing.resubscribe-modal.error.payment-method": {
+    "defaultMessage": "无法更改您的支付方式"
   },
   "billing.resubscribe-modal.error.text": {
     "defaultMessage": "无法重新订阅，获取订阅信息失败。"
@@ -41,11 +74,41 @@
   "billing.resubscribe-modal.failed-load": {
     "defaultMessage": "获取订阅信息失败。"
   },
+  "billing.resubscribe-modal.no-payment-method": {
+    "defaultMessage": "未选择付款方式"
+  },
+  "billing.resubscribe-modal.period": {
+    "defaultMessage": "{interval, select, fiveDays {5 天} monthly {month} quarterly {3 个月} yearly {year} other {{interval}}}"
+  },
+  "billing.resubscribe-modal.plan-item": {
+    "defaultMessage": "Modrinth Hosting（{plan}）"
+  },
+  "billing.resubscribe-modal.plan.custom": {
+    "defaultMessage": "自定义"
+  },
+  "billing.resubscribe-modal.plan.large": {
+    "defaultMessage": "大型"
+  },
+  "billing.resubscribe-modal.plan.medium": {
+    "defaultMessage": "中型"
+  },
+  "billing.resubscribe-modal.plan.small": {
+    "defaultMessage": "小型"
+  },
+  "billing.resubscribe-modal.preview-error": {
+    "defaultMessage": "我们无法计算重新订阅的费用。请确保您的支付方式有一个账单地址，然后重试。"
+  },
+  "billing.resubscribe-modal.recurring-notice": {
+    "defaultMessage": "点击“重新订阅”即代表您将恢复定期订阅。"
+  },
   "billing.resubscribe-modal.resubscribe": {
     "defaultMessage": "续订"
   },
+  "billing.resubscribe-modal.tax-item": {
+    "defaultMessage": "税费"
+  },
   "billing.resubscribe-modal.title": {
-    "defaultMessage": "重新订阅服务器"
+    "defaultMessage": "重新订阅 Modrinth Hosting"
   },
   "browse.advanced-filters.apply-saved-preferences": {
     "defaultMessage": "应用已保存的首选项"
@@ -57,7 +120,7 @@
     "defaultMessage": "高级排除在会话之间保存，打开与过滤器的共享链接将覆盖它们。"
   },
   "browse.filter-results": {
-    "defaultMessage": "筛选结果…"
+    "defaultMessage": "筛选结果……"
   },
   "browse.no-results": {
     "defaultMessage": "找不到你查询的结果！"
@@ -118,6 +181,9 @@
   },
   "button.close": {
     "defaultMessage": "关闭"
+  },
+  "button.confirm": {
+    "defaultMessage": "确认"
   },
   "button.continue": {
     "defaultMessage": "继续"
@@ -338,8 +404,14 @@
   "content-type.item.lowercase": {
     "defaultMessage": "{count, plural, one {个项目} other {个项目}}"
   },
+  "content.card.external-file": {
+    "defaultMessage": "外部文件"
+  },
   "content.card.frozen": {
     "defaultMessage": "在解除锁定前，此项目被锁定到当前版本。"
+  },
+  "content.card.override-file": {
+    "defaultMessage": "覆盖文件"
   },
   "content.card.select-project": {
     "defaultMessage": "选择 {project}"
@@ -352,6 +424,9 @@
   },
   "content.card.uploaded": {
     "defaultMessage": "已上传"
+  },
+  "content.card.uploaded-file": {
+    "defaultMessage": "上传文件"
   },
   "content.confirm-bulk-update.admonition-body": {
     "defaultMessage": "是否确定要将 {count, plural,  other {# 个项目}}更新至最新的兼容版本？建议逐个更新内容。"
@@ -382,6 +457,45 @@
   },
   "content.confirm-disable.header": {
     "defaultMessage": "禁用 {itemType}"
+  },
+  "content.confirm-environment.admonition-title": {
+    "defaultMessage": "该内容可能不兼容"
+  },
+  "content.confirm-environment.disable-player-body": {
+    "defaultMessage": "玩家客户端必须安装 {project}。若将其禁用，可能会导致玩家无法正常使用此内容。"
+  },
+  "content.confirm-environment.disable-player-title": {
+    "defaultMessage": "对玩家禁用？"
+  },
+  "content.confirm-environment.disable-server-body": {
+    "defaultMessage": "{project}在服务器中为必需项。 禁用此项可能会导致你的服务器工作异常。"
+  },
+  "content.confirm-environment.disable-server-title": {
+    "defaultMessage": "对你的服务器禁用？"
+  },
+  "content.confirm-environment.distant-horizons-server-body": {
+    "defaultMessage": "远程地平线可以大大提高您服务器上的 CPU 使用率并导致延迟。建议只在玩家一侧启用它。"
+  },
+  "content.confirm-environment.performance-admonition-title": {
+    "defaultMessage": "性能警告"
+  },
+  "content.confirm-environment.player-body": {
+    "defaultMessage": "{project} 不适用于玩家的客户端。启用它可能会导致错误或阻止游戏启动。"
+  },
+  "content.confirm-environment.player-title": {
+    "defaultMessage": "为玩家启用？"
+  },
+  "content.confirm-environment.required-admonition-title": {
+    "defaultMessage": "此处需要此内容"
+  },
+  "content.confirm-environment.server-body": {
+    "defaultMessage": "{project} 并非设计用于在服务器上运行。启用它可能会导致错误，或使您的服务器无法启动。"
+  },
+  "content.confirm-environment.server-title": {
+    "defaultMessage": "在你的服务器上启用？"
+  },
+  "content.confirm-environment.singleplayer-body": {
+    "defaultMessage": "{project} 被设计用于单人游戏。在服务器上启用它可能会导致错误，或使服务器无法启动。"
   },
   "content.confirm-modpack-update.admonition-body": {
     "defaultMessage": "{action, select, downgrade {降级} other {更新}}可能会导致兼容性问题。你在整合包基础上额外添加的模组或内容将被保留，但可能与新版本不兼容。"
@@ -452,8 +566,11 @@
   "content.diff-modal.added-count": {
     "defaultMessage": "添加了 {count} 项"
   },
+  "content.diff-modal.config-file-count": {
+    "defaultMessage": "{count, plural, one {# 个配置文件} other {# 个配置文件}}"
+  },
   "content.diff-modal.config-files-updated": {
-    "defaultMessage": "更改的文件"
+    "defaultMessage": "配置文件"
   },
   "content.diff-modal.diff-type.added": {
     "defaultMessage": "添加（依赖）"
@@ -487,6 +604,9 @@
   },
   "content.diff-modal.install-anyway": {
     "defaultMessage": "仍然安装"
+  },
+  "content.diff-modal.instance-folder": {
+    "defaultMessage": "实例文件夹"
   },
   "content.diff-modal.loader-updated": {
     "defaultMessage": "模组加载器"
@@ -526,6 +646,39 @@
   },
   "content.diff-modal.updated-count": {
     "defaultMessage": "更新了 {count} 项"
+  },
+  "content.enabled-for.description": {
+    "defaultMessage": "选择在何处启用此内容。使用“操作”开关可将其彻底启用或禁用。"
+  },
+  "content.enabled-for.label": {
+    "defaultMessage": "启用对象"
+  },
+  "content.enabled-for.not-supported-here": {
+    "defaultMessage": "此内容并非设计为在此处启用。"
+  },
+  "content.enabled-for.player": {
+    "defaultMessage": "玩家"
+  },
+  "content.enabled-for.player-only-filter": {
+    "defaultMessage": "仅玩家"
+  },
+  "content.enabled-for.player-tooltip": {
+    "defaultMessage": "将此内容包含在共享实例或玩家下载的 .mrpack 文件中。"
+  },
+  "content.enabled-for.please-wait": {
+    "defaultMessage": "请稍等"
+  },
+  "content.enabled-for.server": {
+    "defaultMessage": "服务器"
+  },
+  "content.enabled-for.server-and-player": {
+    "defaultMessage": "服务器和玩家"
+  },
+  "content.enabled-for.server-only-filter": {
+    "defaultMessage": "仅服务器"
+  },
+  "content.enabled-for.server-tooltip": {
+    "defaultMessage": "在你的服务器上安装此内容。"
   },
   "content.filter.disabled": {
     "defaultMessage": "已禁用"
@@ -644,11 +797,23 @@
   "content.metadata-filter.warning.client-only": {
     "defaultMessage": "仅客户端的内容"
   },
+  "content.metadata-filter.warning.client-only-dependency-on-server": {
+    "defaultMessage": "仅客户端模组在服务器上"
+  },
   "content.metadata-filter.warning.client-retained": {
     "defaultMessage": "客户端文件已保存"
   },
+  "content.metadata-filter.warning.compatibility-unknown": {
+    "defaultMessage": "兼容性未知"
+  },
   "content.metadata-filter.warning.none": {
     "defaultMessage": "无警告"
+  },
+  "content.metadata-filter.warning.requires-client-only-dependency": {
+    "defaultMessage": "仅需要客户端的模组"
+  },
+  "content.metadata-filter.warning.server-only": {
+    "defaultMessage": "仅限服务器的内容"
   },
   "content.metadata-filter.warnings": {
     "defaultMessage": "警告"
@@ -802,6 +967,51 @@
   },
   "creation-flow.button.setup-server": {
     "defaultMessage": "初始化服务器"
+  },
+  "creation-flow.curseforge.change-button": {
+    "defaultMessage": "更改"
+  },
+  "creation-flow.curseforge.checking-server-pack": {
+    "defaultMessage": "正在检查服务器包……"
+  },
+  "creation-flow.curseforge.description": {
+    "defaultMessage": "使用一个在 Modrinth 上不存在的整合包。"
+  },
+  "creation-flow.curseforge.file-label": {
+    "defaultMessage": "CurseForge 整合包文件"
+  },
+  "creation-flow.curseforge.link-label": {
+    "defaultMessage": "CurseForge 整合包链接"
+  },
+  "creation-flow.curseforge.lookup-failed": {
+    "defaultMessage": "我们无法连接到 CurseForge，请重试。"
+  },
+  "creation-flow.curseforge.minecraft-version": {
+    "defaultMessage": "Minecraft {version}"
+  },
+  "creation-flow.curseforge.not-found": {
+    "defaultMessage": "我们无法在 CurseForge 找到这个整合包。"
+  },
+  "creation-flow.curseforge.or-upload": {
+    "defaultMessage": "或自行上传"
+  },
+  "creation-flow.curseforge.processing-file": {
+    "defaultMessage": "处理中..."
+  },
+  "creation-flow.curseforge.remove-file": {
+    "defaultMessage": "移除 {filename}"
+  },
+  "creation-flow.curseforge.selected-file-label": {
+    "defaultMessage": "整合包文件"
+  },
+  "creation-flow.curseforge.server-pack-label": {
+    "defaultMessage": "服务器包 <optional>（可选）</optional>"
+  },
+  "creation-flow.curseforge.title": {
+    "defaultMessage": "上传一个 CurseForge 整合包"
+  },
+  "creation-flow.curseforge.upload-prompt": {
+    "defaultMessage": "拖放文件或单击浏览"
   },
   "creation-flow.modal.custom-setup.build-number.label": {
     "defaultMessage": "构建编号"
@@ -1057,6 +1267,9 @@
   },
   "creation-flow.modal.setup-type.title.world": {
     "defaultMessage": "选择世界类型"
+  },
+  "creation-flow.modal.uploading.mrpack-file-label": {
+    "defaultMessage": ".mrpack文件"
   },
   "creation-flow.title.create-instance": {
     "defaultMessage": "创建实例"
@@ -1725,7 +1938,7 @@
     "defaultMessage": "名称只能包含字母、数字、连字符、下划线或空格。"
   },
   "files.validation.name-invalid-file": {
-    "defaultMessage": "名称只能包含字母、数字、连字符、下划线或空格。"
+    "defaultMessage": "名称只能包含字母、数字、连字符、下划线、句点或空格。"
   },
   "files.validation.name-label": {
     "defaultMessage": "名称"
@@ -1734,7 +1947,7 @@
     "defaultMessage": "名称为必填项。"
   },
   "files.zip-url-modal.backup-name": {
-    "defaultMessage": "安装 CurseForge 整合包"
+    "defaultMessage": "在 .zip 文件 URL 上传前"
   },
   "files.zip-url-modal.cf-header": {
     "defaultMessage": "安装一个 CurseForge 整合包"
@@ -2033,6 +2246,21 @@
   "hosting.settings.properties.motd-profanity-save-error": {
     "defaultMessage": "根据《Minecraft Usage Guidelines》，服务器的 MOTD 不得包含粗俗用语。检测到的内容：“{value}”"
   },
+  "hosting.settings.update-channel": {
+    "defaultMessage": "更新渠道"
+  },
+  "hosting.settings.update-channel.alpha": {
+    "defaultMessage": "Alpha 版"
+  },
+  "hosting.settings.update-channel.beta": {
+    "defaultMessage": "Beta 版"
+  },
+  "hosting.settings.update-channel.release": {
+    "defaultMessage": "正式版"
+  },
+  "hosting.settings.update-channel.select": {
+    "defaultMessage": "选择更新渠道"
+  },
   "hosting.specs.burst": {
     "defaultMessage": "爆发时最多 {cpus} CPU"
   },
@@ -2276,6 +2504,15 @@
   "installation-settings.search-game-version": {
     "defaultMessage": "搜索游戏版本……"
   },
+  "installation-settings.shared-instance.title": {
+    "defaultMessage": "取消发布实例"
+  },
+  "installation-settings.shared-instance.unpublish-button": {
+    "defaultMessage": "取消发布共享实例"
+  },
+  "installation-settings.shared-instance.unpublishing-button": {
+    "defaultMessage": "取消发布中……"
+  },
   "installation-settings.type.instance": {
     "defaultMessage": "实例"
   },
@@ -2293,6 +2530,12 @@
   },
   "installation-settings.unlink.description": {
     "defaultMessage": "解除关联将永久断开该 {type} 与 {projectType} 项目的关联，你可以自由更换加载器与Minecraft版本，但此后你将无法接收到整合包的后续更新。"
+  },
+  "installation-settings.unpublish-shared-instance.modal.admonition-header": {
+    "defaultMessage": "取消发布共享实例中"
+  },
+  "installation-settings.unpublish-shared-instance.modal.header": {
+    "defaultMessage": "取消发布共享实例"
   },
   "installation-settings.verifying": {
     "defaultMessage": "正在验证……"
@@ -2326,6 +2569,285 @@
   },
   "instance.confirm-repair.server-label": {
     "defaultMessage": "服务器"
+  },
+  "instance.icon-editor.background": {
+    "defaultMessage": "背景"
+  },
+  "instance.icon-editor.background.blue": {
+    "defaultMessage": "蓝色"
+  },
+  "instance.icon-editor.background.dark-gray": {
+    "defaultMessage": "深灰色"
+  },
+  "instance.icon-editor.background.dark-green": {
+    "defaultMessage": "深绿色"
+  },
+  "instance.icon-editor.background.gray": {
+    "defaultMessage": "灰色"
+  },
+  "instance.icon-editor.background.green": {
+    "defaultMessage": "绿色"
+  },
+  "instance.icon-editor.background.indigo": {
+    "defaultMessage": "靛蓝色"
+  },
+  "instance.icon-editor.background.lavender": {
+    "defaultMessage": "淡紫色"
+  },
+  "instance.icon-editor.background.light-gray": {
+    "defaultMessage": "浅灰色"
+  },
+  "instance.icon-editor.background.lime": {
+    "defaultMessage": "青柠色"
+  },
+  "instance.icon-editor.background.orange": {
+    "defaultMessage": "橙色"
+  },
+  "instance.icon-editor.background.pink": {
+    "defaultMessage": "粉色"
+  },
+  "instance.icon-editor.background.purple": {
+    "defaultMessage": "紫色"
+  },
+  "instance.icon-editor.background.red": {
+    "defaultMessage": "红色"
+  },
+  "instance.icon-editor.background.rose": {
+    "defaultMessage": "玫瑰红色"
+  },
+  "instance.icon-editor.background.yellow": {
+    "defaultMessage": "黄色"
+  },
+  "instance.icon-editor.description": {
+    "defaultMessage": "混合搭配各种元素以创建自定义图标。"
+  },
+  "instance.icon-editor.recents": {
+    "defaultMessage": "最近使用"
+  },
+  "instance.icon-editor.save": {
+    "defaultMessage": "保存图标"
+  },
+  "instance.icon-editor.surprise-me": {
+    "defaultMessage": "随机生成"
+  },
+  "instance.icon-editor.symbol": {
+    "defaultMessage": "符号"
+  },
+  "instance.icon-editor.symbol.backpack": {
+    "defaultMessage": "背包"
+  },
+  "instance.icon-editor.symbol.beacon": {
+    "defaultMessage": "信标"
+  },
+  "instance.icon-editor.symbol.blue-shark": {
+    "defaultMessage": "蓝鲨"
+  },
+  "instance.icon-editor.symbol.bookshelf": {
+    "defaultMessage": "书架"
+  },
+  "instance.icon-editor.symbol.brown-bear": {
+    "defaultMessage": "棕熊"
+  },
+  "instance.icon-editor.symbol.cake": {
+    "defaultMessage": "蛋糕"
+  },
+  "instance.icon-editor.symbol.campfire": {
+    "defaultMessage": "营火"
+  },
+  "instance.icon-editor.symbol.chest": {
+    "defaultMessage": "箱子"
+  },
+  "instance.icon-editor.symbol.cogwheel": {
+    "defaultMessage": "齿轮"
+  },
+  "instance.icon-editor.symbol.command-block": {
+    "defaultMessage": "命令方块"
+  },
+  "instance.icon-editor.symbol.cooking-pot": {
+    "defaultMessage": "烹饪锅"
+  },
+  "instance.icon-editor.symbol.couch": {
+    "defaultMessage": "沙发"
+  },
+  "instance.icon-editor.symbol.crafting-table": {
+    "defaultMessage": "工作台"
+  },
+  "instance.icon-editor.symbol.create-wrench": {
+    "defaultMessage": "扳手"
+  },
+  "instance.icon-editor.symbol.creeper": {
+    "defaultMessage": "苦力怕"
+  },
+  "instance.icon-editor.symbol.enchanting-table": {
+    "defaultMessage": "附魔台"
+  },
+  "instance.icon-editor.symbol.ender-chest": {
+    "defaultMessage": "末影箱"
+  },
+  "instance.icon-editor.symbol.ender-dragon": {
+    "defaultMessage": "末影龙"
+  },
+  "instance.icon-editor.symbol.engine": {
+    "defaultMessage": "引擎"
+  },
+  "instance.icon-editor.symbol.fabric": {
+    "defaultMessage": "Fabric"
+  },
+  "instance.icon-editor.symbol.forge": {
+    "defaultMessage": "Forge"
+  },
+  "instance.icon-editor.symbol.furnace": {
+    "defaultMessage": "熔炉"
+  },
+  "instance.icon-editor.symbol.gizmo": {
+    "defaultMessage": "小装置"
+  },
+  "instance.icon-editor.symbol.globe": {
+    "defaultMessage": "地球仪"
+  },
+  "instance.icon-editor.symbol.grass-block": {
+    "defaultMessage": "草方块"
+  },
+  "instance.icon-editor.symbol.lantern": {
+    "defaultMessage": "灯笼"
+  },
+  "instance.icon-editor.symbol.moobloom": {
+    "defaultMessage": "哞花"
+  },
+  "instance.icon-editor.symbol.mr-pack": {
+    "defaultMessage": "整合包"
+  },
+  "instance.icon-editor.symbol.neoforge": {
+    "defaultMessage": "NeoForge"
+  },
+  "instance.icon-editor.symbol.orb": {
+    "defaultMessage": "经验球"
+  },
+  "instance.icon-editor.symbol.oxygen-distributor": {
+    "defaultMessage": "氧气分配器"
+  },
+  "instance.icon-editor.symbol.pancakes": {
+    "defaultMessage": "煎饼"
+  },
+  "instance.icon-editor.symbol.pickaxe": {
+    "defaultMessage": "镐"
+  },
+  "instance.icon-editor.symbol.poke-ball": {
+    "defaultMessage": "精灵球"
+  },
+  "instance.icon-editor.symbol.quilt": {
+    "defaultMessage": "Quilt"
+  },
+  "instance.icon-editor.symbol.redstone-block": {
+    "defaultMessage": "红石块"
+  },
+  "instance.icon-editor.symbol.sculk-sensor": {
+    "defaultMessage": "幽匿感测体"
+  },
+  "instance.icon-editor.symbol.skeleton": {
+    "defaultMessage": "骷髅"
+  },
+  "instance.icon-editor.symbol.skillet": {
+    "defaultMessage": "滑块"
+  },
+  "instance.icon-editor.symbol.slime-block": {
+    "defaultMessage": "粘液快"
+  },
+  "instance.icon-editor.symbol.space-helmet": {
+    "defaultMessage": "航天头盔"
+  },
+  "instance.icon-editor.symbol.sticky-piston": {
+    "defaultMessage": "粘性活塞"
+  },
+  "instance.icon-editor.symbol.sword": {
+    "defaultMessage": "剑"
+  },
+  "instance.icon-editor.symbol.terminal": {
+    "defaultMessage": "终端"
+  },
+  "instance.icon-editor.symbol.tiny-potato": {
+    "defaultMessage": "小土豆"
+  },
+  "instance.icon-editor.symbol.tire": {
+    "defaultMessage": "车轮"
+  },
+  "instance.icon-editor.symbol.tnt": {
+    "defaultMessage": "TNT"
+  },
+  "instance.icon-editor.symbol.wrenth-rinth": {
+    "defaultMessage": "Modrinth 扳手"
+  },
+  "instance.icon-editor.symbol.zombie": {
+    "defaultMessage": "僵尸"
+  },
+  "instance.icon-editor.title": {
+    "defaultMessage": "图标编辑器"
+  },
+  "instance.settings.sharing.active-invites.actions": {
+    "defaultMessage": "操作"
+  },
+  "instance.settings.sharing.active-invites.code": {
+    "defaultMessage": "邀请链接"
+  },
+  "instance.settings.sharing.active-invites.empty": {
+    "defaultMessage": "暂无有效邀请。"
+  },
+  "instance.settings.sharing.active-invites.expires": {
+    "defaultMessage": "有效期"
+  },
+  "instance.settings.sharing.active-invites.revoke": {
+    "defaultMessage": "撤销邀请"
+  },
+  "instance.settings.sharing.active-invites.revoke-with-code": {
+    "defaultMessage": "撤销邀请码 {code}"
+  },
+  "instance.settings.sharing.active-invites.title": {
+    "defaultMessage": "有效邀请"
+  },
+  "instance.settings.sharing.active-invites.uses": {
+    "defaultMessage": "使用"
+  },
+  "instance.settings.sharing.revoke-invite.admonition-header": {
+    "defaultMessage": "此操作无法撤销"
+  },
+  "instance.settings.sharing.revoke-invite.confirm": {
+    "defaultMessage": "撤销邀请"
+  },
+  "instance.settings.sharing.revoke-invite.header": {
+    "defaultMessage": "撤销邀请"
+  },
+  "instance.shared-instance.publish-review.added-label": {
+    "defaultMessage": "添加"
+  },
+  "instance.shared-instance.publish-review.changes-tab": {
+    "defaultMessage": "更改"
+  },
+  "instance.shared-instance.publish-review.file-type-not-allowed": {
+    "defaultMessage": "您无权推送此文件类型。"
+  },
+  "instance.shared-instance.publish-review.files-tab": {
+    "defaultMessage": "文件"
+  },
+  "instance.shared-instance.publish-review.header": {
+    "defaultMessage": "推送更新"
+  },
+  "instance.shared-instance.publish-review.loading-files": {
+    "defaultMessage": "正在加载文件……"
+  },
+  "instance.shared-instance.publish-review.more-options": {
+    "defaultMessage": "更多推送选项"
+  },
+  "instance.shared-instance.publish-review.publish-button": {
+    "defaultMessage": "推送更新"
+  },
+  "instance.shared-instance.publish-review.push-and-restart-button": {
+    "defaultMessage": "推送并重启"
+  },
+  "instance.shared-instance.publish-review.removed-label": {
+    "defaultMessage": "已移除"
+  },
+  "instance.shared-instance.publish-review.storage-title": {
+    "defaultMessage": "存储允许量"
   },
   "instance.worlds.game_mode.adventure": {
     "defaultMessage": "冒险模式"
@@ -3032,6 +3554,9 @@
   "modal.open-in-app.why-use": {
     "defaultMessage": "为何使用 Modrinth App"
   },
+  "modal.tabbed.collapse": {
+    "defaultMessage": "折叠"
+  },
   "notification.error.title": {
     "defaultMessage": "发生错误"
   },
@@ -3485,6 +4010,9 @@
   "profile.restrict-user.save-success-title": {
     "defaultMessage": "限制已保存"
   },
+  "profile.restrict-user.select-all-button": {
+    "defaultMessage": "全选"
+  },
   "profile.revoke-sessions.admonition-body": {
     "defaultMessage": "{username} 将在所有设备上退出登录，并需要重新登录。个人访问令牌不受影响。"
   },
@@ -3738,7 +4266,7 @@
     "defaultMessage": "已复制！"
   },
   "project.about.server.copiedText": {
-    "defaultMessage": "服务器地址以复制到剪贴板"
+    "defaultMessage": "服务器地址已复制到剪贴板"
   },
   "project.about.server.downloadModpack": {
     "defaultMessage": "下载整合包"
@@ -4625,11 +5153,17 @@
   "search.photosensitivity-warning-modal.title": {
     "defaultMessage": "搜索结果不能保证安全"
   },
+  "search.server-environment.title": {
+    "defaultMessage": "运行环境"
+  },
   "search.server_content_type.modpack": {
     "defaultMessage": "模组适配"
   },
   "search.server_content_type.vanilla": {
     "defaultMessage": "原版"
+  },
+  "server.settings.sharing.retry": {
+    "defaultMessage": "重试"
   },
   "servers.access-page.activity-log-filter.action-group.backups": {
     "defaultMessage": "备份"
@@ -4760,11 +5294,20 @@
   "servers.access-page.activity-log-filter.action.server-restarted": {
     "defaultMessage": "重启服务器"
   },
+  "servers.access-page.activity-log-filter.action.server-resuspended": {
+    "defaultMessage": "服务器又停止服务了"
+  },
   "servers.access-page.activity-log-filter.action.server-started": {
     "defaultMessage": "开启服务器"
   },
   "servers.access-page.activity-log-filter.action.server-stopped": {
     "defaultMessage": "停止服务器"
+  },
+  "servers.access-page.activity-log-filter.action.server-suspended": {
+    "defaultMessage": "服务器停止服务"
+  },
+  "servers.access-page.activity-log-filter.action.server-unsuspended": {
+    "defaultMessage": "服务器没有停止服务"
   },
   "servers.access-page.activity-log-filter.action.sftp-credentials-rolled": {
     "defaultMessage": "轮转 SFTP 凭据"
@@ -5288,6 +5831,60 @@
   "servers.backups.delete.error": {
     "defaultMessage": "尝试删除 {count, plural, one {backup} other {# backups}} 时失败。"
   },
+  "servers.backups.deleted.auto-badge": {
+    "defaultMessage": "自动"
+  },
+  "servers.backups.deleted.column.created": {
+    "defaultMessage": "已创建"
+  },
+  "servers.backups.deleted.column.name": {
+    "defaultMessage": "名称"
+  },
+  "servers.backups.deleted.column.reason": {
+    "defaultMessage": "原因"
+  },
+  "servers.backups.deleted.filter.add": {
+    "defaultMessage": "添加筛选条件"
+  },
+  "servers.backups.deleted.filter.clear": {
+    "defaultMessage": "清空筛选"
+  },
+  "servers.backups.deleted.filter.reason": {
+    "defaultMessage": "原因"
+  },
+  "servers.backups.deleted.filter.recoverable": {
+    "defaultMessage": "可恢复性"
+  },
+  "servers.backups.deleted.filter.recoverable.yes": {
+    "defaultMessage": "可恢复"
+  },
+  "servers.backups.deleted.filter.type": {
+    "defaultMessage": "类型"
+  },
+  "servers.backups.deleted.filter.type.auto": {
+    "defaultMessage": "自动"
+  },
+  "servers.backups.deleted.filter.type.manual": {
+    "defaultMessage": "手动"
+  },
+  "servers.backups.deleted.no-results": {
+    "defaultMessage": "没有符合搜索条件的已删除备份。"
+  },
+  "servers.backups.deleted.reason.deleted": {
+    "defaultMessage": "手动删除"
+  },
+  "servers.backups.deleted.search-label": {
+    "defaultMessage": "搜索已删除的备份"
+  },
+  "servers.backups.deleted.title": {
+    "defaultMessage": "删除备份"
+  },
+  "servers.backups.deleted.undelete": {
+    "defaultMessage": "撤消删除"
+  },
+  "servers.backups.deleted.unrecoverable": {
+    "defaultMessage": "不可恢复"
+  },
   "servers.backups.empty.description": {
     "defaultMessage": "创建你的第一个备份"
   },
@@ -5524,6 +6121,21 @@
   },
   "servers.installing-banner.preparing.header": {
     "defaultMessage": "正在准备服务器"
+  },
+  "servers.lift-suspension.duration": {
+    "defaultMessage": "持续时间"
+  },
+  "servers.lift-suspension.duration.custom": {
+    "defaultMessage": "自定义"
+  },
+  "servers.lift-suspension.minutes": {
+    "defaultMessage": "分钟"
+  },
+  "servers.lift-suspension.minutes.invalid": {
+    "defaultMessage": "请输入介于 1 到 {max} （3 天）之间的整数分钟数。"
+  },
+  "servers.lift-suspension.minutes.placeholder": {
+    "defaultMessage": "输入分钟数"
   },
   "servers.list-empty.already-have-server-label": {
     "defaultMessage": "已经有服务器了吗？"
@@ -5770,6 +6382,9 @@
   },
   "servers.manage.shared-servers-title": {
     "defaultMessage": "共享服务器"
+  },
+  "servers.manage.suspended.go-to-admin-billing": {
+    "defaultMessage": "转到账单管理"
   },
   "servers.manage.unlock-server": {
     "defaultMessage": "解锁服务器"
@@ -6064,6 +6679,9 @@
   },
   "servers.settings.support.clear-action-log-title": {
     "defaultMessage": "是否清除操作日志？"
+  },
+  "servers.settings.support.resuspend.button": {
+    "defaultMessage": "立即取消"
   },
   "servers.setup.onboarding.installation-failed.text": {
     "defaultMessage": "安装时出现了未被预料的错误。请稍后再试。"

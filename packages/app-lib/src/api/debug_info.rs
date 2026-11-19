@@ -1,8 +1,13 @@
+use crate::state::db_backup::{
+    copy_db_files, create_sqlite_snapshot, remove_partial_backup,
+};
 use crate::util::io::IOError;
+use crate::util::redactions::{Redactor, scrub_database_snapshot};
 use crate::{ErrorKind, State};
+use flate2::read::GzDecoder;
 use serde::Serialize;
 use std::fs::File;
-use std::io::{BufWriter, Read, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
@@ -29,6 +34,8 @@ struct ExportFile {
     path: PathBuf,
     name: String,
     length: u64,
+    redact: bool,
+    gzip: bool,
 }
 
 pub async fn export_debug_info(
@@ -46,17 +53,44 @@ pub async fn export_debug_info(
         state = State::get() => state?,
     };
     let directories = state.directories.clone();
+    let redactor = Redactor::load(&state.pool).await?;
     let database_files = tempfile::tempdir()?;
-    // A consistent snapshot from SQLite itself, rather than copying app.db and
-    // its -wal/-shm files: on Windows SQLite holds byte-range locks on the -shm
-    // file, and reading it fails with ERROR_LOCK_VIOLATION (os error 33).
-    let snapshot = database_files.path().join("app.db");
-    tokio::select! {
+    let database_snapshot = database_files.path().join("app.db");
+    let mut connection = tokio::select! {
         _ = cancel.cancelled() => return Ok(false),
-        result = sqlx::query("VACUUM INTO ?")
-            .bind(snapshot.to_string_lossy().into_owned())
-            .execute(&state.pool) => { result?; }
+        connection = state.pool.acquire() => connection?,
     };
+    if let Err(error) =
+        create_sqlite_snapshot(&mut connection, &database_snapshot).await
+    {
+        tracing::warn!(
+            "Failed to snapshot app database for debug info export, copying the database files instead: {error}"
+        );
+        remove_partial_backup(&database_snapshot).await;
+        copy_db_files(
+            &directories.settings_dir.join("app.db"),
+            &database_snapshot,
+        )
+        .await?;
+    }
+    drop(connection);
+    if cancel.is_cancelled() {
+        return Ok(false);
+    }
+    let include_database = match scrub_database_snapshot(&database_snapshot)
+        .await
+    {
+        Ok(()) => true,
+        Err(error) => {
+            tracing::warn!(
+                "Failed to remove credentials from the app database snapshot, leaving it out of the debug info export: {error}"
+            );
+            false
+        }
+    };
+    if cancel.is_cancelled() {
+        return Ok(false);
+    }
     let mut buffer = vec![0; 64 * 1024];
 
     tokio::task::spawn_blocking(move || -> crate::Result<bool> {
@@ -70,18 +104,22 @@ pub async fn export_debug_info(
                 .unwrap_or_else(|_| export_path.clone()),
         ];
         let mut files = Vec::new();
-        collect_files(
-            &mut files,
-            database_files.path(),
-            "database",
-            &excluded_paths,
-            &cancel,
-        )?;
+        if include_database {
+            collect_files(
+                &mut files,
+                database_files.path(),
+                "database",
+                false,
+                &excluded_paths,
+                &cancel,
+            )?;
+        }
         if let Some(logs_dir) = directories.launcher_logs_dir() {
             collect_files(
                 &mut files,
                 &logs_dir,
                 "launcher_logs",
+                true,
                 &excluded_paths,
                 &cancel,
             )?;
@@ -107,6 +145,7 @@ pub async fn export_debug_info(
                             &mut files,
                             &instance_dir.join(name),
                             &format!("{prefix}/{name}"),
+                            true,
                             &excluded_paths,
                             &cancel,
                         )?;
@@ -125,6 +164,7 @@ pub async fn export_debug_info(
                                 &mut files,
                                 &file.path(),
                                 &format!("{prefix}/{name}"),
+                                true,
                                 &excluded_paths,
                                 &cancel,
                             )?;
@@ -166,6 +206,52 @@ pub async fn export_debug_info(
                     return Err(IOError::with_path(error, &file.path).into());
                 }
             };
+            let mut input = input.take(file.length);
+            if file.redact {
+                let mut reader: Box<dyn BufRead> = if file.gzip {
+                    Box::new(BufReader::new(GzDecoder::new(input)))
+                } else {
+                    Box::new(BufReader::new(input))
+                };
+                archive
+                    .start_file(
+                        &file.name,
+                        file_options().large_file(
+                            file.gzip
+                                || file.length >= zip::ZIP64_BYTES_THR / 2,
+                        ),
+                    )
+                    .map_err(std::io::Error::from)?;
+                let mut line = Vec::new();
+                loop {
+                    if cancel.is_cancelled() {
+                        return Ok(false);
+                    }
+                    match reader.read_until(b'\n', &mut line) {
+                        Ok(0) => break,
+                        Ok(_) => {}
+                        Err(error) if file.gzip => {
+                            tracing::warn!(
+                                "Failed to decompress {} for debug info export, keeping the part read before the error: {error}",
+                                file.path.display()
+                            );
+                            break;
+                        }
+                        Err(error) => {
+                            return Err(
+                                IOError::with_path(error, &file.path).into()
+                            );
+                        }
+                    }
+                    archive.write_all(&redactor.apply(std::mem::take(&mut line)))?;
+                }
+                progress.processed_bytes += file.length;
+                if last_sent.elapsed() >= Duration::from_millis(200) {
+                    on_progress(progress);
+                    last_sent = Instant::now();
+                }
+                continue;
+            }
             archive
                 .start_file(
                     &file.name,
@@ -173,7 +259,6 @@ pub async fn export_debug_info(
                         .large_file(file.length >= zip::ZIP64_BYTES_THR),
                 )
                 .map_err(std::io::Error::from)?;
-            let mut input = input.take(file.length);
             let mut copied = 0;
             loop {
                 if cancel.is_cancelled() {
@@ -214,8 +299,8 @@ pub async fn export_debug_info(
                 "os_version": sysinfo::System::long_os_version(),
                 "kernel_version": sysinfo::System::kernel_version(),
                 "architecture": std::env::consts::ARCH,
-                "settings_dir": directories.settings_dir,
-                "config_dir": directories.config_dir,
+                "settings_dir": redactor.apply_path(&directories.settings_dir),
+                "config_dir": redactor.apply_path(&directories.config_dir),
             }),
         )?;
         archive.finish().map_err(std::io::Error::from)?.flush()?;
@@ -241,6 +326,7 @@ fn collect_files(
     files: &mut Vec<ExportFile>,
     path: &Path,
     archive_name: &str,
+    redact: bool,
     excluded_paths: &[PathBuf],
     cancel: &CancellationToken,
 ) -> crate::Result<()> {
@@ -269,6 +355,7 @@ fn collect_files(
                     "{archive_name}/{}",
                     entry.file_name().to_string_lossy()
                 ),
+                redact,
                 excluded_paths,
                 cancel,
             )?;
@@ -277,10 +364,13 @@ fn collect_files(
         && !std::fs::canonicalize(path)
             .is_ok_and(|path| excluded_paths.contains(&path))
     {
+        let gzip_name = archive_name.strip_suffix(".gz").filter(|_| redact);
         files.push(ExportFile {
             path: path.to_path_buf(),
-            name: archive_name.to_string(),
+            name: gzip_name.unwrap_or(archive_name).to_string(),
             length: metadata.len(),
+            redact,
+            gzip: gzip_name.is_some(),
         });
     }
     Ok(())

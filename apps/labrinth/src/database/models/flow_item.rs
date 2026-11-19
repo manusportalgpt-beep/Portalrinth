@@ -4,8 +4,8 @@ use crate::models::pats::Scopes;
 use crate::{auth::AuthProvider, routes::internal::flows::TempUser};
 use chrono::Duration;
 use eyre::{Result, WrapErr};
-use rand::Rng;
-use rand::distributions::Alphanumeric;
+use rand::RngExt;
+use rand::distr::Alphanumeric;
 use rand_chacha::ChaCha20Rng;
 use rand_chacha::rand_core::SeedableRng;
 use serde_binhum::serde_binhum;
@@ -13,7 +13,7 @@ use url::Url;
 use webauthn_rs::prelude::{DiscoverableAuthentication, PasskeyRegistration};
 use xredis::RedisPool;
 
-const FLOWS_NAMESPACE: &str = "flows:v4";
+const FLOWS_NAMESPACE: &str = "flows:v5";
 
 #[serde_binhum]
 pub enum DBFlow {
@@ -22,6 +22,7 @@ pub enum DBFlow {
         url: Url,
         provider: AuthProvider,
         existing_user_id: Option<DBUserId>,
+        session_id: Option<DBSessionId>,
     },
     OAuthPending {
         url: Url,
@@ -123,7 +124,7 @@ impl DBFlow {
         expires: Duration,
         redis: &RedisPool,
     ) -> Result<String> {
-        let state = ChaCha20Rng::from_entropy()
+        let state = ChaCha20Rng::from_rng(&mut rand::rng())
             .sample_iter(&Alphanumeric)
             .take(32)
             .map(char::from)

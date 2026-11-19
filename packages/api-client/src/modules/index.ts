@@ -1,9 +1,11 @@
 import type { AbstractModrinthClient } from '../core/abstract-client'
 import type { AbstractModule } from '../core/abstract-module'
 import { ArchonActionsV1Module } from './archon/actions/v1'
+import { ArchonBackupRepositoriesInternalModule } from './archon/backup-repositories/internal'
 import { ArchonBackupsV1Module } from './archon/backups/v1'
 import { ArchonBackupsQueueV1Module } from './archon/backups-queue/v1'
 import { ArchonContentV1Module } from './archon/content/v1'
+import { ArchonIconsV1Module } from './archon/icons/v1'
 import { ArchonNodesInternalModule } from './archon/nodes/internal'
 import { ArchonNoticesV0Module } from './archon/notices/v0'
 import { ArchonOptionsV1Module } from './archon/options/v1'
@@ -18,6 +20,7 @@ import { KyrosBackupsV1Module } from './kyros/backups/v1'
 import { KyrosContentV1Module } from './kyros/content/v1'
 import { KyrosFilesV0Module } from './kyros/files/v0'
 import { KyrosFilesV1Module } from './kyros/files/v1'
+import { KyrosFlameAnvilV1Module } from './kyros/flameanvil/v1'
 import { KyrosLogsV1Module } from './kyros/logs/v1'
 import { KyrosUploadSessionsV1Module } from './kyros/upload-sessions/v1'
 import { LabrinthVersionsV2Module, LabrinthVersionsV3Module } from './labrinth'
@@ -32,6 +35,7 @@ import { LabrinthBlockedUsersV3Module } from './labrinth/blocked-users/v3'
 import { LabrinthCampaignInternalModule } from './labrinth/campaign/internal'
 import { LabrinthCollectionsModule } from './labrinth/collections'
 import { LabrinthContentV3Module } from './labrinth/content/v3'
+import { LabrinthCopyrightArchivesInternalModule } from './labrinth/copyright-archives/internal'
 import { LabrinthExternalProjectsInternalModule } from './labrinth/external-projects/internal'
 import { LabrinthFriendsV3Module } from './labrinth/friends/v3'
 import { LabrinthGeoIpModule } from './labrinth/geoip'
@@ -45,6 +49,7 @@ import { LabrinthOrganizationsV3Module } from './labrinth/organizations/v3'
 import { LabrinthPatsV2Module } from './labrinth/pats/v2'
 import { LabrinthPayoutV3Module } from './labrinth/payout/v3'
 import { LabrinthPayoutsV3Module } from './labrinth/payouts/v3'
+import { LabrinthProjectFlagsInternalModule } from './labrinth/project-flags/internal'
 import { LabrinthProjectsV2Module } from './labrinth/projects/v2'
 import { LabrinthProjectsV3Module } from './labrinth/projects/v3'
 import { LabrinthReportsV3Module } from './labrinth/reports/v3'
@@ -62,6 +67,7 @@ import { LauncherMetaManifestV0Module } from './launcher-meta/v0'
 import { MclogsInsightsV1Module } from './mclogs/insights/v1'
 import { MclogsLogsV1Module } from './mclogs/logs/v1'
 import { PaperVersionsV3Module } from './paper/v3'
+import { PastePastesV0Module } from './paste/pastes/v0'
 import { PurpurVersionsV2Module } from './purpur/v2'
 import { SharedInstancesInstancesV1Module } from './shared-instances/instances/v1'
 import { SharedInstancesInvitesV1Module } from './shared-instances/invites/v1'
@@ -81,9 +87,11 @@ type ModuleConstructor = new (client: AbstractModrinthClient) => AbstractModule
  */
 export const MODULE_REGISTRY = {
 	archon_actions_v1: ArchonActionsV1Module,
+	archon_backup_repositories_internal: ArchonBackupRepositoriesInternalModule,
 	archon_backups_queue_v1: ArchonBackupsQueueV1Module,
 	archon_backups_v1: ArchonBackupsV1Module,
 	archon_content_v1: ArchonContentV1Module,
+	archon_icons_v1: ArchonIconsV1Module,
 	archon_nodes_internal: ArchonNodesInternalModule,
 	archon_notices_v0: ArchonNoticesV0Module,
 	archon_options_v1: ArchonOptionsV1Module,
@@ -101,6 +109,7 @@ export const MODULE_REGISTRY = {
 	kyros_content_v1: KyrosContentV1Module,
 	kyros_files_v0: KyrosFilesV0Module,
 	kyros_files_v1: KyrosFilesV1Module,
+	kyros_flameanvil_v1: KyrosFlameAnvilV1Module,
 	kyros_logs_v1: KyrosLogsV1Module,
 	kyros_upload_sessions_v1: KyrosUploadSessionsV1Module,
 	labrinth_analytics_internal: LabrinthAnalyticsInternalModule,
@@ -114,6 +123,7 @@ export const MODULE_REGISTRY = {
 	labrinth_campaign_internal: LabrinthCampaignInternalModule,
 	labrinth_collections: LabrinthCollectionsModule,
 	labrinth_content_v3: LabrinthContentV3Module,
+	labrinth_copyright_archives_internal: LabrinthCopyrightArchivesInternalModule,
 	labrinth_external_projects_internal: LabrinthExternalProjectsInternalModule,
 	labrinth_friends_v3: LabrinthFriendsV3Module,
 	labrinth_geoip: LabrinthGeoIpModule,
@@ -127,6 +137,7 @@ export const MODULE_REGISTRY = {
 	labrinth_limits_v3: LabrinthLimitsV3Module,
 	labrinth_payout_v3: LabrinthPayoutV3Module,
 	labrinth_payouts_v3: LabrinthPayoutsV3Module,
+	labrinth_project_flags_internal: LabrinthProjectFlagsInternalModule,
 	labrinth_projects_v2: LabrinthProjectsV2Module,
 	labrinth_projects_v3: LabrinthProjectsV3Module,
 	labrinth_reports_v3: LabrinthReportsV3Module,
@@ -143,6 +154,7 @@ export const MODULE_REGISTRY = {
 	labrinth_versions_v2: LabrinthVersionsV2Module,
 	labrinth_versions_v3: LabrinthVersionsV3Module,
 	paper_versions_v3: PaperVersionsV3Module,
+	paste_pastes_v0: PastePastesV0Module,
 	purpur_versions_v2: PurpurVersionsV2Module,
 	sharedinstances_invites_v1: SharedInstancesInvitesV1Module,
 	sharedinstances_instances_v1: SharedInstancesInstancesV1Module,

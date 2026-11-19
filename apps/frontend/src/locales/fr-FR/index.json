@@ -548,14 +548,23 @@
   "app-marketing.download.download-appimage": {
     "message": "Télécharger l'AppImage"
   },
+  "app-marketing.download.download-appimage-arm64": {
+    "message": "Télécharger l'AppImage (ARM64)"
+  },
   "app-marketing.download.download-beta": {
     "message": "Télécharger la bêta"
   },
   "app-marketing.download.download-deb": {
     "message": "Télécharger le DEB"
   },
+  "app-marketing.download.download-deb-arm64": {
+    "message": "Télécharger le DEB (ARM64)"
+  },
   "app-marketing.download.download-rpm": {
     "message": "Télécharger le RPM"
+  },
+  "app-marketing.download.download-rpm-arm64": {
+    "message": "Télécharger le RPM (ARM64)"
   },
   "app-marketing.download.flathub": {
     "message": "Disponible sur Flathub"
@@ -690,7 +699,7 @@
     "message": "Partagez des modpacks"
   },
   "app-marketing.features.unlike-any-launcher": {
-    "message": "Contrairement à tous les autres launchers"
+    "message": "Un launcher comme"
   },
   "app-marketing.features.website.description": {
     "message": "Modrinth App est entièrement intégrée au site Web, vous pouvez donc accéder à tous vos projets préférés depuis l'application !"
@@ -699,7 +708,7 @@
     "message": "Intégration au site Web"
   },
   "app-marketing.features.youve-used-before": {
-    "message": "vous avez utilisé avant"
+    "message": "vous n'en avez jamais vu"
   },
   "app-marketing.hero.app-screenshot-alt": {
     "message": "Capture d'écran de Modrinth App avec une instance Cobblemon ouverte sur la page « Contenu »."
@@ -812,6 +821,12 @@
   "auth.create-account.username.placeholder": {
     "message": "Entrez un pseudo"
   },
+  "auth.oauth.opening.description": {
+    "message": "Complétez votre inscription sur {provider}"
+  },
+  "auth.oauth.opening.title": {
+    "message": "Ouverture de {provider}..."
+  },
   "auth.reauthenticate.2fa.description": {
     "message": "Entrez le code à 6 chiffres de votre application d'authentification, ou l'un de vos codes de récupération."
   },
@@ -880,6 +895,9 @@
   },
   "auth.sign-in.choose-existing-account": {
     "message": "Utiliser un compte existant"
+  },
+  "auth.sign-in.code-failed": {
+    "message": "Ce lien de connexion est invalide ou a expiré. Veuillez réessayer."
   },
   "auth.sign-in.continue-with-email": {
     "message": "Continuer avec un E-mail"
@@ -1500,7 +1518,7 @@
     "message": "Total des téléchargements"
   },
   "dashboard.analytics.total-followers": {
-    "message": "Total des adorateurs"
+    "message": "Total des abonnés"
   },
   "dashboard.collections.button.create-new": {
     "message": "Créer un nouveau"
@@ -1606,6 +1624,12 @@
   },
   "dashboard.creator-withdraw-modal.fee-breakdown-usd-equivalent": {
     "message": "Équivalent en dollars américains"
+  },
+  "dashboard.creator-withdraw-modal.kyc.blocked-region-body": {
+    "message": "En raison de restrictions de conformité, nous ne pouvons pas envoyer d'argent dans la région : {region}."
+  },
+  "dashboard.creator-withdraw-modal.kyc.blocked-region-header": {
+    "message": "Les retraits ne sont pas pris en charge pour cette région"
   },
   "dashboard.creator-withdraw-modal.kyc.business-entity": {
     "message": "Entité commerciale"
@@ -2223,7 +2247,7 @@
     "message": "Ce type de contenu ne peut pas être installé sur un serveur depuis Découvrir."
   },
   "discover.install.heading.reset-modpack": {
-    "message": "Sélectionner un modpack à insaller après la réinitialisation"
+    "message": "Sélection du contenu à installer après la réinitialisation"
   },
   "discover.seo.description": {
     "message": "Recherchez et explorez des milliers de {projectType} Minecraft sur Modrinth avec des résultats instantanés et précis. Nos filtres vous aident à trouver rapidement les meilleurs {projectType}."
@@ -2337,7 +2361,7 @@
     "message": "Grenouille surprise ! 🐸"
   },
   "frog.altText": {
-    "message": "Un tableau photoréaliste d'un labyrinthe amphibien"
+    "message": "Un chef-d'œuvre intersidéral d'un labyrinthe en forme de grenouille"
   },
   "frog.title": {
     "message": "Grenouille"
@@ -2394,7 +2418,7 @@
     "message": "Les serveurs de Modrinth Hosting sont hébergés sur du matériel très moderne et performant, mais il est difficile de dire exactement comment cela se traduira par la vitesse à laquelle votre serveur fonctionnera, car il y a tellement de facteurs qui l'affectent, tels que les mods, les packs de données ou les plugins que vous exécutez sur votre serveur, et même le comportement de l'utilisateur."
   },
   "hosting-marketing.faq.how-fast.answer.two": {
-    "message": "La plupart des problèmes de performance qui surviennent ont tendance à être la faute d'un modpack, mod, pack de données ou plugin non optimisé qui provoque du lag chez le serveur. Puisque nos serveurs sont très haut de gamme, vous ne devriez pas rencontrer beaucoup de problèmes tant que vous choisissez un plan approprié pour le contenu que vous diffusez sur le serveur."
+    "message": "La plupart des problèmes de performance qui surviennent ont tendance à être la faute d'un modpack, mod, pack de données ou plugin non optimisé qui provoque du lag chez le serveur. Puisque nos serveurs sont très haut de gamme, vous ne devriez pas rencontrer beaucoup de problèmes tant que vous choisissez un forfait approprié pour le contenu que vous diffusez sur le serveur."
   },
   "hosting-marketing.faq.increase-storage": {
     "message": "Puis-je augmenter le stockage sur mon serveur ?"
@@ -2517,7 +2541,7 @@
     "message": "Une erreur inattendue est survenue"
   },
   "hosting-marketing.pick-customized-plan": {
-    "message": "Choisissez un plan personnalisé avec seulement les spécifications dont vous avez besoin."
+    "message": "Choisissez un forfait personnalisé avec seulement les spécifications dont vous avez besoin."
   },
   "hosting-marketing.server-for-everyone": {
     "message": "Il y a un serveur pour tout le monde"
@@ -2565,7 +2589,7 @@
     "message": "En rupture de stock"
   },
   "hosting.plan.select-plan": {
-    "message": "Sélectionner un plan"
+    "message": "Sélectionner un forfait"
   },
   "landing.button.discover-mods": {
     "message": "Découvrez des mods"
@@ -2737,9 +2761,6 @@
   },
   "layout.action.review-projects": {
     "message": "Revue de projet"
-  },
-  "layout.action.tech-review": {
-    "message": "Revue technique"
   },
   "layout.action.user-lookup": {
     "message": "Recherche d'utilisateur"
@@ -2993,6 +3014,9 @@
   "layout.nav.upgrade-to-modrinth-plus": {
     "message": "Passer à Modrinth+"
   },
+  "layout.nav.use-signed-out": {
+    "message": "Utiliser la déconnexion"
+  },
   "layout.publish.email-verification-required.description": {
     "message": "Vous devez vérifier votre adresse e-mail avant de publier sur Modrinth."
   },
@@ -3110,6 +3134,12 @@
   "moderation.keybinds.panel-toggles": {
     "message": "Panneaux basculants"
   },
+  "moderation.keybinds.project": {
+    "message": "Copier des pages du projet public"
+  },
+  "moderation.keybinds.recording": {
+    "message": "{setting}: En attente d'un raccourci clavier. Appuyez sur Espace pour enlever ce raccourci."
+  },
   "moderation.keybinds.reset-default": {
     "message": "Réinitialiser"
   },
@@ -3158,8 +3188,23 @@
   "moderation.keybinds.transfer.file": {
     "message": "Choisissez un fichier JSON"
   },
+  "moderation.keybinds.transfer.file-error": {
+    "message": "Ce fichier n'a pas pu être lu. Choisissez un fichier JSON plus petit que 64  KO."
+  },
+  "moderation.keybinds.transfer.import": {
+    "message": "Importer les raccourcis clavier"
+  },
+  "moderation.keybinds.transfer.import-help": {
+    "message": "Collez un raccourci clavier JSON ou choisissez un fichier JSON. Appliquer permet de remplacer vos raccourcis clavier ; Les actions omises renvoient les raccourcis par défaut."
+  },
+  "moderation.keybinds.transfer.invalid": {
+    "message": "Raccourcis clavier invalides. Utilisez un retour d'export de raccourci clavier de version 1 avec des actions IDs connus, des séries de définitions clés et des modificateurs de booléens."
+  },
   "moderation.keybinds.transfer.json": {
     "message": "Raccourci JSON"
+  },
+  "moderation.keybinds.transfer.too-large": {
+    "message": "Ces raccourcis dépassent l'espace disponible dans vos paramètres de modération enregistrés. Réduisez le nombre de liaisons personnalisées et réessayez."
   },
   "moderation.moderate": {
     "message": "Modérer"
@@ -3178,9 +3223,6 @@
   },
   "moderation.page.reports": {
     "message": "Signalements"
-  },
-  "moderation.page.technicalReview": {
-    "message": "Revue technique"
   },
   "moderation.project-review.approvedCount": {
     "message": "{count} approuvés"
@@ -3215,35 +3257,59 @@
   "moderation.project-review.withheldCount": {
     "message": "{count} refusés"
   },
-  "moderation.settings.appearance": {
-    "message": "Apparence"
-  },
   "moderation.settings.control-label": {
     "message": "{section}: {setting}"
-  },
-  "moderation.settings.debug": {
-    "message": "Paramètres de débogage"
   },
   "moderation.settings.default-value-styled": {
     "message": "Par défaut : <value></value>"
   },
-  "moderation.settings.none": {
-    "message": "Aucun"
+  "moderation.settings.floating-panel-preview": {
+    "message": "Aperçu du panneau flottant"
+  },
+  "moderation.settings.floating-panel-section": {
+    "message": "Tableau de bord flottant"
+  },
+  "moderation.settings.highlight-preview": {
+    "message": "Vérifier l'aperçu de la surbrillance"
+  },
+  "moderation.settings.highlight-preview.incorrect-formatting": {
+    "message": "Formatage incorrect"
+  },
+  "moderation.settings.highlight-preview.missing-information": {
+    "message": "Information manquante"
+  },
+  "moderation.settings.highlight-preview.non-english": {
+    "message": "Autre que l’anglais"
+  },
+  "moderation.settings.highlights-section": {
+    "message": "Points forts"
+  },
+  "moderation.settings.issue-toggle-preview": {
+    "message": "Aperçu des problèmes"
+  },
+  "moderation.settings.issue-toggles-section": {
+    "message": "Permuter les anomalies"
+  },
+  "moderation.settings.no-results": {
+    "message": "Aucun paramètre ne correspond à votre recherche."
+  },
+  "moderation.settings.off": {
+    "message": "Non"
+  },
+  "moderation.settings.on": {
+    "message": "Oui"
+  },
+  "moderation.settings.reset": {
+    "message": "Remettre aux paramètres par défaut"
   },
   "moderation.settings.search": {
     "message": "Paramètres de recherche…"
   },
-  "moderation.settings.title": {
-    "message": "Paramètres généraux"
+  "moderation.settings.theme-border": {
+    "message": "Thème orange (25% d'opacité)"
   },
-  "moderation.tech-review.file.download": {
-    "message": "Télécharger"
-  },
-  "moderation.tech-review.file.download-file": {
-    "message": "Télécharger {filename} ({size})"
-  },
-  "moderation.tech-review.file.view-version": {
-    "message": "Voir la version"
+  "moderation.settings.theme-default": {
+    "message": "Thème orange"
   },
   "modpack-scan-modal.batch.label": {
     "message": "{amount} par lot"
@@ -3668,6 +3734,9 @@
   "project-moderation-nags.warning": {
     "message": "Avertissement"
   },
+  "project-review.disclosures.select-ai-uses": {
+    "message": "Sélectionner les utilisations d'IA"
+  },
   "project-type.collection.plural": {
     "message": "Collections"
   },
@@ -3746,6 +3815,9 @@
   "project.actions.edit-project": {
     "message": "Modifier le projet"
   },
+  "project.actions.open-in-modview": {
+    "message": "Modview"
+  },
   "project.actions.project-page": {
     "message": "Page du projet"
   },
@@ -3787,6 +3859,12 @@
   },
   "project.description.title": {
     "message": "Description"
+  },
+  "project.disclosures.lock-status.cannot-disable": {
+    "message": "Impossible de désactiver cette option"
+  },
+  "project.disclosures.lock-status.change": {
+    "message": "Modifier le statut de verrouillage"
   },
   "project.disclosures.retry": {
     "message": "Réessayer"
@@ -4351,6 +4429,9 @@
   },
   "project.settings.license.optional-label": {
     "message": "facultatif"
+  },
+  "project.settings.license.optional-url": {
+    "message": "URL de la licence (optionnel)"
   },
   "project.settings.license.select": {
     "message": "Licence"
@@ -5351,6 +5432,9 @@
   "settings.account.standing.reason-label": {
     "message": "Raison :"
   },
+  "settings.account.standing.restricted.description": {
+    "message": "Un modérateur a supprimé les autorisations suivantes de votre compte :"
+  },
   "settings.account.two-factor.backup.intro": {
     "message": "Téléchargez et enregistrez ces codes de secours dans un endroit sûr. Vous pourrez les utiliser à la place d’un code 2FA si vous perdez l’accès à votre appareil ! Vous devez protéger ces codes comme votre mot de passe."
   },
@@ -5607,7 +5691,7 @@
     "message": "Mode de paiement"
   },
   "settings.billing.plan.title": {
-    "message": "Plan {size}"
+    "message": "Forfait {size}"
   },
   "settings.billing.price.includes-tax": {
     "message": "Comprend {amount} de taxes"
@@ -5738,6 +5822,12 @@
   "settings.pats.modal.edit.title": {
     "message": "Modifier le jeton d'accès personnel"
   },
+  "settings.pats.modal.revoke.action": {
+    "message": "Révoquer ce jeton"
+  },
+  "settings.pats.token.access-token": {
+    "message": "Jeton d'accès"
+  },
   "settings.pats.token.action.edit": {
     "message": "Modifier le jeton"
   },
@@ -5761,6 +5851,12 @@
   },
   "settings.sessions.current-session": {
     "message": "Session actuelle"
+  },
+  "settings.sessions.empty-state.heading": {
+    "message": "Aucun session active"
+  },
+  "settings.sessions.ip": {
+    "message": "Adresse IP : {ip}"
   },
   "settings.sessions.last-accessed-ago": {
     "message": "Dernier accès {ago}"
@@ -5810,6 +5906,12 @@
   "shared-instance.invite.unavailable.title": {
     "message": "Cette invitation n'est pas disponible"
   },
+  "thread-issues.mark-resolved": {
+    "message": "Marquer comme résolu"
+  },
+  "thread-issues.mark-unresolved": {
+    "message": "Marquer comme non résolu"
+  },
   "thread-issues.resolved": {
     "message": "Résolu"
   },
@@ -5842,6 +5944,12 @@
   },
   "thread.message.private-message": {
     "message": "Seulement visible par les modérateurs"
+  },
+  "thread.message.sent-image": {
+    "message": "a envoyé une image."
+  },
+  "thread.message.sent-message": {
+    "message": "a envoyé un message."
   },
   "thread.message.system": {
     "message": "Modrinth"

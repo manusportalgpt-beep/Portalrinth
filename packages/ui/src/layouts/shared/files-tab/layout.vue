@@ -47,6 +47,7 @@
 					:base-id="baseId"
 					:disabled="isBusy"
 					:disabled-tooltip="busyTooltip"
+					:browse-only="ctx.browseOnly"
 					@navigate="navigateToSegment"
 					@navigate-home="() => navigateToSegment(-1)"
 					@prefetch-home="handlePrefetchHome"
@@ -85,7 +86,7 @@
 					<FileUploadDragAndDrop
 						ref="fileUploadRef"
 						class="@container relative flex flex-col overflow-clip rounded-[20px] border border-solid border-surface-4 shadow-sm"
-						:disabled="isBusy"
+						:disabled="isBusy || ctx.browseOnly"
 						@drop-error="handleDropError"
 						@files-dropped="handleDroppedFiles"
 					>
@@ -95,6 +96,7 @@
 							:all-selected="allSelected"
 							:some-selected="someSelected"
 							:is-stuck="isLabelBarStuck"
+							:hide-timestamps="ctx.hideTimestamps"
 							@sort="handleSort"
 							@toggle-all="toggleSelectAll"
 						/>
@@ -197,7 +199,11 @@
 				</Button>
 			</div>
 		</FloatingActionBar>
-		<FloatingActionBar :shown="selectedItems.size > 0">
+		<FloatingActionBar
+			:shown="selectedItems.size > 0"
+			:inline="inlineActionBar"
+			:class="{ 'sticky bottom-0 mt-4': inlineActionBar }"
+		>
 			<div class="flex items-center gap-0.5">
 				<span class="px-4 py-2.5 text-base font-semibold text-contrast tabular-nums">
 					{{ formatMessage(messages.selectedCount, { count: selectedItems.size }) }}
@@ -366,6 +372,7 @@ const messages = defineMessages({
 defineProps<{
 	showDebugInfo?: boolean
 	showRefreshButton?: boolean
+	inlineActionBar?: boolean
 }>()
 
 const { addNotification } = injectNotificationManager()
@@ -792,9 +799,9 @@ function showCreateModal(type: 'file' | 'directory') {
 	createItemModal.value?.show()
 }
 
-function showUnzipFromUrlModal(cf: boolean) {
+function showUnzipFromUrlModal() {
 	if (isBusy.value) return
-	uploadZipUrlModal.value?.show(cf)
+	uploadZipUrlModal.value?.show()
 }
 
 function showRenameModal(item: FileItem) {
@@ -809,9 +816,15 @@ function showDeleteModal(item: FileItem) {
 	deleteItemModal.value?.show()
 }
 
-function showBulkDeleteModal() {
+async function showBulkDeleteModal() {
 	if (isBusy.value || selectionReadOnly.value) return
 	if (selectedItems.value.size === 0) return
+
+	if (ctx.deleteItems) {
+		const selected = items.value.filter((item) => selectedItems.value.has(item.path))
+		if (await ctx.deleteItems(selected)) deselectAll()
+		return
+	}
 
 	const itemsToDelete = Array.from(selectedItems.value)
 	for (const path of itemsToDelete) {

@@ -1,5 +1,7 @@
 use crate::ErrorKind;
-use crate::state::{EmbeddedContentMetadata, ProjectType};
+use crate::state::{
+    EmbeddedContentMetadata, ModLoader, ProjectType, SharedInstanceRole,
+};
 use crate::util::fetch::{FetchSemaphore, fetch_json};
 use anyhow::Context;
 use chrono::{DateTime, Utc};
@@ -45,6 +47,8 @@ pub enum CacheValueType {
     EmbeddedContentMetadata,
     /// Cached list of versions for a project (without changelogs for fast loading)
     ProjectVersions,
+    /// Shared instances the user can access, for showing uninstalled ones in the library
+    SharedInstanceLibrary,
 }
 
 impl CacheValueType {
@@ -74,6 +78,7 @@ impl CacheValueType {
                 "embedded_content_metadata"
             }
             CacheValueType::ProjectVersions => "project_versions",
+            CacheValueType::SharedInstanceLibrary => "shared_instance_library",
         }
     }
 
@@ -103,6 +108,7 @@ impl CacheValueType {
                 CacheValueType::EmbeddedContentMetadata
             }
             "project_versions" => CacheValueType::ProjectVersions,
+            "shared_instance_library" => CacheValueType::SharedInstanceLibrary,
             _ => CacheValueType::Project,
         }
     }
@@ -115,7 +121,8 @@ impl CacheValueType {
             // ModpackFiles never expire - version_id is immutable so hashes never change
             // TODO: There has to be a way to exclude this from the "Purge cache" stuff?
             CacheValueType::ModpackFiles
-            | CacheValueType::EmbeddedContentMetadata => {
+            | CacheValueType::EmbeddedContentMetadata
+            | CacheValueType::SharedInstanceLibrary => {
                 100 * 365 * 24 * 60 * 60 // 100 years (effectively never)
             }
             CacheValueType::SearchResults | CacheValueType::SearchResultsV3 => {
@@ -160,7 +167,8 @@ impl CacheValueType {
             | CacheValueType::SearchResultsV3
             | CacheValueType::ModpackFiles
             | CacheValueType::EmbeddedContentMetadata
-            | CacheValueType::ProjectVersions => None,
+            | CacheValueType::ProjectVersions
+            | CacheValueType::SharedInstanceLibrary => None,
         }
     }
 }
@@ -179,6 +187,23 @@ pub struct CachedModpackFiles {
 pub struct CachedProjectVersions {
     pub project_id: String,
     pub versions: Vec<Version>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct CachedSharedInstanceLibrary {
+    pub user_id: String,
+    pub instances: Vec<CachedSharedInstanceSummary>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct CachedSharedInstanceSummary {
+    pub shared_instance_id: String,
+    pub role: SharedInstanceRole,
+    pub manager_id: Option<String>,
+    pub name: String,
+    pub icon_url: Option<String>,
+    pub game_version: String,
+    pub loader: ModLoader,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -213,7 +238,7 @@ pub enum CacheValue {
     Organization(Organization),
     File(CachedFile),
     LoaderManifest(CachedLoaderManifest),
-    MinecraftManifest(daedalus::minecraft::VersionManifest),
+    MinecraftManifest(minecraft_meta_manifest::minecraft::Catalog),
     Categories(Vec<Category>),
     ReportTypes(Vec<String>),
     Loaders(Vec<Loader>),
@@ -227,6 +252,7 @@ pub enum CacheValue {
     EmbeddedContentMetadata(CachedEmbeddedContentMetadata),
     ProjectVersions(CachedProjectVersions),
     ProjectV3(ProjectV3),
+    SharedInstanceLibrary(CachedSharedInstanceLibrary),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -417,18 +443,25 @@ pub struct KnownModrinthFile<'a> {
     pub version_id: &'a str,
 }
 
+/// Returns the file's modification time as signed nanoseconds since the Unix
+/// epoch, reinterpreted as `u64` so pre-1970 timestamps stay distinct from one
+/// another and cast back to the correct negative `i64`.
 pub(crate) fn file_modified_at_ns(
     metadata: &std::fs::Metadata,
 ) -> std::io::Result<u64> {
-    let elapsed = metadata
+    let signed_ns = match metadata
         .modified()?
         .duration_since(std::time::UNIX_EPOCH)
-        .map_err(std::io::Error::other)?;
+    {
+        Ok(since_epoch) => {
+            i64::try_from(since_epoch.as_nanos()).unwrap_or(i64::MAX)
+        }
+        Err(before_epoch) => i64::try_from(before_epoch.duration().as_nanos())
+            .map(|ns| -ns)
+            .unwrap_or(i64::MIN),
+    };
 
-    Ok(elapsed
-        .as_secs()
-        .saturating_mul(1_000_000_000)
-        .saturating_add(u64::from(elapsed.subsec_nanos())))
+    Ok(signed_ns as u64)
 }
 
 pub(crate) fn file_hash_cache_key(
@@ -451,7 +484,7 @@ fn file_hash_path_from_cache_key(key: &str) -> Option<&str> {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CachedLoaderManifest {
     pub loader: String,
-    pub manifest: daedalus::modded::Manifest,
+    pub manifest: minecraft_meta_manifest::fabriclike::Manifest,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -745,6 +778,9 @@ impl CacheValue {
                 CacheValueType::EmbeddedContentMetadata
             }
             CacheValue::ProjectVersions(_) => CacheValueType::ProjectVersions,
+            CacheValue::SharedInstanceLibrary(_) => {
+                CacheValueType::SharedInstanceLibrary
+            }
         }
     }
 
@@ -792,6 +828,9 @@ impl CacheValue {
                 metadata.cache_key.clone()
             }
             CacheValue::ProjectVersions(pv) => pv.project_id.clone(),
+            CacheValue::SharedInstanceLibrary(library) => {
+                library.user_id.clone()
+            }
         }
     }
 
@@ -822,7 +861,8 @@ impl CacheValue {
             | CacheValue::SearchResultsV3(_)
             | CacheValue::ModpackFiles(_)
             | CacheValue::EmbeddedContentMetadata(_)
-            | CacheValue::ProjectVersions(_) => None,
+            | CacheValue::ProjectVersions(_)
+            | CacheValue::SharedInstanceLibrary(_) => None,
         }
     }
 
@@ -862,6 +902,9 @@ impl CacheValue {
                 serde_json::to_value(metadata)
             }
             CacheValue::ProjectVersions(pv) => serde_json::to_value(pv),
+            CacheValue::SharedInstanceLibrary(library) => {
+                serde_json::to_value(library)
+            }
         }
         .context("failed to serialize cache value")?;
 
@@ -980,7 +1023,10 @@ impl_cache_methods!(
 );
 
 impl_cache_method_singular!(
-    (MinecraftManifest, daedalus::minecraft::VersionManifest),
+    (
+        MinecraftManifest,
+        minecraft_meta_manifest::minecraft::Catalog
+    ),
     (Categories, Vec<Category>),
     (ReportTypes, Vec<String>),
     (Loaders, Vec<Loader>),
@@ -1518,7 +1564,7 @@ impl CachedEntry {
                     .iter()
                     .map(|x| {
                         let metadata =
-                            daedalus::modded::loader_manifest_metadata_from_cache_key(
+                            crate::launcher::profile::loader_manifest_metadata_from_cache_key(
                                 &x.key().to_string(),
                             );
 
@@ -1569,7 +1615,7 @@ impl CachedEntry {
                     env!("MODRINTH_LAUNCHER_META_URL"),
                     format!(
                         "minecraft/v{}/manifest.json",
-                        daedalus::minecraft::CURRENT_FORMAT_VERSION
+                        minecraft_meta_manifest::minecraft::CURRENT_FORMAT_VERSION
                     ),
                     None,
                     CacheValue::MinecraftManifest
@@ -1937,6 +1983,7 @@ impl CachedEntry {
                 // Embedded content metadata is populated from local archives.
                 vec![]
             }
+            CacheValueType::SharedInstanceLibrary => vec![],
             CacheValueType::ProjectVersions => {
                 // One request per project, and a pack with sixty dependencies
                 // would otherwise make them one after another, each waiting on
@@ -2127,6 +2174,13 @@ impl CachedEntry {
             CacheValueType::ProjectVersions => CacheValue::ProjectVersions(
                 parse(data, id, "project_versions")?,
             ),
+            CacheValueType::SharedInstanceLibrary => {
+                CacheValue::SharedInstanceLibrary(parse(
+                    data,
+                    id,
+                    "shared_instance_library",
+                )?)
+            }
         };
 
         Ok(value)
@@ -2296,6 +2350,53 @@ impl CachedEntry {
         }
 
         Ok(None)
+    }
+
+    pub async fn cache_shared_instance_library(
+        user_id: &str,
+        instances: Vec<CachedSharedInstanceSummary>,
+        pool: &SqlitePool,
+    ) -> crate::Result<()> {
+        let entry = CachedEntry {
+            id: user_id.to_string(),
+            alias: None,
+            expires: Utc::now().timestamp()
+                + CacheValueType::SharedInstanceLibrary.expiry(),
+            type_: CacheValueType::SharedInstanceLibrary,
+            data: Some(CacheValue::SharedInstanceLibrary(
+                CachedSharedInstanceLibrary {
+                    user_id: user_id.to_string(),
+                    instances,
+                },
+            )),
+        };
+
+        Self::upsert_many(&[entry], pool).await
+    }
+
+    pub async fn get_shared_instance_library(
+        user_id: &str,
+        pool: &SqlitePool,
+        fetch_semaphore: &FetchSemaphore,
+    ) -> crate::Result<Vec<CachedSharedInstanceSummary>> {
+        let entry = Self::get(
+            CacheValueType::SharedInstanceLibrary,
+            user_id,
+            None,
+            pool,
+            fetch_semaphore,
+        )
+        .await?;
+
+        if let Some(CachedEntry {
+            data: Some(CacheValue::SharedInstanceLibrary(library)),
+            ..
+        }) = entry
+        {
+            return Ok(library.instances);
+        }
+
+        Ok(Vec::new())
     }
 
     /// Get versions for a project (without changelogs for fast loading)

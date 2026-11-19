@@ -4,17 +4,45 @@ use super::model::{
     InstallPhaseDetails, InstallPhaseId, InstallProgress,
 };
 use super::store;
-use crate::state::{DirectoryInfo, ModrinthCredentials, State};
+use crate::state::{DirectoryInfo, State};
 use crate::util::io::format_bytes;
-use regex::{Captures, Regex};
-use sqlx::{Row, SqlitePool};
+use crate::util::redactions::censor_support_text;
 use std::fmt::Write as _;
 use std::io::{Read, Seek, SeekFrom};
-use std::net::{Ipv4Addr, Ipv6Addr};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 const INSTALL_SUPPORT_LOG_TAIL_BYTES: u64 = 128 * 1024;
+
+/// Constructs large futures outside the caller's polling frame.
+#[inline(never)]
+pub(super) fn install_step<
+    T,
+    F: std::future::Future<Output = crate::Result<T>>,
+>(
+    job_id: uuid::Uuid,
+    step: &'static str,
+    create: impl FnOnce() -> F,
+) -> impl std::future::Future<Output = crate::Result<T>> {
+    tracing::debug!(
+        %job_id,
+        step,
+        future_size_bytes = std::mem::size_of::<F>(),
+        "Preparing install step future"
+    );
+    let future = Box::pin(create());
+    async move {
+        tracing::info!(%job_id, step, "Starting install step");
+        let result = future.await;
+        tracing::info!(
+            %job_id,
+            step,
+            succeeded = result.is_ok(),
+            "Finished install step"
+        );
+        result
+    }
+}
 
 pub async fn build_job_support_details(
     job: &store::InstallJobRecord,
@@ -581,79 +609,4 @@ fn read_file_tail(path: &Path, max_bytes: u64) -> crate::Result<String> {
     }
 
     Ok(output)
-}
-
-pub(crate) async fn censor_support_text(
-    mut text: String,
-    pool: &SqlitePool,
-) -> crate::Result<String> {
-    for credentials in ModrinthCredentials::get_all(pool).await? {
-        replace_nonempty(
-            &mut text,
-            &credentials.session,
-            "{MODRINTH_ACCESS_TOKEN}",
-        );
-    }
-
-    for token in minecraft_tokens(pool).await? {
-        replace_nonempty(&mut text, &token, "{MINECRAFT_TOKEN}");
-    }
-
-    text = censor_ip_addresses(text);
-
-    Ok(text)
-}
-
-async fn minecraft_tokens(
-    pool: &sqlx::SqlitePool,
-) -> crate::Result<Vec<String>> {
-    let rows =
-        sqlx::query("SELECT access_token, refresh_token FROM minecraft_users")
-            .fetch_all(pool)
-            .await?;
-    let mut tokens = Vec::with_capacity(rows.len() * 2);
-
-    for row in rows {
-        tokens.push(row.try_get("access_token")?);
-        tokens.push(row.try_get("refresh_token")?);
-    }
-
-    Ok(tokens)
-}
-
-fn replace_nonempty(text: &mut String, value: &str, replacement: &str) {
-    if !value.is_empty() {
-        *text = text.replace(value, replacement);
-    }
-}
-
-fn censor_ip_addresses(text: String) -> String {
-    let text = Regex::new(
-        r"\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b",
-    )
-    .expect("valid IPv4 regex")
-    .replace_all(&text, |captures: &Captures<'_>| {
-        let value = &captures[0];
-        match value.parse::<Ipv4Addr>() {
-            Ok(_) => "...".to_string(),
-            _ => value.to_string(),
-        }
-    })
-    .into_owned();
-
-    Regex::new(r"(?i)\b[0-9a-f:.%]{3,}\b")
-        .expect("valid IPv6 candidate regex")
-        .replace_all(&text, |captures: &Captures<'_>| {
-            let value = &captures[0];
-            if value.matches(':').count() < 2 {
-                return value.to_string();
-            }
-
-            let candidate = value.split('%').next().unwrap_or(value);
-            match candidate.parse::<Ipv6Addr>() {
-                Ok(_) => ":::::::".to_string(),
-                _ => value.to_string(),
-            }
-        })
-        .into_owned()
 }

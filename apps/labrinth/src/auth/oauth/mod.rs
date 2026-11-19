@@ -20,8 +20,8 @@ use actix_web::http::header::{CACHE_CONTROL, LOCATION, PRAGMA};
 use actix_web::web::{Data, Query};
 use actix_web::{HttpRequest, HttpResponse, get, post, web};
 use chrono::{DateTime, Duration};
-use rand::distributions::Alphanumeric;
-use rand::{Rng, SeedableRng};
+use rand::distr::Alphanumeric;
+use rand::{RngExt, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use serde::{Deserialize, Serialize};
 use xredis::RedisPool;
@@ -85,7 +85,10 @@ pub async fn init_oauth(
         Scopes::USER_AUTH_WRITE,
     )
     .await?
-    .1;
+    .user;
+
+    crate::auth::validate::require_privileged_token(&req, &**pool, &redis)
+        .await?;
 
     let client_id = oauth_info.client_id.into();
     let client = DBOAuthClient::get(client_id, &**pool).await?;
@@ -294,7 +297,7 @@ pub async fn request_token(
                 ));
             }
 
-            let scopes = scopes - Scopes::restricted();
+            let scopes = scopes - Scopes::restricted() - Scopes::staff();
 
             let mut transaction = pool.begin().await?;
             let token_id =
@@ -352,7 +355,12 @@ pub async fn accept_or_reject_client_scopes(
         Scopes::SESSION_ACCESS | Scopes::USER_AUTH_WRITE,
     )
     .await?
-    .1;
+    .user;
+
+    if accept {
+        crate::auth::validate::require_privileged_token(&req, &**pool, &redis)
+            .await?;
+    }
 
     let flow = DBFlow::take_if(
         &body.flow,
@@ -434,7 +442,7 @@ fn authenticate_client_token_request(
 }
 
 fn generate_access_token() -> String {
-    let random = ChaCha20Rng::from_entropy()
+    let random = ChaCha20Rng::from_rng(&mut rand::rng())
         .sample_iter(&Alphanumeric)
         .take(60)
         .map(char::from)

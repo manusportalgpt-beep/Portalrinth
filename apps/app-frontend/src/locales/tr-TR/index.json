@@ -206,6 +206,21 @@
   "app.behavior-settings.content.title": {
     "message": "Ana sayfa ve içerik"
   },
+  "app.behavior-settings.hidden-instances.description": {
+    "message": "Bu cihazda kitaplığınızdan gizlediğiniz örnekler. Gizlenen örnekler Modrinth hesabınızla senkronize edilmez."
+  },
+  "app.behavior-settings.hidden-instances.empty": {
+    "message": "Henüz herhangi bir oturum gizlemedin."
+  },
+  "app.behavior-settings.hidden-instances.more-options": {
+    "message": "Diğer seçenekler"
+  },
+  "app.behavior-settings.hidden-instances.not-installed": {
+    "message": "Yüklü değil"
+  },
+  "app.behavior-settings.hidden-instances.title": {
+    "message": "Gizli oturumlar"
+  },
   "app.behavior-settings.refocus-on-game-close.description": {
     "message": "Minecraft'tan çıkıldığında Modrinth App'i ön plana getirir."
   },
@@ -268,6 +283,9 @@
   },
   "app.browse.project-type.mods": {
     "message": "Modlar"
+  },
+  "app.browse.project-type.plugins": {
+    "message": "Eklentiler"
   },
   "app.browse.project-type.resource-packs": {
     "message": "Kaynak Paketleri"
@@ -353,6 +371,9 @@
   "app.download-manager.hide": {
     "message": "İndirme işlemlerini gizle"
   },
+  "app.download-manager.hide-tasks": {
+    "message": "Görevleri gizle"
+  },
   "app.download-manager.imported-instance": {
     "message": "İçeri aktarılmış kurulum"
   },
@@ -367,6 +388,9 @@
   },
   "app.download-manager.new-instance": {
     "message": "Yeni kurulum"
+  },
+  "app.download-manager.no-tasks": {
+    "message": "Görev yok"
   },
   "app.download-manager.pause": {
     "message": "İndirmeyi duraklat"
@@ -388,6 +412,9 @@
   },
   "app.download-manager.show": {
     "message": "İndirme işlemlerini göster"
+  },
+  "app.download-manager.show-tasks": {
+    "message": "Görevleri göster"
   },
   "app.download-manager.tasks": {
     "message": "İşlemler"
@@ -632,6 +659,15 @@
   "app.instance.admonitions.shared-instance.changes-header": {
     "message": "Değişiklikler henüz paylaşılmadı"
   },
+  "app.instance.admonitions.shared-instance.owner-update-body": {
+    "message": "Başka bir Modrinth App üzerinden bu oturuma güncelleme yükledin. Buradan yönetmeye devam etmek için son değişiklikleri indir."
+  },
+  "app.instance.admonitions.shared-instance.owner-update-button": {
+    "message": "Güncellemeyi indir"
+  },
+  "app.instance.admonitions.shared-instance.owner-update-header": {
+    "message": "Güncelleme mevcut"
+  },
   "app.instance.admonitions.shared-instance.publish-button": {
     "message": "Güncellemeyi gönder"
   },
@@ -640,6 +676,12 @@
   },
   "app.instance.admonitions.shared-instance.removed-label": {
     "message": "Kaldırıldı"
+  },
+  "app.instance.admonitions.shared-instance.restored-body": {
+    "message": "Bu oturum yüklediğin son sürümden geri yüklendi. Diğer oturumundan yüklemediğin ayar değişikliği ya da içerik gibi şeyler dahil edilmedi."
+  },
+  "app.instance.admonitions.shared-instance.restored-header": {
+    "message": "Sadece yüklenmiş içerik indirildi"
   },
   "app.instance.admonitions.shared-instance.review-admonition-header": {
     "message": "Güncellemeyi yayınla"
@@ -749,6 +791,18 @@
   "app.instance.navigation.back-to-instance": {
     "message": "Kuruluma dön"
   },
+  "app.instance.server.offline.description": {
+    "message": "Bu sunucu şu an çevrimdışı. Yine de Minecraft'ı başlatabilirsin ama bağlanamayabilirsin."
+  },
+  "app.instance.server.offline.launch-anyway": {
+    "message": "Yine de başlat"
+  },
+  "app.instance.server.offline.title": {
+    "message": "Sunucu çevrimdışı"
+  },
+  "app.instance.server.status.unknown": {
+    "message": "Durum bilinmiyor"
+  },
   "app.instance.share.empty.description": {
     "message": "Bu instance'ı arkadaşlarınla paylaşabilirsin!"
   },
@@ -758,11 +812,23 @@
   "app.instance.share.empty.invite-friends-button": {
     "message": "Arkadaşlarını davet et"
   },
+  "app.instance.share.invite-friends": {
+    "message": "Arkadaşlarını davet et"
+  },
   "app.instance.share.invite-modal.heading": {
     "message": "Paylaş {name}"
   },
   "app.instance.share.invite-modal.user-limit-reached": {
     "message": "Bu örnek {limit} kullanıcı sınırına ulaştı."
+  },
+  "app.instance.share.limit-reached.description": {
+    "message": "Zaten en fazla {limit} oturum paylaşabilirsin."
+  },
+  "app.instance.share.limit-reached.heading": {
+    "message": "Oturum paylaşım sınırına ulaşıldı"
+  },
+  "app.instance.share.limit-reached.manage-button": {
+    "message": "Paylaşılan oturumları yönet"
   },
   "app.instance.share.locked.empty-description-prefix": {
     "message": "Giriş yapmanız gerekiyor"
@@ -1010,6 +1076,15 @@
   "app.library.filter.game-version": {
     "message": "Oyun sürümü"
   },
+  "app.library.filter.install-state": {
+    "message": "Yükleme durumu"
+  },
+  "app.library.filter.install-state.installed": {
+    "message": "Yüklü"
+  },
+  "app.library.filter.install-state.not-installed": {
+    "message": "Yüklü değil"
+  },
   "app.library.filter.instance-type": {
     "message": "Kurulum türü"
   },
@@ -1027,6 +1102,24 @@
   },
   "app.library.filter.loader": {
     "message": "Yükleyici"
+  },
+  "app.library.filter.owner": {
+    "message": "Sahip"
+  },
+  "app.library.filter.owner.me": {
+    "message": "Sen"
+  },
+  "app.library.filter.owner.others": {
+    "message": "Diğer"
+  },
+  "app.library.filter.sharing": {
+    "message": "Paylaşım"
+  },
+  "app.library.filter.sharing.not-shared": {
+    "message": "Paylaşılmamış"
+  },
+  "app.library.filter.sharing.shared": {
+    "message": "Paylaşılan"
   },
   "app.library.group-by.custom-group": {
     "message": "Özel grup"
@@ -1139,6 +1232,12 @@
   "app.library.group.unknown": {
     "message": "Bilinmeyen grup"
   },
+  "app.library.instance-hidden.text": {
+    "message": "Ayarlar > Davranış bölümünde tekrar görebilirsin."
+  },
+  "app.library.instance-hidden.title": {
+    "message": "Kütüphaneden gizli"
+  },
   "app.library.instance.action.add-content": {
     "message": "İçerik ekle"
   },
@@ -1154,6 +1253,12 @@
   "app.library.instance.action.duplicate": {
     "message": "Kurulumu çoğalt"
   },
+  "app.library.instance.action.hide-from-library": {
+    "message": "Kütüphaneden gizle"
+  },
+  "app.library.instance.action.leave": {
+    "message": "Çıkış"
+  },
   "app.library.instance.action.open-folder": {
     "message": "Klasörü aç"
   },
@@ -1166,8 +1271,17 @@
   "app.library.instance.action.remove-from-group": {
     "message": "Gruptan çıkar"
   },
+  "app.library.instance.action.show-in-library": {
+    "message": "Kütüphanede göster"
+  },
   "app.library.instance.action.stop": {
     "message": "Durdur"
+  },
+  "app.library.instance.action.unpublish": {
+    "message": "Yayından kaldır"
+  },
+  "app.library.instance.action.unpublish-and-leave": {
+    "message": "Yayından kaldır ve çık"
   },
   "app.library.instance.action.view-instance": {
     "message": "Kurulumu göster"
@@ -1180,6 +1294,12 @@
   },
   "app.library.instance.deselect-with-name": {
     "message": "{name} Seçimini Kaldır"
+  },
+  "app.library.instance.install": {
+    "message": "Yükle"
+  },
+  "app.library.instance.install-with-name": {
+    "message": "{name} Yükle"
   },
   "app.library.instance.installing": {
     "message": "Yükleniyor..."
@@ -1205,8 +1325,26 @@
   "app.library.instance.select-with-name": {
     "message": "{name} Seç"
   },
+  "app.library.instance.shared-by": {
+    "message": "{name} tarafından paylaşıldı"
+  },
+  "app.library.instance.shared-by-owner": {
+    "message": "<owner>{name}</owner> tarafından paylaşıldı"
+  },
+  "app.library.instance.shared-by-you": {
+    "message": "Paylaştıklarınız"
+  },
   "app.library.instance.stop": {
     "message": "Durdur"
+  },
+  "app.library.leave-shared-instance.modal.admonition-body": {
+    "message": "{count, plural, one {Paylaşılan bu oturuma erişimini kaybedeceksin ve kütüphanenden kaldırılacak. Tekrar katılmak için yeni bir davete ihtiyacın var.} other {Paylaşılan bu oturumlara erişimini kaybedeceksin ve kütüphanenden kaldırılacak. Tekrar katılmak için yeni bir davete ihtiyacın var.}}"
+  },
+  "app.library.leave-shared-instance.modal.admonition-header": {
+    "message": "{count, plural, one {Paylaşılan oturumdan ayrılınıyor} other {Paylaşılan # oturumdan ayrılınıyor}}"
+  },
+  "app.library.leave-shared-instance.modal.header": {
+    "message": "{count, plural, one {Paylaşılan oturumdan ayrıl} other {Paylaşılan # oturumdan ayrıl}}"
   },
   "app.library.search.no-results.title": {
     "message": "Aramanızla eşleşen kurulum yok."
@@ -1225,6 +1363,9 @@
   },
   "app.library.selection.remove-from-group": {
     "message": "Gruptan çıkar"
+  },
+  "app.library.selection.removing-shared-instances": {
+    "message": "Seçili paylaşılan oturumlar kaldırılıyor"
   },
   "app.library.selection.selected-count": {
     "message": "{count} adet seçildi"
@@ -1255,6 +1396,24 @@
   },
   "app.library.title": {
     "message": "Kütüphane"
+  },
+  "app.library.unpublish-and-leave-shared-instances.modal.admonition-body": {
+    "message": "{unpublishCount, plural, one {Sahibi olarak paylaştığın # oturum Modrinth sunucularından silinecek ve onu kullanan insanlar} other {Sahibi olarak paylaştığın # oturum Modrinth sunucularından silinecek ve onu kullanan insanlar}} güncelleme almayı bırakacak. {leaveCount, plural, one {Paylaşılan diğer oturuma erişimini kaybedeceksin ve tekrar katılmak için yeni bir davete ihtiyacın olacak.} other {Paylaşılan diğer # oturuma erişimini kaybedeceksin ve tekrar katılmak için yeni bir davete ihtiyacın olacak.}} Tamamı kütüphanenden kaldırılacak."
+  },
+  "app.library.unpublish-and-leave-shared-instances.modal.admonition-header": {
+    "message": "Unpublishing and leaving shared instances"
+  },
+  "app.library.unpublish-and-leave-shared-instances.modal.header": {
+    "message": "Paylaşılan kurulumun paylaşımını kaldır {count} ve bunlardan ayrıl"
+  },
+  "app.library.unpublish-shared-instance.modal.admonition-body": {
+    "message": "{count, plural, one {Bu paylaşılan oturumu Modrinth sunucularından silecek. Modrinth App'te kullanan insanlar güncelleme almayı bırakacak ve senin kütüphanenden kaldırılacak.} other {Bu paylaşılan oturumları Modrinth sunucularından silecek. Modrinth App'te kullanan insanlar güncelleme almayı bırakacak ve senin kütüphanenden kaldırılacak.}}"
+  },
+  "app.library.unpublish-shared-instance.modal.admonition-header": {
+    "message": "{count, plural, one {Paylaşılan oturum paylaşımdan kaldırılıyor} other {Paylaşılan # oturum paylaşımdan kaldırılıyor}}"
+  },
+  "app.library.unpublish-shared-instance.modal.header": {
+    "message": "{count, plural, one {Paylaşılan oturumu paylaşımdam kaldır} other {Paylaşılan # oturumu paylaşımdan kaldır}}"
   },
   "app.modal.install-to-play.additional-context": {
     "message": "Ek bağlam"
@@ -1294,6 +1453,9 @@
   },
   "app.modal.install-to-play.mod-count": {
     "message": "{count, plural, one {#mod} other {#mods}}"
+  },
+  "app.modal.install-to-play.owner-install-note": {
+    "message": "Bu en son yüklediğin sürümü indirir. Diğer oturumlarda yaptığın henüz yüklenmemiş değişiklikler dahil edilmeyecek."
   },
   "app.modal.install-to-play.report-description": {
     "message": "Bu formu <rules-link>Kuralları</rules-link> ihlal eden veya <terms-link>Hizmet Şartlarını</terms-link> ihlal eden örnekleri raporlamak için kullanın."
@@ -1354,6 +1516,15 @@
   },
   "app.modal.update-to-play.header": {
     "message": "Oynamak için güncelle"
+  },
+  "app.modal.update-to-play.owner-admonition-header": {
+    "message": "Diğer oturumdan yüklendi"
+  },
+  "app.modal.update-to-play.owner-description": {
+    "message": "Bu değişiklikler başka bir Modrinth App oturumundan yüklendi. Bu oturumdaki yüklenmemiş değişikliklerin üzerine yazılacak."
+  },
+  "app.modal.update-to-play.owner-header": {
+    "message": "Güncelleme mevcut"
   },
   "app.modal.update-to-play.removed": {
     "message": "Silindi"
@@ -1651,6 +1822,12 @@
   },
   "app.screenshots.sort.oldest": {
     "message": "En eski"
+  },
+  "app.server-sharing-update.notification.dismiss": {
+    "message": "Reddet"
+  },
+  "app.server-sharing-update.notification.purchase-description": {
+    "message": "Bir sunucu edin ve arkadaşlarını bu sunucunun yönettiği oyun dünyasında birlikte oynamaya davet et."
   },
   "app.settings.app-version": {
     "message": "Modrinth Uygulaması {version}"
@@ -2279,6 +2456,9 @@
   "app.settings.game-options.setting.gui-scale.label": {
     "message": "Arayüz Ölçeği"
   },
+  "app.settings.game-options.setting.hat.description": {
+    "message": "Skin şapka katmanını göster."
+  },
   "app.settings.game-options.setting.hat.label": {
     "message": "Şapka"
   },
@@ -2300,6 +2480,9 @@
   "app.settings.game-options.setting.high-contrast-outline.label": {
     "message": "Yüksek Kontrastlı Blok Çerçevesi"
   },
+  "app.settings.game-options.setting.high-contrast.description": {
+    "message": "Arayüz öğelerinin kontrastını yükselt."
+  },
   "app.settings.game-options.setting.high-contrast.label": {
     "message": "Yüksek karşıtlık"
   },
@@ -2318,8 +2501,14 @@
   "app.settings.game-options.setting.invert-horizontal-mouse.label": {
     "message": "Fareyi Ters Çevir (Yatay)"
   },
+  "app.settings.game-options.setting.invert-mouse.description": {
+    "message": "Dikey mouse hareketini tersine çevir."
+  },
   "app.settings.game-options.setting.invert-mouse.label": {
     "message": "Fareyi ters çevir"
+  },
+  "app.settings.game-options.setting.jacket.description": {
+    "message": "Skin ceket katmanını göster."
   },
   "app.settings.game-options.setting.jacket.label": {
     "message": "Ceket"
@@ -2354,11 +2543,38 @@
   "app.settings.game-options.setting.key-debug-copy-location.label": {
     "message": "Konumu kopyala"
   },
+  "app.settings.game-options.setting.key-debug-copy-recreate-command.label": {
+    "message": "Yeniden oluşturma komutunu kopyala"
+  },
+  "app.settings.game-options.setting.key-debug-crash.label": {
+    "message": "Hata ayıklama çöküşünü tetikle"
+  },
+  "app.settings.game-options.setting.key-debug-dump-dynamic-textures.label": {
+    "message": "Dinamik dokuları dumpla"
+  },
+  "app.settings.game-options.setting.key-debug-dump-version.label": {
+    "message": "Dump versiyonu"
+  },
+  "app.settings.game-options.setting.key-debug-focus-pause.label": {
+    "message": "Son fokusta durdur"
+  },
   "app.settings.game-options.setting.key-debug-fps-charts.label": {
     "message": "FPS grafikleri"
   },
   "app.settings.game-options.setting.key-debug-hitboxes.label": {
     "message": "Vuruş kutularını göster"
+  },
+  "app.settings.game-options.setting.key-debug-improved-transparency.label": {
+    "message": "Gelişmiş şeffaflık hata ayıklama görünümü"
+  },
+  "app.settings.game-options.setting.key-debug-lightmap-texture.label": {
+    "message": "Işık haritası dokusu"
+  },
+  "app.settings.game-options.setting.key-debug-modifier.label": {
+    "message": "Hata ayıklama değiştiricisi"
+  },
+  "app.settings.game-options.setting.key-debug-network-charts.label": {
+    "message": "Ağ grafikleri"
   },
   "app.settings.game-options.setting.key-debug-options.label": {
     "message": "Hata ayıklama seçenekleri"
@@ -2396,14 +2612,62 @@
   "app.settings.game-options.setting.key-fullscreen.label": {
     "message": "Tam ekranı aç/kapat"
   },
+  "app.settings.game-options.setting.key-hotbar-1.label": {
+    "message": "Hızlı tuş 1"
+  },
+  "app.settings.game-options.setting.key-hotbar-2.label": {
+    "message": "Hızlı tuş 2"
+  },
+  "app.settings.game-options.setting.key-hotbar-3.label": {
+    "message": "Hızlı tuş 3"
+  },
+  "app.settings.game-options.setting.key-hotbar-4.label": {
+    "message": "Hızlı tuş 4"
+  },
+  "app.settings.game-options.setting.key-hotbar-5.label": {
+    "message": "Hızlı tuş 5"
+  },
+  "app.settings.game-options.setting.key-hotbar-6.label": {
+    "message": "Hızlı tuş 6"
+  },
+  "app.settings.game-options.setting.key-hotbar-7.label": {
+    "message": "Hızlı tuş 7"
+  },
+  "app.settings.game-options.setting.key-hotbar-8.label": {
+    "message": "Hızlı tuş 8"
+  },
+  "app.settings.game-options.setting.key-hotbar-9.label": {
+    "message": "Hızlı tuş 9"
+  },
+  "app.settings.game-options.setting.key-inventory.label": {
+    "message": "Envanter"
+  },
   "app.settings.game-options.setting.key-jump.label": {
     "message": "Zıpla"
+  },
+  "app.settings.game-options.setting.key-left.label": {
+    "message": "Sola kay"
+  },
+  "app.settings.game-options.setting.key-load-toolbar.label": {
+    "message": "Araç çubuğunu yükle"
+  },
+  "app.settings.game-options.setting.key-perspective.label": {
+    "message": "Perspektifi değiştir"
   },
   "app.settings.game-options.setting.key-pick-item.label": {
     "message": "Blok Seç"
   },
   "app.settings.game-options.setting.key-player-list.label": {
     "message": "Oyuncu Listesi"
+  },
+  "app.settings.game-options.setting.key-quick-actions.label": {
+    "message": "Hızlı eylemler"
+  },
+  "app.settings.game-options.setting.key-right.label": {
+    "message": "Sağa kay"
+  },
+  "app.settings.game-options.setting.key-save-toolbar.label": {
+    "message": "Araç çubuğunu kaydet"
   },
   "app.settings.game-options.setting.key-screenshot.label": {
     "message": "Ekran Görüntüsü"
@@ -2426,11 +2690,26 @@
   "app.settings.game-options.setting.key-sprint.label": {
     "message": "Koşma"
   },
+  "app.settings.game-options.setting.key-swap-offhand.label": {
+    "message": "Yan elle değiştir"
+  },
+  "app.settings.game-options.setting.key-toggle-gui.label": {
+    "message": "Arayüzü kapat/aç"
+  },
+  "app.settings.game-options.setting.key-toggle-spectator-shader.label": {
+    "message": "İzleyici shader'ını kapat/aç"
+  },
   "app.settings.game-options.setting.key-use.label": {
     "message": "Eşyayı kullan"
   },
   "app.settings.game-options.setting.language.label": {
     "message": "Dil"
+  },
+  "app.settings.game-options.setting.left-pants-leg.label": {
+    "message": "Sol pantolon bacağı"
+  },
+  "app.settings.game-options.setting.left-sleeve.label": {
+    "message": "Sol kol"
   },
   "app.settings.game-options.setting.legacy-framerate-limit.label": {
     "message": "Kare hızı sınırı"
@@ -2440,6 +2719,9 @@
   },
   "app.settings.game-options.setting.mac-fullscreen-menu.label": {
     "message": "macOS menüsünü tam ekranda göster"
+  },
+  "app.settings.game-options.setting.main-hand.description": {
+    "message": "Ana elin sağ mı sol mu olduğunu seçer."
   },
   "app.settings.game-options.setting.main-hand.label": {
     "message": "Ana el"
@@ -2453,11 +2735,20 @@
   "app.settings.game-options.setting.menu-background-blur.label": {
     "message": "Menü arka plan bulanıklığı"
   },
+  "app.settings.game-options.setting.mipmap-levels.description": {
+    "message": "Uzak mesafede doku yumuşatma."
+  },
   "app.settings.game-options.setting.mipmap-levels.label": {
     "message": "Mipmap düzeyleri"
   },
   "app.settings.game-options.setting.mouse-wheel-sensitivity.label": {
     "message": "Fare tekerleği hassasiyeti"
+  },
+  "app.settings.game-options.setting.music-frequency.label": {
+    "message": "Müzik frekansı"
+  },
+  "app.settings.game-options.setting.music-toast.description": {
+    "message": "Müzik adlarının duraklatma menüsünde veya bildirim olarak görünüp görünmeyeceğini seçin."
   },
   "app.settings.game-options.setting.music-toast.label": {
     "message": "Müzik bildirimi"
@@ -2467,6 +2758,9 @@
   },
   "app.settings.game-options.setting.narrator-hotkey.label": {
     "message": "Anlatıcı kısayol tuşu"
+  },
+  "app.settings.game-options.setting.narrator.description": {
+    "message": "Seslendiricinin neleri okuduğunu seçer."
   },
   "app.settings.game-options.setting.narrator.label": {
     "message": "Anlatıcı"
@@ -2516,11 +2810,20 @@
   "app.settings.game-options.setting.touchscreen.label": {
     "message": "Dokunmatik Ekran Modu"
   },
+  "app.settings.game-options.setting.ui-volume.label": {
+    "message": "Arayüz"
+  },
   "app.settings.game-options.setting.use-vbo.label": {
     "message": "VBO'ları Kullan"
   },
+  "app.settings.game-options.setting.view-bobbing.label": {
+    "message": "Sarsılmayı göster"
+  },
   "app.settings.game-options.setting.vignette.label": {
     "message": "Vinyet"
+  },
+  "app.settings.game-options.setting.vsync.label": {
+    "message": "Vsync"
   },
   "app.settings.game-options.setting.weather-radius.label": {
     "message": "Hava Durumu Çapı"
@@ -2530,6 +2833,9 @@
   },
   "app.settings.game-options.validation.invalid-value": {
     "message": "Geçerli Bir Değer Gir"
+  },
+  "app.settings.game-options.validation.missing-value": {
+    "message": "Önce bir değer seç"
   },
   "app.settings.game-options.validation.no-compatible-instances": {
     "message": "Profillerinden bazıları bu ayarı kullanamaz"
@@ -2608,6 +2914,39 @@
   },
   "app.settings.resource-management.maximum-concurrent-writes.title": {
     "message": "Maksimum eşzamanlı yazım"
+  },
+  "app.settings.resource-management.store.cache-limit.unit": {
+    "message": "GiB"
+  },
+  "app.settings.resource-management.store.calculating": {
+    "message": "Hesaplanıyor"
+  },
+  "app.settings.resource-management.store.clear": {
+    "message": "Kullanılmayanları temizle"
+  },
+  "app.settings.resource-management.store.clear.description": {
+    "message": "Kullanılmayan indirilmiş içeriği sil"
+  },
+  "app.settings.resource-management.store.cleared": {
+    "message": "{size} disk alanı temizlendi"
+  },
+  "app.settings.resource-management.store.clearing": {
+    "message": "Temizleniyor..."
+  },
+  "app.settings.resource-management.store.nothing-to-clear": {
+    "message": "Temizlenecek kullanılmayan içerik yok"
+  },
+  "app.settings.resource-management.store.shared.label": {
+    "message": "Paylaşılan"
+  },
+  "app.settings.resource-management.store.unique.label": {
+    "message": "Benzersiz"
+  },
+  "app.settings.resource-management.store.unused.label": {
+    "message": "Yetim"
+  },
+  "app.settings.sidebar.label.system": {
+    "message": "Sistem"
   },
   "app.settings.synced-options.choose-sync-source.no-instances-found": {
     "message": "Hiçbir örnek bulunamadı"

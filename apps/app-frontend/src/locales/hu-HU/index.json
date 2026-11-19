@@ -269,6 +269,9 @@
   "app.browse.project-type.mods": {
     "message": "Modok"
   },
+  "app.browse.project-type.plugins": {
+    "message": "Pluginok"
+  },
   "app.browse.project-type.resource-packs": {
     "message": "Forráscsomagok"
   },
@@ -353,6 +356,9 @@
   "app.download-manager.hide": {
     "message": "Telepítési folyamatok elrejtése"
   },
+  "app.download-manager.hide-tasks": {
+    "message": "Feladatok elrejtése"
+  },
   "app.download-manager.imported-instance": {
     "message": "Importált példány"
   },
@@ -367,6 +373,9 @@
   },
   "app.download-manager.new-instance": {
     "message": "Új példány"
+  },
+  "app.download-manager.no-tasks": {
+    "message": "Nincsenek feladatok"
   },
   "app.download-manager.pause": {
     "message": "Telepítés szüneteltetése"
@@ -388,6 +397,9 @@
   },
   "app.download-manager.show": {
     "message": "Telepítési feladatok megjelenítése"
+  },
+  "app.download-manager.show-tasks": {
+    "message": "Feladatok megtekintése"
   },
   "app.download-manager.tasks": {
     "message": "Feladatok"
@@ -632,6 +644,12 @@
   "app.instance.admonitions.shared-instance.changes-header": {
     "message": "A változtatásaid még nem lettek megosztva"
   },
+  "app.instance.admonitions.shared-instance.owner-update-button": {
+    "message": "Frissítés letöltése"
+  },
+  "app.instance.admonitions.shared-instance.owner-update-header": {
+    "message": "Frissítés elérhető"
+  },
   "app.instance.admonitions.shared-instance.publish-button": {
     "message": "Frissítés közzététele"
   },
@@ -749,6 +767,15 @@
   "app.instance.navigation.back-to-instance": {
     "message": "Vissza a példányhoz"
   },
+  "app.instance.server.offline.launch-anyway": {
+    "message": "Indítás mindenképp"
+  },
+  "app.instance.server.offline.title": {
+    "message": "A szerver offline"
+  },
+  "app.instance.server.status.unknown": {
+    "message": "Ismeretlen állapot"
+  },
   "app.instance.share.empty.description": {
     "message": "Ezt a példányt megoszthatod a barátaiddal!"
   },
@@ -756,6 +783,9 @@
     "message": "Nincsenek barátok meghívva"
   },
   "app.instance.share.empty.invite-friends-button": {
+    "message": "Barátok meghívása"
+  },
+  "app.instance.share.invite-friends": {
     "message": "Barátok meghívása"
   },
   "app.instance.share.invite-modal.heading": {
@@ -3173,6 +3203,24 @@
   "app.settings.troubleshooting.report-ad.description": {
     "message": "Nem megfelelő vagy sértő hirdetést láttál? Másold ki az adatait, amíg megjelenik, majd küldd el a <support>Modrinth ügyfélszolgálatának</support>. Ellenőrizzük, és eltávolítjuk."
   },
+  "app.settings.troubleshooting.report-ad.no-ad.text": {
+    "message": "Várd meg amíg a hirdetés betölt, és próbáld újra."
+  },
+  "app.settings.troubleshooting.report-ad.no-ad.title": {
+    "message": "Nem találtunk hirdetést"
+  },
+  "app.settings.troubleshooting.report-ad.title": {
+    "message": "Hirdetés jelentése"
+  },
+  "app.shared-instance-publish.preparing": {
+    "message": "Frissítés előkészítése…"
+  },
+  "app.shared-instance-publish.pushed": {
+    "message": "Frissítés közzétéve"
+  },
+  "app.shared-instance-publish.uploading": {
+    "message": "Frissítés közzététele…"
+  },
   "app.sidebar.playing-as": {
     "message": "Játékfiók"
   },
@@ -3800,6 +3848,9 @@
   "instance.server-modal.resource-pack": {
     "message": "Forráscsomag"
   },
+  "instance.settings.defaults.open-app-settings": {
+    "message": "Alapértelmezett beállítások kezelése"
+  },
   "instance.settings.sharing.active-invites.actions": {
     "message": "Műveletek"
   },
@@ -3962,6 +4013,12 @@
   "instance.settings.tabs.general.update-channel.select": {
     "message": "Frissítési csatorna kiválasztása"
   },
+  "instance.settings.tabs.hooks.default-settings-description": {
+    "message": "A példányod az alapértelmezett indítási hookokat használja, ameddig nem írod azokat felül itt."
+  },
+  "instance.settings.tabs.hooks.label": {
+    "message": "Indítási hookok"
+  },
   "instance.settings.tabs.hooks.post-exit": {
     "message": "Kilépés után"
   },
@@ -4022,6 +4079,9 @@
   "instance.settings.tabs.installation.locked": {
     "message": "A telepítési beállítások nem érhetők el, amíg ez a példány zárolva van."
   },
+  "instance.settings.tabs.java.default-settings-description": {
+    "message": "A példányod az alapértelmezett Java és memóriabeállításaidat használja, ameddig nem írod azokat felül itt."
+  },
   "instance.settings.tabs.java.enter-environment-variables": {
     "message": "Környezeti változók megadása..."
   },
@@ -4045,6 +4105,9 @@
   },
   "instance.settings.tabs.java.java-path-placeholder": {
     "message": "/path/to/java"
+  },
+  "instance.settings.tabs.java.label": {
+    "message": "Java és memória"
   },
   "instance.settings.tabs.sharing": {
     "message": "Megosztás"
@@ -4106,8 +4169,14 @@
   "instance.settings.tabs.synced-options.shared-settings.description": {
     "message": "Engedélyezz egy felülírást, hogy egy szinkronizált beállítás külön legyen kezelve ennél a példánynál."
   },
+  "instance.settings.tabs.syncing": {
+    "message": "Szinkronizálás"
+  },
   "instance.settings.tabs.window": {
     "message": "Egyéni ablakbeállítások"
+  },
+  "instance.settings.tabs.window.default-settings-description": {
+    "message": "A példányod az alapértelmezett ablak beállításaidat használja ameddig nem írod azokat felül itt."
   },
   "instance.settings.tabs.window.fullscreen": {
     "message": "Teljes képernyő"
@@ -4138,6 +4207,9 @@
   },
   "instance.shared-instance.error.title": {
     "message": "Valami hiba történt"
+  },
+  "instance.shared-instance.file-not-allowed.title": {
+    "message": "A fájl típus nem megengedett"
   },
   "instance.shared-instance.network-error.text": {
     "message": "Nem sikerült csatlakozni a megosztott példányok API-jához"
