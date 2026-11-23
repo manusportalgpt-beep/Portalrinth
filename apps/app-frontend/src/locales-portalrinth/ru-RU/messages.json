@@ -5153,5 +5153,86 @@
 	},
 	"app.settings.plugins.sizes": {
 		"message": "{size} CSS"
+	},
+	"app.settings.plugins.author-label": {
+		"message": "Автор"
+	},
+	"app.settings.plugins.catalog": {
+		"message": "Каталог"
+	},
+	"app.settings.plugins.catalog-title": {
+		"message": "Каталог Noctrinth"
+	},
+	"app.settings.plugins.catalog-subtitle": {
+		"message": "Плагины сообщества: темы, расширения и источники контента."
+	},
+	"app.settings.plugins.search": {
+		"message": "Поиск плагинов..."
+	},
+	"app.settings.plugins.catalog-install": {
+		"message": "Установить"
+	},
+	"app.settings.plugins.catalog-installed": {
+		"message": "Установлено"
+	},
+	"app.settings.plugins.catalog-installing": {
+		"message": "Установка..."
+	},
+	"app.settings.plugins.refresh": {
+		"message": "Обновить"
+	},
+	"app.settings.plugins.catalog-failed": {
+		"message": "Каталог недоступен"
+	},
+	"app.settings.plugins.no-results": {
+		"message": "Ничего не найдено"
+	},
+	"app.settings.plugins.no-results-description": {
+		"message": "Под этот поиск нет плагина. Попробуйте другое слово."
+	},
+	"app.settings.plugins.settings-title": {
+		"message": "Плагинные настройки"
+	},
+	"app.settings.plugins.apply": {
+		"message": "Применить"
+	},
+	"app.settings.plugins.close": {
+		"message": "Закрыть"
+	},
+	"app.settings.plugins.unsupported": {
+		"message": "Этот плагин содержит код — он не запускается, применена только его CSS-часть."
+	},
+	"app.settings.plugins.filter-all": {
+		"message": "Все"
+	},
+	"app.settings.plugins.filter-theme": {
+		"message": "Темы"
+	},
+	"app.settings.plugins.filter-extension": {
+		"message": "Расширения"
+	},
+	"app.settings.plugins.filter-content-source": {
+		"message": "Источники"
+	},
+	"app.profile.last-server.title": {
+		"message": "Последний сервер"
+	},
+	"app.profile.last-server.empty": {
+		"message": "Пока-что ничего нет"
+	},
+	"app.profile.last-server.empty-description": {
+		"message": "Зайдите на любой сервер в Minecraft — он запомнится здесь."
+	},
+	"app.profile.last-server.play": {
+		"message": "Играть"
+	},
+	"app.profile.last-server.offline": {
+		"message": "Не в сети"
+	},
+	"app.profile.last-server.online": {
+		"message": "{online}/{max} в сети"
+	},
+	"app.profile.last-server.joining": {
+		"message": "Подключение..."
 	}
 }

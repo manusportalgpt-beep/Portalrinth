@@ -11,6 +11,9 @@
 			external-navigation
 			:in-app-paths="['/organization/', '/collection/']"
 		>
+			<template v-if="isOwnProfile" #sidebar>
+				<LastServerCard :user-id="user?.id" />
+			</template>
 			<template #project-actions="{ project }">
 				<Button
 					v-if="project.minecraft_server == null"
@@ -44,6 +47,7 @@ import {
 	Button,
 	commonMessages,
 	defineMessages,
+	injectAuth,
 	injectNotificationManager,
 	provideUserProfile,
 	UserProfilePageLayout,
@@ -67,6 +71,7 @@ import {
 	patch_user,
 	unblock_user,
 } from '@/helpers/users'
+import LastServerCard from '@/components/ui/world/LastServerCard.vue'
 import { injectContentInstall } from '@/providers/content-install'
 import { useBreadcrumb } from '@/shared/breadcrumbs'
 
@@ -78,6 +83,11 @@ const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
 const { install: installVersion } = injectContentInstall()
 const installingProjectIds = ref(new Set<string>())
+
+const auth = injectAuth()
+const isOwnProfile = computed(
+	() => !!auth.user.value?.id && !!user.value?.id && auth.user.value.id === user.value.id,
+)
 
 const messages = defineMessages({
 	installToInstance: {
@@ -221,7 +231,7 @@ async function ensureUserProfileData(id: string): Promise<void> {
 
 onBeforeRouteUpdate(async (to) => {
 	const value = to.params.user
-	const id = Array.isArray(value) ? (value[0] ?? '') : (value ?? '')
+	const id = Array.isArray(value) ? value[0] ?? '' : value ?? ''
 	await ensureUserProfileData(id)
 })
 

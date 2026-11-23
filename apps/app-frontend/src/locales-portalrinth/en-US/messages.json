@@ -3341,5 +3341,86 @@
 	},
 	"app.settings.plugins.sizes": {
 		"message": "{size} of CSS"
+	},
+	"app.settings.plugins.author-label": {
+		"message": "Author"
+	},
+	"app.settings.plugins.catalog": {
+		"message": "Catalog"
+	},
+	"app.settings.plugins.catalog-title": {
+		"message": "Noctrinth Catalog"
+	},
+	"app.settings.plugins.catalog-subtitle": {
+		"message": "Community plugins: themes, extensions and content sources."
+	},
+	"app.settings.plugins.search": {
+		"message": "Search plugins..."
+	},
+	"app.settings.plugins.catalog-install": {
+		"message": "Install"
+	},
+	"app.settings.plugins.catalog-installed": {
+		"message": "Installed"
+	},
+	"app.settings.plugins.catalog-installing": {
+		"message": "Installing..."
+	},
+	"app.settings.plugins.refresh": {
+		"message": "Refresh"
+	},
+	"app.settings.plugins.catalog-failed": {
+		"message": "Catalog unavailable"
+	},
+	"app.settings.plugins.no-results": {
+		"message": "Nothing found"
+	},
+	"app.settings.plugins.no-results-description": {
+		"message": "No plugin matches that search. Try a different word."
+	},
+	"app.settings.plugins.settings-title": {
+		"message": "Plugin settings"
+	},
+	"app.settings.plugins.apply": {
+		"message": "Apply"
+	},
+	"app.settings.plugins.close": {
+		"message": "Close"
+	},
+	"app.settings.plugins.unsupported": {
+		"message": "This plugin ships code - it is not executed, only its CSS is applied."
+	},
+	"app.settings.plugins.filter-all": {
+		"message": "All"
+	},
+	"app.settings.plugins.filter-theme": {
+		"message": "Themes"
+	},
+	"app.settings.plugins.filter-extension": {
+		"message": "Extensions"
+	},
+	"app.settings.plugins.filter-content-source": {
+		"message": "Content sources"
+	},
+	"app.profile.last-server.title": {
+		"message": "Last server"
+	},
+	"app.profile.last-server.empty": {
+		"message": "Nothing here yet"
+	},
+	"app.profile.last-server.empty-description": {
+		"message": "Join any server in Minecraft and it will be remembered here."
+	},
+	"app.profile.last-server.play": {
+		"message": "Join"
+	},
+	"app.profile.last-server.offline": {
+		"message": "Offline"
+	},
+	"app.profile.last-server.online": {
+		"message": "{online}/{max} online"
+	},
+	"app.profile.last-server.joining": {
+		"message": "Joining..."
 	}
 }

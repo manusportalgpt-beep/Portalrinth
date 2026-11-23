@@ -12,6 +12,7 @@
  * stylesheet that sits on top of all installed plugins.
  */
 import JSZip from 'jszip'
+import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { reactive, ref, watch } from 'vue'
 
 export interface PluginManifest {
@@ -23,6 +24,21 @@ export interface PluginManifest {
 	description?: string
 	/** Paths of the CSS files inside the archive, in apply order. */
 	css?: string[]
+	/** A picture shown at the top of the plugin's card, like a mod's. */
+	banner?: string
+	/** The plugin's own icon, as a URL or a data URL. */
+	icon?: string
+	/** Short chips under the description, straight from the catalog. */
+	tags?: string[]
+	/** Where the plugin comes from. */
+	homepage?: string
+	/**
+	 * The catalog's settings schema (key/type/label/default), kept raw.
+	 * Values become CSS custom properties on :root: --plugin-<key>.
+	 */
+	settings?: unknown[]
+	/** The catalog's entry script; Portalrinth runs no plugin code. */
+	entry?: string
 }
 
 export interface InstalledPlugin {
@@ -80,6 +96,51 @@ export function setPluginSafeMode(on: boolean) {
 	applyPlugins()
 }
 
+const SETTINGS_KEY = 'portalrinth-plugin-settings'
+
+function loadSettings(): Record<string, Record<string, unknown>> {
+	try {
+		const raw = localStorage.getItem(SETTINGS_KEY)
+		const parsed = raw ? JSON.parse(raw) : {}
+		return parsed && typeof parsed === 'object' ? parsed : {}
+	} catch {
+		return {}
+	}
+}
+
+const pluginSettings = reactive<Record<string, Record<string, unknown>>>(loadSettings())
+
+export function readPluginSettings(id: string): Record<string, unknown> {
+	return pluginSettings[id] ?? {}
+}
+
+export function savePluginSettings(id: string, values: Record<string, unknown>) {
+	pluginSettings[id] = { ...values }
+	scheduleSaveAndApply()
+}
+
+/**
+ * A plugin's settings, as CSS custom properties on :root, so a theme's
+ * stylesheet can read them: `--plugin-<key>`. Booleans become true/false,
+ * numbers and strings land as they are written.
+ */
+function settingsToCss(schema: unknown, values: Record<string, unknown>): string {
+	if (!Array.isArray(schema)) return ''
+	const lines: string[] = []
+	for (const raw of schema) {
+		const setting = raw as { key?: string; default?: unknown }
+		if (!setting?.key) continue
+		const value = values[setting.key] ?? setting.default
+		if (value === undefined || value === null) continue
+		if (typeof value === 'boolean') {
+			lines.push(`--plugin-${setting.key}: ${value ? 'true' : 'false'};`)
+		} else if (typeof value === 'number' || typeof value === 'string') {
+			lines.push(`--plugin-${setting.key}: ${String(value).replace(/[;{}]/g, '')};`)
+		}
+	}
+	return lines.length ? ':root {\n\t' + lines.join('\n\t') + '\n}' : ''
+}
+
 function injectStyle(id: string, css: string) {
 	const style = document.createElement('style')
 	style.setAttribute(STYLE_MARKER, id)
@@ -95,7 +156,11 @@ export function applyPlugins() {
 	if (pluginSafeMode.value) return
 	for (const plugin of plugins) {
 		if (plugin.enabled && plugin.css.trim()) {
-			injectStyle(plugin.manifest.id, plugin.css)
+			const settingsCss = settingsToCss(
+				plugin.manifest.settings,
+				readPluginSettings(plugin.manifest.id),
+			)
+			injectStyle(plugin.manifest.id, settingsCss ? `${plugin.css}\n${settingsCss}` : plugin.css)
 		}
 	}
 	if (quickCss.enabled && quickCss.css.trim()) {
@@ -120,12 +185,18 @@ function scheduleSaveAndApply() {
 		} catch {
 			/* same as above */
 		}
+		try {
+			localStorage.setItem(SETTINGS_KEY, JSON.stringify(pluginSettings))
+		} catch {
+			/* same as above */
+		}
 		applyPlugins()
 	}, 200)
 }
 
 watch(plugins, scheduleSaveAndApply, { deep: true })
 watch(quickCss, scheduleSaveAndApply, { deep: true })
+watch(pluginSettings, scheduleSaveAndApply, { deep: true })
 
 export function togglePlugin(id: string, enabled: boolean) {
 	const plugin = plugins.find((entry) => entry.manifest.id === id)
@@ -143,8 +214,13 @@ export function setQuickCss(css: string) {
 
 function upsertPlugin(plugin: InstalledPlugin) {
 	const index = plugins.findIndex((entry) => entry.manifest.id === plugin.manifest.id)
-	if (index >= 0) plugins.splice(index, 1, plugin)
-	else plugins.push(plugin)
+	if (index >= 0) {
+		// An update keeps the switch where the player left it.
+		plugin.enabled = plugins[index].enabled
+		plugins.splice(index, 1, plugin)
+	} else {
+		plugins.push(plugin)
+	}
 }
 
 function sanitizeId(text: string): string {
@@ -283,4 +359,179 @@ export async function installPluginFiles(files: File[]): Promise<'zip' | 'css' |
 	}
 
 	throw new Error('Поддерживаются .zip с манифестом или .css файлы')
+}
+
+/**
+ * The Noctrinth catalog - the community's plugin and theme database
+ * (github.com/Everelsu/Noctrinth-Plugins). It lives on GitHub Pages as one
+ * index.json; a plugin is a zip with plugin.json and CSS files inside.
+ * Catalog installs go through the same localStorage store as local ones, so
+ * both kinds sit in one list and are toggled and deleted the same way.
+ */
+export interface CatalogPluginEntry {
+	id: string
+	name: string
+	version: string
+	type?: string
+	author?: string
+	description?: string
+	homepage?: string
+	repository?: string
+	banner_url?: string
+	tags?: string[]
+	download_url?: string
+	sha256?: string
+}
+
+export interface Catalog {
+	schema_version?: unknown
+	updated_at?: string
+	plugins: CatalogPluginEntry[]
+}
+
+const CATALOG_URL = 'https://everelsu.github.io/Noctrinth-Plugins/index.json'
+const CATALOG_CACHE_KEY = 'portalrinth-plugin-catalog'
+const CATALOG_MAX_BYTES = 512 * 1024
+const PLUGIN_ZIP_MAX_BYTES = 16 * 1024 * 1024
+const ICON_MAX_BYTES = 256 * 1024
+
+export const catalogLoading = ref(false)
+export const catalogUpdatedAt = ref<string | null>(null)
+
+/** The catalog, fresh when the network allows it, cached when it does not. */
+export async function loadCatalog(): Promise<Catalog> {
+	try {
+		const reply = await tauriFetch(CATALOG_URL)
+		if (!reply.ok) throw new Error(`Каталог ответил ${reply.status}`)
+		const text = await reply.text()
+		if (text.length > CATALOG_MAX_BYTES) throw new Error('Каталог подозрительно велик')
+		const catalog = JSON.parse(text) as Catalog
+		localStorage.setItem(
+			CATALOG_CACHE_KEY,
+			JSON.stringify({ fetchedAt: new Date().toISOString(), catalog }),
+		)
+		catalogUpdatedAt.value = catalog.updated_at ?? new Date().toISOString()
+		return catalog
+	} catch {
+		const cached = localStorage.getItem(CATALOG_CACHE_KEY)
+		if (!cached) throw new Error('Каталог недоступен, и кэша ещё нет')
+		const parsed = JSON.parse(cached) as {
+			fetchedAt?: string
+			catalog?: Catalog
+		}
+		if (!parsed.catalog) throw new Error('Кэш каталога не читается')
+		catalogUpdatedAt.value = parsed.catalog.updated_at ?? parsed.fetchedAt ?? null
+		return parsed.catalog
+	}
+}
+
+function mimeOfIcon(name: string): string | null {
+	const extension = name.toLowerCase().split('.').pop() ?? ''
+	if (extension === 'svg') return 'image/svg+xml'
+	if (extension === 'png') return 'image/png'
+	if (extension === 'jpg' || extension === 'jpeg') return 'image/jpeg'
+	if (extension === 'webp') return 'image/webp'
+	if (extension === 'gif') return 'image/gif'
+	return null
+}
+
+/** A picture from the archive, as a data URL the card can show offline. */
+async function zipPicture(archive: JSZip, path: string | undefined): Promise<string | undefined> {
+	if (!path) return undefined
+	if (/^https?:\/\//i.test(path)) return path
+	const file = archive.files[path] ?? archive.files[path.replace(/^\//, '')]
+	if (!file || file.dir) return undefined
+	const base64 = await file.async('base64')
+	if (base64.length > (ICON_MAX_BYTES * 4) / 3) return undefined
+	const mime = mimeOfIcon(path)
+	if (!mime) return undefined
+	return `data:${mime};base64,${base64}`
+}
+
+async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
+	const digest = await crypto.subtle.digest('SHA-256', bytes)
+	return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Installs a plugin from the catalog: downloads the zip, checks the
+ * checksum the catalog publishes, reads plugin.json (the catalog's format)
+ * or manifest.json, and lands the theme in the same list as local plugins.
+ * Only CSS is applied - an `entry` script is kept for the record, never run.
+ */
+export async function installCatalogPlugin(entry: CatalogPluginEntry): Promise<InstalledPlugin> {
+	if (!entry.download_url) throw new Error('У плагина нет ссылки на скачивание')
+	if (!/^https:\/\//i.test(entry.download_url)) {
+		throw new Error('Плагины качаются только по https')
+	}
+	const reply = await tauriFetch(entry.download_url)
+	if (!reply.ok) throw new Error(`Плагин не скачался: ${reply.status}`)
+	const bytes = await reply.arrayBuffer()
+	if (bytes.byteLength > PLUGIN_ZIP_MAX_BYTES) {
+		throw new Error('Плагин больше 16 МБ - слишком велик для темы')
+	}
+	if (entry.sha256 && crypto?.subtle) {
+		const actual = await sha256Hex(bytes)
+		if (actual.toLowerCase() !== entry.sha256.toLowerCase()) {
+			throw new Error('Контрольная сумма не совпала - архив повреждён')
+		}
+	}
+
+	let archive: JSZip
+	try {
+		archive = await JSZip.loadAsync(bytes)
+	} catch {
+		throw new Error('Архив повреждён или это не zip')
+	}
+	const entries = Object.keys(archive.files).filter((name) => !archive.files[name].dir)
+
+	const manifestEntry =
+		entries.find((name) => /(^|\/)plugin\.json$/i.test(name)) ??
+		entries.find((name) => /(^|\/)manifest\.json$/i.test(name))
+	let manifest: Partial<PluginManifest> & { id?: string; name?: string } = {}
+	if (manifestEntry) {
+		try {
+			manifest = JSON.parse((await archive.files[manifestEntry].async('string')) || '{}')
+		} catch {
+			throw new Error('plugin.json не читается - проверьте JSON')
+		}
+	}
+	const manifestDir = manifestEntry ? manifestEntry.replace(/[^/]*(\.json)?$/i, '') : ''
+
+	const stylePaths = Array.isArray(manifest.css)
+		? manifest.css.map((path) => manifestDir + path)
+		: Array.isArray((manifest as { styles?: string[] }).styles)
+			? (manifest as { styles?: string[] }).styles!.map((path) => manifestDir + path)
+			: entries
+					.filter((name) => /\.css$/i.test(name))
+					.sort((a, b) => a.length - b.length || a.localeCompare(b))
+	const chunks: string[] = []
+	for (const path of stylePaths) {
+		const file = archive.files[path]
+		if (!file || file.dir) continue
+		chunks.push((await file.async('string')) || '')
+	}
+	const css = chunks.join('\n').trim()
+	if (!css) throw new Error('В архиве нет ни одного .css файла')
+
+	const icon = await zipPicture(archive, manifest.icon)
+	const fallbackName = entry.name || baseName(manifestEntry ?? entry.id)
+	const installed = buildPlugin(
+		{
+			id: typeof manifest.id === 'string' && manifest.id ? manifest.id : entry.id,
+			name: typeof manifest.name === 'string' && manifest.name ? manifest.name : fallbackName,
+			version: manifest.version ?? entry.version,
+			author: manifest.author ?? entry.author,
+			description: manifest.description ?? entry.description,
+			tags: manifest.tags ?? entry.tags,
+			homepage: manifest.homepage ?? entry.homepage ?? entry.repository,
+			settings: manifest.settings,
+			entry: manifest.entry,
+			banner: entry.banner_url,
+			icon,
+		},
+		css,
+	)
+	upsertPlugin(installed)
+	return installed
 }
