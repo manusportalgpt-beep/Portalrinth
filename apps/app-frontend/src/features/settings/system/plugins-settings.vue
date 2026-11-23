@@ -181,7 +181,6 @@ const settingsModal = ref<InstanceType<typeof NewModal> | null>(null)
 const catalog = ref<CatalogPluginEntry[] | null>(null)
 const catalogError = ref('')
 const catalogSearch = ref('')
-const catalogFilter = ref('all')
 const installingIds = ref(new Set<string>())
 
 const settingsTarget = ref<InstalledPlugin | null>(null)
